@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"time"
@@ -36,13 +37,23 @@ type Config struct {
 
 // Load reads configuration from environment variables
 func Load() *Config {
+	// Database components
+	dbHost := getEnv("DB_HOST", "localhost")
+	dbPort := getEnv("DB_PORT", "5432")
+	dbUser := getEnv("POSTGRES_USER", "postgres")
+	dbPass := getEnv("POSTGRES_PASSWORD", "postgres")
+	dbName := getEnv("POSTGRES_DB", "grafikarsa_db")
+
+	defaultDBURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		dbUser, dbPass, dbHost, dbPort, dbName)
+
 	return &Config{
 		// Server
 		ServerPort: getEnv("PORT", "8080"),
 		ServerHost: getEnv("HOST", "0.0.0.0"),
 
 		// Database
-		DatabaseURL: getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/grafikarsa_db?sslmode=disable"),
+		DatabaseURL: getEnv("DATABASE_URL", defaultDBURL),
 
 		// JWT
 		JWTAccessSecret:      getEnv("JWT_ACCESS_SECRET", "your-access-secret-key-change-in-production"),
@@ -52,8 +63,8 @@ func Load() *Config {
 
 		// MinIO
 		MinIOEndpoint:        getEnv("MINIO_ENDPOINT", "localhost:9000"),
-		MinIOAccessKeyID:     getEnv("MINIO_ACCESS_KEY_ID", "minioadmin"),
-		MinIOSecretAccessKey: getEnv("MINIO_SECRET_ACCESS_KEY", "minioadmin"),
+		MinIOAccessKeyID:     getEnv("MINIO_ROOT_USER", "minioadmin"),
+		MinIOSecretAccessKey: getEnv("MINIO_ROOT_PASSWORD", "minioadmin"),
 		MinIOBucketName:      getEnv("MINIO_BUCKET_NAME", "grafikarsa"),
 		MinIOUseSSL:          getBoolEnv("MINIO_USE_SSL", false),
 		MinioCDNURL:          getEnv("MINIO_CDN_URL", "http://localhost:9000/grafikarsa"),

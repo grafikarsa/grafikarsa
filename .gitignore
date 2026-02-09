@@ -37,4 +37,4 @@ docker-compose.override.yml
 coverage/
 
 # Misc
-tmp/
+**/tmp/

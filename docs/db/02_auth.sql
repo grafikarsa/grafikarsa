@@ -108,7 +108,7 @@ CREATE INDEX idx_refresh_tokens_family ON refresh_tokens(token_family);
 CREATE INDEX idx_refresh_tokens_session ON refresh_tokens(session_id) WHERE session_id IS NOT NULL;
 CREATE INDEX idx_refresh_tokens_expires_at ON refresh_tokens(expires_at);
 CREATE INDEX idx_refresh_tokens_active ON refresh_tokens(user_id) 
-    WHERE revoked_at IS NULL AND expires_at > NOW();
+    WHERE revoked_at IS NULL;
 
 -- Auth Sessions
 CREATE INDEX idx_auth_sessions_user ON auth_sessions(user_id);
