@@ -1,0 +1,55 @@
+services:
+  # Database Utama
+  postgres:
+    image: postgres:16-alpine
+    ports: ["5432:5432"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  # Object Storage (S3 Compatible)
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    ports: ["9000:9000", "9001:9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
+
+  # Backend Go (Hot Reload dengan Air)
+  api:
+    build: 
+      context: ./apps/api
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./apps/api:/app
+    ports: ["8080:8080"]
+    depends_on:
+      - postgres
+      - minio
+    env_file:
+      - .env
+
+  # Frontend Next.js (Dev Server)
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+    ports: ["3000:3000"]
+    depends_on:
+      - api
+    # Inject semua env var dari root .env ke container
+    env_file:
+      - .env
+
+volumes:
+  pg_data:
+  minio_data:
