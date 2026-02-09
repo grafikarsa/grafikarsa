@@ -11,7 +11,7 @@ dev:
 	@echo "Initializing database..."
 	@docker compose exec -T postgres psql -U $(POSTGRES_USER) -d $(POSTGRES_DB) < docs/db/01_db.sql
 	@docker compose exec -T postgres psql -U $(POSTGRES_USER) -d $(POSTGRES_DB) < docs/db/02_auth.sql
-	@docker compose up -d api
+	@docker compose up -d api web
 	@echo "Seeding admin..."
 	@make seed-admin
 	@docker compose logs -f
