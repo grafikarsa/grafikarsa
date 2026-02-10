@@ -31,3 +31,7 @@ seed:
 migrate:
 	docker compose exec api go run cmd/migrate/main.go
 
+test-api:
+	@echo "Running Grafikarsa API Complete Test Suite..."
+	@./scripts/test-api-complete.sh
+

@@ -63,10 +63,17 @@ func (h *AdminHandler) Register(app fiber.Router, authMiddleware *middleware.Aut
 
 	// Users
 	admin.Get("/users", h.ListUsers)
+	admin.Get("/users/:id", h.GetUserDetail)
 	admin.Post("/users", h.CreateUser)
 	admin.Put("/users/:id", h.UpdateUser)
 	admin.Delete("/users/:id", h.DeleteUser)
 	admin.Post("/users/:id/reset-password", h.ResetUserPassword)
+
+	// Portfolio management
+	admin.Get("/portfolios", h.ListAllPortfolios)
+	admin.Get("/portfolios/:id", h.GetPortfolioDetail)
+	admin.Patch("/portfolios/:id", h.UpdatePortfolioAdmin)
+	admin.Delete("/portfolios/:id", h.DeletePortfolioAdmin)
 
 	// Portfolio moderation
 	admin.Get("/portfolios/pending", h.ListPendingPortfolios)
@@ -511,6 +518,24 @@ func (h *AdminHandler) ListUsers(c *fiber.Ctx) error {
 	return utils.SuccessWithMeta(c, fiber.StatusOK, users, meta)
 }
 
+// GetUserDetail gets user detail for admin
+func (h *AdminHandler) GetUserDetail(c *fiber.Ctx) error {
+	userID, err := utils.ParseUUID(c.Params("id"))
+	if err != nil {
+		return utils.Error(c, fiber.StatusBadRequest, utils.ErrCodeInvalidInput, "ID pengguna tidak valid")
+	}
+
+	user, err := h.userService.GetUserByID(c.Context(), userID)
+	if err != nil {
+		if err == service.ErrUserNotFound {
+			return utils.Error(c, fiber.StatusNotFound, utils.ErrCodeUserNotFound, "Pengguna tidak ditemukan")
+		}
+		return utils.Error(c, fiber.StatusInternalServerError, utils.ErrCodeInternalError, "Gagal mengambil pengguna")
+	}
+
+	return utils.SuccessResponse(c, fiber.StatusOK, user, "")
+}
+
 // CreateUserRequest is the request for creating a user
 type CreateUserRequest struct {
 	Username       string     `json:"username" validate:"required,username,not_reserved_username"`
@@ -685,6 +710,119 @@ func (h *AdminHandler) ResetUserPassword(c *fiber.Ctx) error {
 	}
 
 	return utils.SuccessResponse(c, fiber.StatusOK, nil, "Password berhasil direset")
+}
+
+// ==================== PORTFOLIO MANAGEMENT ====================
+
+// ListAllPortfolios lists all portfolios (all statuses) for admin
+func (h *AdminHandler) ListAllPortfolios(c *fiber.Ctx) error {
+	filter := repository.PortfolioFilter{
+		Search: c.Query("search"),
+		Status: c.Query("status"),
+		Sort:   c.Query("sort", "-created_at"),
+		Page:   c.QueryInt("page", 1),
+		Limit:  c.QueryInt("limit", 20),
+	}
+
+	if userID := c.Query("user_id"); userID != "" {
+		if id, err := uuid.Parse(userID); err == nil {
+			filter.UserID = &id
+		}
+	}
+
+	if majorID := c.Query("major_id"); majorID != "" {
+		if id, err := uuid.Parse(majorID); err == nil {
+			filter.MajorID = &id
+		}
+	}
+
+	portfolios, meta, err := h.portfolioService.ListAllPortfoliosAdmin(c.Context(), filter)
+	if err != nil {
+		return utils.Error(c, fiber.StatusInternalServerError, utils.ErrCodeInternalError, "Gagal mengambil portfolio")
+	}
+
+	return utils.SuccessWithMeta(c, fiber.StatusOK, portfolios, meta)
+}
+
+// GetPortfolioDetail gets portfolio detail for admin
+func (h *AdminHandler) GetPortfolioDetail(c *fiber.Ctx) error {
+	portfolioID, err := utils.ParseUUID(c.Params("id"))
+	if err != nil {
+		return utils.Error(c, fiber.StatusBadRequest, utils.ErrCodeInvalidInput, "ID portfolio tidak valid")
+	}
+
+	// Admin can view any portfolio
+	portfolio, err := h.portfolioService.GetPortfolioByID(c.Context(), portfolioID, uuid.Nil, true)
+	if err != nil {
+		if err == service.ErrPortfolioNotFound {
+			return utils.Error(c, fiber.StatusNotFound, utils.ErrCodePortfolioNotFound, "Portfolio tidak ditemukan")
+		}
+		return utils.Error(c, fiber.StatusInternalServerError, utils.ErrCodeInternalError, "Gagal mengambil portfolio")
+	}
+
+	return utils.SuccessResponse(c, fiber.StatusOK, portfolio, "")
+}
+
+// UpdatePortfolioAdminRequest is the request for updating portfolio by admin
+type UpdatePortfolioAdminRequest struct {
+	Title            *string     `json:"title" validate:"omitempty,min=3,max=200"`
+	ThumbnailURL     *string     `json:"thumbnail_url" validate:"omitempty,url"`
+	TagIDs           []uuid.UUID `json:"tag_ids" validate:"omitempty,max=10"`
+	AdminReviewNote  *string     `json:"admin_review_note" validate:"omitempty,max=1000"`
+}
+
+// UpdatePortfolioAdmin updates portfolio as admin
+func (h *AdminHandler) UpdatePortfolioAdmin(c *fiber.Ctx) error {
+	adminID := middleware.GetUserID(c)
+
+	portfolioID, err := utils.ParseUUID(c.Params("id"))
+	if err != nil {
+		return utils.Error(c, fiber.StatusBadRequest, utils.ErrCodeInvalidInput, "ID portfolio tidak valid")
+	}
+
+	var req UpdatePortfolioAdminRequest
+	if err := c.BodyParser(&req); err != nil {
+		return utils.Error(c, fiber.StatusBadRequest, utils.ErrCodeInvalidInput, "Format request tidak valid")
+	}
+
+	if errs := utils.Validate(&req); len(errs) > 0 {
+		return utils.ErrorWithDetails(c, fiber.StatusBadRequest, utils.ErrCodeValidationFailed, "Validasi gagal", errs)
+	}
+
+	input := service.UpdatePortfolioInput{
+		Title:        req.Title,
+		ThumbnailURL: req.ThumbnailURL,
+		TagIDs:       req.TagIDs,
+	}
+
+	portfolio, err := h.portfolioService.UpdatePortfolio(c.Context(), portfolioID, adminID, true, input)
+	if err != nil {
+		if err == service.ErrPortfolioNotFound {
+			return utils.Error(c, fiber.StatusNotFound, utils.ErrCodePortfolioNotFound, "Portfolio tidak ditemukan")
+		}
+		return utils.Error(c, fiber.StatusInternalServerError, utils.ErrCodeInternalError, "Gagal memperbarui portfolio")
+	}
+
+	return utils.SuccessResponse(c, fiber.StatusOK, portfolio, "Portfolio berhasil diperbarui")
+}
+
+// DeletePortfolioAdmin deletes portfolio as admin
+func (h *AdminHandler) DeletePortfolioAdmin(c *fiber.Ctx) error {
+	adminID := middleware.GetUserID(c)
+
+	portfolioID, err := utils.ParseUUID(c.Params("id"))
+	if err != nil {
+		return utils.Error(c, fiber.StatusBadRequest, utils.ErrCodeInvalidInput, "ID portfolio tidak valid")
+	}
+
+	if err := h.portfolioService.DeletePortfolio(c.Context(), portfolioID, adminID, true); err != nil {
+		if err == service.ErrPortfolioNotFound {
+			return utils.Error(c, fiber.StatusNotFound, utils.ErrCodePortfolioNotFound, "Portfolio tidak ditemukan")
+		}
+		return utils.Error(c, fiber.StatusInternalServerError, utils.ErrCodeInternalError, "Gagal menghapus portfolio")
+	}
+
+	return utils.SuccessResponse(c, fiber.StatusOK, nil, "Portfolio berhasil dihapus")
 }
 
 // ==================== PORTFOLIO MODERATION ====================

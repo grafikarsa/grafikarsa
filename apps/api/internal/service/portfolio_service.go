@@ -643,6 +643,17 @@ func (s *PortfolioService) ListPendingReview(ctx context.Context, page, limit in
 	return portfolios, meta, nil
 }
 
+// ListAllPortfoliosAdmin lists all portfolios for admin (all statuses)
+func (s *PortfolioService) ListAllPortfoliosAdmin(ctx context.Context, filter repository.PortfolioFilter) ([]domain.PortfolioListItem, *utils.Meta, error) {
+	portfolios, total, err := s.portfolioRepo.ListAllForAdmin(ctx, filter)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to list portfolios: %w", err)
+	}
+
+	meta := utils.NewMeta(filter.Page, filter.Limit, total)
+	return portfolios, meta, nil
+}
+
 // Portfolio service errors
 var (
 	ErrPortfolioNotFound       = fmt.Errorf("portfolio not found")

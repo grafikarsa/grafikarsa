@@ -87,13 +87,14 @@ func main() {
 	uploadHandler := handler.NewUploadHandler(uploadService)
 	adminHandler := handler.NewAdminHandler(adminService, userService, tagService, portfolioService)
 	publicHandler := handler.NewPublicHandler(tagService, adminService)
+	searchHandler := handler.NewSearchHandler(userService, portfolioService)
 
 	// ==================== ROUTES ====================
 	// API v1 routes
 	api := app.Group("/api/v1")
 
 	// Apply rate limiter to auth routes
-	api.Use("/auth", middleware.AuthRateLimiter())
+	// api.Use("/auth", middleware.AuthRateLimiter())
 
 	// Register handlers
 	publicHandler.Register(api, authMiddleware)
@@ -102,6 +103,7 @@ func main() {
 	portfolioHandler.Register(api, authMiddleware)
 	uploadHandler.Register(api, authMiddleware)
 	adminHandler.Register(api, authMiddleware)
+	searchHandler.Register(api, authMiddleware)
 
 	// ==================== START SERVER ====================
 	addr := fmt.Sprintf("%s:%s", cfg.ServerHost, cfg.ServerPort)

@@ -874,3 +874,126 @@ func (r *PortfolioRepository) GetFeed(ctx context.Context, userID uuid.UUID, pag
 
 	return portfolios, total, rows.Err()
 }
+
+// ListAllForAdmin lists all portfolios for admin (all statuses)
+func (r *PortfolioRepository) ListAllForAdmin(ctx context.Context, filter PortfolioFilter) ([]domain.PortfolioListItem, int, error) {
+	var conditions []string
+	var args []interface{}
+	argNum := 1
+
+	conditions = append(conditions, "p.deleted_at IS NULL")
+
+	if filter.Search != "" {
+		conditions = append(conditions, fmt.Sprintf("(pv.title ILIKE $%d OR u.name ILIKE $%d)", argNum, argNum))
+		args = append(args, "%"+filter.Search+"%")
+		argNum++
+	}
+
+	if filter.Status != "" {
+		conditions = append(conditions, fmt.Sprintf("pv.status = $%d", argNum))
+		args = append(args, filter.Status)
+		argNum++
+	}
+
+	if filter.UserID != nil {
+		conditions = append(conditions, fmt.Sprintf("p.user_id = $%d", argNum))
+		args = append(args, *filter.UserID)
+		argNum++
+	}
+
+	if filter.MajorID != nil {
+		conditions = append(conditions, fmt.Sprintf("c.major_id = $%d", argNum))
+		args = append(args, *filter.MajorID)
+		argNum++
+	}
+
+	whereClause := strings.Join(conditions, " AND ")
+
+	// Count query
+	countQuery := fmt.Sprintf(`
+		SELECT COUNT(DISTINCT p.id)
+		FROM portfolios p
+		INNER JOIN portfolio_versions pv ON p.id = pv.portfolio_id
+		INNER JOIN users u ON p.user_id = u.id
+		LEFT JOIN classes c ON u.current_class_id = c.id
+		WHERE %s
+	`, whereClause)
+
+	var total int
+	if err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	// Determine sort order
+	orderBy := "p.created_at DESC"
+	switch filter.Sort {
+	case "-created_at":
+		orderBy = "p.created_at DESC"
+	case "created_at":
+		orderBy = "p.created_at ASC"
+	case "-published_at":
+		orderBy = "pv.published_at DESC NULLS LAST"
+	case "-like_count":
+		orderBy = "p.like_count DESC"
+	case "title":
+		orderBy = "pv.title ASC"
+	}
+
+	pagination := utils.Pagination{Page: filter.Page, Limit: filter.Limit}
+	pagination.Validate(50)
+
+	query := fmt.Sprintf(`
+		SELECT DISTINCT ON (p.id) p.id, pv.title, p.slug, pv.thumbnail_url, pv.status, 
+		       pv.published_at, p.created_at, p.updated_at, p.like_count,
+		       u.id, u.username, u.name, u.avatar_url, u.role, c.name
+		FROM portfolios p
+		INNER JOIN portfolio_versions pv ON p.id = pv.portfolio_id
+		INNER JOIN users u ON p.user_id = u.id
+		LEFT JOIN classes c ON u.current_class_id = c.id
+		WHERE %s
+		ORDER BY p.id, pv.version_number DESC
+	`, whereClause)
+
+	// Wrap for proper ordering and pagination
+	query = fmt.Sprintf(`
+		SELECT * FROM (%s) sub
+		ORDER BY %s
+		LIMIT $%d OFFSET $%d
+	`, query, orderBy, argNum, argNum+1)
+
+	args = append(args, pagination.Limit, pagination.Offset())
+
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var portfolios []domain.PortfolioListItem
+	for rows.Next() {
+		var p domain.PortfolioListItem
+		var user domain.UserListItem
+		var className *string
+
+		if err := rows.Scan(
+			&p.ID, &p.Title, &p.Slug, &p.ThumbnailURL, &p.Status,
+			&p.PublishedAt, &p.CreatedAt, &p.UpdatedAt, &p.LikeCount,
+			&user.ID, &user.Username, &user.Name, &user.AvatarURL, &user.Role, &className,
+		); err != nil {
+			return nil, 0, err
+		}
+
+		if className != nil {
+			user.ClassName = *className
+		}
+		p.User = &user
+
+		// Get tags for this portfolio
+		tags, _ := r.GetPortfolioTags(ctx, p.ID)
+		p.Tags = tags
+
+		portfolios = append(portfolios, p)
+	}
+
+	return portfolios, total, rows.Err()
+}
