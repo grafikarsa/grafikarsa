@@ -4,7 +4,8 @@
 # Tests ALL endpoints with ALL scenarios including error cases
 # This script is immutable to database (uses cleanup after tests)
 
-set -e
+# Don't exit on error - we want to collect all failures
+# set -e
 
 # Load helper functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

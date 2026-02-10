@@ -72,6 +72,83 @@ ADMIN_PASSWORD=admin123 \
 
 **Total: 81+ test scenarios**
 
+## 🔍 Error Tracking & Detailed Reporting
+
+Script sekarang menampilkan **detail lengkap** untuk setiap test yang gagal di akhir test summary!
+
+### Test Summary - All Pass
+
+```bash
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  TEST SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Total Tests: 81
+Passed: 81
+Failed: 0
+
+✓ ALL TESTS PASSED!
+```
+
+### Test Summary - With Failures (Detailed Error Info)
+
+```bash
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  TEST SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Total Tests: 81
+Passed: 78
+Failed: 3
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  FAILED TESTS DETAILS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Endpoint: POST /auth/login
+   Test: Expected status 200, got 401
+   Reason: Error: INVALID_CREDENTIALS - Username atau password salah
+
+2. Endpoint: GET /portfolios/nonexistent/portfolio-slug
+   Test: Expected status 404, got 500
+   Reason: Error: INTERNAL_ERROR - Terjadi kesalahan pada server
+
+3. Endpoint: POST /portfolios
+   Test: Request failed
+   Reason: Curl error (exit code: 7)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✗ SOME TESTS FAILED
+Please check the details above for more information.
+```
+
+### Error Information Captured
+
+Untuk setiap test yang gagal, script menampilkan:
+
+1. **Endpoint**: HTTP method dan path yang di-test
+   - Contoh: `POST /auth/login`, `GET /users/:username`
+
+2. **Test**: Deskripsi test yang gagal
+   - Contoh: `Expected status 200, got 401`
+   - Contoh: `Request failed`
+
+3. **Reason**: Alasan spesifik kenapa test gagal
+   - HTTP error dengan error code dan message dari API
+   - Curl error dengan exit code
+   - Connection error
+   - Server error (5xx)
+
+### Types of Errors Tracked
+
+- ❌ **HTTP Status Mismatch**: Expected vs actual status code dengan error message dari API
+- ❌ **Connection Errors**: Cannot connect to server
+- ❌ **Curl Errors**: Network atau request errors dengan exit code
+- ❌ **Server Errors**: 5xx responses
+- ❌ **Validation Errors**: 422 dengan validation details
+- ❌ **Authentication Errors**: 401/403 dengan error codes
+
 ## Test Output Example
 
 ```bash
