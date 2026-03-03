@@ -65,13 +65,12 @@ jobs:
             # Ensure the deploy directory exists
             mkdir -p /opt/grafikarsa
             
-            # Remove old config files/db directory
-            # We use sudo here because Docker volumes might have created root-owned files
-            sudo rm -f /opt/grafikarsa/docker-compose.deploy.yml
-            sudo rm -rf /opt/grafikarsa/db
+            # Automated Cleanup: Use Docker to handle root-owned files (avoiding sudo)
+            # This works because the deploy user has permission to run Docker
+            docker run --rm -v /opt/grafikarsa:/app busybox sh -c "rm -f /app/docker-compose.deploy.yml && rm -rf /app/db"
             
-            # Ensure user ownership for scp step
-            sudo chown -R ${{ secrets.SSH_USERNAME }}:${{ secrets.SSH_USERNAME }} /opt/grafikarsa
+            # Reset ownership to ensure scp-action can write new files
+            docker run --rm -v /opt:/mnt busybox chown -R $(id -u):$(id -g) /mnt/grafikarsa
 
       - name: Copy config files to server
         uses: appleboy/scp-action@v0.1.7
