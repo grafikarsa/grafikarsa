@@ -53,6 +53,23 @@ jobs:
           cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-web:latest
           cache-to: type=inline
       
+      - name: Prepare server directories
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            # Ensure the deploy directory exists and user has ownership
+            # We use sudo to fix any permissions changed by Docker volumes
+            sudo chown -R ${{ secrets.SSH_USERNAME }}:${{ secrets.SSH_USERNAME }} /opt/grafikarsa || true
+            mkdir -p /opt/grafikarsa
+            
+            # Remove old config files to prevent scp/tar conflicts
+            rm -f /opt/grafikarsa/docker-compose.deploy.yml
+            rm -rf /opt/grafikarsa/db
+
       - name: Copy config files to server
         uses: appleboy/scp-action@v0.1.7
         with:
