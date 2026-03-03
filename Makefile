@@ -52,6 +52,7 @@ dev: ## Start dev: backend (Docker + hot reload) + web (npm run dev)
 	@echo ""
 
 dev-web: ## Start web frontend (run in separate terminal)
+	@if not exist apps\web\.env.local copy .env apps\web\.env.local
 	cd apps/web && npm install && npm run dev
 
 dev-down: ## Stop dev backend services
