@@ -28,21 +28,21 @@ $SSH_USER = if ($env:SSH_USER) { $env:SSH_USER } else { "deploy" }
 $DEPLOY_PATH = "/opt/grafikarsa"
 
 Write-Host ""
-Write-Host "🚀 Deploying Grafikarsa to Production..." -ForegroundColor Magenta
+Write-Host "[*] Deploying Grafikarsa to Production..." -ForegroundColor Magenta
 Write-Host ""
 
 # Check if SSH config is set
 if ($SSH_HOST -eq "YOUR_SERVER_IP") {
-    Write-Host "❌ Please set SSH_HOST, SSH_PORT, and SSH_USER in .env" -ForegroundColor Red
+    Write-Host "[!] Please set SSH_HOST, SSH_PORT, and SSH_USER in .env" -ForegroundColor Red
     exit 1
 }
 
-Write-Host "📦 Version: $Version" -ForegroundColor Cyan
-Write-Host "🖥️  Server: ${SSH_USER}@${SSH_HOST}:${SSH_PORT}" -ForegroundColor Cyan
+Write-Host "[v] Version: $Version" -ForegroundColor Cyan
+Write-Host "[s] Server: ${SSH_USER}@${SSH_HOST}:${SSH_PORT}" -ForegroundColor Cyan
 Write-Host ""
 
 # SSH to server and deploy
-Write-Host "📡 Connecting to server..." -ForegroundColor Yellow
+Write-Host "[*] Connecting to server..." -ForegroundColor Yellow
 
 $sshScript = @"
 set -e
@@ -61,13 +61,13 @@ echo '✅ Deployment complete!'
 ssh -p $SSH_PORT "${SSH_USER}@${SSH_HOST}" $sshScript
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ Deployment failed!" -ForegroundColor Red
+    Write-Host "[ERROR] Deployment failed!" -ForegroundColor Red
     exit 1
 }
 
 Write-Host ""
-Write-Host "✅ Deployment successful!" -ForegroundColor Green
+Write-Host "[OK] Deployment successful!" -ForegroundColor Green
 Write-Host ""
-Write-Host "📝 Verify deployment:" -ForegroundColor Cyan
+Write-Host "Verify deployment:" -ForegroundColor Cyan
 Write-Host "   ssh -p $SSH_PORT ${SSH_USER}@${SSH_HOST} 'docker ps'" -ForegroundColor White
 Write-Host ""

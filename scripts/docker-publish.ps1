@@ -78,8 +78,8 @@ docker build `
     -t "${WebImage}:${Version}" `
     -t "${WebImage}:latest" `
     --target production `
-    --build-arg NEXT_PUBLIC_API_URL=$env:NEXT_PUBLIC_API_URL `
-    --build-arg NEXT_PUBLIC_APP_URL=$env:NEXT_PUBLIC_APP_URL `
+    --build-arg NEXT_PUBLIC_API_URL="$($env:NEXT_PUBLIC_API_URL)" `
+    --build-arg NEXT_PUBLIC_APP_URL="$($env:NEXT_PUBLIC_APP_URL)" `
     ./apps/web
 
 if ($LASTEXITCODE -ne 0) {

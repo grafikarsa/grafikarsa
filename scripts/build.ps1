@@ -25,46 +25,46 @@ if (-not $Version) {
     $Version = "latest"
 }
 
-Write-Host "🏗️  Building Grafikarsa Production Images..." -ForegroundColor Green
-Write-Host "📦 Version: $Version" -ForegroundColor Cyan
+Write-Host "[*] Building Grafikarsa Production Images..." -ForegroundColor Green
+Write-Host "[v] Version: $Version" -ForegroundColor Cyan
 Write-Host ""
 
 # Build backend
-Write-Host "🔨 Building backend image..." -ForegroundColor Cyan
+Write-Host "[1/2] Building backend image..." -ForegroundColor Cyan
 docker build `
-    -t "$env:DOCKERHUB_USERNAME/grafikarsa-backend:$Version" `
-    -t "$env:DOCKERHUB_USERNAME/grafikarsa-backend:latest" `
+    -t "$($env:DOCKERHUB_USERNAME)/grafikarsa-backend:$Version" `
+    -t "$($env:DOCKERHUB_USERNAME)/grafikarsa-backend:latest" `
     --target production `
     ./apps/backend
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "✅ Backend image built" -ForegroundColor Green
+    Write-Host "[OK] Backend image built" -ForegroundColor Green
 } else {
-    Write-Host "❌ Backend build failed" -ForegroundColor Red
+    Write-Host "[ERROR] Backend build failed" -ForegroundColor Red
     exit 1
 }
 
 # Build frontend
-Write-Host "🔨 Building frontend image..." -ForegroundColor Cyan
+Write-Host "[2/2] Building frontend image..." -ForegroundColor Cyan
 docker build `
-    -t "$env:DOCKERHUB_USERNAME/grafikarsa-web:$Version" `
-    -t "$env:DOCKERHUB_USERNAME/grafikarsa-web:latest" `
+    -t "$($env:DOCKERHUB_USERNAME)/grafikarsa-web:$Version" `
+    -t "$($env:DOCKERHUB_USERNAME)/grafikarsa-web:latest" `
     --target production `
-    --build-arg NEXT_PUBLIC_API_URL=$env:NEXT_PUBLIC_API_URL `
-    --build-arg NEXT_PUBLIC_APP_URL=$env:NEXT_PUBLIC_APP_URL `
+    --build-arg NEXT_PUBLIC_API_URL="$($env:NEXT_PUBLIC_API_URL)" `
+    --build-arg NEXT_PUBLIC_APP_URL="$($env:NEXT_PUBLIC_APP_URL)" `
     ./apps/web
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "✅ Frontend image built" -ForegroundColor Green
+    Write-Host "[OK] Frontend image built" -ForegroundColor Green
 } else {
-    Write-Host "❌ Frontend build failed" -ForegroundColor Red
+    Write-Host "[ERROR] Frontend build failed" -ForegroundColor Red
     exit 1
 }
 
 Write-Host ""
-Write-Host "✅ All images built successfully!" -ForegroundColor Green
+Write-Host "SUCCESS: All images built successfully!" -ForegroundColor Green
 Write-Host ""
-Write-Host "📝 Next steps:" -ForegroundColor Cyan
+Write-Host "Next steps:" -ForegroundColor Cyan
 Write-Host "   - Test images:  docker compose -f docker-compose.prod.yml up"
 Write-Host "   - Push images:  .\scripts\push.ps1 $Version"
 Write-Host ""

@@ -26,6 +26,67 @@ Panduan **lengkap step-by-step** untuk deploy Grafikarsa ke LXC container Ubuntu
 
 ---
 
+## 📋 Arsitektur Deployment
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        CLOUDFLARE                                │
+│   grafikarsa.com ──► api.grafikarsa.com ──► storage.grafikarsa.com│
+└───────────────────────────┬─────────────────────────────────────┘
+                            │ (HTTPS - Proxied)
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    PROXMOX HOST (NAT)                            │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │              LXC CONTAINER (Ubuntu 22.04)                  │  │
+│  │  ┌─────────────────────────────────────────────────────┐  │  │
+│  │  │              NGINX (Reverse Proxy Port 80)           │  │  │
+│  │  │   /           → grafikarsa-web:3000                 │  │  │
+│  │  │   api.        → grafikarsa-backend:8080             │  │  │
+│  │  │   storage.    → grafikarsa-minio:9000               │  │  │
+│  │  └─────────────────────────────────────────────────────┘  │  │
+│  │                          │                                 │  │
+│  │  ┌───────────────────────┴───────────────────────────┐    │  │
+│  │  │               DOCKER CONTAINERS                    │    │  │
+│  │  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────┐  │    │  │
+│  │  │  │  Web     │ │ Backend  │ │ Postgres │ │MinIO │  │    │  │
+│  │  │  │  :3000   │ │  :8080   │ │  :5432   │ │:9000 │  │    │  │
+│  │  │  └──────────┘ └──────────┘ └──────────┘ └──────┘  │    │  │
+│  │  └───────────────────────────────────────────────────┘    │  │
+│  └───────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Step 0: Pembuatan LXC Container (CLI)
+
+Jika kamu ingin membuat container via command line di host Proxmox:
+
+```bash
+# Login ke Proxmox host via SSH
+
+# Buat container Ubuntu 22.04
+# Ganti ID 100, storage local-lvm, dan password sesuai keinginan
+pct create 100 local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst \
+  --hostname grafikarsa \
+  --memory 4096 \
+  --cores 2 \
+  --rootfs local-lvm:20 \
+  --net0 name=eth0,bridge=vmbr0,ip=dhcp \
+  --password \
+  --unprivileged 1 \
+  --features nesting=1,keyctl=1
+
+# Jalankan container
+pct start 100
+
+# Masuk ke shell container
+pct enter 100
+```
+
+---
+
 ## Step 1: Konfigurasi LXC Container
 
 ### ⚠️ Enable Nesting (WAJIB)
@@ -275,6 +336,38 @@ IMAGE_TAG=latest
 
 ---
 
+## Step 5.5: Deploy Pertama Kali (Manual)
+
+Jika CI/CD belum siap, kamu bisa melakukan push image pertama kali dari komputer lokal kamu.
+
+### 5.5.1 Login ke Docker Hub (Lokal)
+```bash
+docker login
+```
+
+### 5.5.2 Build & Push (Lokal)
+Gunakan script build yang sudah disediakan di folder `scripts/`:
+
+**Windows (PowerShell):**
+```powershell
+.\scripts\build.ps1 -Version "1.0.0"
+.\scripts\push.ps1 -Version "1.0.0"
+```
+
+**Linux/macOS (Bash):**
+```bash
+./scripts/build.sh 1.0.0
+./scripts/push.sh 1.0.0
+```
+
+### 5.5.3 Copy Database Schema ke LXC
+```bash
+# Ganti HOST_IP dan port SSH yang sesuai
+scp -P 22 db/db.sql deploy@HOST_IP:/opt/grafikarsa/db/
+```
+
+---
+
 ## Step 6: Start Services
 
 ```bash
@@ -428,16 +521,36 @@ sudo systemctl reload nginx
 | A | `api` | `SERVER_IP` | ☁️ Proxied |
 | A | `storage` | `SERVER_IP` | ☁️ Proxied |
 
-### 8.3 Port Forwarding (jika LXC di belakang NAT)
+### 8.3 Port Forwarding & NAT (Jika LXC di belakang Proxmox Host)
 
-Pada host Proxmox, forward port 80 dan 443 ke LXC:
+Jika LXC container kamu menggunakan IP private (misal `192.168.1.100`), kamu harus melakukan port forwarding di **Host Proxmox** agar trafik domain dari Internet bisa sampai ke LXC.
+
+#### 8.3.1 Forward Port 80 & 443 (HTTP/HTTPS)
+
+Jalankan ini di **Host Proxmox** (bukan di dalam LXC):
 
 ```bash
-# Di host Proxmox (ganti LXC_IP dengan IP internal LXC)
-iptables -t nat -A PREROUTING -i vmbr0 -p tcp --dport 80 -j DNAT --to LXC_IP:80
-iptables -t nat -A PREROUTING -i vmbr0 -p tcp --dport 443 -j DNAT --to LXC_IP:443
+# Ganti 192.168.1.100 dengan IP private LXC kamu
+LXC_IP="192.168.1.100"
 
-# Persist rules
+# Forward HTTP (80)
+iptables -t nat -A PREROUTING -i vmbr0 -p tcp --dport 80 -j DNAT --to $LXC_IP:80
+
+# Forward HTTPS (443)
+iptables -t nat -A PREROUTING -i vmbr0 -p tcp --dport 443 -j DNAT --to $LXC_IP:443
+
+# Forward SSH (opsional, misal ke port 2222 agar tidak bentrok dengan host)
+iptables -t nat -A PREROUTING -i vmbr0 -p tcp --dport 2222 -j DNAT --to $LXC_IP:22
+
+# Masquerade (agar LXC bisa akses Internet keluar)
+iptables -t nat -A POSTROUTING -s $LXC_IP -j MASQUERADE
+```
+
+#### 8.3.2 Persist Iptables
+
+Agar rules tidak hilang saat Proxmox reboot:
+
+```bash
 apt install -y iptables-persistent
 netfilter-persistent save
 ```
