@@ -50,6 +50,7 @@ jobs:
             NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
             NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}
             NEXT_PUBLIC_STORAGE_URL=${{ secrets.NEXT_PUBLIC_STORAGE_URL }}
+            NEXT_PUBLIC_MAINTENANCE_MODE=${{ secrets.NEXT_PUBLIC_MAINTENANCE_MODE }}
           cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-web:latest
           cache-to: type=inline
       
@@ -61,14 +62,16 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            # Ensure the deploy directory exists and user has ownership
-            # We use sudo to fix any permissions changed by Docker volumes
-            sudo chown -R ${{ secrets.SSH_USERNAME }}:${{ secrets.SSH_USERNAME }} /opt/grafikarsa || true
+            # Ensure the deploy directory exists
             mkdir -p /opt/grafikarsa
             
-            # Remove old config files to prevent scp/tar conflicts
-            rm -f /opt/grafikarsa/docker-compose.deploy.yml
-            rm -rf /opt/grafikarsa/db
+            # Remove old config files/db directory
+            # We use sudo here because Docker volumes might have created root-owned files
+            sudo rm -f /opt/grafikarsa/docker-compose.deploy.yml
+            sudo rm -rf /opt/grafikarsa/db
+            
+            # Ensure user ownership for scp step
+            sudo chown -R ${{ secrets.SSH_USERNAME }}:${{ secrets.SSH_USERNAME }} /opt/grafikarsa
 
       - name: Copy config files to server
         uses: appleboy/scp-action@v0.1.7
