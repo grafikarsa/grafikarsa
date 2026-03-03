@@ -586,6 +586,7 @@ Di GitHub repo → **Settings** → **Secrets and variables** → **Actions**:
 | `SSH_PRIVATE_KEY` | Private key SSH |
 | `NEXT_PUBLIC_API_URL` | `https://api.grafikarsa.com/api/v1` |
 | `NEXT_PUBLIC_APP_URL` | `https://grafikarsa.com` |
+| `NEXT_PUBLIC_STORAGE_URL` | `https://storage.grafikarsa.com/grafikarsa` |
 
 ### 9.2 Port Forwarding SSH (jika LXC di belakang NAT)
 

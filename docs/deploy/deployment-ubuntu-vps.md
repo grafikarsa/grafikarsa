@@ -418,6 +418,7 @@ Di GitHub repo → **Settings** → **Secrets and variables** → **Actions** �
 | `SSH_PRIVATE_KEY` | Isi dari `~/.ssh/id_ed25519` (private key) |
 | `NEXT_PUBLIC_API_URL` | `https://api.grafikarsa.com/api/v1` |
 | `NEXT_PUBLIC_APP_URL` | `https://grafikarsa.com` |
+| `NEXT_PUBLIC_STORAGE_URL` | `https://storage.grafikarsa.com/grafikarsa` |
 
 ### 8.2 Generate SSH Key untuk deploy
 

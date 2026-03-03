@@ -49,8 +49,19 @@ jobs:
           build-args: |
             NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
             NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}
+            NEXT_PUBLIC_STORAGE_URL=${{ secrets.NEXT_PUBLIC_STORAGE_URL }}
           cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-web:latest
           cache-to: type=inline
+      
+      - name: Copy config files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          source: "docker-compose.deploy.yml,db/"
+          target: "/opt/grafikarsa"
       
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.2.0
@@ -61,12 +72,30 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             cd /opt/grafikarsa
+            echo "Starting deployment of version ${{ github.sha }}..."
+            
+            # Export variables for docker-compose
             export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
-            export IMAGE_TAG=latest
+            export IMAGE_TAG=${{ github.sha }}
+            
+            # Pull specific version and update
             docker compose -f docker-compose.deploy.yml pull
             docker compose -f docker-compose.deploy.yml up -d
+            
+            # Cleanup old images
             docker image prune -f
-            echo "✅ Deployment complete!"
+            
+            # Basic Health Check
+            echo "Checking health..."
+            sleep 10
+            if curl -s --fail http://localhost:8080/health > /dev/null; then
+              echo "✅ Backend is UP"
+            else
+              echo "❌ Backend HEALTH CHECK FAILED!"
+              exit 1
+            fi
+            
+            echo "✅ Deployment version ${{ github.sha }} complete!"
       
       - name: Notify deployment status
         if: always()
