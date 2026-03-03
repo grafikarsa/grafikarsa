@@ -6,6 +6,7 @@ import { AuthProvider } from '@/components/providers/auth-provider';
 import { DMProvider } from '@/components/providers/dm-provider';
 import { Toaster } from '@/components/ui/sonner';
 import { FeedbackButton } from '@/components/layout/feedback-button';
+import { MaintenancePage } from '@/components/maintenance/maintenance-page';
 
 const inter = Inter({
   variable: '--font-sans',
@@ -45,6 +46,18 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const isMaintenanceMode = process.env.NEXT_PUBLIC_MAINTENANCE_MODE === 'true';
+
+  if (isMaintenanceMode) {
+    return (
+      <html lang="id" suppressHydrationWarning>
+        <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
+          <MaintenancePage />
+        </body>
+      </html>
+    );
+  }
+
   return (
     <html lang="id" suppressHydrationWarning>
       <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
