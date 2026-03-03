@@ -1,0 +1,86 @@
+# ==============================================
+# GRAFIKARSA MONOREPO - DEVELOPMENT
+# ==============================================
+# Backend services: DB + MinIO + Backend (hot reload)
+# Web: run separately with `npm run dev` (see Makefile)
+#
+# Usage: make dev
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: grafikarsa-db-dev
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - grafikarsa-network
+
+  # MinIO Object Storage
+  minio:
+    image: minio/minio:latest
+    container_name: grafikarsa-minio-dev
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - grafikarsa-network
+
+  # Go Backend API (with Air hot-reload)
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: grafikarsa-backend-dev
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file: .env
+    environment:
+      # Override DB_HOST to use Docker network hostname
+      - DB_HOST=db
+      - MINIO_ENDPOINT=minio:9000
+    volumes:
+      - ./apps/backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - grafikarsa-network
+
+volumes:
+  postgres_data:
+  minio_data:
+
+networks:
+  grafikarsa-network:
+    driver: bridge

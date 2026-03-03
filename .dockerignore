@@ -1,0 +1,40 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+docs/
+MIGRATION.md
+
+# CI/CD
+.github/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Backups
+*.sql
+*.tar.gz
+*.zip
+
+# SSH Keys
+*.pem
+*.key
+github_deploy*

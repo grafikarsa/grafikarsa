@@ -1,0 +1,78 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      - name: Build and push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./apps/backend
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-backend:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-backend:${{ github.sha }}
+          target: production
+          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-backend:latest
+          cache-to: type=inline
+      
+      - name: Build and push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./apps/web
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-web:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-web:${{ github.sha }}
+          target: production
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}
+          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-web:latest
+          cache-to: type=inline
+      
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd /opt/grafikarsa
+            export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
+            export IMAGE_TAG=latest
+            docker compose -f docker-compose.deploy.yml pull
+            docker compose -f docker-compose.deploy.yml up -d
+            docker image prune -f
+            echo "✅ Deployment complete!"
+      
+      - name: Notify deployment status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Deployment successful!"
+          else
+            echo "❌ Deployment failed!"
+          fi

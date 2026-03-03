@@ -1,0 +1,40 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+README.md
+LICENSE
+
+# Environment
+.env
+.env.*
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Build artifacts
+main
+*.exe
+*.test
+*.out
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go
+vendor/
+go.work

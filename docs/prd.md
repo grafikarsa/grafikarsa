@@ -1,0 +1,344 @@
+Nama: Grafikarsa  
+Deskripsi: Platform Katalog Portofolio & Social Network Warga SMKN 4 Malang
+
+Fitur & Alur Berdasarkan Pengguna:
+
+- Guest/Web Visitor:  
+  - dapat mengunjungi web dan akan diarahkan ke landing page (halaman beranda) yang berisi  
+    - navbar, dengan isi:  
+      - logo grafikarsa  
+      - menu beranda  
+      - menu siswa  
+      - menu portofolio siswa  
+      - theme toggle  
+      - tombol login (untuk user)  
+    - pada halaman beranda berisi sections:  
+      - hero section:  
+        - heading: Temukan Karya Terbaik Warga SMKN 4 Malang  
+        - subheading: Jelajahi portofolio siswa & alumni, dan lihat bagaimana mereka berkarya hari ini\!  
+        - cta button (2):  
+          - Jelajahi Portofolio  
+          - Login  
+      - about section:  
+        - heading: Tentang Grafikarsa  
+        - subheading: Platform untuk menampilkan portofolio dan membangun jaringan komunitas warga SMKN 4 Malang  
+        - grid (6 poin):  
+          - Temukan Karya Kreatif: “Jelajahi portofolio siswa dan alumni yang unik dan inspiratif.”  
+          - Buat Portofolio Sendiri: “Unggah karya dengan mudah dan tampilkan gaya kreatifmu.”  
+          - Terhubung dengan Komunitas: “Ikuti teman, alumni, dan temukan kreator lain di sekolahmu.”  
+          - Konten Modular: “Tambahkan teks, gambar, video, dan blok interaktif untuk portofoliomu.”  
+          - Feed & Explore Inspiratif: “Pantau karya terbaru dan temukan inspirasi setiap hari.”  
+          - Ekspresikan Dirimu: “Tampilkan bakat, minat, dan karya terbaikmu dengan cara yang unik.”  
+      - FAQ section  
+      - Footer  
+    - pada halaman siswa berisi:  
+      - heading: Siswa & Alumni SMKN 4 Malang  
+      - Searchbox untuk cari profil user berdasarkan nama,username,  kelas, jurusan, bio  
+      - filter berdasarkan jurusan, kelas, role  
+      - list card semua user grafikarsa, tampilan card profil usernya berisi:  
+        - avatar/photo profile  
+        - nama  
+        - username  
+        - kelas  
+        - role  
+      - jika salah satu card profil diklik maka akan diarahkan ke halaman detail profil user yang berisi:  
+        - banner  
+        - avatar/photo profile  
+        - nama  
+        - username  
+        - jurusan  
+        - kelas  
+        - role  
+        - tahun masuk  
+        - tahun lulus  
+        - histori kelas  
+        - jumlah follower (jika dipencet maka akan menampilkan modal/popup yang berisi list follower, dengan search bar)  
+        - jumlah following (jika dipencet maka akan menampilkan modal/popup yang berisi list following, dengan search bar)  
+        - tombol follow  
+        - tombol social link  
+        - hanya menampilkan portofolio dengan status published (portofolio draft/pending_review/rejected/archived tidak tampil)  
+        - list card portofolio user, dengan tampilan card portofolio berisi:  
+          - thumbnail  
+          - judul  
+          - pemilik/pembuat portofolio  
+          - tanggal portofolio di publish  
+        - jika card portofolio dipencet maka akan mengarah ke halaman detail portofolio yang berisi:  
+          - judul  
+          - thumbnail  
+          - pembuat portofolio  
+            - nama pembuat  
+            - avatar/photo profil pembuat  
+            - role pembuat  
+            - username pembuat  
+            - kelas pembuat  
+          - tanggal dibuat  
+          - tanggal terakhir diubah  
+          - tags  
+          - content blocks  
+          - tombol like  
+          - tombol share  
+    - pada halaman portofolio siswa berisi:  
+      - heading: Katalog Portofolio Siswa SMKN 4 Malang  
+      - search box untuk cari portofolio siswa berdasarkan nama portofolio, nama user  
+      - filer bedasarkan tags, jurusan pembuat portofolio, kelas pembuat portofolio  
+      - hanya menampilkan portofolio dengan status published (portofolio draft/pending_review/rejected/archived tidak tampil)  
+      - list card portofolio user yang memiliki tampilan yang berisi:  
+        - thumbnail  
+        - judul  
+        - pemilik/pembuat portofolio  
+        - tanggal portofolio di publish  
+      - jika card portofolio dipencet maka akan mengarah ke halaman detail portofolio yang berisi:  
+        - judul  
+        - thumbnail  
+        - pembuat portofolio  
+          - nama pembuat  
+          - avatar/photo profil pembuat  
+          - role pembuat  
+          - username pembuat  
+          - kelas pembuat  
+        - tanggal dibuat  
+        - tanggal terakhir diubah  
+        - tags  
+        - content blocks  
+        - tombol like  
+        - tombol share  
+- admin:  
+  - admin login lewat url khusus yang dapat dikelola secara hardcode (https://grafikarsa.com/admin/{{configureable-hardcoded-path}}).
+
+  contoh: https://grafikarsa.com/admin/loginadmin
+
+- admin login dengan username dan password. jika valid maka akan diarahkan ke halaman panel admin  
+- Panel Admin:  
+  - dashboard admin berisi  
+  - Kelola Jurusan (CRUD):  
+    - Nama jurusan (contoh: Rekayasa Perangkat Lunak)  
+    - Kode Jurusan (contoh: rpl. (akan otomatis lowescase  db, hanya boleh berupa huruf saja)  
+  - Kelola Tahun Ajaran (CRUD):  
+    - Tahun Mulai (misal: 2025\.  integer)  
+    - is\_active (boolean. hanya boleh satu tahun ajaran baru aja yang statusnya aktif, dipakai buat auto-assign kelas saat pembuatan kelas baru & promosi kelas)  
+    - promotion\_month (bulan naik kelas otomatis. auto promotion/kenaikan kelas siswa akan ditangani oleh cronjob)  
+    - promotion\_day (bulan naik kelas otomatis. auto promotion/kenaikan kelas siswa akan ditangani oleh cronjob)  
+  - Kelola Kelas:  
+    - tahun\_ajaran\_id (fk ke table tahun ajaran. Biar tau kelas itu milik tahun apa. Tanpa FK ke tahun ajaran, promosi otomatis MUSTAHIL).  
+      - Sistem harus ambil kelas milik tahun ajaran aktif, lalu bikin kelas baru untuk tahun berikutnya.  
+      - Kalau kelas nggak punya FK ke tahun ajaran, sistem nggak tau:  
+        - kelas mana saja yang aktif tahun ini  
+        - kelas mana yang harus dipromosikan  
+        - kelas mana yang sudah lewat  
+        - kelas mana yang bakal ke tingkat berikutnya  
+        - FK ini wajib banget demi promosi kelas otomatis.  
+      - Untuk histori/riwayat kelas siswa. Setiap tahun, siswa pindah kelas, tapi riwayat nggak boleh hilang. Ini penting buat portofolio, cetak rapor, alumni, dsb.  
+    - jurusan\_id (fk ke table jurusan)  
+    - tingkat (10 / 11 / 12\)  
+    - rombel → (A / B / C / D / …, A \- Z. hanya boleh satu karakter huruf)  
+    - Nama kelas: dibuat otomatis dengan nggabungin tiga bagian: tingkat (yang dikonversi ke angka Romawi, huruf besar), kode jurusan (di ubah ke huruf besar), dan rombel (A/B/C/…, huruf besar), lalu disimpan saat admin membuat atau mengedit kelas.  
+  - Kelola Tags (CRUD) (tags ini bisa di assignkan ke portofolio):  
+    - nama tags  
+  - Kelola User:  
+    - nama  
+    - username  
+    - email  
+    - password  
+    - avatar  
+    - bio  
+    - banner  
+    - social profile link:  
+      - facebook  
+      - instagram  
+      - github  
+      - linkedin  
+      - twitter  
+      - personal website  
+      - tiktok  
+      - youtube  
+      - behance  
+      - dribbble  
+      - threads  
+      - bluesky  
+      - medium  
+      - gitlab  
+    - role (dropdown: student, admin, alumni (alumni ini ngga ada fitur yang beda sama siswa, cuman beda nama role aja). default: student)  
+    - jika role \= student maka akan ada input field tambahan yakni:  
+      - nisn (must be a number. misal: 0098115881\) (\*opsional)  
+      - nis (misal: 25491/02000.0411) (\*opsional)  
+      - kelas (/kelas\_id) (milih dari kelas yang ada. fk ke table kelas)  
+      - tahun masuk (misal: 2024\)  
+  - Kelola Portfolio User (CRUD):  
+    - pilih pemilik portfolio (user\_id)  
+    - judul (slug akan terisi otomatis berdasarkan judul yang telah dibersihkan)  
+    - thumbnail  
+    - status (draft, pending_review, rejected, published, archived)  
+      - status draft → hanya bisa dilihat owner dan superadmin, belum dikirim untuk moderasi  
+      - status pending_review → user sudah submit portofolio, menunggu moderasi admin, tidak tampil di publik  
+      - status rejected → portofolio ditolak admin, tidak tampil di publik (hanya owner & admin yang bisa melihat)  
+      - status published → portofolio disetujui admin dan tampil di publik (feed, explore, profil, katalog, dsb.)  
+      - status archived → portofolio disembunyikan dari publik oleh owner atau admin, namun data tetap tersimpan dan masih bisa diubah statusnya lagi  
+    - catatan review admin (opsional; alasan penolakan atau feedback singkat, hanya terlihat oleh owner & admin)  
+    - pilih tags (bisa banyak. dari table tags)  
+    - waktu dibuat dan waktu terakhir diedit terekam secara otomatis  
+    - modular content blocks (bisa drag and drop order block agar mudah diatur dan mudah digunakan):  
+
+      - setiap portofolio bisa punya banyak blok konten  
+      - blok konten bisa bertipe:  
+        - text → rich-text / paragraf  
+        - image → gambar dengan caption  
+        - table → tabel dengan header & row  
+        - youtube → video youtube  
+        - button → tombol custom (nama & link redirect)  
+        - embed → iframe / kode embed custom  
+      - urutan blok disimpan di field order (integer)  
+      - isi konten tiap blok disimpan di field payload (JSON) sesuai tipe blok  
+      - frontend menampilkan blok sesuai urutan order  
+      - setiap blok menyimpan waktu dibuat dan terakhir diedit  
+  - Moderasi Portofolio:  
+    - halaman khusus di panel admin untuk memoderasi portofolio dengan status pending_review  
+    - menampilkan daftar portofolio pending_review (judul, pemilik, jurusan, kelas, tanggal pengajuan, status saat ini)  
+    - admin dapat membuka detail portofolio untuk melihat isi lengkap (content blocks) sebelum mengambil keputusan  
+    - tindakan yang tersedia untuk setiap portofolio:  
+      - Setujui → mengubah status menjadi published (portofolio langsung tampil di publik)  
+      - Tolak → mengubah status menjadi rejected  
+    - pencarian & filter: berdasarkan judul, pemilik, jurusan, tanggal pengajuan, dll.  
+- User (student & alumni):  
+
+- (*tidak ada perbedaan eksplisit untuk fiturnya student dan alumni, cuman beda nama rolenya aja)  
+- Catatan visibilitas portofolio:  
+  - portofolio dengan status published → tampil di semua halaman publik (guest & user lain: halaman siswa, portofolio siswa, feed, explore, profil user lain, dsb.)  
+  - portofolio dengan status draft, pending_review, rejected, archived → tidak tampil di halaman publik dan hanya dapat diakses oleh owner (dan admin) di halaman yang relevan  
+- user login di halaman login dengan menginputkan kredensialnya (telah dibuatkan oleh admin)  
+
+- tidak ada sistem register mandiri karena semua akun dan kredensial user dibuatkan oleh admin  
+- jika login berhasil maka user tetap berada di url yang sama yakni di baseurl (misal: [grafikarsa.com](http://grafikarsa.com)) namun komponen komponen halaman guest seperti navbar guest dan halaman landing page guest diganti/ di swap dengan komponen sidebar & header user dan komponen halaman beranda(seperti halaman timeline/beranda di twitter. menampilkan postingan portofolio terbaru dari user lain) (\*path tetap sama di baseurl (grafikarsa.com) . namun hanya komponennya yang diganti berdasarkan status login user)  
+- ada beberapa menu di sidebar user yakni:  
+  - Feed (tampilan seperti halaman timeline/feed di twitter. menampilkan postingan portofolio terbaru dari user lain yang berstatus published)  
+  - Search (cari user lain. untuk tampilannya nanti hampir sama seperti search yang ada di ig, dimana nanti kalo menunya dipencet sidebarnya bakalan muncul extended panel (bukan page) untuk cari user (bisa berdasarkan nama, bio, username, kelas, jurusan, dll))  
+
+    - dapat melihat halaman detail profil user lain  
+    - jika salah satu card profil diklik maka akan diarahkan ke halaman detail profil user yang berisi:  
+      - banner  
+      - avatar/photo profile  
+      - nama  
+      - username  
+      - jurusan  
+      - kelas  
+      - role  
+      - tahun masuk  
+      - tahun lulus  
+      - histori kelas  
+      - jumlah follower (jika dipencet maka akan menampilkan modal/popup yang berisi list follower, dengan search bar)  
+      - jumlah following (jika dipencet maka akan menampilkan modal/popup yang berisi list following, dengan search bar)  
+      - tombol follow  
+      - tombol social link  
+      - list card portofolio user, dengan tampilan card portofolio berisi:  
+        - thumbnail  
+        - judul  
+        - pemilik/pembuat portofolio  
+        - tanggal portofolio di publish  
+      - jika card portofolio dipencet maka akan mengarah ke halaman detail portofolio yang berisi:  
+        - judul  
+        - thumbnail  
+        - pembuat portofolio  
+          - nama pembuat  
+          - avatar/photo profil pembuat  
+          - role pembuat  
+          - username pembuat  
+          - kelas pembuat  
+        - tanggal dibuat  
+        - tanggal terakhir diubah  
+        - tags  
+        - content blocks  
+        - tombol like  
+        - tombol share  
+  - Explore (cari dan jelajahi portofolio user lain), berisi:  
+    - heading: Katalog Portofolio Siswa SMKN 4 Malang  
+    - search box untuk cari portofolio siswa berdasarkan nama portofolio, nama user  
+    - filer bedasarkan tags, jurusan pembuat portofolio, kelas pembuat portofolio  
+    - hanya menampilkan portofolio dengan status published (portofolio draft/pending_review/rejected/archived tidak tampil)  
+    - list card portofolio user yang memiliki tampilan yang berisi:  
+      - thumbnail  
+      - judul  
+      - pemilik/pembuat portofolio  
+      - tanggal portofolio di publish  
+    - jika card portofolio dipencet maka akan mengarah ke halaman detail portofolio yang berisi:  
+      - judul  
+      - thumbnail  
+      - pembuat portofolio  
+        - nama pembuat  
+        - avatar/photo profil pembuat  
+        - role pembuat  
+        - username pembuat  
+        - kelas pembuat  
+      - tanggal dibuat  
+      - tanggal terakhir diubah  
+      - tags  
+      - content blocks  
+      - tombol like  
+      - tombol share  
+  - Tambah Portofolio (tombol tambah ( + ). menuju ke halaman tambah portofolio)  
+    - input create portofolio:  
+      - judul (slug akan terisi otomatis berdasarkan judul yang telah dibersihkan)  
+      - thumbnail  
+        - user tidak bisa langsung mengubah status ke published; ketika user klik aksi seperti "Kirim untuk Ditinjau" atau "Ajukan Publish", status akan otomatis berubah menjadi pending_review dan menunggu keputusan admin  
+      - pilih tags (bisa banyak. dari table tags)  
+      - waktu dibuat dan waktu terakhir diedit terekam secara otomatis  
+      - modular content blocks (bisa drag and drop order block agar mudah diatur dan mudah digunakan):  
+
+        - setiap portofolio bisa punya banyak blok konten  
+        - blok konten bisa bertipe:  
+          - text → rich-text / paragraf  
+          - image → gambar dengan caption  
+          - table → tabel dengan header & row  
+          - youtube → video youtube  
+          - button → tombol custom (nama & link redirect)  
+          - embed → iframe / kode embed custom  
+        - urutan blok disimpan di field order (integer)  
+        - isi konten tiap blok disimpan di field payload (JSON) sesuai tipe blok  
+        - frontend menampilkan blok sesuai urutan order  
+        - setiap blok menyimpan waktu dibuat dan terakhir diedit  
+  - manu halaman profil user itu sendiri (me)  
+    - dimana user dapat mengklik tombol edit profil yang akan mengarahkan user ke halaman edit profil dia:  
+      - yang bisa diedit oleh user:  
+        - nama  
+        - username (cek secara otomatis tersedia atau tidak usernamenya)  
+        - foto profil/avatar  
+        - banner  
+        - bio  
+        - email  
+        - password  
+        - social profile link:  
+          - facebook  
+          - instagram  
+          - github  
+          - linkedin  
+          - twitter  
+          - personal website  
+          - tiktok  
+          - youtube  
+          - behance  
+          - dribbble  
+          - threads  
+          - bluesky  
+          - medium  
+          - gitlab  
+    - dihalaman profil user tampilannya akan ada:  
+      - banner  
+      - foto profil  
+      - nama  
+      - username  
+      - bio  
+      - kelas  
+      - jurusan  
+      - tahun masuk  
+      - tahun lulus  
+      - jumlah follower  
+      - jumlah following  
+      - social link (yang tampil tergantung user udah ngisi apa aja/yang mana):  
+      - list card portofolio user tersebut, dengan aturan:  
+        - halaman "me" (profil milik sendiri saat user login sebagai pemilik akun) menampilkan semua portofolio milik user tersebut (draft, pending_review, rejected, published, archived)  
+        - ketika profil user dilihat oleh user lain/guest, hanya portofolio berstatus published yang tampil  
+      - untuk tampilan card portofolionya ada:  
+        - thumbnail  
+        - judul  
+        - pemilik/pembuat portofolio  
+        - tanggal portofolio di publish  
+        - tombol edit portofolio (hanya tampil untuk portofolio yang dimiliki/dibuat oleh user tersebut)  
+        - tombol delete portofolio (hanya tampil untuk portofolio yang dimiliki/dibuat oleh user tersebut)

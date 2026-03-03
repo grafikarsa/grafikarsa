@@ -1,0 +1,101 @@
+# ==============================================
+# GRAFIKARSA MONOREPO - PRODUCTION SIMULATION
+# ==============================================
+# Simulates real production with built images.
+# Usage: make prod
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: grafikarsa-db-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+      - ./db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - grafikarsa-network
+
+  # MinIO Object Storage
+  minio:
+    image: minio/minio:latest
+    container_name: grafikarsa-minio-prod
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    volumes:
+      - minio_data_prod:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - grafikarsa-network
+
+  # Go Backend API (production build)
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: grafikarsa-backend-prod
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file: .env
+    environment:
+      - APP_ENV=production
+      - DB_HOST=db
+      - MINIO_ENDPOINT=minio:9000
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - grafikarsa-network
+
+  # Next.js Frontend (production build)
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+      target: production
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+        - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+    container_name: grafikarsa-web-prod
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+    depends_on:
+      - backend
+    networks:
+      - grafikarsa-network
+
+volumes:
+  postgres_data_prod:
+  minio_data_prod:
+
+networks:
+  grafikarsa-network:
+    driver: bridge
