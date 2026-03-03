@@ -48,7 +48,6 @@ const (
 type SocialPlatform string
 
 const (
-	PlatformFacebook        SocialPlatform = "facebook"
 	PlatformInstagram       SocialPlatform = "instagram"
 	PlatformGithub          SocialPlatform = "github"
 	PlatformLinkedin        SocialPlatform = "linkedin"
@@ -58,10 +57,12 @@ const (
 	PlatformYoutube         SocialPlatform = "youtube"
 	PlatformBehance         SocialPlatform = "behance"
 	PlatformDribbble        SocialPlatform = "dribbble"
-	PlatformThreads         SocialPlatform = "threads"
-	PlatformBluesky         SocialPlatform = "bluesky"
-	PlatformMedium          SocialPlatform = "medium"
-	PlatformGitlab          SocialPlatform = "gitlab"
+	// Unused/Unsupported in frontend yet
+	// PlatformFacebook        SocialPlatform = "facebook"
+	// PlatformThreads         SocialPlatform = "threads"
+	// PlatformBluesky         SocialPlatform = "bluesky"
+	// PlatformMedium          SocialPlatform = "medium"
+	// PlatformGitlab          SocialPlatform = "gitlab"
 )
 
 // JSONB type for GORM

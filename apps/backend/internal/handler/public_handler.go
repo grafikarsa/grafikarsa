@@ -123,3 +123,18 @@ func (h *PublicHandler) GetTopProjects(c *fiber.Ctx) error {
 
 	return c.JSON(dto.SuccessResponse(projects, ""))
 }
+
+func (h *PublicHandler) ListTags(c *fiber.Ctx) error {
+	search := c.Query("search")
+	tags, err := h.adminRepo.ListTags(search)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse("INTERNAL_ERROR", "Gagal mengambil data tags"))
+	}
+
+	var result []dto.TagDTO
+	for _, t := range tags {
+		result = append(result, dto.TagDTO{ID: t.ID, Nama: t.Nama})
+	}
+
+	return c.JSON(dto.SuccessResponse(result, ""))
+}

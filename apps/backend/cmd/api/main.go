@@ -77,7 +77,6 @@ func main() {
 	contentBlockHandler := handler.NewContentBlockHandler(portfolioRepo)
 	adminHandler := handler.NewAdminHandler(adminRepo, userRepo, portfolioRepo, notificationService)
 	uploadHandler := handler.NewUploadHandler(minioClient, userRepo, portfolioRepo)
-	tagHandler := handler.NewTagHandler(adminRepo)
 	publicHandler := handler.NewPublicHandler(adminRepo, userRepo)
 	feedHandler := handler.NewFeedHandler(feedRepo, feedService, interestRepo, userRepo)
 	searchHandler := handler.NewSearchHandler(userRepo, portfolioRepo)
@@ -211,7 +210,6 @@ func main() {
 	portfolioRoutes.Post("/:id/archive", authMiddleware.Required(), portfolioHandler.Archive)
 	portfolioRoutes.Post("/:id/unarchive", authMiddleware.Required(), portfolioHandler.Unarchive)
 	portfolioRoutes.Post("/:id/like", authMiddleware.Required(), portfolioHandler.Like)
-	portfolioRoutes.Post("/:id/like", authMiddleware.Required(), portfolioHandler.Like)
 	portfolioRoutes.Delete("/:id/like", authMiddleware.Required(), portfolioHandler.Unlike)
 
 	// Comment Routes (nested under portfolios)
@@ -229,7 +227,7 @@ func main() {
 	portfolioRoutes.Delete("/:portfolio_id/blocks/:block_id", authMiddleware.Required(), contentBlockHandler.Delete)
 
 	// Tags routes (public)
-	api.Get("/tags", tagHandler.List)
+	api.Get("/tags", publicHandler.ListTags)
 
 	// Public routes
 	api.Get("/jurusan", publicHandler.ListJurusan)
