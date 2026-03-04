@@ -25,14 +25,15 @@ type UploadHandler struct {
 }
 
 type PendingUpload struct {
-	ID          string
-	UserID      uuid.UUID
-	UploadType  string
-	ObjectKey   string
-	PortfolioID *uuid.UUID
-	BlockID     *uuid.UUID
-	ExpiresAt   time.Time
-	Confirmed   bool
+	ID           string
+	UserID       uuid.UUID  // User yang melakukan upload (bisa admin)
+	TargetUserID *uuid.UUID // User yang akan di-update avatar/bannernya (untuk admin)
+	UploadType   string
+	ObjectKey    string
+	PortfolioID  *uuid.UUID
+	BlockID      *uuid.UUID
+	ExpiresAt    time.Time
+	Confirmed    bool
 }
 
 var uploadLimits = map[string]int64{
@@ -124,6 +125,23 @@ func (h *UploadHandler) Presign(c *fiber.Ctx) error {
 		}
 	}
 
+	// Determine target user for avatar/banner uploads
+	targetUserID := userID // Default: user yang login
+	if req.UploadType == "avatar" || req.UploadType == "banner" {
+		// If admin is uploading for another user
+		if req.TargetUserID != nil {
+			if middleware.GetUserRole(c) != "admin" {
+				return c.Status(fiber.StatusForbidden).JSON(dto.ErrorResponse("FORBIDDEN", "Hanya admin yang bisa upload untuk user lain"))
+			}
+			// Verify target user exists
+			_, err := h.userRepo.FindByID(*req.TargetUserID)
+			if err != nil {
+				return c.Status(fiber.StatusNotFound).JSON(dto.ErrorResponse("USER_NOT_FOUND", "Target user tidak ditemukan"))
+			}
+			targetUserID = req.TargetUserID
+		}
+	}
+
 	// Generate object key
 	ext := filepath.Ext(req.Filename)
 	fileID := uuid.New().String()
@@ -131,9 +149,9 @@ func (h *UploadHandler) Presign(c *fiber.Ctx) error {
 
 	switch req.UploadType {
 	case "avatar":
-		objectKey = fmt.Sprintf("avatars/%s/%s%s", userID.String(), fileID, ext)
+		objectKey = fmt.Sprintf("avatars/%s/%s%s", targetUserID.String(), fileID, ext)
 	case "banner":
-		objectKey = fmt.Sprintf("banners/%s/%s%s", userID.String(), fileID, ext)
+		objectKey = fmt.Sprintf("banners/%s/%s%s", targetUserID.String(), fileID, ext)
 	case "thumbnail":
 		objectKey = fmt.Sprintf("thumbnails/%s/%s%s", req.PortfolioID.String(), fileID, ext)
 	case "portfolio_image":
@@ -155,13 +173,14 @@ func (h *UploadHandler) Presign(c *fiber.Ctx) error {
 	uploadID := uuid.New().String()
 	h.mu.Lock()
 	h.pendingUploads[uploadID] = &PendingUpload{
-		ID:          uploadID,
-		UserID:      *userID,
-		UploadType:  req.UploadType,
-		ObjectKey:   objectKey,
-		PortfolioID: req.PortfolioID,
-		BlockID:     req.BlockID,
-		ExpiresAt:   time.Now().Add(15 * time.Minute),
+		ID:           uploadID,
+		UserID:       *userID,
+		TargetUserID: targetUserID,
+		UploadType:   req.UploadType,
+		ObjectKey:    objectKey,
+		PortfolioID:  req.PortfolioID,
+		BlockID:      req.BlockID,
+		ExpiresAt:    time.Now().Add(15 * time.Minute),
 	}
 	h.mu.Unlock()
 
@@ -214,11 +233,21 @@ func (h *UploadHandler) Confirm(c *fiber.Ctx) error {
 	// Update database based on upload type
 	switch pending.UploadType {
 	case "avatar":
-		user, _ := h.userRepo.FindByID(*userID)
+		// Use TargetUserID if set (admin uploading for another user), otherwise use UserID
+		updateUserID := pending.UserID
+		if pending.TargetUserID != nil {
+			updateUserID = *pending.TargetUserID
+		}
+		user, _ := h.userRepo.FindByID(updateUserID)
 		user.AvatarURL = &publicURL
 		h.userRepo.Update(user)
 	case "banner":
-		user, _ := h.userRepo.FindByID(*userID)
+		// Use TargetUserID if set (admin uploading for another user), otherwise use UserID
+		updateUserID := pending.UserID
+		if pending.TargetUserID != nil {
+			updateUserID = *pending.TargetUserID
+		}
+		user, _ := h.userRepo.FindByID(updateUserID)
 		user.BannerURL = &publicURL
 		h.userRepo.Update(user)
 	case "thumbnail":

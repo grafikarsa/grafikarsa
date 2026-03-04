@@ -152,9 +152,9 @@ test-backend-cover: ## Run backend tests with coverage
 # ========================================
 clean: ## Clean up ALL Docker resources (volumes included!)
 	@echo "🧹 Cleaning up..."
-	docker compose down -v 2>/dev/null || true
-	docker compose -f docker-compose.prod.yml down -v 2>/dev/null || true
-	docker system prune -f
+	-@docker compose down -v 2>nul
+	-@docker compose -f docker-compose.prod.yml down -v 2>nul
+	@docker system prune -f
 	@echo "✅ Cleanup complete!"
 
 restart: ## Restart dev backend services

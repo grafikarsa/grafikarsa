@@ -813,6 +813,11 @@ function UserFormModal({
       setEmailStatus('idle');
       setShowPassword(false);
       if (user) {
+        console.log('Edit user modal opened:', { 
+          username: user.username, 
+          avatar_url: user.avatar_url, 
+          banner_url: user.banner_url 
+        });
         setFormData({
           nama: user.nama || '',
           username: user.username || '',
@@ -871,7 +876,8 @@ function UserFormModal({
 
     setUploadingAvatar(true);
     try {
-      const url = await uploadsApi.uploadFile(file, 'avatar');
+      // Pass user.id as targetUserId when editing existing user
+      const url = await uploadsApi.uploadFile(file, 'avatar', undefined, undefined, user?.id);
       setFormData(prev => ({ ...prev, avatar_url: url }));
       toast.success('Avatar berhasil diupload');
     } catch {
@@ -898,7 +904,8 @@ function UserFormModal({
 
     setUploadingBanner(true);
     try {
-      const url = await uploadsApi.uploadFile(file, 'banner');
+      // Pass user.id as targetUserId when editing existing user
+      const url = await uploadsApi.uploadFile(file, 'banner', undefined, undefined, user?.id);
       setFormData(prev => ({ ...prev, banner_url: url }));
       toast.success('Banner berhasil diupload');
     } catch {
@@ -1302,16 +1309,26 @@ function UserFormModal({
               {/* Banner */}
               <div className="space-y-2">
                 <Label>Banner</Label>
-                <div className="relative h-16 w-full overflow-hidden rounded-md border bg-muted">
+                <div className="relative h-32 w-full overflow-hidden rounded-md border bg-muted">
                   {formData.banner_url ? (
                     <Image
                       src={formData.banner_url}
                       alt="Banner"
                       fill
                       className="object-cover"
+                      unoptimized
+                      onError={(e) => {
+                        console.error('Banner image failed to load:', formData.banner_url);
+                        e.currentTarget.style.display = 'none';
+                      }}
                     />
                   ) : (
                     <div className="flex h-full items-center justify-center">
+                      <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                  )}
+                  {!formData.banner_url && (
+                    <div className="absolute inset-0 flex items-center justify-center">
                       <ImageIcon className="h-6 w-6 text-muted-foreground" />
                     </div>
                   )}
@@ -1348,7 +1365,14 @@ function UserFormModal({
                     </Button>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">Maks 10MB, format JPG/PNG</p>
+                <p className="text-xs text-muted-foreground">
+                  Maks 10MB, format JPG/PNG
+                  {formData.banner_url && (
+                    <span className="block text-xs text-blue-600 mt-1 truncate">
+                      URL: {formData.banner_url}
+                    </span>
+                  )}
+                </p>
               </div>
             </div>
           </div>

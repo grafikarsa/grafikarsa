@@ -179,6 +179,7 @@ export const uploadsApi = {
     file_size: number;
     portfolio_id?: string;
     block_id?: string;
+    target_user_id?: string;
   }) => {
     const response = await api.post<ApiResponse<PresignResponse>>('/uploads/presign', data);
     return response.data;
@@ -193,7 +194,8 @@ export const uploadsApi = {
     file: File,
     uploadType: 'avatar' | 'banner' | 'thumbnail' | 'portfolio_image' | 'document',
     portfolioId?: string,
-    blockId?: string
+    blockId?: string,
+    targetUserId?: string
   ): Promise<string> => {
     // 1. Get presigned URL
     const presignRes = await uploadsApi.presign({
@@ -203,6 +205,7 @@ export const uploadsApi = {
       file_size: file.size,
       portfolio_id: portfolioId,
       block_id: blockId,
+      target_user_id: targetUserId,
     });
 
     if (!presignRes.data) throw new Error('Failed to get presigned URL');

@@ -110,6 +110,7 @@ type AdminUserDTO struct {
 	Email       string      `json:"email"`
 	Nama        string      `json:"nama"`
 	AvatarURL   *string     `json:"avatar_url,omitempty"`
+	BannerURL   *string     `json:"banner_url,omitempty"`
 	Role        string      `json:"role"`
 	NISN        *string     `json:"nisn,omitempty"`
 	NIS         *string     `json:"nis,omitempty"`

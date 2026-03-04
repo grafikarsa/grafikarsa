@@ -3,12 +3,13 @@ package dto
 import "github.com/google/uuid"
 
 type PresignRequest struct {
-	UploadType  string     `json:"upload_type" validate:"required"`
-	Filename    string     `json:"filename" validate:"required"`
-	ContentType string     `json:"content_type" validate:"required"`
-	FileSize    int64      `json:"file_size" validate:"required"`
-	PortfolioID *uuid.UUID `json:"portfolio_id,omitempty"`
-	BlockID     *uuid.UUID `json:"block_id,omitempty"`
+	UploadType   string     `json:"upload_type" validate:"required"`
+	Filename     string     `json:"filename" validate:"required"`
+	ContentType  string     `json:"content_type" validate:"required"`
+	FileSize     int64      `json:"file_size" validate:"required"`
+	PortfolioID  *uuid.UUID `json:"portfolio_id,omitempty"`
+	BlockID      *uuid.UUID `json:"block_id,omitempty"`
+	TargetUserID *uuid.UUID `json:"target_user_id,omitempty"` // For admin uploading avatar/banner for other users
 }
 
 type PresignResponse struct {

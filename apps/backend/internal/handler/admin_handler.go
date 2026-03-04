@@ -751,7 +751,7 @@ func (h *AdminHandler) ListUsers(c *fiber.Ctx) error {
 	var result []dto.AdminUserDTO
 	for _, u := range users {
 		uDTO := dto.AdminUserDTO{
-			ID: u.ID, Username: u.Username, Email: u.Email, Nama: u.Nama, AvatarURL: u.AvatarURL,
+			ID: u.ID, Username: u.Username, Email: u.Email, Nama: u.Nama, AvatarURL: u.AvatarURL, BannerURL: u.BannerURL,
 			Role: string(u.Role), NISN: u.NISN, NIS: u.NIS, TahunMasuk: u.TahunMasuk, TahunLulus: u.TahunLulus,
 			IsActive: u.IsActive, LastLoginAt: u.LastLoginAt, CreatedAt: u.CreatedAt,
 		}
@@ -785,7 +785,7 @@ func (h *AdminHandler) GetUser(c *fiber.Ctx) error {
 
 	result := dto.AdminUserDetailDTO{
 		AdminUserDTO: dto.AdminUserDTO{
-			ID: user.ID, Username: user.Username, Email: user.Email, Nama: user.Nama, AvatarURL: user.AvatarURL,
+			ID: user.ID, Username: user.Username, Email: user.Email, Nama: user.Nama, AvatarURL: user.AvatarURL, BannerURL: user.BannerURL,
 			Role: string(user.Role), NISN: user.NISN, NIS: user.NIS, TahunMasuk: user.TahunMasuk, TahunLulus: user.TahunLulus,
 			IsActive: user.IsActive, LastLoginAt: user.LastLoginAt, CreatedAt: user.CreatedAt,
 		},
