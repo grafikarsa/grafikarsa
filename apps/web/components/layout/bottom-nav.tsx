@@ -39,17 +39,6 @@ export function BottomNav() {
                         <span className="text-[10px]">Home</span>
                     </Link>
 
-                    {/* <Link
-                        href="/messages"
-                        className={cn(
-                            "flex flex-col items-center gap-0.5 p-2 min-w-[56px]",
-                            isActive('/messages') ? "text-primary" : "text-muted-foreground"
-                        )}
-                    >
-                        <MessageSquare className="h-5 w-5" />
-                        <span className="text-[10px]">Pesan</span>
-                    </Link> */}
-
                     <button
                         onClick={() => setIsSearchOpen(true)}
                         className={cn(

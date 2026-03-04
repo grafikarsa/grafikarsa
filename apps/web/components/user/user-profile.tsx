@@ -163,24 +163,6 @@ export function UserProfile({ profile }: UserProfileProps) {
                   {followMutation.isPending && <Loader2 className="mr-2 h-3 w-3 animate-spin md:h-4 md:w-4" />}
                   {profile.is_following ? 'Unfollow' : 'Follow'}
                 </Button>
-                {/* <Button
-                  variant="secondary"
-                  size="sm"
-                  className="h-8 text-xs md:h-9 md:px-4 md:text-sm active:scale-95 transition-transform"
-                  onClick={async () => {
-                    // Start conversation and redirect
-                    try {
-                      const { dmApi } = await import('@/lib/api/dm');
-                      // backend version expects message content, making it optional in next step
-                      await dmApi.startConversation(profile.id, 'Halo!');
-                      window.location.href = '/messages';
-                    } catch (e) {
-                      toast.error('Gagal memulai percakapan');
-                    }
-                  }}
-                >
-                  Kirim Pesan
-                </Button> */}
               </div>
             ) : null}
           </div>

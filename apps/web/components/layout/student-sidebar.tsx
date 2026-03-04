@@ -75,7 +75,6 @@ export function StudentSidebar() {
 
   const navItems = [
     { href: '/', label: 'Feed', icon: Home, exact: true },
-    // { href: '/messages', label: 'Pesan', icon: Send },
     { href: `/${user?.username}/portfolios/new`, label: 'Buat Portofolio', icon: Plus },
   ];
 
