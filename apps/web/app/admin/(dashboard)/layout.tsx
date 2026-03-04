@@ -43,7 +43,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-neutral-50 dark:bg-neutral-900">
       <AdminSidebar />
       <div className="flex flex-1 flex-col pl-56">
         <AdminHeader />

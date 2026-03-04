@@ -13,22 +13,22 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import {
-  LayoutDashboard,
+  Home,
   Users,
-  FolderOpen,
-  ClipboardCheck,
-  GraduationCap,
-  School,
-  Calendar,
-  Tags,
-  MessageSquare,
+  Folder,
+  Gavel,
   Star,
-  BarChart3,
+  Grid3x3,
+  Tag,
   Layers,
-  Shield,
+  UserPlus,
+  Crown,
+  GraduationCap,
+  Building2,
+  CalendarDays,
+  MessageCircle,
+  FileText,
   ArrowLeft,
-  Upload,
-  History,
 } from 'lucide-react';
 import api from '@/lib/api/client';
 
@@ -61,8 +61,7 @@ const capabilityMap: Record<string, string> = {
 interface NavItem {
   href: string;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  iconColor: string;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
   exact?: boolean;
   badge?: 'pending' | 'assessment';
 }
@@ -72,46 +71,46 @@ interface NavSection {
   items: NavItem[];
 }
 
-// Navigation sections with grouped items and icon colors
+// Navigation sections with grouped items
 const navSections: NavSection[] = [
   {
     title: 'Overview',
     items: [
-      { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, iconColor: 'text-blue-500', exact: true },
+      { href: '/admin', label: 'Dashboard', icon: Home, exact: true },
     ],
   },
   {
     title: 'Konten',
     items: [
-      { href: '/admin/portfolios', label: 'Portfolios', icon: FolderOpen, iconColor: 'text-emerald-500' },
-      { href: '/admin/moderation', label: 'Moderasi', icon: ClipboardCheck, iconColor: 'text-orange-500', badge: 'pending' },
-      { href: '/admin/assessments', label: 'Penilaian', icon: Star, iconColor: 'text-yellow-500', badge: 'assessment' },
-      { href: '/admin/assessment-metrics', label: 'Metrik Penilaian', icon: BarChart3, iconColor: 'text-indigo-500' },
-      { href: '/admin/tags', label: 'Tags', icon: Tags, iconColor: 'text-pink-500' },
-      { href: '/admin/series', label: 'Series', icon: Layers, iconColor: 'text-blue-500' },
+      { href: '/admin/portfolios', label: 'Portfolios', icon: Folder },
+      { href: '/admin/moderation', label: 'Moderasi', icon: Gavel, badge: 'pending' },
+      { href: '/admin/assessments', label: 'Penilaian', icon: Star, badge: 'assessment' },
+      { href: '/admin/assessment-metrics', label: 'Metrik Penilaian', icon: Grid3x3 },
+      { href: '/admin/tags', label: 'Tags', icon: Tag },
+      { href: '/admin/series', label: 'Series', icon: Layers },
     ],
   },
   {
     title: 'Pengguna',
     items: [
-      { href: '/admin/users', label: 'Users', icon: Users, iconColor: 'text-violet-500' },
-      { href: '/admin/import', label: 'Import Siswa', icon: Upload, iconColor: 'text-green-500' },
-      { href: '/admin/special-roles', label: 'Special Roles', icon: Shield, iconColor: 'text-amber-500' },
+      { href: '/admin/users', label: 'Users', icon: Users },
+      { href: '/admin/import', label: 'Import Siswa', icon: UserPlus },
+      { href: '/admin/special-roles', label: 'Special Roles', icon: Crown },
     ],
   },
   {
     title: 'Akademik',
     items: [
-      { href: '/admin/majors', label: 'Jurusan', icon: GraduationCap, iconColor: 'text-cyan-500' },
-      { href: '/admin/classes', label: 'Kelas', icon: School, iconColor: 'text-amber-500' },
-      { href: '/admin/academic-years', label: 'Tahun Ajaran', icon: Calendar, iconColor: 'text-rose-500' },
+      { href: '/admin/majors', label: 'Jurusan', icon: GraduationCap },
+      { href: '/admin/classes', label: 'Kelas', icon: Building2 },
+      { href: '/admin/academic-years', label: 'Tahun Ajaran', icon: CalendarDays },
     ],
   },
   {
     title: 'Lainnya',
     items: [
-      { href: '/admin/feedback', label: 'Feedback', icon: MessageSquare, iconColor: 'text-teal-500' },
-      { href: '/admin/changelogs', label: 'Changelog', icon: History, iconColor: 'text-purple-500' },
+      { href: '/admin/feedback', label: 'Feedback', icon: MessageCircle },
+      { href: '/admin/changelogs', label: 'Changelog', icon: FileText },
     ],
   },
 ];
@@ -178,7 +177,7 @@ export function AdminSidebar() {
       : '/images/logos/logo_black.svg';
 
   return (
-    <aside className="fixed left-0 top-0 z-40 h-screen w-56 border-r bg-muted/40">
+    <aside className="fixed left-0 top-0 z-40 h-screen w-56 border-r bg-white dark:bg-neutral-950">
       <div className="flex h-full flex-col">
         {/* Logo/Brand */}
         <div className="flex h-14 items-center gap-2.5 border-b bg-background/50 px-4">
@@ -211,8 +210,8 @@ export function AdminSidebar() {
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-2 py-3">
           {filteredSections.map((section, sectionIndex) => (
-            <div key={section.title} className={cn(sectionIndex > 0 && 'mt-4')}>
-              <h2 className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <div key={section.title} className={cn(sectionIndex > 0 && 'mt-7')}>
+              <h2 className="mb-2 px-2 text-[10px] font-medium uppercase tracking-wider text-neutral-400">
                 {section.title}
               </h2>
               <div className="space-y-0.5">
@@ -226,13 +225,13 @@ export function AdminSidebar() {
                       key={item.href}
                       href={item.href}
                       className={cn(
-                        'group flex items-center gap-2.5 rounded-md px-2 py-1.5 text-xs font-medium transition-all',
+                        'group flex items-center gap-3 rounded-md px-2 py-1.5 text-sm font-medium transition-all',
                         active
-                          ? 'bg-muted text-foreground'
-                          : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                          ? 'bg-muted text-black dark:text-white'
+                          : 'text-neutral-500 hover:bg-muted/60 hover:text-neutral-700 dark:hover:text-neutral-300'
                       )}
                     >
-                      <Icon className={cn('h-4 w-4 flex-shrink-0', item.iconColor)} />
+                      <Icon className="h-[18px] w-[18px] flex-shrink-0" strokeWidth={1.5} />
                       <span className="flex-1">{item.label}</span>
                       {showBadge && (
                         <Badge
