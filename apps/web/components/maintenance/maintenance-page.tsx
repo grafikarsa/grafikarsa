@@ -26,7 +26,7 @@ export function MaintenancePage() {
             }}
             className="text-balance text-2xl font-medium tracking-tight sm:text-3xl md:text-4xl text-foreground"
           >
-            Bentar ya, lagi bersih-bersih bug.
+            Masih ada perbaikan bug. <br/> Grafikarsa akan bisa diakses kembali besok
           </motion.h1>
           
           <motion.div
