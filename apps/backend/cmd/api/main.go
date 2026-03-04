@@ -83,7 +83,6 @@ func main() {
 	importHandler := handler.NewImportHandler(adminRepo, userRepo)
 	changelogHandler := handler.NewChangelogHandler(changelogRepo, notificationService, userRepo)
 	commentHandler := handler.NewCommentHandler(commentService)
-	wsHandler := handler.NewWebSocketHandler()
 
 	// Initialize auth middleware
 	authMiddleware := middleware.NewAuthMiddleware(jwtService, db)
