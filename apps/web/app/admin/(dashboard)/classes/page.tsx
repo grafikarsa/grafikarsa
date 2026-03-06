@@ -131,39 +131,71 @@ export default function AdminClassesPage() {
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Search and Action Button in same row */}
-      <div className="flex gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Cari kelas..."
-            className="pl-9"
-          />
+    <div className="flex flex-col -m-4 sm:-m-6 lg:-m-8">
+      {/* Sticky Header - Search & Actions (Full Width) */}
+      <div className="sticky top-0 z-10 bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 lg:px-8 border-b">
+        <div className="mx-auto w-full max-w-[1600px] flex gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Cari kelas..."
+              className="pl-9"
+            />
+          </div>
+          <Button variant="secondary" onClick={handleSearch}>
+            <Search className="mr-2 h-4 w-4" />
+            Cari
+          </Button>
+          <Button onClick={() => setIsCreateOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Tambah Kelas
+          </Button>
         </div>
-        <Button variant="secondary" onClick={handleSearch}>
-          <Search className="mr-2 h-4 w-4" />
-          Cari
-        </Button>
-        <Button onClick={() => setIsCreateOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Tambah Kelas
-        </Button>
       </div>
 
-      {debugMode && <DebugBanner pageName="Kelas" />}
+      {/* Content Area with proper padding */}
+      <div className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-[1600px]">
+          {debugMode && <DebugBanner pageName="Kelas" />}
 
-      <DataTable
-        data={displayClasses}
-        columns={columns}
-        isLoading={isLoading}
-        onEdit={setEditClass}
-        onDelete={setDeleteClass}
-      />
+          {displayClasses.length === 0 && !isLoading ? (
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <div className="flex flex-col items-center justify-center px-6">
+                <div className="rounded-full bg-primary/10 p-4">
+                  <Users className="h-10 w-10 text-primary" />
+                </div>
+                <h3 className="mt-6 text-xl font-semibold">
+                  {searchQuery ? 'Tidak ada kelas yang sesuai' : 'Belum ada kelas'}
+                </h3>
+                <p className="mt-2 text-sm text-muted-foreground text-center max-w-sm">
+                  {searchQuery
+                    ? 'Coba ubah kata kunci pencarian untuk menemukan kelas yang Anda cari.'
+                    : 'Kelas/rombongan belajar digunakan untuk mengelompokkan siswa. Buat kelas pertama untuk mulai mengelola siswa berdasarkan tingkat dan jurusan.'}
+                </p>
+                {!searchQuery && (
+                  <Button onClick={() => setIsCreateOpen(true)} className="mt-6">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Buat Kelas Pertama
+                  </Button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <DataTable
+              data={displayClasses}
+              columns={columns}
+              isLoading={isLoading}
+              onEdit={setEditClass}
+              onDelete={setDeleteClass}
+            />
+          )}
+        </div>
+      </div>
 
+      {/* Modals - Outside scrollable area */}
       {/* Form Dialog */}
       <ClassFormDialog
         kelas={editClass}
