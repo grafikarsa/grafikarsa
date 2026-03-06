@@ -238,11 +238,13 @@ export default function AdminAssessmentsPage() {
                 <div className="rounded-full bg-primary/10 p-4">
                   <ClipboardList className="h-10 w-10 text-primary" />
                 </div>
-                <h3 className="mt-6 text-xl font-semibold">Tidak Ada Portfolio</h3>
-                <p className="mt-2 text-sm text-muted-foreground text-center max-w-sm">
+                <h3 className="mt-6 text-xl font-semibold">
+                  {search || filter !== 'all' ? 'Tidak ada portfolio yang sesuai' : 'Belum ada portfolio untuk dinilai'}
+                </h3>
+                <p className="mt-2 text-sm text-muted-foreground text-center max-w-md">
                   {search || filter !== 'all'
-                    ? 'Tidak ada portfolio yang sesuai dengan filter pencarian Anda.'
-                    : 'Belum ada portfolio yang dipublish untuk dinilai.'}
+                    ? 'Coba ubah filter atau kata kunci pencarian untuk menemukan portfolio yang Anda cari.'
+                    : 'Portfolio yang sudah dipublish akan muncul di sini untuk dinilai. Tunggu hingga ada portfolio baru yang dipublish oleh siswa.'}
                 </p>
               </div>
             </div>
