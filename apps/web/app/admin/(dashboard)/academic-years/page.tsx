@@ -130,37 +130,63 @@ export default function AdminAcademicYearsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Action Button */}
-      <div className="flex justify-end">
-        <Button onClick={() => setIsCreateOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Tambah Tahun Ajaran
-        </Button>
+    <div className="flex flex-col -m-4 sm:-m-6 lg:-m-8">
+      {/* Sticky Header - Actions (Full Width) */}
+      <div className="sticky top-0 z-10 bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 lg:px-8 border-b">
+        <div className="mx-auto w-full max-w-[1600px] flex justify-end">
+          <Button onClick={() => setIsCreateOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Tambah Tahun Ajaran
+          </Button>
+        </div>
       </div>
 
-      {debugMode && <DebugBanner pageName="Tahun Ajaran" />}
+      {/* Content Area with proper padding */}
+      <div className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-[1600px]">
+          {debugMode && <DebugBanner pageName="Tahun Ajaran" />}
 
-      <DataTable
-        data={displayYears}
-        columns={columns}
-        isLoading={isLoading}
-        onEdit={setEditYear}
-        onDelete={handleDelete}
-        actions={(year) =>
-          !year.is_active ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setActiveMutation.mutate(year.id)}
-              disabled={setActiveMutation.isPending}
-            >
-              Set Aktif
-            </Button>
-          ) : null
-        }
-      />
+          {displayYears.length === 0 && !isLoading ? (
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <div className="flex flex-col items-center justify-center px-6">
+                <div className="rounded-full bg-primary/10 p-4">
+                  <Calendar className="h-10 w-10 text-primary" />
+                </div>
+                <h3 className="mt-6 text-xl font-semibold">Belum ada tahun ajaran</h3>
+                <p className="mt-2 text-sm text-muted-foreground text-center max-w-sm">
+                  Tahun ajaran digunakan untuk mengelola periode akademik dan kenaikan kelas otomatis. Buat tahun ajaran pertama untuk mulai mengelola sistem akademik.
+                </p>
+                <Button onClick={() => setIsCreateOpen(true)} className="mt-6">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Buat Tahun Ajaran Pertama
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <DataTable
+              data={displayYears}
+              columns={columns}
+              isLoading={isLoading}
+              onEdit={setEditYear}
+              onDelete={handleDelete}
+              actions={(year) =>
+                !year.is_active ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setActiveMutation.mutate(year.id)}
+                    disabled={setActiveMutation.isPending}
+                  >
+                    Set Aktif
+                  </Button>
+                ) : null
+              }
+            />
+          )}
+        </div>
+      </div>
 
+      {/* Modals - Outside scrollable area */}
       {/* Form Dialog */}
       <AcademicYearFormDialog
         year={editYear}
