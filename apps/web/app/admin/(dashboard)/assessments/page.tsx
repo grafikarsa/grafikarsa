@@ -249,7 +249,7 @@ export default function AdminAssessmentsPage() {
               </div>
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,320px))] gap-6">
               {portfolios.map((portfolio) => (
                 <PortfolioCard
                   key={portfolio.id}
@@ -328,93 +328,96 @@ function PortfolioCard({
   const hasAssessment = !!portfolio.assessment;
 
   return (
-    <Card className="overflow-hidden p-0">
-      {/* Thumbnail */}
-      <div className="aspect-video bg-muted relative overflow-hidden">
-        {portfolio.thumbnail_url ? (
-          <img
-            src={portfolio.thumbnail_url}
-            alt={portfolio.judul}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <ClipboardList className="h-12 w-12 text-muted-foreground/50" />
-          </div>
-        )}
-        {/* Score Ribbon - Bookmark style with color based on score */}
-        {hasAssessment && (
-          <div className="absolute right-3 -top-0.5">
-            <div className="relative">
-              {/* Ribbon body */}
-              <div 
-                className={cn(
-                  "px-2.5 pt-2 pb-4 shadow-lg flex flex-col items-center",
-                  (portfolio.assessment?.total_score ?? 0) < 4 
-                    ? "bg-red-500" 
-                    : (portfolio.assessment?.total_score ?? 0) <= 7 
-                      ? "bg-amber-500" 
-                      : "bg-green-500"
-                )}
-                style={{
-                  clipPath: 'polygon(0 0, 100% 0, 100% 100%, 50% 85%, 0 100%)',
-                }}
-              >
-                <Star className="h-4 w-4 text-white fill-white" />
-                <span className="text-white text-sm font-bold mt-0.5">
-                  {portfolio.assessment?.total_score?.toFixed(1) || '-'}
-                </span>
+    <Card className="group w-[320px] gap-0 overflow-hidden border py-0 transition-shadow hover:shadow-lg">
+      <div className="p-3 pb-4">
+        {/* Thumbnail */}
+        <div className="relative h-[240px] w-full overflow-hidden rounded-xl bg-muted">
+          {portfolio.thumbnail_url ? (
+            <img
+              src={portfolio.thumbnail_url}
+              alt={portfolio.judul}
+              className="h-full w-full object-cover transition-transform group-hover:scale-105"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center">
+              <ClipboardList className="h-12 w-12 text-muted-foreground/50" />
+            </div>
+          )}
+          {/* Score Ribbon - Bookmark style with color based on score */}
+          {hasAssessment && (
+            <div className="absolute right-3 -top-0.5">
+              <div className="relative">
+                {/* Ribbon body */}
+                <div 
+                  className={cn(
+                    "px-2.5 pt-2 pb-4 shadow-lg flex flex-col items-center",
+                    (portfolio.assessment?.total_score ?? 0) < 4 
+                      ? "bg-red-500" 
+                      : (portfolio.assessment?.total_score ?? 0) <= 7 
+                        ? "bg-amber-500" 
+                        : "bg-green-500"
+                  )}
+                  style={{
+                    clipPath: 'polygon(0 0, 100% 0, 100% 100%, 50% 85%, 0 100%)',
+                  }}
+                >
+                  <Star className="h-4 w-4 text-white fill-white" />
+                  <span className="text-white text-sm font-bold mt-0.5">
+                    {portfolio.assessment?.total_score?.toFixed(1) || '-'}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
 
-      {/* Content */}
-      <div className="p-3 space-y-2">
-        <h3 className="font-semibold line-clamp-1">{portfolio.judul}</h3>
-
-        {/* User Info */}
-        {portfolio.user && (
-          <div className="flex items-center gap-2">
-            <Avatar className="h-6 w-6">
-              <AvatarImage src={portfolio.user.avatar_url} />
-              <AvatarFallback className="text-xs">
-                {portfolio.user.nama?.charAt(0)}
-              </AvatarFallback>
-            </Avatar>
-            <span className="text-sm text-muted-foreground">{portfolio.user.nama}</span>
-          </div>
-        )}
-
-        {/* Assessment Status */}
-        <div className="flex items-center gap-2">
+        {/* Assessment Status Badge */}
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <div />
           {hasAssessment ? (
             <Badge 
               variant="secondary" 
-              className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-0"
+              className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-normal text-green-700 dark:bg-green-900/30 dark:text-green-400"
             >
-              <CheckCircle2 className="h-3 w-3 mr-1" />
+              <CheckCircle2 className="mr-1 h-3 w-3" />
               Sudah Dinilai
             </Badge>
           ) : (
             <Badge 
               variant="secondary" 
-              className="bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20 border-0"
+              className="rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-normal text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
             >
-              <Clock className="h-3 w-3 mr-1" />
+              <Clock className="mr-1 h-3 w-3" />
               Belum Dinilai
             </Badge>
           )}
         </div>
 
+        {/* Title */}
+        <h3 className="mt-2 line-clamp-2 font-semibold leading-tight">{portfolio.judul}</h3>
+
+        {/* User Info */}
+        {portfolio.user && (
+          <div className="mt-3 flex items-center gap-2">
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={portfolio.user.avatar_url} alt={portfolio.user.nama} />
+              <AvatarFallback className="text-xs">{portfolio.user.nama?.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col">
+              <span className="text-sm font-medium leading-tight">{portfolio.user.nama}</span>
+              <span className="text-xs text-muted-foreground">@{portfolio.user.username}</span>
+            </div>
+          </div>
+        )}
+
         {/* Actions */}
-        <div className="flex gap-2 pt-1">
+        <div className="mt-4 flex gap-2">
           <Button size="sm" className="flex-1" onClick={onAssess}>
+            <Star className="mr-1.5 h-4 w-4" />
             {hasAssessment ? 'Edit Penilaian' : 'Nilai Portfolio'}
           </Button>
           {hasAssessment && (
-            <Button size="sm" variant="outline" onClick={onDelete}>
+            <Button size="sm" variant="destructive" onClick={onDelete}>
               <X className="h-4 w-4" />
             </Button>
           )}
