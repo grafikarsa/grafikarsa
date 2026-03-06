@@ -155,7 +155,7 @@ export default function AdminPortfoliosPage() {
   const [editingPortfolio, setEditingPortfolio] = useState<PortfolioCard | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<PortfolioCard | null>(null);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isFetching } = useQuery({
     queryKey: ['admin-portfolios', debouncedSearch, status, page],
     queryFn: () =>
       adminPortfoliosApi.getPortfolios({
@@ -196,110 +196,137 @@ export default function AdminPortfoliosPage() {
   const portfolios = data?.data || [];
   const pagination = (data as { pagination?: { total_pages: number } })?.pagination;
 
-  if (isLoading) {
+  // Initial loading - show full skeleton
+  if (isLoading && !data) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-9 w-48" />
-          <Skeleton className="h-10 w-32" />
+      <div className="flex flex-col">
+        {/* Sticky Header Skeleton */}
+        <div className="sticky top-0 z-10 bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 lg:px-8 border-b">
+          <div className="mx-auto w-full max-w-[1600px] flex items-center gap-4">
+            <Skeleton className="h-10 flex-1" />
+            <Skeleton className="h-10 w-48" />
+            <Skeleton className="h-10 w-40" />
+          </div>
         </div>
-        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-          {[...Array(6)].map((_, i) => (
-            <Skeleton key={i} className="h-80" />
-          ))}
+        <div className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+          <div className="mx-auto w-full max-w-[1600px]">
+            <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+              {[...Array(6)].map((_, i) => (
+                <Skeleton key={i} className="h-80" />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Filters & Actions */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Cari judul portfolio..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
+    <div className="flex flex-col">
+      {/* Sticky Header - Filters & Actions */}
+      <div className="sticky top-0 z-10 bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 lg:px-8 border-b">
+        <div className="mx-auto w-full max-w-[1600px] flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Cari judul portfolio..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={status} onValueChange={setStatus}>
+            <SelectTrigger className="w-full sm:w-48">
+              <SelectValue placeholder="Filter status" />
+            </SelectTrigger>
+            <SelectContent>
+              {statusOptions.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button onClick={() => setShowCreateModal(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Buat Portfolio
+          </Button>
         </div>
-        <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Filter status" />
-          </SelectTrigger>
-          <SelectContent>
-            {statusOptions.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button onClick={() => setShowCreateModal(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Buat Portfolio
-        </Button>
       </div>
 
-      {portfolios.length === 0 ? (
-        <Card className="border-dashed py-16">
-          <div className="flex flex-col items-center justify-center">
-            <div className="rounded-full bg-muted p-4">
-              <FileText className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <h3 className="mt-4 text-lg font-semibold">Tidak ada portfolio</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {search || status !== 'all' ? 'Tidak ada portfolio yang sesuai' : 'Belum ada portfolio'}
-            </p>
-          </div>
-        </Card>
-      ) : (
-        <>
-          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-            {portfolios.map((portfolio) => (
-              <PortfolioCardItem
-                key={portfolio.id}
-                portfolio={portfolio}
-                onPreview={() => setSelectedPortfolio(portfolio)}
-                onEdit={() => {
-                  setEditingPortfolio(portfolio);
-                  setShowEditModal(true);
-                }}
-                onDelete={() => setDeleteTarget(portfolio)}
-                onStatusChange={(newStatus) => updateStatusMutation.mutate({ id: portfolio.id, status: newStatus as PortfolioStatus })}
-                isUpdatingStatus={updateStatusMutation.isPending}
-              />
-            ))}
-          </div>
-
-          {pagination && pagination.total_pages > 1 && (
-            <div className="flex items-center justify-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-              >
-                Previous
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                Halaman {page} dari {pagination.total_pages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.min(pagination.total_pages, p + 1))}
-                disabled={page === pagination.total_pages}
-              >
-                Next
-              </Button>
+      {/* Content Area */}
+      <div className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-[1600px] relative">
+          {/* Loading overlay - only shows during refetch */}
+          {isFetching && data && (
+            <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
+              <div className="flex items-center gap-2 bg-background border rounded-lg px-4 py-2 shadow-lg">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-sm font-medium">Memuat...</span>
+              </div>
             </div>
           )}
-        </>
-      )}
 
+          {portfolios.length === 0 ? (
+          <Card className="border-dashed py-16">
+            <div className="flex flex-col items-center justify-center">
+              <div className="rounded-full bg-muted p-4">
+                <FileText className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="mt-4 text-lg font-semibold">Tidak ada portfolio</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {search || status !== 'all' ? 'Tidak ada portfolio yang sesuai' : 'Belum ada portfolio'}
+              </p>
+            </div>
+          </Card>
+        ) : (
+          <>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,320px))] gap-6">
+              {portfolios.map((portfolio) => (
+                <PortfolioCardItem
+                  key={portfolio.id}
+                  portfolio={portfolio}
+                  onPreview={() => setSelectedPortfolio(portfolio)}
+                  onEdit={() => {
+                    setEditingPortfolio(portfolio);
+                    setShowEditModal(true);
+                  }}
+                  onDelete={() => setDeleteTarget(portfolio)}
+                  onStatusChange={(newStatus) => updateStatusMutation.mutate({ id: portfolio.id, status: newStatus as PortfolioStatus })}
+                  isUpdatingStatus={updateStatusMutation.isPending}
+                />
+              ))}
+            </div>
+
+            {pagination && pagination.total_pages > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-8">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  Previous
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Halaman {page} dari {pagination.total_pages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.min(pagination.total_pages, p + 1))}
+                  disabled={page === pagination.total_pages}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+          </>
+        )}
+        </div>
+      </div>
+
+      {/* Modals - Outside scrollable area */}
       <PreviewDialog
         portfolio={selectedPortfolio}
         detailData={detailData?.data}
@@ -364,9 +391,9 @@ function PortfolioCardItem({
   const displayDate = portfolio.published_at || portfolio.created_at;
 
   return (
-    <Card className="group gap-0 overflow-hidden border py-0 transition-shadow hover:shadow-lg">
+    <Card className="group w-[320px] gap-0 overflow-hidden border py-0 transition-shadow hover:shadow-lg">
       <div className="p-3 pb-4">
-        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-muted">
+        <div className="relative h-[240px] w-full overflow-hidden rounded-xl bg-muted">
           {portfolio.thumbnail_url ? (
             <Image src={portfolio.thumbnail_url} alt={portfolio.judul} fill className="object-cover transition-transform group-hover:scale-105" />
           ) : (
