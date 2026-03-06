@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Plus, Loader2, GraduationCap } from 'lucide-react';
+import { Plus, Loader2, GraduationCap, Search } from 'lucide-react';
 import { getDebugEmptyState } from '@/lib/utils/debug';
 import { DebugBanner } from '@/components/admin/debug-banner';
+import { useDebounce } from '@/lib/hooks/use-debounce';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -24,9 +25,12 @@ import { adminMajorsApi, Major } from '@/lib/api/admin';
 
 export default function AdminMajorsPage() {
   const queryClient = useQueryClient();
+  const [search, setSearch] = useState('');
   const [editMajor, setEditMajor] = useState<Major | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [deleteMajor, setDeleteMajor] = useState<Major | null>(null);
+  
+  const debouncedSearch = useDebounce(search, 300);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-majors'],
@@ -46,10 +50,18 @@ export default function AdminMajorsPage() {
   });
 
   const majors = data?.data || [];
+  
+  // Filter by search
+  const filteredMajors = debouncedSearch
+    ? majors.filter((m) =>
+        m.nama.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        m.kode.toLowerCase().includes(debouncedSearch.toLowerCase())
+      )
+    : majors;
 
   // Debug mode: Force empty state
   const debugMode = getDebugEmptyState();
-  const displayMajors = debugMode ? [] : majors;
+  const displayMajors = debugMode ? [] : filteredMajors;
 
   const columns: Column<Major>[] = [
     {
@@ -69,25 +81,66 @@ export default function AdminMajorsPage() {
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Action Button */}
-      <div className="flex justify-end">
-        <Button onClick={() => setIsCreateOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Tambah Jurusan
-        </Button>
+    <div className="flex flex-col -m-4 sm:-m-6 lg:-m-8">
+      {/* Sticky Header - Search & Actions (Full Width) */}
+      <div className="sticky top-0 z-10 bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 lg:px-8 border-b">
+        <div className="mx-auto w-full max-w-[1600px] flex gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Cari jurusan..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Button onClick={() => setIsCreateOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Tambah Jurusan
+          </Button>
+        </div>
       </div>
 
-      {debugMode && <DebugBanner pageName="Jurusan" />}
+      {/* Content Area with proper padding */}
+      <div className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-[1600px]">
+          {debugMode && <DebugBanner pageName="Jurusan" />}
 
-      <DataTable
-        data={displayMajors}
-        columns={columns}
-        isLoading={isLoading}
-        onEdit={setEditMajor}
-        onDelete={setDeleteMajor}
-      />
+          {displayMajors.length === 0 && !isLoading ? (
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <div className="flex flex-col items-center justify-center px-6">
+                <div className="rounded-full bg-primary/10 p-4">
+                  <GraduationCap className="h-10 w-10 text-primary" />
+                </div>
+                <h3 className="mt-6 text-xl font-semibold">
+                  {search ? 'Tidak ada jurusan yang sesuai' : 'Belum ada jurusan'}
+                </h3>
+                <p className="mt-2 text-sm text-muted-foreground text-center max-w-sm">
+                  {search
+                    ? 'Coba ubah kata kunci pencarian untuk menemukan jurusan yang Anda cari.'
+                    : 'Jurusan/kompetensi keahlian digunakan untuk mengorganisir kelas. Buat jurusan pertama untuk mulai mengelola kelas siswa.'}
+                </p>
+                {!search && (
+                  <Button onClick={() => setIsCreateOpen(true)} className="mt-6">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Buat Jurusan Pertama
+                  </Button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <DataTable
+              data={displayMajors}
+              columns={columns}
+              isLoading={isLoading}
+              onEdit={setEditMajor}
+              onDelete={setDeleteMajor}
+            />
+          )}
+        </div>
+      </div>
 
+      {/* Modals - Outside scrollable area */}
       {/* Form Dialog */}
       <MajorFormDialog
         major={editMajor}
