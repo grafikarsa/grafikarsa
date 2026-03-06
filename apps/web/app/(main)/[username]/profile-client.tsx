@@ -37,6 +37,7 @@ export function ProfileClient({ username, initialData }: ProfileClientProps) {
         queryKey: ['user', username],
         queryFn: () => usersApi.getUserByUsername(username),
         initialData: initialData ? { data: initialData, message: '', success: true } : undefined,
+        refetchOnMount: 'always', // Always refetch to get latest follow state
     });
 
     const { data: portfoliosData, isLoading: portfoliosLoading } = useQuery({
@@ -70,7 +71,7 @@ export function ProfileClient({ username, initialData }: ProfileClientProps) {
                 <h2 className="mb-6 text-xl font-semibold">Portofolio</h2>
 
                 {portfoliosLoading ? (
-                    <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,320px))] justify-center gap-6">
+                    <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,320px))] gap-6">
                         {Array.from({ length: 6 }).map((_, i) => (
                             <div key={i} className="w-[320px] space-y-3 rounded-lg border p-3">
                                 <Skeleton className="h-[240px] w-full rounded-lg" />
@@ -84,7 +85,7 @@ export function ProfileClient({ username, initialData }: ProfileClientProps) {
                         <p className="text-muted-foreground">Belum ada portofolio.</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,320px))] justify-center gap-6">
+                    <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,320px))] gap-6">
                         {portfolios.map((portfolio) => (
                             <PortfolioCard
                                 key={portfolio.id}

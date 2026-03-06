@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import { useState, useEffect, useCallback, useMemo, memo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -132,21 +132,35 @@ const statusStyles: Record<PortfolioStatus, string> = {
 };
 
 // Memoized Sticky Header Component - prevents re-render during data fetching
-// Note: This WILL re-render when search/status props change (that's correct behavior)
-// The input needs to update to show user typing
+// Uses internal state for input to prevent re-render on every keystroke
+// Debounces internally before calling parent callback
 const PortfolioFilters = memo(({
-  search,
   onSearchChange,
   status,
   onStatusChange,
   onCreateClick,
 }: {
-  search: string;
   onSearchChange: (value: string) => void;
   status: string;
   onStatusChange: (value: string) => void;
   onCreateClick: () => void;
 }) => {
+  const [localSearch, setLocalSearch] = useState('');
+  const debouncedLocalSearch = useDebounce(localSearch, 300);
+  
+  // Use ref to store callback to avoid re-render when callback changes
+  const onSearchChangeRef = useRef(onSearchChange);
+  
+  useEffect(() => {
+    onSearchChangeRef.current = onSearchChange;
+  }, [onSearchChange]);
+
+  // Notify parent when debounced value changes
+  useEffect(() => {
+    onSearchChangeRef.current(debouncedLocalSearch);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedLocalSearch]);
+
   return (
     <div className="sticky top-0 z-10 bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 lg:px-8 border-b">
       <div className="mx-auto w-full max-w-[1600px] flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -154,8 +168,8 @@ const PortfolioFilters = memo(({
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Cari judul portfolio..."
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
+            value={localSearch}
+            onChange={(e) => setLocalSearch(e.target.value)}
             className="pl-9"
           />
         </div>
@@ -198,7 +212,6 @@ export default function AdminPortfoliosPage() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [page, setPage] = useState(1);
-  const debouncedSearch = useDebounce(search, 300);
 
   const [selectedPortfolio, setSelectedPortfolio] = useState<PortfolioCard | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -209,10 +222,12 @@ export default function AdminPortfoliosPage() {
   // Memoize callbacks to prevent unnecessary re-creation
   const handleSearchChange = useCallback((value: string) => {
     setSearch(value);
+    setPage(1);
   }, []);
 
   const handleStatusChange = useCallback((value: string) => {
     setStatus(value);
+    setPage(1);
   }, []);
 
   const handleCreateClick = useCallback(() => {
@@ -220,10 +235,10 @@ export default function AdminPortfoliosPage() {
   }, []);
 
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['admin-portfolios', debouncedSearch, status, page],
+    queryKey: ['admin-portfolios', search, status, page],
     queryFn: () =>
       adminPortfoliosApi.getPortfolios({
-        search: debouncedSearch || undefined,
+        search: search || undefined,
         status: status === 'all' ? undefined : status,
         page,
         limit: 21,
@@ -260,15 +275,15 @@ export default function AdminPortfoliosPage() {
   const portfolios = data?.data || [];
   const pagination = (data as { pagination?: { total_pages: number } })?.pagination;
 
-  // Memoize content area - only re-render when actual data changes (debouncedSearch triggers query)
-  // NOT when search input changes (that only affects the input field)
+  // Memoize content area - only re-render when actual data changes (search triggers query)
+  // NOT when search input changes (that only affects the input field in PortfolioFilters)
   const contentArea = useMemo(() => {
     // Show loading overlay during refetch
     const showLoadingOverlay = isFetching && data;
 
     if (portfolios.length === 0) {
       // Different empty states based on context
-      const hasFilters = debouncedSearch || status !== 'all';
+      const hasFilters = search || status !== 'all';
       
       return (
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -351,9 +366,9 @@ export default function AdminPortfoliosPage() {
         )}
       </>
     );
-    // Note: 'search' is intentionally NOT in dependencies - only debouncedSearch matters for data
+    // Note: 'search' is in dependencies because it's the debounced value from PortfolioFilters
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [portfolios, pagination, page, debouncedSearch, status, isFetching, data, updateStatusMutation.isPending]);
+  }, [portfolios, pagination, page, search, status, isFetching, data, updateStatusMutation.isPending]);
 
   // Initial loading - show full skeleton
   if (isLoading && !data) {
@@ -384,7 +399,6 @@ export default function AdminPortfoliosPage() {
     <div className="flex flex-col -m-4 sm:-m-6 lg:-m-8">
       {/* Sticky Header - Filters & Actions (Full Width) */}
       <PortfolioFilters
-        search={search}
         onSearchChange={handleSearchChange}
         status={status}
         onStatusChange={handleStatusChange}
