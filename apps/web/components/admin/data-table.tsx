@@ -9,10 +9,18 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, ChevronLeft, ChevronRight, Edit, Trash2 } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, MoreVertical, Edit, Trash2 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export interface Column<T> {
   key: string;
@@ -58,13 +66,13 @@ export function DataTable<T extends { id: string }>({
     return (
       <div className="space-y-4">
         <Skeleton className="h-10 w-full max-w-sm" />
-        <div className="rounded-lg border">
-          <div className="p-4">
+        <Card className="overflow-hidden p-0">
+          <div className="p-6 space-y-4">
             {[...Array(5)].map((_, i) => (
-              <Skeleton key={i} className="mb-4 h-12 w-full" />
+              <Skeleton key={i} className="h-16 w-full" />
             ))}
           </div>
-        </div>
+        </Card>
       </div>
     );
   }
@@ -83,46 +91,95 @@ export function DataTable<T extends { id: string }>({
         </div>
       )}
 
-      <div className="rounded-lg border">
+      <Card className="overflow-hidden p-0">
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="border-b bg-muted/30">
               {columns.map((col) => (
                 <TableHead key={col.key}>{col.header}</TableHead>
               ))}
-              {(onEdit || onDelete || actions) && <TableHead className="w-24">Aksi</TableHead>}
+              {(onEdit || onDelete || actions) && <TableHead className="w-[80px] text-right">Aksi</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={columns.length + 1} className="py-8 text-center text-muted-foreground">
-                  Tidak ada data
+                <TableCell colSpan={columns.length + 1} className="py-16 text-center">
+                  <div className="flex flex-col items-center justify-center">
+                    <p className="text-muted-foreground">Tidak ada data</p>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (
               data.map((item) => (
-                <TableRow key={item.id}>
+                <TableRow key={item.id} className="group hover:bg-muted/50">
                   {columns.map((col) => (
                     <TableCell key={col.key}>
                       {col.render ? col.render(item) : (item as Record<string, unknown>)[col.key]?.toString()}
                     </TableCell>
                   ))}
                   {(onEdit || onDelete || actions) && (
-                    <TableCell>
-                      <div className="flex gap-1">
-                        {actions?.(item)}
-                        {onEdit && (
-                          <Button variant="ghost" size="icon" onClick={() => onEdit(item)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {onDelete && (
-                          <Button variant="ghost" size="icon" onClick={() => onDelete(item)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        )}
-                      </div>
+                    <TableCell className="text-right">
+                      {actions ? (
+                        <div className="flex items-center justify-end gap-1">
+                          {actions(item)}
+                          {(onEdit || onDelete) && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                  <MoreVertical className="h-4 w-4" />
+                                  <span className="sr-only">Menu</span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {onEdit && (
+                                  <DropdownMenuItem onClick={() => onEdit(item)}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                )}
+                                {onEdit && onDelete && <DropdownMenuSeparator />}
+                                {onDelete && (
+                                  <DropdownMenuItem
+                                    onClick={() => onDelete(item)}
+                                    className="text-destructive focus:text-destructive"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Hapus
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </div>
+                      ) : (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreVertical className="h-4 w-4" />
+                              <span className="sr-only">Menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {onEdit && (
+                              <DropdownMenuItem onClick={() => onEdit(item)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                            )}
+                            {onEdit && onDelete && <DropdownMenuSeparator />}
+                            {onDelete && (
+                              <DropdownMenuItem
+                                onClick={() => onDelete(item)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Hapus
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </TableCell>
                   )}
                 </TableRow>
@@ -130,7 +187,7 @@ export function DataTable<T extends { id: string }>({
             )}
           </TableBody>
         </Table>
-      </div>
+      </Card>
 
       {totalPages > 1 && onPageChange && (
         <div className="flex items-center justify-end gap-2">

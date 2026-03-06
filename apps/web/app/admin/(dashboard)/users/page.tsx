@@ -25,6 +25,7 @@ import {
   AlertCircle,
   Upload,
   ImageIcon,
+  MoreVertical,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -278,19 +279,19 @@ export default function AdminUsersPage() {
         <Card className="overflow-hidden p-0">
           <Table>
             <TableHeader>
-              <TableRow className="bg-muted/50">
+              <TableRow className="border-b bg-muted/30">
                 <TableHead className="w-12 text-center">#</TableHead>
                 <TableHead className="w-[300px]">User</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Kelas</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Terdaftar</TableHead>
-                <TableHead className="w-[100px] text-right">Aksi</TableHead>
+                <TableHead className="w-[120px]">Role</TableHead>
+                <TableHead className="w-[150px]">Kelas</TableHead>
+                <TableHead className="w-[100px]">Status</TableHead>
+                <TableHead className="w-[120px]">Terdaftar</TableHead>
+                <TableHead className="w-[80px] text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {users.map((user, index) => (
-                <TableRow key={user.id} className="group">
+                <TableRow key={user.id} className="group hover:bg-muted/50">
                   <TableCell className="text-center text-muted-foreground">
                     {(page - 1) * 15 + index + 1}
                   </TableCell>
@@ -324,8 +325,7 @@ export default function AdminUsersPage() {
                   </TableCell>
                   <TableCell>
                     <Badge
-                      variant={user.is_active ? 'default' : 'destructive'}
-                      className={user.is_active ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : ''}
+                      className={user.is_active ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}
                     >
                       {user.is_active ? 'Aktif' : 'Nonaktif'}
                     </Badge>
@@ -339,10 +339,8 @@ export default function AdminUsersPage() {
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <MoreVertical className="h-4 w-4" />
                           <span className="sr-only">Menu</span>
-                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                          </svg>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">

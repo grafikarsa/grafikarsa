@@ -149,7 +149,7 @@ export default function ImportStudentsPage() {
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className="border-b bg-muted/30">
                   <TableHead className="w-20">Kolom</TableHead>
                   <TableHead>Field</TableHead>
                   <TableHead>Contoh</TableHead>
@@ -157,35 +157,35 @@ export default function ImportStudentsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                <TableRow>
-                  <TableCell>1</TableCell>
-                  <TableCell>Tingkat</TableCell>
-                  <TableCell><code>10</code>, <code>11</code>, <code>12</code></TableCell>
-                  <TableCell>Tingkatan kelas</TableCell>
+                <TableRow className="hover:bg-muted/50">
+                  <TableCell className="text-center text-muted-foreground">1</TableCell>
+                  <TableCell className="font-medium">Tingkat</TableCell>
+                  <TableCell><code className="text-xs">10</code>, <code className="text-xs">11</code>, <code className="text-xs">12</code></TableCell>
+                  <TableCell className="text-sm text-muted-foreground">Tingkatan kelas</TableCell>
                 </TableRow>
-                <TableRow>
-                  <TableCell>2</TableCell>
-                  <TableCell>Kode Jurusan</TableCell>
-                  <TableCell><code>rpl</code>, <code>dkv</code>, <code>tkj</code></TableCell>
-                  <TableCell>Harus sesuai master jurusan</TableCell>
+                <TableRow className="hover:bg-muted/50">
+                  <TableCell className="text-center text-muted-foreground">2</TableCell>
+                  <TableCell className="font-medium">Kode Jurusan</TableCell>
+                  <TableCell><code className="text-xs">rpl</code>, <code className="text-xs">dkv</code>, <code className="text-xs">tkj</code></TableCell>
+                  <TableCell className="text-sm text-muted-foreground">Harus sesuai master jurusan</TableCell>
                 </TableRow>
-                <TableRow>
-                  <TableCell>3</TableCell>
-                  <TableCell>Rombel</TableCell>
-                  <TableCell><code>A</code>, <code>B</code>, <code>C</code></TableCell>
-                  <TableCell>Rombongan belajar (A-Z)</TableCell>
+                <TableRow className="hover:bg-muted/50">
+                  <TableCell className="text-center text-muted-foreground">3</TableCell>
+                  <TableCell className="font-medium">Rombel</TableCell>
+                  <TableCell><code className="text-xs">A</code>, <code className="text-xs">B</code>, <code className="text-xs">C</code></TableCell>
+                  <TableCell className="text-sm text-muted-foreground">Rombongan belajar (A-Z)</TableCell>
                 </TableRow>
-                <TableRow>
-                  <TableCell>4</TableCell>
-                  <TableCell>Nama Lengkap</TableCell>
-                  <TableCell><code>Budi Santoso</code></TableCell>
-                  <TableCell>Nama lengkap siswa</TableCell>
+                <TableRow className="hover:bg-muted/50">
+                  <TableCell className="text-center text-muted-foreground">4</TableCell>
+                  <TableCell className="font-medium">Nama Lengkap</TableCell>
+                  <TableCell><code className="text-xs">Budi Santoso</code></TableCell>
+                  <TableCell className="text-sm text-muted-foreground">Nama lengkap siswa</TableCell>
                 </TableRow>
-                <TableRow>
-                  <TableCell>5</TableCell>
-                  <TableCell>NIS</TableCell>
-                  <TableCell><code>25327004990242</code></TableCell>
-                  <TableCell>Nomor Induk Siswa (angka)</TableCell>
+                <TableRow className="hover:bg-muted/50">
+                  <TableCell className="text-center text-muted-foreground">5</TableCell>
+                  <TableCell className="font-medium">NIS</TableCell>
+                  <TableCell><code className="text-xs">25327004990242</code></TableCell>
+                  <TableCell className="text-sm text-muted-foreground">Nomor Induk Siswa (angka)</TableCell>
                 </TableRow>
               </TableBody>
             </Table>

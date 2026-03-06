@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
@@ -45,6 +46,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -393,15 +395,15 @@ function FeedbackTable({
   onDelete: (f: Feedback) => void;
 }) {
   return (
-    <div className="rounded-md border bg-background">
+    <Card className="overflow-hidden p-0">
       <Table>
         <TableHeader>
-          <TableRow>
+          <TableRow className="border-b bg-muted/30">
             <TableHead className="w-[100px]">Status</TableHead>
-            <TableHead className="w-[150px]">Kategori</TableHead>
+            <TableHead className="w-[120px]">Kategori</TableHead>
             <TableHead>Pesan</TableHead>
-            <TableHead className="w-[200px]">Pengirim</TableHead>
-            <TableHead className="w-[150px]">Tanggal</TableHead>
+            <TableHead className="w-[180px]">Pengirim</TableHead>
+            <TableHead className="w-[120px]">Tanggal</TableHead>
             <TableHead className="w-[80px] text-right">Aksi</TableHead>
           </TableRow>
         </TableHeader>
@@ -409,20 +411,20 @@ function FeedbackTable({
           {feedbacks.map((item) => {
             const KategoriIcon = kategoriIcons[item.kategori];
             return (
-              <TableRow key={item.id}>
+              <TableRow key={item.id} className="group hover:bg-muted/50">
                 <TableCell>
-                  <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap', statusStyles[item.status])}>
+                  <Badge className={cn('capitalize', statusStyles[item.status])}>
                     {item.status === 'pending' ? 'Pending' : item.status === 'read' ? 'Dibaca' : 'Selesai'}
-                  </span>
+                  </Badge>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <KategoriIcon className={cn('h-4 w-4', kategoriColors[item.kategori])} />
-                    <span className="capitalize">{item.kategori}</span>
+                    <span className="text-sm capitalize">{item.kategori}</span>
                   </div>
                 </TableCell>
                 <TableCell>
-                  <p className="line-clamp-2 max-w-[400px] text-muted-foreground text-xs md:text-sm">
+                  <p className="line-clamp-2 max-w-[400px] text-sm">
                     {item.pesan}
                   </p>
                 </TableCell>
@@ -431,34 +433,36 @@ function FeedbackTable({
                     <div className="flex items-center gap-2">
                       <Avatar className="h-6 w-6">
                         <AvatarImage src={item.user.avatar_url} />
-                        <AvatarFallback className="text-[10px]">{item.user.nama?.charAt(0)}</AvatarFallback>
+                        <AvatarFallback className="text-xs">{item.user.nama?.charAt(0)}</AvatarFallback>
                       </Avatar>
-                      <span className="text-sm truncate max-w-[150px]">{item.user.nama}</span>
+                      <span className="text-sm truncate max-w-[120px]">{item.user.nama}</span>
                     </div>
                   ) : (
-                    <span className="text-muted-foreground">-</span>
+                    <span className="text-sm text-muted-foreground">-</span>
                   )}
                 </TableCell>
-                <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                  {formatDate(item.created_at)}
+                <TableCell>
+                  <span className="text-sm text-muted-foreground">
+                    {formatDate(item.created_at)}
+                  </span>
                 </TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                         <MoreHorizontal className="h-4 w-4" />
                         <span className="sr-only">Menu</span>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Aksi</DropdownMenuLabel>
                       <DropdownMenuItem onClick={() => onView(item)}>
                         <Edit className="mr-2 h-4 w-4" />
                         Detail / Edit
                       </DropdownMenuItem>
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem
                         onClick={() => onDelete(item)}
-                        className="text-red-600 focus:text-red-600"
+                        className="text-destructive focus:text-destructive"
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
                         Hapus
@@ -471,7 +475,7 @@ function FeedbackTable({
           })}
         </TableBody>
       </Table>
-    </div>
+    </Card>
   );
 }
 

@@ -212,20 +212,20 @@ export default function AdminAssessmentMetricsPage() {
           </div>
         </Card>
       ) : (
-        <Card>
+        <Card className="overflow-hidden p-0">
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="border-b bg-muted/30">
                 <TableHead className="w-16">#</TableHead>
                 <TableHead>Nama Metrik</TableHead>
                 <TableHead className="hidden md:table-cell">Deskripsi</TableHead>
-                <TableHead className="w-40">Status</TableHead>
-                <TableHead className="w-24 text-right">Aksi</TableHead>
+                <TableHead className="w-[120px]">Status</TableHead>
+                <TableHead className="w-[100px] text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sortedMetrics.map((metric) => (
-                <TableRow key={metric.id} className={cn(!metric.is_active && 'opacity-60')}>
+                <TableRow key={metric.id} className={cn('group hover:bg-muted/50', !metric.is_active && 'opacity-60')}>
                   <TableCell>
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <GripVertical className="h-4 w-4 cursor-grab" />
