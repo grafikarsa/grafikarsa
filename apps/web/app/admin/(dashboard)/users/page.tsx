@@ -29,6 +29,8 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { getDebugEmptyState } from '@/lib/utils/debug';
+import { DebugBanner } from '@/components/admin/debug-banner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -167,6 +169,10 @@ export default function AdminUsersPage() {
   const users = data?.data || [];
   const pagination = data?.meta;
 
+  // Debug mode: Force empty state
+  const debugMode = getDebugEmptyState();
+  const displayUsers = debugMode ? [] : users;
+
   const handleViewDetail = (user: User) => {
     setSelectedUser(user);
     setShowDetailModal(true);
@@ -260,8 +266,10 @@ export default function AdminUsersPage() {
         </Button>
       </div>
 
+      {debugMode && <DebugBanner pageName="Users" />}
+
       {/* Table */}
-      {users.length === 0 ? (
+      {displayUsers.length === 0 ? (
         <Card className="border-dashed py-16">
           <div className="flex flex-col items-center justify-center">
             <div className="rounded-full bg-muted p-4">
@@ -290,7 +298,7 @@ export default function AdminUsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user, index) => (
+              {displayUsers.map((user, index) => (
                 <TableRow key={user.id} className="group hover:bg-muted/50">
                   <TableCell className="text-center text-muted-foreground">
                     {(page - 1) * 15 + index + 1}

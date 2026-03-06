@@ -20,6 +20,8 @@ import {
   FileDown,
   Search,
 } from 'lucide-react';
+import { getDebugEmptyState } from '@/lib/utils/debug';
+import { DebugBanner } from '@/components/admin/debug-banner';
 
 // Dynamic import for PDF export modal (client-side only)
 const ExportPdfModal = dynamic(
@@ -123,6 +125,10 @@ export default function AdminSeriesPage() {
   });
 
   const series = data?.data || [];
+
+  // Debug mode: Force empty state
+  const debugMode = getDebugEmptyState();
+  const displaySeries = debugMode ? [] : series;
 
   const columns: Column<Series>[] = [
     {
@@ -239,8 +245,10 @@ export default function AdminSeriesPage() {
         </Button>
       </div>
 
+      {debugMode && <DebugBanner pageName="Series" />}
+
       <DataTable
-        data={series}
+        data={displaySeries}
         columns={columns}
         isLoading={isLoading}
         onEdit={(s) => setEditSeriesId(s.id)}

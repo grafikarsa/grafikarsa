@@ -47,6 +47,8 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { getDebugEmptyState } from '@/lib/utils/debug';
+import { DebugBanner } from '@/components/admin/debug-banner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -275,46 +277,54 @@ export default function AdminPortfoliosPage() {
   const portfolios = data?.data || [];
   const pagination = (data as { pagination?: { total_pages: number } })?.pagination;
 
+  // Debug mode: Force empty state
+  const debugMode = getDebugEmptyState();
+  const displayPortfolios = debugMode ? [] : portfolios;
+
   // Memoize content area - only re-render when actual data changes (search triggers query)
   // NOT when search input changes (that only affects the input field in PortfolioFilters)
   const contentArea = useMemo(() => {
     // Show loading overlay during refetch
     const showLoadingOverlay = isFetching && data;
 
-    if (portfolios.length === 0) {
+    if (displayPortfolios.length === 0) {
       // Different empty states based on context
       const hasFilters = search || status !== 'all';
       
       return (
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="flex flex-col items-center justify-center px-6">
-            <div className="rounded-full bg-primary/10 p-4">
-              <FileText className="h-10 w-10 text-primary" />
+        <>
+          {debugMode && <DebugBanner pageName="Kelola Portfolio" />}
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="flex flex-col items-center justify-center px-6">
+              <div className="rounded-full bg-primary/10 p-4">
+                <FileText className="h-10 w-10 text-primary" />
+              </div>
+              <h3 className="mt-6 text-xl font-semibold">
+                {hasFilters ? 'Tidak ada portfolio yang sesuai' : 'Belum ada portfolio'}
+              </h3>
+              <p className="mt-2 text-sm text-muted-foreground text-center max-w-sm">
+                {hasFilters 
+                  ? 'Coba ubah filter atau kata kunci pencarian untuk menemukan portfolio yang Anda cari.'
+                  : 'Portfolio yang dibuat oleh siswa akan muncul di sini. Anda dapat membuat portfolio untuk siswa atau menunggu mereka membuat sendiri.'
+                }
+              </p>
+              {!hasFilters && (
+                <Button onClick={() => setShowCreateModal(true)} className="mt-6">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Buat Portfolio Pertama
+                </Button>
+              )}
             </div>
-            <h3 className="mt-6 text-xl font-semibold">
-              {hasFilters ? 'Tidak ada portfolio yang sesuai' : 'Belum ada portfolio'}
-            </h3>
-            <p className="mt-2 text-sm text-muted-foreground text-center max-w-sm">
-              {hasFilters 
-                ? 'Coba ubah filter atau kata kunci pencarian untuk menemukan portfolio yang Anda cari.'
-                : 'Portfolio yang dibuat oleh siswa akan muncul di sini. Anda dapat membuat portfolio untuk siswa atau menunggu mereka membuat sendiri.'
-              }
-            </p>
-            {!hasFilters && (
-              <Button onClick={() => setShowCreateModal(true)} className="mt-6">
-                <Plus className="mr-2 h-4 w-4" />
-                Buat Portfolio Pertama
-              </Button>
-            )}
           </div>
-        </div>
+        </>
       );
     }
 
     return (
       <>
+        {debugMode && <DebugBanner pageName="Kelola Portfolio" />}
         <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,320px))] gap-6">
-          {portfolios.map((portfolio) => (
+          {displayPortfolios.map((portfolio) => (
             <PortfolioCardItem
               key={portfolio.id}
               portfolio={portfolio}

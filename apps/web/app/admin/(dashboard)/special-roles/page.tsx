@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Plus, Loader2, Shield, Users, X, Search, Check } from 'lucide-react';
+import { getDebugEmptyState } from '@/lib/utils/debug';
+import { DebugBanner } from '@/components/admin/debug-banner';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -88,6 +90,10 @@ export default function AdminSpecialRolesPage() {
 
   const roles = data?.data || [];
   const capabilities = capabilitiesData?.data || [];
+
+  // Debug mode: Force empty state
+  const debugMode = getDebugEmptyState();
+  const displayRoles = debugMode ? [] : roles;
 
   const getCapabilityLabel = (key: string) => {
     const cap = capabilities.find((c) => c.key === key);
@@ -200,8 +206,10 @@ export default function AdminSpecialRolesPage() {
         </Button>
       </div>
 
+      {debugMode && <DebugBanner pageName="Special Roles" />}
+
       <DataTable
-        data={roles}
+        data={displayRoles}
         columns={columns}
         isLoading={isLoading}
         onEdit={setEditRole}

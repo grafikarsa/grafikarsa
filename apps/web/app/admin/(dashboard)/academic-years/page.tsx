@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Plus, Loader2, CheckCircle, Calendar } from 'lucide-react';
+import { getDebugEmptyState } from '@/lib/utils/debug';
+import { DebugBanner } from '@/components/admin/debug-banner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -78,6 +80,10 @@ export default function AdminAcademicYearsPage() {
 
   const years = data?.data || [];
 
+  // Debug mode: Force empty state
+  const debugMode = getDebugEmptyState();
+  const displayYears = debugMode ? [] : years;
+
   const columns: Column<AcademicYear>[] = [
     {
       key: 'tahun_mulai',
@@ -133,8 +139,10 @@ export default function AdminAcademicYearsPage() {
         </Button>
       </div>
 
+      {debugMode && <DebugBanner pageName="Tahun Ajaran" />}
+
       <DataTable
-        data={years}
+        data={displayYears}
         columns={columns}
         isLoading={isLoading}
         onEdit={setEditYear}

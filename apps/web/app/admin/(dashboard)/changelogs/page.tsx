@@ -13,6 +13,8 @@ import {
   EyeOff,
   Calendar,
 } from 'lucide-react';
+import { getDebugEmptyState } from '@/lib/utils/debug';
+import { DebugBanner } from '@/components/admin/debug-banner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -94,6 +96,10 @@ export default function AdminChangelogsPage() {
   const changelogs = data?.data?.data || [];
   const pagination = data?.data?.meta;
 
+  // Debug mode: Force empty state
+  const debugMode = getDebugEmptyState();
+  const displayChangelogs = debugMode ? [] : changelogs;
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -134,8 +140,10 @@ export default function AdminChangelogsPage() {
         </Button>
       </div>
 
+      {debugMode && <DebugBanner pageName="Changelog" />}
+
       {/* Changelog List */}
-      {changelogs.length === 0 ? (
+      {displayChangelogs.length === 0 ? (
         <Card className="border-dashed py-16">
           <div className="flex flex-col items-center justify-center">
             <FileText className="h-12 w-12 text-muted-foreground" />
@@ -153,7 +161,7 @@ export default function AdminChangelogsPage() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {changelogs.map((changelog: ChangelogListItem) => (
+          {displayChangelogs.map((changelog: ChangelogListItem) => (
             <Card key={changelog.id} className="p-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">

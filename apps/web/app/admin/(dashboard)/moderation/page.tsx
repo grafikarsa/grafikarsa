@@ -5,6 +5,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Check, X, Eye, Loader2, Clock, FileText, AlertCircle } from 'lucide-react';
 import Image from 'next/image';
+import { getDebugEmptyState } from '@/lib/utils/debug';
+import { DebugBanner } from '@/components/admin/debug-banner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -82,6 +84,10 @@ export default function ModerationPage() {
   const portfolios = data?.data || [];
   const totalPending = (data?.meta as { total_count?: number })?.total_count ?? portfolios.length;
 
+  // Debug mode: Force empty state
+  const debugMode = getDebugEmptyState();
+  const displayPortfolios = debugMode ? [] : portfolios;
+
   const openReviewDialog = (id: string, action: ReviewAction) => {
     setPortfolioToReview(id);
     setReviewAction(action);
@@ -143,8 +149,10 @@ export default function ModerationPage() {
         </Badge>
       </div>
 
+      {debugMode && <DebugBanner pageName="Moderasi Portfolio" />}
+
       {/* Empty State */}
-      {portfolios.length === 0 ? (
+      {displayPortfolios.length === 0 ? (
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="flex flex-col items-center justify-center px-6">
             <div className="rounded-full bg-green-500/10 p-4">
@@ -163,7 +171,7 @@ export default function ModerationPage() {
       ) : (
         /* Portfolio Grid - same as portfolios page */
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-          {portfolios.map((portfolio) => {
+          {displayPortfolios.map((portfolio) => {
             const firstTag = portfolio.tags && portfolio.tags.length > 0 ? portfolio.tags[0] : null;
 
             return (

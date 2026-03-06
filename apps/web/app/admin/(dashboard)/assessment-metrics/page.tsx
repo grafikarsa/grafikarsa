@@ -15,6 +15,8 @@ import {
   CheckCircle2,
   XCircle,
 } from 'lucide-react';
+import { getDebugEmptyState } from '@/lib/utils/debug';
+import { DebugBanner } from '@/components/admin/debug-banner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
@@ -90,6 +92,10 @@ export default function AdminAssessmentMetricsPage() {
   const sortedMetrics = [...metrics].sort((a, b) => a.urutan - b.urutan);
   const activeCount = metrics.filter((m) => m.is_active).length;
   const inactiveCount = metrics.filter((m) => !m.is_active).length;
+
+  // Debug mode: Force empty state
+  const debugMode = getDebugEmptyState();
+  const displayMetrics = debugMode ? [] : sortedMetrics;
 
   // Loading state
   if (isLoading) {
@@ -196,8 +202,10 @@ export default function AdminAssessmentMetricsPage() {
         </Button>
       </div>
 
+      {debugMode && <DebugBanner pageName="Metrik Penilaian" />}
+
       {/* Metrics Table */}
-      {sortedMetrics.length === 0 ? (
+      {displayMetrics.length === 0 ? (
         <Card className="border-dashed py-16">
           <div className="flex flex-col items-center justify-center text-center">
             <BarChart3 className="h-12 w-12 text-muted-foreground" />
@@ -224,7 +232,7 @@ export default function AdminAssessmentMetricsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedMetrics.map((metric) => (
+              {displayMetrics.map((metric) => (
                 <TableRow key={metric.id} className={cn('group hover:bg-muted/50', !metric.is_active && 'opacity-60')}>
                   <TableCell>
                     <div className="flex items-center gap-2 text-muted-foreground">

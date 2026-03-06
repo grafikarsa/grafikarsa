@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Plus, Loader2, Users, Search } from 'lucide-react';
+import { getDebugEmptyState } from '@/lib/utils/debug';
+import { DebugBanner } from '@/components/admin/debug-banner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -78,6 +80,10 @@ export default function AdminClassesPage() {
       )
     : allClasses;
 
+  // Debug mode: Force empty state
+  const debugMode = getDebugEmptyState();
+  const displayClasses = debugMode ? [] : classes;
+
   const columns: Column<Class>[] = [
     {
       key: 'nama',
@@ -148,8 +154,10 @@ export default function AdminClassesPage() {
         </Button>
       </div>
 
+      {debugMode && <DebugBanner pageName="Kelas" />}
+
       <DataTable
-        data={classes}
+        data={displayClasses}
         columns={columns}
         isLoading={isLoading}
         onEdit={setEditClass}

@@ -5,6 +5,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Plus, Loader2, Tag as TagIcon, Hash, Search } from 'lucide-react';
 import { useDebounce } from '@/lib/hooks/use-debounce';
+import { getDebugEmptyState } from '@/lib/utils/debug';
+import { DebugBanner } from '@/components/admin/debug-banner';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -91,6 +93,10 @@ export default function AdminTagsPage() {
 
   const tags = data?.data || [];
 
+  // Debug mode: Force empty state
+  const debugMode = getDebugEmptyState();
+  const displayTags = debugMode ? [] : tags;
+
   const columns: Column<Tag>[] = [
     {
       key: 'nama',
@@ -131,39 +137,43 @@ export default function AdminTagsPage() {
     const showLoadingOverlay = isFetching && data;
 
     // Empty state
-    if (tags.length === 0 && !isLoading) {
+    if (displayTags.length === 0 && !isLoading) {
       const hasSearch = debouncedSearch;
       
       return (
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="flex flex-col items-center justify-center px-6">
-            <div className="rounded-full bg-primary/10 p-4">
-              <TagIcon className="h-10 w-10 text-primary" />
+        <>
+          {debugMode && <DebugBanner pageName="Tags" />}
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="flex flex-col items-center justify-center px-6">
+              <div className="rounded-full bg-primary/10 p-4">
+                <TagIcon className="h-10 w-10 text-primary" />
+              </div>
+              <h3 className="mt-6 text-xl font-semibold">
+                {hasSearch ? 'Tidak ada tag yang sesuai' : 'Belum ada tag'}
+              </h3>
+              <p className="mt-2 text-sm text-muted-foreground text-center max-w-sm">
+                {hasSearch 
+                  ? 'Coba ubah kata kunci pencarian untuk menemukan tag yang Anda cari.'
+                  : 'Tag digunakan untuk mengkategorisasi portfolio. Buat tag pertama untuk mulai mengorganisir portfolio siswa.'
+                }
+              </p>
+              {!hasSearch && (
+                <Button onClick={handleCreateClick} className="mt-6">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Buat Tag Pertama
+                </Button>
+              )}
             </div>
-            <h3 className="mt-6 text-xl font-semibold">
-              {hasSearch ? 'Tidak ada tag yang sesuai' : 'Belum ada tag'}
-            </h3>
-            <p className="mt-2 text-sm text-muted-foreground text-center max-w-sm">
-              {hasSearch 
-                ? 'Coba ubah kata kunci pencarian untuk menemukan tag yang Anda cari.'
-                : 'Tag digunakan untuk mengkategorisasi portfolio. Buat tag pertama untuk mulai mengorganisir portfolio siswa.'
-              }
-            </p>
-            {!hasSearch && (
-              <Button onClick={handleCreateClick} className="mt-6">
-                <Plus className="mr-2 h-4 w-4" />
-                Buat Tag Pertama
-              </Button>
-            )}
           </div>
-        </div>
+        </>
       );
     }
 
     return (
       <div className="relative">
+        {debugMode && <DebugBanner pageName="Tags" />}
         <DataTable
-          data={tags}
+          data={displayTags}
           columns={columns}
           isLoading={isLoading && !data}
           actions={renderActions}

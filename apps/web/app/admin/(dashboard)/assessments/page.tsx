@@ -47,6 +47,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
+import { DebugBanner } from '@/components/admin/debug-banner';
 import { adminAssessmentsApi, adminAssessmentMetricsApi } from '@/lib/api/admin';
 import {
   PortfolioForAssessment,
@@ -55,6 +56,7 @@ import {
   ScoreInput,
 } from '@/lib/types';
 import { useDebounce } from '@/lib/hooks/use-debounce';
+import { getDebugEmptyState } from '@/lib/utils/debug';
 import { cn } from '@/lib/utils';
 
 type FilterType = 'all' | 'pending' | 'assessed';
@@ -109,6 +111,10 @@ export default function AdminAssessmentsPage() {
   const totalCount = stats?.total_published || pagination?.total_count || 0;
   const assessedCount = stats?.assessed || 0;
   const pendingCount = stats?.pending || 0;
+
+  // Debug mode: Force empty state
+  const debugMode = getDebugEmptyState();
+  const displayPortfolios = debugMode ? [] : portfolios;
 
   if (isLoading) {
     return (
@@ -231,8 +237,11 @@ export default function AdminAssessmentsPage() {
       {/* Content Area with proper padding */}
       <div className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
         <div className="mx-auto w-full max-w-[1600px]">
+          {/* Debug Banner */}
+          {debugMode && <DebugBanner pageName="Penilaian Portfolio" />}
+
           {/* Portfolio List */}
-          {portfolios.length === 0 ? (
+          {displayPortfolios.length === 0 ? (
             <div className="flex items-center justify-center min-h-[60vh]">
               <div className="flex flex-col items-center justify-center px-6">
                 <div className="rounded-full bg-primary/10 p-4">
@@ -250,7 +259,7 @@ export default function AdminAssessmentsPage() {
             </div>
           ) : (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,320px))] gap-6">
-              {portfolios.map((portfolio) => (
+              {displayPortfolios.map((portfolio) => (
                 <PortfolioCard
                   key={portfolio.id}
                   portfolio={portfolio}

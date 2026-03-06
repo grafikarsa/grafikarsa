@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Plus, Loader2, GraduationCap } from 'lucide-react';
+import { getDebugEmptyState } from '@/lib/utils/debug';
+import { DebugBanner } from '@/components/admin/debug-banner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -45,6 +47,10 @@ export default function AdminMajorsPage() {
 
   const majors = data?.data || [];
 
+  // Debug mode: Force empty state
+  const debugMode = getDebugEmptyState();
+  const displayMajors = debugMode ? [] : majors;
+
   const columns: Column<Major>[] = [
     {
       key: 'kode',
@@ -72,8 +78,10 @@ export default function AdminMajorsPage() {
         </Button>
       </div>
 
+      {debugMode && <DebugBanner pageName="Jurusan" />}
+
       <DataTable
-        data={majors}
+        data={displayMajors}
         columns={columns}
         isLoading={isLoading}
         onEdit={setEditMajor}

@@ -19,6 +19,8 @@ import {
   MoreHorizontal,
   Edit,
 } from 'lucide-react';
+import { getDebugEmptyState } from '@/lib/utils/debug';
+import { DebugBanner } from '@/components/admin/debug-banner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -161,6 +163,10 @@ export default function AdminFeedbackPage() {
   const stats = statsData?.data;
   const pagination = data?.meta;
 
+  // Debug mode: Force empty state
+  const debugMode = getDebugEmptyState();
+  const displayFeedbacks = debugMode ? [] : feedbacks;
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -299,8 +305,10 @@ export default function AdminFeedbackPage() {
         </div>
       </div>
 
+      {debugMode && <DebugBanner pageName="Feedback" />}
+
       {/* Main Content */}
-      {feedbacks.length === 0 ? (
+      {displayFeedbacks.length === 0 ? (
         <Card className="border-dashed py-16">
           <div className="flex flex-col items-center justify-center">
             <MessageSquareText className="h-12 w-12 text-muted-foreground" />
@@ -408,7 +416,7 @@ function FeedbackTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {feedbacks.map((item) => {
+          {displayFeedbacks.map((item) => {
             const KategoriIcon = kategoriIcons[item.kategori];
             return (
               <TableRow key={item.id} className="group hover:bg-muted/50">
