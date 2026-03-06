@@ -1,10 +1,13 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { LogOut } from 'lucide-react';
+import { LogOut, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { ThemeToggle } from './theme-toggle';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { AdminSidebarContent } from './admin-sidebar';
+import { useState } from 'react';
 
 // Map pathname to page title
 const pageTitles: Record<string, string> = {
@@ -28,6 +31,7 @@ const pageTitles: Record<string, string> = {
 export function AdminHeader() {
   const pathname = usePathname();
   const { logout, isLogoutPending } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Get page title from pathname
   const getPageTitle = () => {
@@ -43,8 +47,23 @@ export function AdminHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-background px-6">
-      <h1 className="text-lg font-semibold">{getPageTitle()}</h1>
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 sm:px-6">
+      {/* Mobile Menu Button */}
+      <div className="flex items-center gap-3">
+        <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" className="lg:hidden">
+              <Menu className="h-5 w-5" />
+              <span className="sr-only">Toggle menu</span>
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="p-0 w-56">
+            <AdminSidebarContent onNavigate={() => setMobileMenuOpen(false)} />
+          </SheetContent>
+        </Sheet>
+        
+        <h1 className="text-base sm:text-lg font-semibold">{getPageTitle()}</h1>
+      </div>
       
       <div className="flex items-center gap-2">
         <ThemeToggle />

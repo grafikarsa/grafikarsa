@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,9 @@ import {
   UserPlus,
   GraduationCap,
   Shield,
+  Activity,
+  BarChart3,
+  FileText,
 } from 'lucide-react';
 import api from '@/lib/api/client';
 import { formatDate } from '@/lib/utils/format';
@@ -87,23 +90,10 @@ export default function AdminDashboardPage() {
     },
   });
 
+  // Calculate pending assessment (published but not assessed)
+  const pendingAssessment = (data?.portfolios.published ?? 0) - (data?.portfolios.published ?? 0); // TODO: Need actual assessed count from backend
+
   const stats = [
-    {
-      title: 'Total Users',
-      value: data?.users.total ?? 0,
-      icon: Users,
-      color: 'text-blue-500',
-      bg: 'bg-blue-500/10',
-      href: '/admin/users',
-    },
-    {
-      title: 'Total Portfolios',
-      value: data?.portfolios.total ?? 0,
-      icon: FolderOpen,
-      color: 'text-green-500',
-      bg: 'bg-green-500/10',
-      href: '/admin/portfolios',
-    },
     {
       title: 'Pending Review',
       value: data?.portfolios.pending_review ?? 0,
@@ -111,39 +101,73 @@ export default function AdminDashboardPage() {
       color: 'text-orange-500',
       bg: 'bg-orange-500/10',
       href: '/admin/moderation',
+      urgent: (data?.portfolios.pending_review ?? 0) > 0,
     },
     {
-      title: 'User Baru Bulan Ini',
-      value: data?.users.new_this_month ?? 0,
-      icon: TrendingUp,
+      title: 'Pending Assessment',
+      value: pendingAssessment,
+      icon: BarChart3,
+      color: 'text-blue-500',
+      bg: 'bg-blue-500/10',
+      href: '/admin/assessments',
+      actionable: pendingAssessment > 0,
+    },
+    {
+      title: 'Portfolio Published',
+      value: data?.portfolios.published ?? 0,
+      icon: FileText,
+      color: 'text-green-500',
+      bg: 'bg-green-500/10',
+      href: '/admin/portfolios',
+    },
+    {
+      title: 'Active Students',
+      value: data?.users.students ?? 0,
+      icon: GraduationCap,
       color: 'text-purple-500',
       bg: 'bg-purple-500/10',
       href: '/admin/users',
+    },
+    {
+      title: 'Portfolio Bulan Ini',
+      value: data?.portfolios.new_this_month ?? 0,
+      icon: TrendingUp,
+      color: 'text-indigo-500',
+      bg: 'bg-indigo-500/10',
+      href: '/admin/portfolios',
     },
   ];
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Stats Cards - Compact */}
+      <div className="grid gap-2 grid-cols-2 lg:grid-cols-5">
         {stats.map((stat) => {
           const Icon = stat.icon;
+          const isUrgent = 'urgent' in stat && stat.urgent;
+          const isActionable = 'actionable' in stat && stat.actionable;
           return (
-            <Link key={stat.title} href={stat.href}>
-              <Card className="transition-shadow hover:shadow-md">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
+            <Link key={stat.title} href={stat.href} className="group">
+              <Card className={`transition-all hover:shadow-md ${isUrgent ? 'border-orange-500/50 bg-orange-50/50 dark:bg-orange-950/10' : 'hover:border-primary/50'}`}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 p-3">
+                  <CardTitle className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">
                     {stat.title}
                   </CardTitle>
-                  <div className={`rounded-full p-2 ${stat.bg}`}>
-                    <Icon className={`h-4 w-4 ${stat.color}`} />
+                  <div className={`rounded-md p-1 ${stat.bg} group-hover:scale-110 transition-transform ${isUrgent ? 'animate-pulse' : ''}`}>
+                    <Icon className={`h-4 w-4 ${stat.color}`} strokeWidth={2} />
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-3 pt-0">
                   {isLoading ? (
-                    <Skeleton className="h-8 w-20" />
+                    <Skeleton className="h-7 w-14" />
                   ) : (
-                    <p className="text-2xl font-bold">{stat.value.toLocaleString()}</p>
+                    <div>
+                      <p className="text-2xl font-bold tracking-tight leading-none">{stat.value.toLocaleString()}</p>
+                      <p className="text-[10px] text-muted-foreground flex items-center gap-0.5 mt-1">
+                        <ArrowRight className="h-2.5 w-2.5" />
+                        {isUrgent ? 'Review' : isActionable ? 'Nilai' : 'Detail'}
+                      </p>
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -152,43 +176,52 @@ export default function AdminDashboardPage() {
         })}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Pending Review Quick Link */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <ClipboardCheck className="h-5 w-5 text-orange-500" />
-              Portfolio Menunggu Review
-            </CardTitle>
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Pending Review - Priority Section */}
+        <Card className="flex flex-col lg:col-span-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+            <div className="space-y-1">
+              <CardTitle className="flex items-center gap-2.5 text-lg">
+                <div className="rounded-lg bg-orange-500/10 p-2">
+                  <ClipboardCheck className="h-5 w-5 text-orange-500" strokeWidth={2} />
+                </div>
+                Portfolio Menunggu Review
+              </CardTitle>
+              <CardDescription>
+                Prioritas utama - Review dan setujui portfolio
+              </CardDescription>
+            </div>
             <Link href="/admin/moderation">
-              <Button variant="outline" size="sm">
-                Lihat Semua
-                <ArrowRight className="ml-2 h-4 w-4" />
+              <Button size="sm" className="gap-2">
+                Review Sekarang
+                <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex-1">
             {isLoading ? (
               <div className="space-y-3">
                 {[...Array(3)].map((_, i) => (
-                  <Skeleton key={i} className="h-16 w-full" />
+                  <Skeleton key={i} className="h-20 w-full rounded-lg" />
                 ))}
               </div>
             ) : !data?.recent_pending_portfolios?.length ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <ClipboardCheck className="h-10 w-10 text-green-500" />
-                <p className="mt-2 font-medium text-green-600">Tidak ada portfolio pending</p>
-                <p className="text-sm text-muted-foreground">Semua portfolio sudah direview</p>
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="rounded-full bg-green-500/10 p-4">
+                  <ClipboardCheck className="h-8 w-8 text-green-500" />
+                </div>
+                <p className="mt-3 font-semibold text-green-600 dark:text-green-400">Tidak ada portfolio pending</p>
+                <p className="text-sm text-muted-foreground mt-1">Semua portfolio sudah direview</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {data.recent_pending_portfolios.map((portfolio) => (
                   <Link
                     key={portfolio.id}
                     href="/admin/moderation"
-                    className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted"
+                    className="flex items-center gap-3 rounded-lg border p-3 transition-all hover:bg-muted hover:border-primary/50"
                   >
-                    <div className="relative h-12 w-16 flex-shrink-0 overflow-hidden rounded bg-muted">
+                    <div className="relative h-14 w-20 flex-shrink-0 overflow-hidden rounded-md bg-muted">
                       {portfolio.thumbnail_url ? (
                         <Image
                           src={portfolio.thumbnail_url}
@@ -203,8 +236,8 @@ export default function AdminDashboardPage() {
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium">{portfolio.judul}</p>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <p className="truncate font-semibold text-sm">{portfolio.judul}</p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                         <Avatar className="h-4 w-4">
                           <AvatarImage src={portfolio.user_avatar_url} />
                           <AvatarFallback className="text-[8px]">
@@ -214,11 +247,11 @@ export default function AdminDashboardPage() {
                         <span className="truncate">{portfolio.user_nama}</span>
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <Badge variant="outline" className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
+                    <div className="flex flex-col items-end gap-1.5">
+                      <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800">
                         Pending
                       </Badge>
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
                         <Clock className="h-3 w-3" />
                         {formatDate(portfolio.created_at)}
                       </span>
@@ -230,103 +263,300 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Recent Users */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5 text-blue-500" />
-              User Terbaru
+        {/* Quick Actions */}
+        <Card className="flex flex-col">
+          <CardHeader className="space-y-1 pb-4">
+            <CardTitle className="flex items-center gap-2.5 text-lg">
+              <div className="rounded-lg bg-primary/10 p-2">
+                <Activity className="h-5 w-5 text-primary" strokeWidth={2} />
+              </div>
+              Quick Actions
             </CardTitle>
-            <Link href="/admin/users">
-              <Button variant="outline" size="sm">
-                Lihat Semua
-                <ArrowRight className="ml-2 h-4 w-4" />
+            <CardDescription>
+              Akses cepat ke fitur admin
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex-1 space-y-2">
+            <Link href="/admin/moderation" className="block">
+              <Button variant="outline" className="w-full justify-start gap-3 h-auto py-3" size="lg">
+                <div className="rounded-md bg-orange-500/10 p-2">
+                  <ClipboardCheck className="h-5 w-5 text-orange-500" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="font-semibold text-sm">Moderasi Portfolio</p>
+                  <p className="text-xs text-muted-foreground">Review portfolio pending</p>
+                </div>
+                {!isLoading && data?.portfolios.pending_review ? (
+                  <Badge variant="destructive" className="ml-auto">
+                    {data.portfolios.pending_review}
+                  </Badge>
+                ) : null}
               </Button>
             </Link>
+
+            <Link href="/admin/assessments" className="block">
+              <Button variant="outline" className="w-full justify-start gap-3 h-auto py-3" size="lg">
+                <div className="rounded-md bg-blue-500/10 p-2">
+                  <BarChart3 className="h-5 w-5 text-blue-500" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="font-semibold text-sm">Penilaian Portfolio</p>
+                  <p className="text-xs text-muted-foreground">Beri nilai portfolio</p>
+                </div>
+              </Button>
+            </Link>
+
+            <Link href="/admin/users" className="block">
+              <Button variant="outline" className="w-full justify-start gap-3 h-auto py-3" size="lg">
+                <div className="rounded-md bg-green-500/10 p-2">
+                  <Users className="h-5 w-5 text-green-500" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="font-semibold text-sm">Kelola Users</p>
+                  <p className="text-xs text-muted-foreground">Manage akun pengguna</p>
+                </div>
+              </Button>
+            </Link>
+
+            <Link href="/admin/portfolios" className="block">
+              <Button variant="outline" className="w-full justify-start gap-3 h-auto py-3" size="lg">
+                <div className="rounded-md bg-purple-500/10 p-2">
+                  <FolderOpen className="h-5 w-5 text-purple-500" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="font-semibold text-sm">Semua Portfolio</p>
+                  <p className="text-xs text-muted-foreground">Lihat & edit portfolio</p>
+                </div>
+              </Button>
+            </Link>
+
+            <Link href="/admin/feedback" className="block">
+              <Button variant="outline" className="w-full justify-start gap-3 h-auto py-3" size="lg">
+                <div className="rounded-md bg-amber-500/10 p-2">
+                  <FileText className="h-5 w-5 text-amber-500" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="font-semibold text-sm">Feedback</p>
+                  <p className="text-xs text-muted-foreground">Lihat feedback user</p>
+                </div>
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Bottom Section - 2 Columns */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Recent Activity - 2 cols */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="space-y-1 pb-4">
+            <CardTitle className="flex items-center gap-2.5 text-lg">
+              <div className="rounded-lg bg-primary/10 p-2">
+                <Activity className="h-5 w-5 text-primary" strokeWidth={2} />
+              </div>
+              Recent Activity
+            </CardTitle>
+            <CardDescription>
+              Aktivitas terbaru di platform
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <div className="space-y-3">
-                {[...Array(3)].map((_, i) => (
-                  <Skeleton key={i} className="h-14 w-full" />
+                {[...Array(5)].map((_, i) => (
+                  <Skeleton key={i} className="h-16 rounded-lg" />
                 ))}
               </div>
-            ) : !data?.recent_users?.length ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <Users className="h-10 w-10 text-muted-foreground" />
-                <p className="mt-2 text-muted-foreground">Belum ada user</p>
-              </div>
             ) : (
-              <div className="space-y-3">
-                {data.recent_users.map((user) => (
+              <div className="space-y-2">
+                {/* Recent Pending Portfolios */}
+                {data?.recent_pending_portfolios?.slice(0, 2).map((portfolio) => (
+                  <Link
+                    key={portfolio.id}
+                    href="/admin/moderation"
+                    className="flex items-center gap-3 rounded-lg border p-3 transition-all hover:bg-muted hover:border-primary/50"
+                  >
+                    <div className="rounded-md bg-orange-500/10 p-2">
+                      <ClipboardCheck className="h-4 w-4 text-orange-500" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium text-sm">{portfolio.judul}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {portfolio.user_nama} menunggu review
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800 text-xs">
+                      Pending
+                    </Badge>
+                  </Link>
+                ))}
+
+                {/* Recent Users */}
+                {data?.recent_users?.slice(0, 3).map((user) => (
                   <Link
                     key={user.id}
                     href="/admin/users"
-                    className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted"
+                    className="flex items-center gap-3 rounded-lg border p-3 transition-all hover:bg-muted hover:border-primary/50"
                   >
-                    <Avatar className="h-10 w-10">
+                    <Avatar className="h-9 w-9 border">
                       <AvatarImage src={user.avatar_url} />
-                      <AvatarFallback>{user.nama?.charAt(0)}</AvatarFallback>
+                      <AvatarFallback className="text-xs font-medium">{user.nama?.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium">{user.nama}</p>
-                      <p className="truncate text-sm text-muted-foreground">
-                        @{user.username}
-                        {user.kelas_nama && ` · ${user.kelas_nama}`}
+                      <p className="truncate font-medium text-sm">{user.nama}</p>
+                      <p className="text-xs text-muted-foreground">
+                        User baru mendaftar
                       </p>
                     </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <Badge className={`gap-1 text-xs capitalize ${roleStyles[user.role] || ''}`}>
-                        {roleIcons[user.role]}
-                        {user.role === 'student' ? 'Siswa' : user.role === 'alumni' ? 'Alumni' : 'Admin'}
-                      </Badge>
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        {formatDate(user.created_at)}
-                      </span>
-                    </div>
+                    <Badge className={`text-xs ${roleStyles[user.role] || ''}`}>
+                      {user.role === 'student' ? 'Siswa' : user.role === 'alumni' ? 'Alumni' : 'Admin'}
+                    </Badge>
                   </Link>
                 ))}
+
+                {/* Empty State */}
+                {!data?.recent_pending_portfolios?.length && !data?.recent_users?.length && (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <div className="rounded-full bg-muted p-3">
+                      <Activity className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <p className="mt-2 text-sm font-medium text-muted-foreground">Belum ada aktivitas</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Portfolio Stats Chart - 1 col */}
+        <Card>
+          <CardHeader className="space-y-1 pb-4">
+            <CardTitle className="flex items-center gap-2.5 text-lg">
+              <div className="rounded-lg bg-primary/10 p-2">
+                <BarChart3 className="h-5 w-5 text-primary" strokeWidth={2} />
+              </div>
+              Portfolio Stats
+            </CardTitle>
+            <CardDescription>
+              Breakdown status portfolio
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="space-y-3">
+                {[...Array(5)].map((_, i) => (
+                  <Skeleton key={i} className="h-12 rounded-lg" />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {/* Published */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-green-500" />
+                      <span className="font-medium">Published</span>
+                    </div>
+                    <span className="font-bold">{data?.portfolios.published ?? 0}</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                    <div 
+                      className="h-full bg-green-500 transition-all"
+                      style={{ 
+                        width: `${((data?.portfolios.published ?? 0) / (data?.portfolios.total || 1)) * 100}%` 
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Pending Review */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-orange-500" />
+                      <span className="font-medium">Pending Review</span>
+                    </div>
+                    <span className="font-bold">{data?.portfolios.pending_review ?? 0}</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                    <div 
+                      className="h-full bg-orange-500 transition-all"
+                      style={{ 
+                        width: `${((data?.portfolios.pending_review ?? 0) / (data?.portfolios.total || 1)) * 100}%` 
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Draft */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-gray-500" />
+                      <span className="font-medium">Draft</span>
+                    </div>
+                    <span className="font-bold">{data?.portfolios.draft ?? 0}</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                    <div 
+                      className="h-full bg-gray-500 transition-all"
+                      style={{ 
+                        width: `${((data?.portfolios.draft ?? 0) / (data?.portfolios.total || 1)) * 100}%` 
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Rejected */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-red-500" />
+                      <span className="font-medium">Rejected</span>
+                    </div>
+                    <span className="font-bold">{data?.portfolios.rejected ?? 0}</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                    <div 
+                      className="h-full bg-red-500 transition-all"
+                      style={{ 
+                        width: `${((data?.portfolios.rejected ?? 0) / (data?.portfolios.total || 1)) * 100}%` 
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Archived */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-gray-400" />
+                      <span className="font-medium">Archived</span>
+                    </div>
+                    <span className="font-bold">{data?.portfolios.archived ?? 0}</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                    <div 
+                      className="h-full bg-gray-400 transition-all"
+                      style={{ 
+                        width: `${((data?.portfolios.archived ?? 0) / (data?.portfolios.total || 1)) * 100}%` 
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Total */}
+                <div className="pt-3 mt-3 border-t">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold">Total Portfolio</span>
+                    <span className="text-xl font-bold">{data?.portfolios.total ?? 0}</span>
+                  </div>
+                </div>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
-
-      {/* System Info */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Ringkasan Sistem</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {[...Array(4)].map((_, i) => (
-                <Skeleton key={i} className="h-20" />
-              ))}
-            </div>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-lg border p-4">
-                <p className="text-sm text-muted-foreground">Siswa Aktif</p>
-                <p className="text-2xl font-bold">{data?.users.students.toLocaleString()}</p>
-              </div>
-              <div className="rounded-lg border p-4">
-                <p className="text-sm text-muted-foreground">Alumni</p>
-                <p className="text-2xl font-bold">{data?.users.alumni.toLocaleString()}</p>
-              </div>
-              <div className="rounded-lg border p-4">
-                <p className="text-sm text-muted-foreground">Portfolio Published</p>
-                <p className="text-2xl font-bold">{data?.portfolios.published.toLocaleString()}</p>
-              </div>
-              <div className="rounded-lg border p-4">
-                <p className="text-sm text-muted-foreground">Jurusan</p>
-                <p className="text-2xl font-bold">{data?.jurusan.total.toLocaleString()}</p>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }
