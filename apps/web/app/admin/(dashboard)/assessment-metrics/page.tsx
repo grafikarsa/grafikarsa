@@ -14,9 +14,11 @@ import {
   ListChecks,
   CheckCircle2,
   XCircle,
+  Search,
 } from 'lucide-react';
 import { getDebugEmptyState } from '@/lib/utils/debug';
 import { DebugBanner } from '@/components/admin/debug-banner';
+import { useDebounce } from '@/lib/hooks/use-debounce';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
@@ -54,9 +56,12 @@ import { cn } from '@/lib/utils';
 
 export default function AdminAssessmentMetricsPage() {
   const queryClient = useQueryClient();
+  const [search, setSearch] = useState('');
   const [editMetric, setEditMetric] = useState<AssessmentMetric | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [deleteMetric, setDeleteMetric] = useState<AssessmentMetric | null>(null);
+  
+  const debouncedSearch = useDebounce(search, 300);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin-assessment-metrics'],
@@ -90,28 +95,48 @@ export default function AdminAssessmentMetricsPage() {
 
   const metrics = data?.data || [];
   const sortedMetrics = [...metrics].sort((a, b) => a.urutan - b.urutan);
+  
+  // Filter by search
+  const filteredMetrics = debouncedSearch
+    ? sortedMetrics.filter((m) =>
+        m.nama.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        m.deskripsi?.toLowerCase().includes(debouncedSearch.toLowerCase())
+      )
+    : sortedMetrics;
+  
   const activeCount = metrics.filter((m) => m.is_active).length;
   const inactiveCount = metrics.filter((m) => !m.is_active).length;
 
   // Debug mode: Force empty state
   const debugMode = getDebugEmptyState();
-  const displayMetrics = debugMode ? [] : sortedMetrics;
+  const displayMetrics = debugMode ? [] : filteredMetrics;
 
   // Loading state
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-9 w-64" />
-        <div className="grid gap-4 sm:grid-cols-3">
-          {[...Array(3)].map((_, i) => (
-            <Skeleton key={i} className="h-24" />
-          ))}
+      <div className="flex flex-col -m-4 sm:-m-6 lg:-m-8">
+        {/* Sticky Header Skeleton */}
+        <div className="sticky top-0 z-10 bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 lg:px-8 border-b">
+          <div className="mx-auto w-full max-w-[1600px] space-y-4">
+            <div className="grid gap-4 sm:grid-cols-3">
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-24" />
+              ))}
+            </div>
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <Skeleton className="h-10 flex-1" />
+              <Skeleton className="h-10 w-40" />
+            </div>
+          </div>
         </div>
-        <Skeleton className="h-10 w-32 ml-auto" />
-        <div className="space-y-3">
-          {[...Array(5)].map((_, i) => (
-            <Skeleton key={i} className="h-16" />
-          ))}
+        <div className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+          <div className="mx-auto w-full max-w-[1600px]">
+            <div className="space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <Skeleton key={i} className="h-16" />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -120,205 +145,218 @@ export default function AdminAssessmentMetricsPage() {
   // Error state
   if (isError) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Metrik Penilaian</h1>
-        <Card className="border-destructive/50 bg-destructive/5 p-8">
-          <div className="flex flex-col items-center justify-center text-center">
-            <AlertCircle className="h-12 w-12 text-destructive" />
-            <h3 className="mt-4 text-lg font-semibold">Gagal Memuat Data</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Terjadi kesalahan saat mengambil data metrik penilaian
-            </p>
-            <Button onClick={() => refetch()} className="mt-4">
-              Coba Lagi
-            </Button>
+      <div className="flex flex-col -m-4 sm:-m-6 lg:-m-8">
+        <div className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+          <div className="mx-auto w-full max-w-[1600px]">
+            <Card className="border-destructive/50 bg-destructive/5 p-8">
+              <div className="flex flex-col items-center justify-center text-center">
+                <AlertCircle className="h-12 w-12 text-destructive" />
+                <h3 className="mt-4 text-lg font-semibold">Gagal Memuat Data</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Terjadi kesalahan saat mengambil data metrik penilaian
+                </p>
+                <Button onClick={() => refetch()} className="mt-4">
+                  Coba Lagi
+                </Button>
+              </div>
+            </Card>
           </div>
-        </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Metrik Penilaian</h1>
-
-      {/* Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-muted p-2">
-              <ListChecks className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{metrics.length}</p>
-              <p className="text-sm text-muted-foreground">Total Metrik</p>
-            </div>
+    <div className="flex flex-col -m-4 sm:-m-6 lg:-m-8">
+      {/* Sticky Header - Stats, Search & Actions (Full Width) */}
+      <div className="sticky top-0 z-10 bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 lg:px-8 border-b">
+        <div className="mx-auto w-full max-w-[1600px] space-y-4">
+          {/* Stats Cards */}
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Card className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-muted p-2">
+                  <ListChecks className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{metrics.length}</p>
+                  <p className="text-sm text-muted-foreground">Total Metrik</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-green-100 p-2 dark:bg-green-900/30">
+                  <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{activeCount}</p>
+                  <p className="text-sm text-muted-foreground">Aktif</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-gray-100 p-2 dark:bg-gray-800">
+                  <XCircle className="h-5 w-5 text-gray-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{inactiveCount}</p>
+                  <p className="text-sm text-muted-foreground">Nonaktif</p>
+                </div>
+              </div>
+            </Card>
           </div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-green-100 p-2 dark:bg-green-900/30">
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{activeCount}</p>
-              <p className="text-sm text-muted-foreground">Aktif</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-gray-100 p-2 dark:bg-gray-800">
-              <XCircle className="h-5 w-5 text-gray-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{inactiveCount}</p>
-              <p className="text-sm text-muted-foreground">Nonaktif</p>
-            </div>
-          </div>
-        </Card>
-      </div>
 
-      {/* Info Card */}
-      <Card className="border-blue-200 bg-blue-50/50 p-4 dark:border-blue-900 dark:bg-blue-950/20">
-        <div className="flex gap-3">
-          <BarChart3 className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
-          <div>
-            <h3 className="font-medium text-blue-900 dark:text-blue-100">Tentang Metrik Penilaian</h3>
-            <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-              Metrik penilaian digunakan untuk menilai portfolio siswa dengan skala 1-10.
-              Hanya metrik yang aktif yang akan muncul saat melakukan penilaian baru.
-              Urutan metrik menentukan tampilan saat penilaian.
-            </p>
-          </div>
-        </div>
-      </Card>
-
-      {/* Action Button */}
-      <div className="flex justify-end">
-        <Button onClick={() => setIsCreateOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Tambah Metrik
-        </Button>
-      </div>
-
-      {debugMode && <DebugBanner pageName="Metrik Penilaian" />}
-
-      {/* Metrics Table */}
-      {displayMetrics.length === 0 ? (
-        <Card className="border-dashed py-16">
-          <div className="flex flex-col items-center justify-center text-center">
-            <BarChart3 className="h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-lg font-semibold">Belum Ada Metrik</h3>
-            <p className="mt-1 text-sm text-muted-foreground max-w-sm">
-              Tambahkan metrik penilaian untuk mulai menilai portfolio siswa
-            </p>
-            <Button onClick={() => setIsCreateOpen(true)} className="mt-4">
+          {/* Search & Action */}
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Cari metrik..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Button onClick={() => setIsCreateOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
-              Tambah Metrik Pertama
+              Tambah Metrik
             </Button>
           </div>
-        </Card>
-      ) : (
-        <Card className="overflow-hidden p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-b bg-muted/30">
-                <TableHead className="w-16">#</TableHead>
-                <TableHead>Nama Metrik</TableHead>
-                <TableHead className="hidden md:table-cell">Deskripsi</TableHead>
-                <TableHead className="w-[120px]">Status</TableHead>
-                <TableHead className="w-[100px] text-right">Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {displayMetrics.map((metric) => (
-                <TableRow key={metric.id} className={cn('group hover:bg-muted/50', !metric.is_active && 'opacity-60')}>
-                  <TableCell>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <GripVertical className="h-4 w-4 cursor-grab" />
-                      <span className="font-mono text-sm">{metric.urutan}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <BarChart3 className="h-4 w-4 text-primary" />
-                      <span className="font-medium">{metric.nama}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="text-muted-foreground text-sm line-clamp-1 cursor-help">
-                            {metric.deskripsi || '-'}
-                          </span>
-                        </TooltipTrigger>
-                        {metric.deskripsi && (
-                          <TooltipContent side="bottom" className="max-w-xs">
-                            <p>{metric.deskripsi}</p>
-                          </TooltipContent>
-                        )}
-                      </Tooltip>
-                    </TooltipProvider>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={metric.is_active}
-                        onCheckedChange={(checked: boolean) =>
-                          toggleActiveMutation.mutate({ id: metric.id, is_active: checked })
-                        }
-                        disabled={toggleActiveMutation.isPending}
-                      />
-                      <Badge
-                        variant={metric.is_active ? 'default' : 'secondary'}
-                        className={cn(
-                          'text-xs',
-                          metric.is_active
-                            ? 'bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400'
-                            : ''
-                        )}
-                      >
-                        {metric.is_active ? (
-                          <>
-                            <Check className="h-3 w-3 mr-1" /> Aktif
-                          </>
-                        ) : (
-                          <>
-                            <X className="h-3 w-3 mr-1" /> Nonaktif
-                          </>
-                        )}
-                      </Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setEditMetric(metric)}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => setDeleteMetric(metric)}
-                      >
-                        Hapus
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-      )}
+        </div>
+      </div>
 
-      {/* Form Dialog */}
+      {/* Content Area with proper padding */}
+      <div className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-[1600px]">
+          {debugMode && <DebugBanner pageName="Metrik Penilaian" />}
+
+          {/* Metrics Table */}
+          {displayMetrics.length === 0 ? (
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <div className="flex flex-col items-center justify-center px-6">
+                <div className="rounded-full bg-primary/10 p-4">
+                  <BarChart3 className="h-10 w-10 text-primary" />
+                </div>
+                <h3 className="mt-6 text-xl font-semibold">
+                  {search ? 'Tidak ada metrik yang sesuai' : 'Belum ada metrik'}
+                </h3>
+                <p className="mt-2 text-sm text-muted-foreground text-center max-w-md">
+                  {search
+                    ? 'Coba ubah kata kunci pencarian untuk menemukan metrik yang Anda cari.'
+                    : 'Metrik penilaian digunakan untuk menilai portfolio siswa dengan skala 1-10. Buat metrik pertama untuk mulai menilai portfolio.'}
+                </p>
+                {!search && (
+                  <Button onClick={() => setIsCreateOpen(true)} className="mt-6">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Buat Metrik Pertama
+                  </Button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <Card className="overflow-hidden p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-b bg-muted/30">
+                    <TableHead className="w-16">#</TableHead>
+                    <TableHead>Nama Metrik</TableHead>
+                    <TableHead className="hidden md:table-cell">Deskripsi</TableHead>
+                    <TableHead className="w-[120px]">Status</TableHead>
+                    <TableHead className="w-[100px] text-right">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {displayMetrics.map((metric) => (
+                    <TableRow key={metric.id} className={cn('group hover:bg-muted/50', !metric.is_active && 'opacity-60')}>
+                      <TableCell>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <GripVertical className="h-4 w-4 cursor-grab" />
+                          <span className="font-mono text-sm">{metric.urutan}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <BarChart3 className="h-4 w-4 text-primary" />
+                          <span className="font-medium">{metric.nama}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="text-muted-foreground text-sm line-clamp-1 cursor-help">
+                                {metric.deskripsi || '-'}
+                              </span>
+                            </TooltipTrigger>
+                            {metric.deskripsi && (
+                              <TooltipContent side="bottom" className="max-w-xs">
+                                <p>{metric.deskripsi}</p>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={metric.is_active}
+                            onCheckedChange={(checked: boolean) =>
+                              toggleActiveMutation.mutate({ id: metric.id, is_active: checked })
+                            }
+                            disabled={toggleActiveMutation.isPending}
+                          />
+                          <Badge
+                            variant={metric.is_active ? 'default' : 'secondary'}
+                            className={cn(
+                              'text-xs',
+                              metric.is_active
+                                ? 'bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400'
+                                : ''
+                            )}
+                          >
+                            {metric.is_active ? (
+                              <>
+                                <Check className="h-3 w-3 mr-1" /> Aktif
+                              </>
+                            ) : (
+                              <>
+                                <X className="h-3 w-3 mr-1" /> Nonaktif
+                              </>
+                            )}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditMetric(metric)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => setDeleteMetric(metric)}
+                          >
+                            Hapus
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          )}
+        </div>
+      </div>
+
+      {/* Modals - Outside scrollable area */}
       <MetricFormDialog
         metric={editMetric}
         open={isCreateOpen || !!editMetric}
@@ -350,6 +388,8 @@ export default function AdminAssessmentMetricsPage() {
     </div>
   );
 }
+
+
 
 
 function MetricFormDialog({
