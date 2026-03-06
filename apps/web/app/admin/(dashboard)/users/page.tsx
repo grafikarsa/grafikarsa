@@ -185,246 +185,269 @@ export default function AdminUsersPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-9 w-32" />
-          <Skeleton className="h-10 w-36" />
-        </div>
-        <div className="flex gap-4">
-          <Skeleton className="h-10 flex-1" />
-          <Skeleton className="h-10 w-40" />
-          <Skeleton className="h-10 w-40" />
-        </div>
-        <Card className="p-0">
-          <div className="space-y-4 p-6">
-            {[...Array(8)].map((_, i) => (
-              <Skeleton key={i} className="h-16 w-full" />
-            ))}
+      <div className="flex flex-col -m-4 sm:-m-6 lg:-m-8">
+        {/* Sticky Header Skeleton */}
+        <div className="sticky top-0 z-10 bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 lg:px-8 border-b">
+          <div className="mx-auto w-full max-w-[1600px] flex flex-wrap gap-3">
+            <Skeleton className="h-10 flex-1 min-w-[200px]" />
+            <Skeleton className="h-10 w-40" />
+            <Skeleton className="h-10 w-40" />
+            <Skeleton className="h-10 w-24" />
+            <Skeleton className="h-10 w-36" />
           </div>
-        </Card>
+        </div>
+        <div className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+          <div className="mx-auto w-full max-w-[1600px]">
+            <Card className="p-0">
+              <div className="space-y-4 p-6">
+                {[...Array(8)].map((_, i) => (
+                  <Skeleton key={i} className="h-16 w-full" />
+                ))}
+              </div>
+            </Card>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Search, Filters, and Action Button in same row */}
-      <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Cari nama, username, email..."
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className="pl-9"
-          />
+    <div className="flex flex-col -m-4 sm:-m-6 lg:-m-8">
+      {/* Sticky Header - Search, Filters & Actions (Full Width) */}
+      <div className="sticky top-0 z-10 bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 lg:px-8 border-b">
+        <div className="mx-auto w-full max-w-[1600px] flex flex-wrap gap-3">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Cari nama, username, email..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="pl-9"
+            />
+          </div>
+          <Select
+            value={roleFilter}
+            onValueChange={(v) => {
+              setRoleFilter(v);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Filter role" />
+            </SelectTrigger>
+            <SelectContent>
+              {roleOptions.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={statusFilter}
+            onValueChange={(v) => {
+              setStatusFilter(v);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Filter status" />
+            </SelectTrigger>
+            <SelectContent>
+              {statusOptions.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button variant="secondary" onClick={handleSearch}>
+            <Search className="mr-2 h-4 w-4" />
+            Cari
+          </Button>
+          <Button onClick={() => setShowCreateModal(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Tambah User
+          </Button>
         </div>
-        <Select
-          value={roleFilter}
-          onValueChange={(v) => {
-            setRoleFilter(v);
-            setPage(1);
-          }}
-        >
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Filter role" />
-          </SelectTrigger>
-          <SelectContent>
-            {roleOptions.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
-          value={statusFilter}
-          onValueChange={(v) => {
-            setStatusFilter(v);
-            setPage(1);
-          }}
-        >
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Filter status" />
-          </SelectTrigger>
-          <SelectContent>
-            {statusOptions.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button variant="secondary" onClick={handleSearch}>
-          <Search className="mr-2 h-4 w-4" />
-          Cari
-        </Button>
-        <Button onClick={() => setShowCreateModal(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Tambah User
-        </Button>
       </div>
 
-      {debugMode && <DebugBanner pageName="Users" />}
+      {/* Content Area with proper padding */}
+      <div className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-[1600px] space-y-6">
+          {debugMode && <DebugBanner pageName="Users" />}
 
-      {/* Table */}
-      {displayUsers.length === 0 ? (
-        <Card className="border-dashed py-16">
-          <div className="flex flex-col items-center justify-center">
-            <div className="rounded-full bg-muted p-4">
-              <Users className="h-8 w-8 text-muted-foreground" />
+          {/* Table */}
+          {displayUsers.length === 0 ? (
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <div className="flex flex-col items-center justify-center px-6">
+                <div className="rounded-full bg-primary/10 p-4">
+                  <Users className="h-10 w-10 text-primary" />
+                </div>
+                <h3 className="mt-6 text-xl font-semibold">
+                  {searchQuery || roleFilter !== 'all' || statusFilter !== 'all'
+                    ? 'Tidak ada user yang sesuai'
+                    : 'Belum ada user'}
+                </h3>
+                <p className="mt-2 text-sm text-muted-foreground text-center max-w-sm">
+                  {searchQuery || roleFilter !== 'all' || statusFilter !== 'all'
+                    ? 'Coba ubah kata kunci pencarian atau filter untuk menemukan user yang Anda cari.'
+                    : 'User yang terdaftar akan muncul di sini. Buat user pertama untuk memulai.'}
+                </p>
+                {!searchQuery && roleFilter === 'all' && statusFilter === 'all' && (
+                  <Button onClick={() => setShowCreateModal(true)} className="mt-6">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Buat User Pertama
+                  </Button>
+                )}
+              </div>
             </div>
-            <h3 className="mt-4 text-lg font-semibold">Tidak ada user</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {searchQuery || roleFilter !== 'all' || statusFilter !== 'all'
-                ? 'Tidak ada user yang sesuai filter'
-                : 'Belum ada user terdaftar'}
-            </p>
-          </div>
-        </Card>
-      ) : (
-        <Card className="overflow-hidden p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-b bg-muted/30">
-                <TableHead className="w-12 text-center">#</TableHead>
-                <TableHead className="w-[300px]">User</TableHead>
-                <TableHead className="w-[120px]">Role</TableHead>
-                <TableHead className="w-[150px]">Kelas</TableHead>
-                <TableHead className="w-[100px]">Status</TableHead>
-                <TableHead className="w-[120px]">Terdaftar</TableHead>
-                <TableHead className="w-[80px] text-right">Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {displayUsers.map((user, index) => (
-                <TableRow key={user.id} className="group hover:bg-muted/50">
-                  <TableCell className="text-center text-muted-foreground">
-                    {(page - 1) * 15 + index + 1}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10 border">
-                        <AvatarImage src={user.avatar_url} alt={user.nama} />
-                        <AvatarFallback className="text-sm font-medium">
-                          {user.nama?.charAt(0)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0">
-                        <p className="truncate font-medium">{user.nama}</p>
-                        <p className="truncate text-sm text-muted-foreground">
-                          @{user.username}
-                          {user.email && ` · ${user.email}`}
-                        </p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={`gap-1 capitalize ${roleStyles[user.role] || ''}`}>
-                      {roleIcons[user.role]}
-                      {user.role === 'student' ? 'Siswa' : user.role === 'alumni' ? 'Alumni' : 'Admin'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm">
-                      {user.kelas?.nama || (user.role === 'alumni' ? 'Lulus' : '-')}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      className={user.is_active ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}
-                    >
-                      {user.is_active ? 'Aktif' : 'Nonaktif'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm text-muted-foreground">
-                      {formatDate(user.created_at)}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <MoreVertical className="h-4 w-4" />
-                          <span className="sr-only">Menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleViewDetail(user)}>
-                          <Eye className="mr-2 h-4 w-4" />
-                          Lihat Detail
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEdit(user)}>
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => toggleActiveMutation.mutate({ id: user.id, isActive: user.is_active ?? false })}
-                          disabled={toggleActiveMutation.isPending}
+          ) : (
+            <Card className="overflow-hidden p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-b bg-muted/30">
+                    <TableHead className="w-12 text-center">#</TableHead>
+                    <TableHead className="w-[300px]">User</TableHead>
+                    <TableHead className="w-[120px]">Role</TableHead>
+                    <TableHead className="w-[150px]">Kelas</TableHead>
+                    <TableHead className="w-[100px]">Status</TableHead>
+                    <TableHead className="w-[120px]">Terdaftar</TableHead>
+                    <TableHead className="w-[80px] text-right">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {displayUsers.map((user, index) => (
+                    <TableRow key={user.id} className="group hover:bg-muted/50">
+                      <TableCell className="text-center text-muted-foreground">
+                        {(page - 1) * 15 + index + 1}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10 border">
+                            <AvatarImage src={user.avatar_url} alt={user.nama} />
+                            <AvatarFallback className="text-sm font-medium">
+                              {user.nama?.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <p className="truncate font-medium">{user.nama}</p>
+                            <p className="truncate text-sm text-muted-foreground">
+                              @{user.username}
+                              {user.email && ` · ${user.email}`}
+                            </p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={`gap-1 capitalize ${roleStyles[user.role] || ''}`}>
+                          {roleIcons[user.role]}
+                          {user.role === 'student' ? 'Siswa' : user.role === 'alumni' ? 'Alumni' : 'Admin'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">
+                          {user.kelas?.nama || (user.role === 'alumni' ? 'Lulus' : '-')}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          className={user.is_active ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}
                         >
-                          {user.is_active ? (
-                            <>
-                              <UserX className="mr-2 h-4 w-4" />
-                              Nonaktifkan
-                            </>
-                          ) : (
-                            <>
-                              <UserCheck className="mr-2 h-4 w-4" />
-                              Aktifkan
-                            </>
-                          )}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => setDeleteTarget(user)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Hapus
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-      )}
+                          {user.is_active ? 'Aktif' : 'Nonaktif'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">
+                          {formatDate(user.created_at)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreVertical className="h-4 w-4" />
+                              <span className="sr-only">Menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleViewDetail(user)}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              Lihat Detail
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEdit(user)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => toggleActiveMutation.mutate({ id: user.id, isActive: user.is_active ?? false })}
+                              disabled={toggleActiveMutation.isPending}
+                            >
+                              {user.is_active ? (
+                                <>
+                                  <UserX className="mr-2 h-4 w-4" />
+                                  Nonaktifkan
+                                </>
+                              ) : (
+                                <>
+                                  <UserCheck className="mr-2 h-4 w-4" />
+                                  Aktifkan
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => setDeleteTarget(user)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Hapus
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          )}
 
-      {/* Pagination */}
-      {pagination && pagination.total_pages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Menampilkan {users.length} dari {pagination.total_count} user
-          </p>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-            >
-              Previous
-            </Button>
-            <span className="text-sm">
-              Halaman {page} dari {pagination.total_pages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.min(pagination.total_pages, p + 1))}
-              disabled={page === pagination.total_pages}
-            >
-              Next
-            </Button>
-          </div>
+          {/* Pagination */}
+          {pagination && pagination.total_pages > 1 && (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Menampilkan {users.length} dari {pagination.total_count} user
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  Previous
+                </Button>
+                <span className="text-sm">
+                  Halaman {page} dari {pagination.total_pages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.min(pagination.total_pages, p + 1))}
+                  disabled={page === pagination.total_pages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
+      {/* Modals - Outside scrollable area */}
       {/* User Detail Modal */}
       <UserDetailModal
         user={selectedUser}
