@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -131,6 +131,57 @@ const statusStyles: Record<PortfolioStatus, string> = {
   archived: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
 };
 
+// Memoized Sticky Header Component - prevents re-render during data fetching
+// Note: This WILL re-render when search/status props change (that's correct behavior)
+// The input needs to update to show user typing
+const PortfolioFilters = memo(({
+  search,
+  onSearchChange,
+  status,
+  onStatusChange,
+  onCreateClick,
+}: {
+  search: string;
+  onSearchChange: (value: string) => void;
+  status: string;
+  onStatusChange: (value: string) => void;
+  onCreateClick: () => void;
+}) => {
+  return (
+    <div className="sticky top-0 z-10 bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 lg:px-8 border-b">
+      <div className="mx-auto w-full max-w-[1600px] flex flex-col gap-4 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Cari judul portfolio..."
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={status} onValueChange={onStatusChange}>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue placeholder="Filter status" />
+          </SelectTrigger>
+          <SelectContent>
+            {statusOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button onClick={onCreateClick}>
+          <Plus className="mr-2 h-4 w-4" />
+          Buat Portfolio
+        </Button>
+      </div>
+    </div>
+  );
+});
+
+PortfolioFilters.displayName = 'PortfolioFilters';
+
 const blockTypeOptions = [
   { value: 'text', label: 'Teks', icon: Type },
   { value: 'image', label: 'Gambar', icon: ImageIcon },
@@ -154,6 +205,19 @@ export default function AdminPortfoliosPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingPortfolio, setEditingPortfolio] = useState<PortfolioCard | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<PortfolioCard | null>(null);
+
+  // Memoize callbacks to prevent unnecessary re-creation
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+  }, []);
+
+  const handleStatusChange = useCallback((value: string) => {
+    setStatus(value);
+  }, []);
+
+  const handleCreateClick = useCallback(() => {
+    setShowCreateModal(true);
+  }, []);
 
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ['admin-portfolios', debouncedSearch, status, page],
@@ -196,10 +260,105 @@ export default function AdminPortfoliosPage() {
   const portfolios = data?.data || [];
   const pagination = (data as { pagination?: { total_pages: number } })?.pagination;
 
+  // Memoize content area - only re-render when actual data changes (debouncedSearch triggers query)
+  // NOT when search input changes (that only affects the input field)
+  const contentArea = useMemo(() => {
+    // Show loading overlay during refetch
+    const showLoadingOverlay = isFetching && data;
+
+    if (portfolios.length === 0) {
+      // Different empty states based on context
+      const hasFilters = debouncedSearch || status !== 'all';
+      
+      return (
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="flex flex-col items-center justify-center px-6">
+            <div className="rounded-full bg-primary/10 p-4">
+              <FileText className="h-10 w-10 text-primary" />
+            </div>
+            <h3 className="mt-6 text-xl font-semibold">
+              {hasFilters ? 'Tidak ada portfolio yang sesuai' : 'Belum ada portfolio'}
+            </h3>
+            <p className="mt-2 text-sm text-muted-foreground text-center max-w-sm">
+              {hasFilters 
+                ? 'Coba ubah filter atau kata kunci pencarian untuk menemukan portfolio yang Anda cari.'
+                : 'Portfolio yang dibuat oleh siswa akan muncul di sini. Anda dapat membuat portfolio untuk siswa atau menunggu mereka membuat sendiri.'
+              }
+            </p>
+            {!hasFilters && (
+              <Button onClick={() => setShowCreateModal(true)} className="mt-6">
+                <Plus className="mr-2 h-4 w-4" />
+                Buat Portfolio Pertama
+              </Button>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,320px))] gap-6">
+          {portfolios.map((portfolio) => (
+            <PortfolioCardItem
+              key={portfolio.id}
+              portfolio={portfolio}
+              onPreview={() => setSelectedPortfolio(portfolio)}
+              onEdit={() => {
+                setEditingPortfolio(portfolio);
+                setShowEditModal(true);
+              }}
+              onDelete={() => setDeleteTarget(portfolio)}
+              onStatusChange={(newStatus) =>
+                updateStatusMutation.mutate({ id: portfolio.id, status: newStatus as PortfolioStatus })
+              }
+              isUpdatingStatus={updateStatusMutation.isPending}
+            />
+          ))}
+        </div>
+
+        {pagination && pagination.total_pages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-8">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Halaman {page} dari {pagination.total_pages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.min(pagination.total_pages, p + 1))}
+              disabled={page === pagination.total_pages}
+            >
+              Next
+            </Button>
+          </div>
+        )}
+
+        {showLoadingOverlay && (
+          <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
+            <div className="flex items-center gap-2 bg-background border rounded-lg px-4 py-2 shadow-lg">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-sm font-medium">Memuat...</span>
+            </div>
+          </div>
+        )}
+      </>
+    );
+    // Note: 'search' is intentionally NOT in dependencies - only debouncedSearch matters for data
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [portfolios, pagination, page, debouncedSearch, status, isFetching, data, updateStatusMutation.isPending]);
+
   // Initial loading - show full skeleton
   if (isLoading && !data) {
     return (
-      <div className="flex flex-col">
+      <div className="flex flex-col -m-4 sm:-m-6 lg:-m-8">
         {/* Sticky Header Skeleton */}
         <div className="sticky top-0 z-10 bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 lg:px-8 border-b">
           <div className="mx-auto w-full max-w-[1600px] flex items-center gap-4">
@@ -222,107 +381,20 @@ export default function AdminPortfoliosPage() {
   }
 
   return (
-    <div className="flex flex-col">
-      {/* Sticky Header - Filters & Actions */}
-      <div className="sticky top-0 z-10 bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 lg:px-8 border-b">
-        <div className="mx-auto w-full max-w-[1600px] flex flex-col gap-4 sm:flex-row sm:items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Cari judul portfolio..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="w-full sm:w-48">
-              <SelectValue placeholder="Filter status" />
-            </SelectTrigger>
-            <SelectContent>
-              {statusOptions.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button onClick={() => setShowCreateModal(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Buat Portfolio
-          </Button>
-        </div>
-      </div>
+    <div className="flex flex-col -m-4 sm:-m-6 lg:-m-8">
+      {/* Sticky Header - Filters & Actions (Full Width) */}
+      <PortfolioFilters
+        search={search}
+        onSearchChange={handleSearchChange}
+        status={status}
+        onStatusChange={handleStatusChange}
+        onCreateClick={handleCreateClick}
+      />
 
-      {/* Content Area */}
+      {/* Content Area with proper padding */}
       <div className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
         <div className="mx-auto w-full max-w-[1600px] relative">
-          {/* Loading overlay - only shows during refetch */}
-          {isFetching && data && (
-            <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
-              <div className="flex items-center gap-2 bg-background border rounded-lg px-4 py-2 shadow-lg">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="text-sm font-medium">Memuat...</span>
-              </div>
-            </div>
-          )}
-
-          {portfolios.length === 0 ? (
-          <Card className="border-dashed py-16">
-            <div className="flex flex-col items-center justify-center">
-              <div className="rounded-full bg-muted p-4">
-                <FileText className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <h3 className="mt-4 text-lg font-semibold">Tidak ada portfolio</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {search || status !== 'all' ? 'Tidak ada portfolio yang sesuai' : 'Belum ada portfolio'}
-              </p>
-            </div>
-          </Card>
-        ) : (
-          <>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,320px))] gap-6">
-              {portfolios.map((portfolio) => (
-                <PortfolioCardItem
-                  key={portfolio.id}
-                  portfolio={portfolio}
-                  onPreview={() => setSelectedPortfolio(portfolio)}
-                  onEdit={() => {
-                    setEditingPortfolio(portfolio);
-                    setShowEditModal(true);
-                  }}
-                  onDelete={() => setDeleteTarget(portfolio)}
-                  onStatusChange={(newStatus) => updateStatusMutation.mutate({ id: portfolio.id, status: newStatus as PortfolioStatus })}
-                  isUpdatingStatus={updateStatusMutation.isPending}
-                />
-              ))}
-            </div>
-
-            {pagination && pagination.total_pages > 1 && (
-              <div className="flex items-center justify-center gap-2 mt-8">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                >
-                  Previous
-                </Button>
-                <span className="text-sm text-muted-foreground">
-                  Halaman {page} dari {pagination.total_pages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((p) => Math.min(pagination.total_pages, p + 1))}
-                  disabled={page === pagination.total_pages}
-                >
-                  Next
-                </Button>
-              </div>
-            )}
-          </>
-        )}
+          {contentArea}
         </div>
       </div>
 

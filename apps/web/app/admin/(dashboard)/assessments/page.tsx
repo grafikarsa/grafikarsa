@@ -112,17 +112,29 @@ export default function AdminAssessmentsPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-9 w-64" />
-        <div className="grid gap-4 sm:grid-cols-3">
-          {[...Array(3)].map((_, i) => (
-            <Skeleton key={i} className="h-24" />
-          ))}
+      <div className="flex flex-col -m-4 sm:-m-6 lg:-m-8">
+        {/* Sticky Header Skeleton */}
+        <div className="sticky top-0 z-10 bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 lg:px-8 border-b">
+          <div className="mx-auto w-full max-w-[1600px] space-y-4">
+            <div className="grid gap-4 sm:grid-cols-3">
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-24" />
+              ))}
+            </div>
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <Skeleton className="h-10 flex-1" />
+              <Skeleton className="h-10 w-full sm:w-48" />
+            </div>
+          </div>
         </div>
-        <div className="space-y-3">
-          {[...Array(5)].map((_, i) => (
-            <Skeleton key={i} className="h-24" />
-          ))}
+        <div className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+          <div className="mx-auto w-full max-w-[1600px]">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {[...Array(6)].map((_, i) => (
+                <Skeleton key={i} className="h-80" />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -148,119 +160,131 @@ export default function AdminAssessmentsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-muted p-2">
-              <ClipboardList className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{totalCount}</p>
-              <p className="text-sm text-muted-foreground">Total Portfolio</p>
-            </div>
+    <div className="flex flex-col -m-4 sm:-m-6 lg:-m-8">
+      {/* Sticky Header - Stats & Filters (Full Width) */}
+      <div className="sticky top-0 z-10 bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 lg:px-8 border-b">
+        <div className="mx-auto w-full max-w-[1600px] space-y-4">
+          {/* Stats Cards */}
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Card className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-muted p-2">
+                  <ClipboardList className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{totalCount}</p>
+                  <p className="text-sm text-muted-foreground">Total Portfolio</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-green-100 p-2 dark:bg-green-900/30">
+                  <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{assessedCount}</p>
+                  <p className="text-sm text-muted-foreground">Sudah Dinilai</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-yellow-100 p-2 dark:bg-yellow-900/30">
+                  <Clock className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{pendingCount}</p>
+                  <p className="text-sm text-muted-foreground">Belum Dinilai</p>
+                </div>
+              </div>
+            </Card>
           </div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-green-100 p-2 dark:bg-green-900/30">
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
+
+          {/* Filters */}
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Cari portfolio..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
             </div>
-            <div>
-              <p className="text-2xl font-bold">{assessedCount}</p>
-              <p className="text-sm text-muted-foreground">Sudah Dinilai</p>
-            </div>
+            <Select value={filter} onValueChange={(v) => setFilter(v as FilterType)}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {filterOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-yellow-100 p-2 dark:bg-yellow-900/30">
-              <Clock className="h-5 w-5 text-yellow-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{pendingCount}</p>
-              <p className="text-sm text-muted-foreground">Belum Dinilai</p>
-            </div>
-          </div>
-        </Card>
+        </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col gap-4 sm:flex-row">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Cari portfolio..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
+      {/* Content Area with proper padding */}
+      <div className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-[1600px]">
+          {/* Portfolio List */}
+          {portfolios.length === 0 ? (
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <div className="flex flex-col items-center justify-center px-6">
+                <div className="rounded-full bg-primary/10 p-4">
+                  <ClipboardList className="h-10 w-10 text-primary" />
+                </div>
+                <h3 className="mt-6 text-xl font-semibold">Tidak Ada Portfolio</h3>
+                <p className="mt-2 text-sm text-muted-foreground text-center max-w-sm">
+                  {search || filter !== 'all'
+                    ? 'Tidak ada portfolio yang sesuai dengan filter pencarian Anda.'
+                    : 'Belum ada portfolio yang dipublish untuk dinilai.'}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {portfolios.map((portfolio) => (
+                <PortfolioCard
+                  key={portfolio.id}
+                  portfolio={portfolio}
+                  onAssess={() => setSelectedPortfolio(portfolio)}
+                  onDelete={() => setDeleteTarget(portfolio)}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {pagination && pagination.total_pages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-8">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                Previous
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                Halaman {page} dari {pagination.total_pages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.min(pagination.total_pages, p + 1))}
+                disabled={page === pagination.total_pages}
+              >
+                Next
+              </Button>
+            </div>
+          )}
         </div>
-        <Select value={filter} onValueChange={(v) => setFilter(v as FilterType)}>
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {filterOptions.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
-
-      {/* Portfolio List */}
-      {portfolios.length === 0 ? (
-        <Card className="border-dashed py-16">
-          <div className="flex flex-col items-center justify-center text-center">
-            <ClipboardList className="h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-lg font-semibold">Tidak Ada Portfolio</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {search || filter !== 'all'
-                ? 'Tidak ada portfolio yang sesuai filter'
-                : 'Belum ada portfolio yang dipublish'}
-            </p>
-          </div>
-        </Card>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {portfolios.map((portfolio) => (
-            <PortfolioCard
-              key={portfolio.id}
-              portfolio={portfolio}
-              onAssess={() => setSelectedPortfolio(portfolio)}
-              onDelete={() => setDeleteTarget(portfolio)}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Pagination */}
-      {pagination && pagination.total_pages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-          >
-            Previous
-          </Button>
-          <span className="text-sm text-muted-foreground">
-            Halaman {page} dari {pagination.total_pages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.min(pagination.total_pages, p + 1))}
-            disabled={page === pagination.total_pages}
-          >
-            Next
-          </Button>
-        </div>
-      )}
 
       {/* Assessment Sheet */}
       <AssessmentSheet
@@ -575,11 +599,10 @@ function AssessmentSheet({
                   </h4>
                 </div>
                 <div className="space-y-3">
-                  {metrics.map((metric, index) => (
+                  {metrics.map((metric) => (
                     <MetricScoreInput
                       key={metric.id}
                       metric={metric}
-                      index={index + 1}
                       score={scores[metric.id]?.score || 5}
                       comment={scores[metric.id]?.comment || ''}
                       onScoreChange={(score) => handleScoreChange(metric.id, score)}

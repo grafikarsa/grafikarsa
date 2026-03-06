@@ -145,17 +145,21 @@ export default function ModerationPage() {
 
       {/* Empty State */}
       {portfolios.length === 0 ? (
-        <Card className="border-dashed py-16">
-          <div className="flex flex-col items-center justify-center">
-            <div className="rounded-full bg-muted p-4">
-              <FileText className="h-8 w-8 text-muted-foreground" />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="flex flex-col items-center justify-center px-6">
+            <div className="rounded-full bg-green-500/10 p-4">
+              <Check className="h-10 w-10 text-green-600 dark:text-green-400" />
             </div>
-            <h3 className="mt-4 text-lg font-semibold">Tidak ada portfolio pending</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Semua portfolio sudah direview. Cek kembali nanti.
+            <h3 className="mt-6 text-xl font-semibold">Semua Portfolio Sudah Direview</h3>
+            <p className="mt-2 text-sm text-muted-foreground text-center max-w-md">
+              Tidak ada portfolio yang menunggu review saat ini. Portfolio baru yang disubmit oleh siswa akan muncul di sini untuk direview.
             </p>
+            <div className="mt-6 flex items-center gap-2 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span>Cek kembali nanti untuk portfolio baru</span>
+            </div>
           </div>
-        </Card>
+        </div>
       ) : (
         /* Portfolio Grid - same as portfolios page */
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">

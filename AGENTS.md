@@ -129,6 +129,94 @@ When working on backend code (Go), refer to:
 .agents/skills/golang-pro/
 ```
 
+## Debugging & Troubleshooting
+
+**CRITICAL: When encountering ANY bug, test failure, or unexpected behavior, you MUST use the `systematic-debugging` skill BEFORE proposing fixes.**
+
+### When to Use Systematic Debugging
+
+Use this skill for ANY technical issue:
+- Test failures
+- Bugs in production or development
+- Unexpected behavior
+- Performance problems
+- Build failures
+- Integration issues
+- CI/CD pipeline failures
+
+**ESPECIALLY use when:**
+- Under time pressure (emergencies make guessing tempting)
+- "Just one quick fix" seems obvious
+- You've already tried multiple fixes
+- Previous fix didn't work
+- You don't fully understand the issue
+
+### Skill Location
+
+```
+.agents/skills/systematic-debugging/
+```
+
+### The Iron Law
+
+```
+NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST
+```
+
+### The Four Phases (MUST complete in order)
+
+1. **Root Cause Investigation**
+   - Read error messages carefully
+   - Reproduce consistently
+   - Check recent changes
+   - Gather evidence in multi-component systems
+   - Trace data flow
+
+2. **Pattern Analysis**
+   - Find working examples
+   - Compare against references
+   - Identify differences
+   - Understand dependencies
+
+3. **Hypothesis and Testing**
+   - Form single hypothesis
+   - Test minimally (one variable at a time)
+   - Verify before continuing
+   - If 3+ fixes failed → Question the architecture
+
+4. **Implementation**
+   - Create failing test case first
+   - Implement single fix
+   - Verify fix works
+   - No bundled changes
+
+### Red Flags - STOP and Follow Process
+
+If you catch yourself thinking:
+- "Quick fix for now, investigate later"
+- "Just try changing X and see if it works"
+- "Add multiple changes, run tests"
+- "Skip the test, I'll manually verify"
+- "It's probably X, let me fix that"
+- "I don't fully understand but this might work"
+- "One more fix attempt" (when already tried 2+)
+
+**ALL of these mean: STOP. Return to Phase 1.**
+
+### Supporting Techniques
+
+Available in `.agents/skills/systematic-debugging/`:
+- `root-cause-tracing.md` - Trace bugs backward through call stack
+- `defense-in-depth.md` - Add validation at multiple layers
+- `condition-based-waiting.md` - Replace arbitrary timeouts with condition polling
+
+### Real-World Impact
+
+- Systematic approach: 15-30 minutes to fix
+- Random fixes approach: 2-3 hours of thrashing
+- First-time fix rate: 95% vs 40%
+- New bugs introduced: Near zero vs common
+
 ## Project Context
 
 **Project:** Grafikarsa - Platform Katalog Portofolio & Social Network SMKN 4 Malang
