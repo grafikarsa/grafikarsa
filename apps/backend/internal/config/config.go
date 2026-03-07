@@ -16,6 +16,7 @@ type Config struct {
 	MinIO    MinIOConfig
 	JWT      JWTConfig
 	CORS     CORSConfig
+	AI       AIConfig
 }
 
 type AppConfig struct {
@@ -54,6 +55,10 @@ type JWTConfig struct {
 
 type CORSConfig struct {
 	Origins []string
+}
+
+type AIConfig struct {
+	GeminiAPIKey string
 }
 
 func Load() (*Config, error) {
@@ -106,6 +111,9 @@ func Load() (*Config, error) {
 				}
 				return normalized
 			}(),
+		},
+		AI: AIConfig{
+			GeminiAPIKey: getEnv("GOOGLE_GEMINI_API_KEY", ""),
 		},
 	}
 

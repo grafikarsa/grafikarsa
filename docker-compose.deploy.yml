@@ -61,6 +61,7 @@ services:
       - APP_ENV=production
       - DB_HOST=db
       - MINIO_ENDPOINT=minio:9000
+      - GOOGLE_GEMINI_API_KEY=${GOOGLE_GEMINI_API_KEY}
     depends_on:
       db:
         condition: service_healthy
@@ -80,6 +81,7 @@ services:
       - NODE_ENV=production
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      - NEXT_PUBLIC_AI_FEATURES_ENABLED=${NEXT_PUBLIC_AI_FEATURES_ENABLED}
     depends_on:
       - backend
     networks:

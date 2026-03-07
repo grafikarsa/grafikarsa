@@ -19,7 +19,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { Home, Plus, Search, Users, FolderOpen, History, Shield, Send } from 'lucide-react';
+import { Home, Plus, Search, Users, FolderOpen, History, Shield, Send, Sparkles } from 'lucide-react';
 import { getUnreadCount } from '@/lib/api/changelog';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 
@@ -73,8 +73,11 @@ export function StudentSidebar() {
     (user?.special_roles && user.special_roles.length > 0) ||
     (user?.capabilities && user.capabilities.length > 0);
 
+  const aiEnabled = process.env.NEXT_PUBLIC_AI_FEATURES_ENABLED === 'true';
+
   const navItems = [
     { href: '/', label: 'Feed', icon: Home, exact: true },
+    ...(aiEnabled ? [{ href: '/ai-ideas', label: 'AI Ide Proyek', icon: Sparkles }] : []),
     { href: `/${user?.username}/portfolios/new`, label: 'Buat Portofolio', icon: Plus },
   ];
 

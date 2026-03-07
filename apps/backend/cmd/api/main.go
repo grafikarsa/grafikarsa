@@ -83,6 +83,7 @@ func main() {
 	importHandler := handler.NewImportHandler(adminRepo, userRepo)
 	changelogHandler := handler.NewChangelogHandler(changelogRepo, notificationService, userRepo)
 	commentHandler := handler.NewCommentHandler(commentService)
+	aiHandler := handler.NewAIHandler(cfg)
 
 	// Initialize auth middleware
 	authMiddleware := middleware.NewAuthMiddleware(jwtService, db)
@@ -378,6 +379,10 @@ func main() {
 
 	// Public Feedback route (auth optional)
 	api.Post("/feedback", authMiddleware.Optional(), feedbackHandler.CreateFeedback)
+
+	// AI routes (auth required)
+	aiRoutes := api.Group("/ai", authMiddleware.Required())
+	aiRoutes.Post("/generate-project-ideas", aiHandler.GenerateProjectIdeas)
 
 	// Graceful shutdown
 	quit := make(chan os.Signal, 1)
