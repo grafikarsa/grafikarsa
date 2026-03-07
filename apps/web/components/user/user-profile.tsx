@@ -92,8 +92,8 @@ export function UserProfile({ profile }: UserProfileProps) {
 
   return (
     <>
-      {/* Banner - Contained with rounded corners and 3:1 aspect ratio */}
-      <div className="container mx-auto max-w-5xl px-6 pt-4 md:px-12 md:pt-6 lg:px-16">
+      {/* Banner - Extended width with 3:1 aspect ratio */}
+      <div className="container mx-auto max-w-6xl px-4 pt-4 md:px-6 md:pt-6 lg:px-8">
         <div className="relative w-full aspect-[3/1] overflow-hidden rounded-2xl bg-gradient-to-r from-primary/20 to-primary/10">
           {profile.banner_url && (
             <Image
