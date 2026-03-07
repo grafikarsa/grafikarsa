@@ -191,9 +191,9 @@ export function SmartFeedList() {
   const feedItems = data?.pages.flatMap((page) => page.data || []) || [];
 
   return (
-    <div className="max-w-2xl mx-auto">
-      {/* Sticky Tab Switcher */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+    <div className="max-w-2xl mx-auto -mt-4 md:-mt-6">
+      {/* Sticky Tab Switcher - positioned right below header */}
+      <div className="sticky top-14 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
         <FeedAlgorithmSwitcher
           value={algorithm}
           onChange={handleAlgorithmChange}

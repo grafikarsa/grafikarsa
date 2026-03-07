@@ -295,7 +295,7 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
   );
 
   return (
-    <aside className="fixed left-0 top-0 z-40 h-screen w-56 border-r bg-white dark:bg-neutral-950 hidden lg:block">
+    <aside className="fixed left-0 top-0 z-40 h-screen w-56 border-r bg-muted/40 hidden lg:block">
       <div className="flex h-full flex-col">
         {sidebarContent}
       </div>

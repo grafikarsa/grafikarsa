@@ -39,7 +39,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   // Only if viewMode is explicitly 'admin' (default)
   if (isAuthenticated && hasAdminAccess && viewMode === 'admin') {
     return (
-      <div className="flex min-h-screen bg-neutral-50 dark:bg-neutral-900">
+      <div className="flex min-h-screen bg-background">
         <AdminSidebar />
         <div className="flex flex-1 flex-col pl-56">
           <AdminHeader />
