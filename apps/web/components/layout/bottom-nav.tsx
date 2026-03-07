@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Search, PlusSquare, User, History, Users, Image as ImageIcon, X, MessageSquare } from 'lucide-react';
+import { Home, Search, PlusSquare, User, Sparkles, Users, Image as ImageIcon, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useState } from 'react';
@@ -16,6 +16,8 @@ export function BottomNav() {
     const [isSearchOpen, setIsSearchOpen] = useState(false);
 
     if (!user) return null;
+
+    const aiEnabled = process.env.NEXT_PUBLIC_AI_FEATURES_ENABLED === 'true';
 
     const isActive = (path: string) => pathname === path || pathname.startsWith(path + '/');
 
@@ -72,16 +74,18 @@ export function BottomNav() {
                         <span className="text-[10px]">Profil</span>
                     </Link>
 
-                    <Link
-                        href="/changelog"
-                        className={cn(
-                            "flex flex-col items-center gap-0.5 p-2 min-w-[56px]",
-                            isActive('/changelog') ? "text-primary" : "text-muted-foreground"
-                        )}
-                    >
-                        <History className="h-5 w-5" />
-                        <span className="text-[10px]">Updates</span>
-                    </Link>
+                    {aiEnabled && (
+                        <Link
+                            href="/ai-ideas"
+                            className={cn(
+                                "flex flex-col items-center gap-0.5 p-2 min-w-[56px]",
+                                isActive('/ai-ideas') ? "text-primary" : "text-muted-foreground"
+                            )}
+                        >
+                            <Sparkles className="h-5 w-5" />
+                            <span className="text-[10px]">AI Ide</span>
+                        </Link>
+                    )}
                 </nav>
             </div>
 

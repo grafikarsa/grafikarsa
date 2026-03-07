@@ -3,12 +3,15 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LogOut, Settings } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { LogOut, Settings, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useThemeValue } from '@/lib/hooks/use-theme-value';
 import { ThemeToggle } from './theme-toggle';
 import { NotificationBell } from '@/components/notifications/notification-bell';
+import { getUnreadCount } from '@/lib/api/changelog';
 
 const pageTitles: Record<string, string> = {
   '/': 'Feed',
@@ -21,6 +24,15 @@ export function StudentHeader() {
   const pathname = usePathname();
   const { logout, isLogoutPending } = useAuth();
   const { theme, mounted } = useThemeValue();
+
+  // Fetch changelog unread count
+  const { data } = useQuery({
+    queryKey: ['changelog-unread-count'],
+    queryFn: () => getUnreadCount(),
+    refetchInterval: 60000,
+  });
+
+  const unreadCount = data?.data?.data?.count || 0;
 
   const getTitle = () => {
     if (pageTitles[pathname]) return pageTitles[pathname];
@@ -77,14 +89,25 @@ export function StudentHeader() {
         <span className="font-semibold">Grafikarsa</span>
       </Link>
 
-      {/* Mobile: Settings + Notification on right */}
+      {/* Mobile: Changelog + Theme + Notification on right */}
       <div className="flex items-center gap-1 md:hidden">
         <Link
-          href="/settings"
-          className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          href="/changelog"
+          className="relative flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
         >
-          <Settings className="h-5 w-5" />
+          <History className="h-5 w-5" />
+          {unreadCount > 0 && (
+            <Badge
+              variant="destructive"
+              className="absolute -right-1 -top-1 h-4 min-w-4 justify-center px-1 text-[10px]"
+            >
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </Badge>
+          )}
         </Link>
+        <div className="flex h-9 w-9 items-center justify-center">
+          <ThemeToggle />
+        </div>
         <NotificationBell />
       </div>
 
