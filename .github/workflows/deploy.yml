@@ -51,6 +51,7 @@ jobs:
             NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}
             NEXT_PUBLIC_STORAGE_URL=${{ secrets.NEXT_PUBLIC_STORAGE_URL }}
             NEXT_PUBLIC_MAINTENANCE_MODE=${{ secrets.NEXT_PUBLIC_MAINTENANCE_MODE }}
+            NEXT_PUBLIC_AI_FEATURES_ENABLED=${{ secrets.NEXT_PUBLIC_AI_FEATURES_ENABLED }}
           cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-web:latest
           cache-to: type=inline
       
