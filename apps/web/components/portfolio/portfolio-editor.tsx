@@ -63,6 +63,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Progress } from '@/components/ui/progress';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
+import { ImageCropper } from '@/components/common/image-cropper';
 import { portfoliosApi, tagsApi } from '@/lib/api';
 import { seriesApi } from '@/lib/api/public';
 import { uploadsApi } from '@/lib/api/admin';
@@ -148,6 +149,10 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  
+  // Thumbnail cropper state
+  const [thumbnailCropperOpen, setThumbnailCropperOpen] = useState(false);
+  const [thumbnailCropperImage, setThumbnailCropperImage] = useState<string | null>(null);
 
   // Initialize content blocks
   useEffect(() => {
@@ -278,11 +283,26 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
         toast.error('Ukuran file maksimal 5MB');
         return;
       }
-      setThumbnailFile(file);
+      
+      // Open cropper for thumbnail
       const reader = new FileReader();
-      reader.onloadend = () => setThumbnailPreview(reader.result as string);
+      reader.addEventListener('load', () => {
+        setThumbnailCropperImage(reader.result?.toString() || null);
+        setThumbnailCropperOpen(true);
+      });
       reader.readAsDataURL(file);
     }
+    // Reset input
+    if (e.target) e.target.value = '';
+  };
+  
+  const handleThumbnailCropComplete = (croppedFile: File) => {
+    setThumbnailFile(croppedFile);
+    const reader = new FileReader();
+    reader.onloadend = () => setThumbnailPreview(reader.result as string);
+    reader.readAsDataURL(croppedFile);
+    setThumbnailCropperOpen(false);
+    setThumbnailCropperImage(null);
   };
 
   const removeThumbnail = () => {
@@ -586,8 +606,8 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
           className="relative mb-8 overflow-hidden rounded-2xl border bg-card shadow-sm"
         >
           {displayThumbnail ? (
-            <div className="group relative aspect-[21/9] w-full overflow-hidden">
-              <Image src={displayThumbnail} alt="Thumbnail" fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
+            <div className="group relative aspect-[4/3] w-full overflow-hidden">
+              <Image src={displayThumbnail} alt="Thumbnail" fill className="object-cover object-center transition-transform duration-500 group-hover:scale-105" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
               <div className="absolute inset-0 flex items-center justify-center gap-3 bg-black/40 opacity-0 transition-all duration-300 group-hover:opacity-100">
                 <label className="cursor-pointer">
@@ -608,17 +628,33 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
               )}
             </div>
           ) : (
-            <label className="group flex aspect-[21/9] w-full cursor-pointer flex-col items-center justify-center bg-gradient-to-br from-muted/50 to-muted transition-colors hover:from-muted hover:to-muted/80">
+            <label className="group flex aspect-[4/3] w-full cursor-pointer flex-col items-center justify-center bg-gradient-to-br from-muted/50 to-muted transition-colors hover:from-muted hover:to-muted/80">
               <div className="flex flex-col items-center p-4 text-center">
                 <div className="rounded-full bg-primary/10 p-3 transition-transform group-hover:scale-110 md:p-4">
                   <ImageIcon className="h-6 w-6 text-primary md:h-8 md:w-8" />
                 </div>
                 <span className="mt-3 text-sm font-medium md:mt-4">Tambahkan Thumbnail</span>
-                <span className="mt-1 text-xs text-muted-foreground">Gambar utama menarik</span>
-                <span className="mt-1 text-[10px] text-muted-foreground md:mt-2 md:text-xs">PNG, JPG, WebP • Max 5MB</span>
+                <span className="mt-1 text-xs text-muted-foreground">Gambar utama portfolio</span>
+                <span className="mt-1 text-[10px] text-muted-foreground md:mt-2 md:text-xs">Rasio 4:3 • 1200x900px • Max 5MB</span>
               </div>
               <input type="file" accept="image/*" className="hidden" onChange={handleThumbnailChange} />
             </label>
+          )}
+          
+          {/* Thumbnail Guidelines - Show when no thumbnail */}
+          {!displayThumbnail && (
+            <div className="border-t bg-muted/30 px-4 py-3">
+              <div className="text-xs text-muted-foreground">
+                <p className="font-semibold text-foreground mb-1">Standar Thumbnail:</p>
+                <ul className="list-inside list-disc space-y-0.5">
+                  <li>Rasio: 4:3 (Horizontal)</li>
+                  <li>Rekomendasi: 1200 x 900 px</li>
+                  <li>Format: JPG, PNG, WebP</li>
+                  <li>Maksimal: 5 MB</li>
+                  <li>Focal point: 1/3 bagian atas (Rule of Thirds)</li>
+                </ul>
+              </div>
+            </div>
           )}
         </motion.div>
 
@@ -993,6 +1029,19 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
           variant="destructive"
           isLoading={deleteMutation.isPending}
           onConfirm={() => deleteMutation.mutate()}
+        />
+        
+        {/* Thumbnail Cropper */}
+        <ImageCropper
+          open={thumbnailCropperOpen}
+          onOpenChange={setThumbnailCropperOpen}
+          imageSrc={thumbnailCropperImage}
+          aspect={4 / 3}
+          cropShape="rect"
+          objectPosition="center"
+          onCropComplete={handleThumbnailCropComplete}
+          title="Sesuaikan Thumbnail Portfolio"
+          description="Posisikan elemen penting di area 1/3 bagian atas (Rule of Thirds). Rasio 4:3 memberikan ruang vertikal lebih baik untuk showcase."
         />
       </div>
     </TooltipProvider>

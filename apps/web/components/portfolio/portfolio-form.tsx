@@ -50,10 +50,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
+import { ImageCropper } from '@/components/common/image-cropper';
 import { portfoliosApi, tagsApi } from '@/lib/api';
 import { uploadsApi } from '@/lib/api/admin';
 import { useAuthStore } from '@/lib/stores/auth-store';
-import { Portfolio, Tag, ContentBlockType } from '@/lib/types';
+import { Portfolio, Tag, ContentBlockType, ContentBlockPayload } from '@/lib/types';
 
 // Types for local content blocks
 interface LocalContentBlock {
@@ -96,6 +97,10 @@ export function PortfolioForm({ portfolio }: PortfolioFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitProgress, setSubmitProgress] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  
+  // Thumbnail cropper state
+  const [thumbnailCropperOpen, setThumbnailCropperOpen] = useState(false);
+  const [thumbnailCropperImage, setThumbnailCropperImage] = useState<string | null>(null);
 
   // Initialize content blocks from portfolio
   useEffect(() => {
@@ -141,11 +146,26 @@ export function PortfolioForm({ portfolio }: PortfolioFormProps) {
         toast.error('Ukuran file maksimal 5MB');
         return;
       }
-      setThumbnailFile(file);
+      
+      // Open cropper for thumbnail
       const reader = new FileReader();
-      reader.onloadend = () => setThumbnailPreview(reader.result as string);
+      reader.addEventListener('load', () => {
+        setThumbnailCropperImage(reader.result?.toString() || null);
+        setThumbnailCropperOpen(true);
+      });
       reader.readAsDataURL(file);
     }
+    // Reset input
+    if (e.target) e.target.value = '';
+  };
+  
+  const handleThumbnailCropComplete = (croppedFile: File) => {
+    setThumbnailFile(croppedFile);
+    const reader = new FileReader();
+    reader.onloadend = () => setThumbnailPreview(reader.result as string);
+    reader.readAsDataURL(croppedFile);
+    setThumbnailCropperOpen(false);
+    setThumbnailCropperImage(null);
   };
 
   const removeThumbnail = () => {
@@ -258,11 +278,11 @@ export function PortfolioForm({ portfolio }: PortfolioFormProps) {
           await portfoliosApi.addBlock(portfolio.id, {
             block_type: block.block_type,
             block_order: i,
-            payload: blockPayload,
+            payload: blockPayload as unknown as ContentBlockPayload,
           });
         } else {
           setSubmitProgress(`Memperbarui konten ${i + 1}/${contentBlocks.length}...`);
-          await portfoliosApi.updateBlock(portfolio.id, block.id, { payload: blockPayload });
+          await portfoliosApi.updateBlock(portfolio.id, block.id, { payload: blockPayload as unknown as ContentBlockPayload });
         }
       }
 
@@ -346,13 +366,13 @@ export function PortfolioForm({ portfolio }: PortfolioFormProps) {
       {/* Thumbnail */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Thumbnail</CardTitle>
+          <CardTitle className="text-base">Thumbnail Portfolio</CardTitle>
           <CardDescription>Gambar utama yang akan ditampilkan di katalog</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           {displayThumbnail ? (
-            <div className="group relative aspect-video w-full overflow-hidden rounded-lg border bg-muted">
-              <Image src={displayThumbnail} alt="Thumbnail" fill className="object-cover" />
+            <div className="group relative aspect-[4/3] w-full overflow-hidden rounded-lg border bg-muted">
+              <Image src={displayThumbnail} alt="Thumbnail" fill className="object-cover object-center" />
               <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
                 <label className="cursor-pointer">
                   <Button type="button" variant="secondary" size="sm" asChild>
@@ -366,13 +386,25 @@ export function PortfolioForm({ portfolio }: PortfolioFormProps) {
               </div>
             </div>
           ) : (
-            <label className="flex aspect-video w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed bg-muted/30 transition-colors hover:bg-muted/50">
+            <label className="flex aspect-[4/3] w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed bg-muted/30 transition-colors hover:bg-muted/50">
               <Upload className="h-8 w-8 text-muted-foreground" />
               <span className="mt-2 text-sm font-medium">Klik untuk upload thumbnail</span>
               <span className="text-xs text-muted-foreground">PNG, JPG, WebP, max 5MB</span>
               <input type="file" accept="image/*" className="hidden" onChange={handleThumbnailChange} />
             </label>
           )}
+          
+          {/* Thumbnail Guidelines */}
+          <div className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
+            <p className="font-semibold text-foreground mb-1">📐 Standar Thumbnail:</p>
+            <ul className="list-inside list-disc space-y-0.5">
+              <li>Rasio: 4:3 (Horizontal)</li>
+              <li>Rekomendasi: 1200 x 900 px</li>
+              <li>Format: JPG, PNG, WebP</li>
+              <li>Maksimal: 5 MB</li>
+              <li>Focal point: 1/3 bagian atas (Rule of Thirds)</li>
+            </ul>
+          </div>
         </CardContent>
       </Card>
 
@@ -534,6 +566,18 @@ export function PortfolioForm({ portfolio }: PortfolioFormProps) {
         isLoading={deleteMutation.isPending}
         onConfirm={() => deleteMutation.mutate()}
       />
+      
+      <ImageCropper
+        open={thumbnailCropperOpen}
+        onOpenChange={setThumbnailCropperOpen}
+        imageSrc={thumbnailCropperImage}
+        aspect={4 / 3}
+        cropShape="rect"
+        objectPosition="center"
+        onCropComplete={handleThumbnailCropComplete}
+        title="Sesuaikan Thumbnail Portfolio"
+        description="Posisikan elemen penting di area 1/3 bagian atas (Rule of Thirds). Rasio 4:3 memberikan ruang vertikal lebih baik untuk showcase."
+      />
     </div>
   );
 }
@@ -662,55 +706,9 @@ function SortableContentBlockEditor({
           </div>
         )}
 
-        {block.block_type === 'youtube' && (() => {
-          const extractVideoId = (input: string): string => {
-            if (!input) return '';
-            if (/^[a-zA-Z0-9_-]{11}$/.test(input)) return input;
-            const patterns = [
-              /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
-              /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
-            ];
-            for (const pattern of patterns) {
-              const match = input.match(pattern);
-              if (match) return match[1];
-            }
-            return input;
-          };
-
-          const handleYoutubeInput = (value: string) => {
-            const videoId = extractVideoId(value.trim());
-            onUpdate({ ...block.payload, video_id: videoId });
-          };
-
-          const videoId = (block.payload.video_id as string) || '';
-
-          return (
-            <div className="space-y-3">
-              <div>
-                <Label className="text-xs">Link atau Video ID YouTube</Label>
-                <Input
-                  value={videoId}
-                  onChange={(e) => handleYoutubeInput(e.target.value)}
-                  placeholder="https://youtube.com/watch?v=xxx atau video ID"
-                />
-                <p className="mt-1 text-xs text-muted-foreground">Bisa paste link YouTube langsung atau video ID saja</p>
-              </div>
-              <div>
-                <Label className="text-xs">Judul (opsional)</Label>
-                <Input
-                  value={(block.payload.title as string) || ''}
-                  onChange={(e) => onUpdate({ ...block.payload, title: e.target.value })}
-                  placeholder="Judul video"
-                />
-              </div>
-              {videoId && (
-                <div className="aspect-video w-full overflow-hidden rounded-lg border">
-                  <iframe src={`https://www.youtube.com/embed/${videoId}`} className="h-full w-full" allowFullScreen />
-                </div>
-              )}
-            </div>
-          );
-        })()}
+        {block.block_type === 'youtube' && (
+          <YoutubeBlockEditor block={block} onUpdate={onUpdate} />
+        )}
 
         {block.block_type === 'button' && (
           <div className="space-y-3">
@@ -730,18 +728,75 @@ function SortableContentBlockEditor({
                 placeholder="https://example.com"
               />
             </div>
-            {block.payload.text && block.payload.url && (
+            {block.payload.text && block.payload.url ? (
               <div className="pt-2">
                 <Button variant="outline" size="sm" asChild>
                   <a href={block.payload.url as string} target="_blank" rel="noopener noreferrer">
-                    {block.payload.text as string}
+                    {String(block.payload.text)}
                   </a>
                 </Button>
               </div>
-            )}
+            ) : null}
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// YouTube Block Editor Component
+function YoutubeBlockEditor({
+  block,
+  onUpdate,
+}: {
+  block: LocalContentBlock;
+  onUpdate: (payload: Record<string, unknown>) => void;
+}) {
+  const extractVideoId = (input: string): string => {
+    if (!input) return '';
+    if (/^[a-zA-Z0-9_-]{11}$/.test(input)) return input;
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
+    ];
+    for (const pattern of patterns) {
+      const match = input.match(pattern);
+      if (match) return match[1];
+    }
+    return input;
+  };
+
+  const handleYoutubeInput = (value: string) => {
+    const videoId = extractVideoId(value.trim());
+    onUpdate({ ...block.payload, video_id: videoId });
+  };
+
+  const videoId = (block.payload.video_id as string) || '';
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs">Link atau Video ID YouTube</Label>
+        <Input
+          value={videoId}
+          onChange={(e) => handleYoutubeInput(e.target.value)}
+          placeholder="https://youtube.com/watch?v=xxx atau video ID"
+        />
+        <p className="mt-1 text-xs text-muted-foreground">Bisa paste link YouTube langsung atau video ID saja</p>
+      </div>
+      <div>
+        <Label className="text-xs">Judul (opsional)</Label>
+        <Input
+          value={(block.payload.title as string) || ''}
+          onChange={(e) => onUpdate({ ...block.payload, title: e.target.value })}
+          placeholder="Judul video"
+        />
+      </div>
+      {videoId && (
+        <div className="aspect-video w-full overflow-hidden rounded-lg border">
+          <iframe src={`https://www.youtube.com/embed/${videoId}`} className="h-full w-full" allowFullScreen />
+        </div>
+      )}
     </div>
   );
 }

@@ -100,7 +100,7 @@ export function UserProfile({ profile }: UserProfileProps) {
               src={profile.banner_url ?? ''}
               alt="Banner"
               fill
-              className="object-cover"
+              className="object-cover object-center"
               priority
               unoptimized
             />

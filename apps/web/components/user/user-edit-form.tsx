@@ -7,8 +7,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Loader2, Check, X, Camera, Eye, EyeOff, ChevronDown, Link as LinkIcon, Lock, User as UserIcon } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Loader2, Check, X, Camera, Eye, EyeOff, ChevronDown, Link as LinkIcon, Lock, User as UserIcon, ImageIcon, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -66,6 +68,7 @@ export function UserEditForm({ user }: UserEditFormProps) {
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [socialLinksOpen, setSocialLinksOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const [imageGuideOpen, setImageGuideOpen] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -273,16 +276,16 @@ export function UserEditForm({ user }: UserEditFormProps) {
   const filledSocialLinksCount = socialLinks.filter(l => l.url).length;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       {/* Hero Section - Banner & Avatar Preview */}
       <div className="relative overflow-hidden rounded-xl border bg-card">
-        {/* Banner */}
+        {/* Banner - 3:1 aspect ratio */}
         <div
-          className="relative h-36 cursor-pointer bg-gradient-to-r from-primary/20 via-primary/10 to-primary/5 sm:h-44"
+          className="relative aspect-[3/1] cursor-pointer bg-gradient-to-r from-primary/20 via-primary/10 to-primary/5"
           onClick={() => !bannerUploading && bannerInputRef.current?.click()}
         >
           {bannerUrl ? (
-            <Image src={bannerUrl} alt="Banner" fill className="object-cover" unoptimized />
+            <Image src={bannerUrl} alt="Banner" fill className="object-cover object-center" unoptimized />
           ) : null}
           {/* Banner Overlay */}
           <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-all hover:bg-black/40">
@@ -346,15 +349,142 @@ export function UserEditForm({ user }: UserEditFormProps) {
           <p className="mt-2 text-xs text-muted-foreground">
             Klik pada foto profil atau banner untuk mengubahnya.
           </p>
-          <div className="mt-2 rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
-            <span className="font-semibold text-foreground">Catatan untuk Banner GIF:</span>
-            <ul className="mt-1 list-inside list-disc space-y-1">
-              <li>File GIF akan diupload langsung <strong>tanpa cropping</strong> agar animasi tetap berjalan.</li>
-              <li>Disarankan menggunakan resolusi <strong>1500x500 piksel</strong> untuk hasil terbaik.</li>
-            </ul>
-          </div>
         </div>
       </div>
+
+      {/* Image Standards Guide - Accordion Card */}
+      <Collapsible open={imageGuideOpen} onOpenChange={setImageGuideOpen}>
+        <Card className="py-0 overflow-hidden">
+          <CollapsibleTrigger asChild>
+            <button className="flex w-full items-center justify-between p-4 text-left transition-colors hover:bg-muted/50">
+              <div className="flex items-center gap-2">
+                <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                <h3 className="text-sm font-semibold">Panduan Ukuran Gambar</h3>
+              </div>
+              <motion.div
+                animate={{ rotate: imageGuideOpen ? 180 : 0 }}
+                transition={{ duration: 0.2, ease: "easeInOut" }}
+              >
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              </motion.div>
+            </button>
+          </CollapsibleTrigger>
+          <AnimatePresence initial={false}>
+            {imageGuideOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] }}
+              >
+                <CollapsibleContent forceMount>
+                  <div className="border-t px-4 pb-4">
+                    <div className="mt-4 space-y-3">
+                {/* Foto Profil */}
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <div className="flex items-start gap-2">
+                    <div className="rounded-full bg-primary/10 p-1.5">
+                      <UserIcon className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-foreground">Foto Profil</p>
+                      <ul className="mt-1.5 space-y-1 text-xs text-muted-foreground">
+                        <li className="flex items-center gap-1.5">
+                          <span className="h-1 w-1 rounded-full bg-muted-foreground" />
+                          Rasio: 1:1 (Square/Persegi)
+                        </li>
+                        <li className="flex items-center gap-1.5">
+                          <span className="h-1 w-1 rounded-full bg-muted-foreground" />
+                          Rekomendasi: 800 x 800 px
+                        </li>
+                        <li className="flex items-center gap-1.5">
+                          <span className="h-1 w-1 rounded-full bg-muted-foreground" />
+                          Format: JPG, PNG, WebP
+                        </li>
+                        <li className="flex items-center gap-1.5">
+                          <span className="h-1 w-1 rounded-full bg-muted-foreground" />
+                          Maksimal: 2 MB
+                        </li>
+                        <li className="flex items-center gap-1.5">
+                          <span className="h-1 w-1 rounded-full bg-muted-foreground" />
+                          Ditampilkan dalam bentuk lingkaran
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Banner Profil */}
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <div className="flex items-start gap-2">
+                    <div className="rounded-full bg-primary/10 p-1.5">
+                      <ImageIcon className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-foreground">Banner Profil</p>
+                      <ul className="mt-1.5 space-y-1 text-xs text-muted-foreground">
+                        <li className="flex items-center gap-1.5">
+                          <span className="h-1 w-1 rounded-full bg-muted-foreground" />
+                          Rasio: 3:1 (Horizontal)
+                        </li>
+                        <li className="flex items-center gap-1.5">
+                          <span className="h-1 w-1 rounded-full bg-muted-foreground" />
+                          Rekomendasi: 1500 x 500 px
+                        </li>
+                        <li className="flex items-center gap-1.5">
+                          <span className="h-1 w-1 rounded-full bg-muted-foreground" />
+                          Format: JPG, PNG, WebP, GIF
+                        </li>
+                        <li className="flex items-center gap-1.5">
+                          <span className="h-1 w-1 rounded-full bg-muted-foreground" />
+                          Maksimal: 10 MB
+                        </li>
+                        <li className="flex items-center gap-1.5">
+                          <span className="h-1 w-1 rounded-full bg-muted-foreground" />
+                          Safe zone: Elemen penting di area tengah
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tips */}
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+                  <div className="flex items-start gap-2">
+                    <div className="rounded-full bg-primary/10 p-1.5">
+                      <AlertCircle className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-foreground">Tips</p>
+                      <ul className="mt-1.5 space-y-1 text-xs text-muted-foreground">
+                        <li className="flex items-start gap-1.5">
+                          <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-muted-foreground" />
+                          <span>Gunakan gambar berkualitas tinggi untuk hasil terbaik</span>
+                        </li>
+                        <li className="flex items-start gap-1.5">
+                          <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-muted-foreground" />
+                          <span>Foto profil: Pastikan wajah berada di tengah (10-15% dari tepi akan terpotong)</span>
+                        </li>
+                        <li className="flex items-start gap-1.5">
+                          <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-muted-foreground" />
+                          <span>Banner: Hindari teks penting di bagian pinggir (kiri/kanan)</span>
+                        </li>
+                        <li className="flex items-start gap-1.5">
+                          <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-muted-foreground" />
+                          <span>GIF banner akan diupload langsung tanpa cropping untuk menjaga animasi</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CollapsibleContent>
+                </motion.div>
+              )}
+            </AnimatePresence>
+        </Card>
+      </Collapsible>
 
       {/* Profile Information Section */}
       <section className="space-y-4">
@@ -574,9 +704,15 @@ export function UserEditForm({ user }: UserEditFormProps) {
         onOpenChange={setCropperOpen}
         imageSrc={cropperImage}
         aspect={cropType === 'avatar' ? 1 : 3}
+        cropShape={cropType === 'avatar' ? 'round' : 'rect'}
+        objectPosition={cropType === 'avatar' ? 'center' : 'center'}
         onCropComplete={handleCropComplete}
         title={cropType === 'avatar' ? 'Sesuaikan Foto Profil' : 'Sesuaikan Banner Profil'}
-        description={cropType === 'avatar' ? 'Geser dan zoom untuk menyesuaikan foto profil.' : 'Geser dan zoom untuk menyesuaikan banner.'}
+        description={
+          cropType === 'avatar' 
+            ? 'Posisikan wajah di tengah. Area 10-15% dari tepi akan terpotong saat ditampilkan dalam lingkaran.' 
+            : 'Posisikan elemen penting di area tengah. Bagian kiri dan kanan mungkin terpotong pada layar kecil.'
+        }
       />
     </div>
   );

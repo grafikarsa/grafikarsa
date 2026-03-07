@@ -24,6 +24,8 @@ interface ImageCropperProps {
     onCropComplete: (croppedImage: File) => void;
     title?: string;
     description?: string;
+    cropShape?: 'rect' | 'round';
+    objectPosition?: string;
 }
 
 export function ImageCropper({
@@ -34,6 +36,8 @@ export function ImageCropper({
     onCropComplete,
     title = 'Crop Gambar',
     description = 'Sesuaikan posisi dan ukuran gambar.',
+    cropShape = 'rect',
+    objectPosition = 'center',
 }: ImageCropperProps) {
     const [crop, setCrop] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
@@ -87,6 +91,13 @@ export function ImageCropper({
                             onCropChange={onCropChange}
                             onZoomChange={onZoomChange}
                             onCropComplete={onCropCompleteHandler}
+                            cropShape={cropShape}
+                            objectFit="contain"
+                            style={{
+                                containerStyle: {
+                                    backgroundColor: '#000',
+                                },
+                            }}
                         />
                     )}
                 </div>
