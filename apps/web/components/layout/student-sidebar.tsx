@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useUIStore } from '@/lib/stores/ui-store';
@@ -19,54 +20,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { Home, Plus, Search, Users, FolderOpen, History, Shield, Send, Sparkles } from 'lucide-react';
-import { getUnreadCount } from '@/lib/api/changelog';
+import { Home, Plus, Search, Users, FolderOpen, Shield, Sparkles } from 'lucide-react';
 import { NotificationBell } from '@/components/notifications/notification-bell';
-
-function ChangelogNavItem({ pathname }: { pathname: string }) {
-  const { data } = useQuery({
-    queryKey: ['changelog-unread-count'],
-    queryFn: () => getUnreadCount(),
-    refetchInterval: 60000, // Refresh every minute
-  });
-
-  const unreadCount = data?.data?.data?.count || 0;
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Link
-          href="/changelog"
-          className={cn(
-            'relative flex h-10 w-10 items-center justify-center rounded-lg transition-all',
-            pathname === '/changelog'
-              ? 'bg-muted text-foreground'
-              : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
-          )}
-        >
-          <History className="h-5 w-5" />
-          {unreadCount > 0 && (
-            <Badge
-              variant="destructive"
-              className="absolute -right-1 -top-1 h-4 min-w-4 justify-center px-1 text-[10px]"
-            >
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </Badge>
-          )}
-        </Link>
-      </TooltipTrigger>
-      <TooltipContent side="right">
-        Changelog {unreadCount > 0 && `(${unreadCount} baru)`}
-      </TooltipContent>
-    </Tooltip>
-  );
-}
 
 export function StudentSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useAuthStore();
-  const { setViewMode } = useUIStore();
+  const { setViewMode, sidebarCollapsed } = useUIStore();
 
   const hasAdminAccess =
     user?.role === 'admin' ||
@@ -91,14 +52,46 @@ export function StudentSidebar() {
 
   return (
     <TooltipProvider delayDuration={0}>
-      <aside className="fixed left-0 top-0 z-40 flex h-screen w-16 flex-col items-center border-r bg-muted/40 py-4">
-        {/* Notification Bell - Top */}
-        <div className="flex h-10 w-10 items-center justify-center">
-          <NotificationBell />
+      <motion.aside
+        initial={false}
+        animate={{
+          width: sidebarCollapsed ? 64 : 240,
+        }}
+        transition={{
+          type: 'spring',
+          stiffness: 300,
+          damping: 30,
+          mass: 0.8,
+        }}
+        className="fixed left-0 top-0 z-40 flex h-screen flex-col border-r bg-muted/40 py-4"
+      >
+        {/* Notification Bell with Label */}
+        <div className="px-2 mb-2">
+          <div
+            className={cn(
+              'flex items-center rounded-lg transition-colors',
+              sidebarCollapsed ? 'h-10 w-10 justify-center mx-auto' : 'h-10 w-full gap-3 px-3'
+            )}
+          >
+            <NotificationBell />
+            <AnimatePresence>
+              {!sidebarCollapsed && (
+                <motion.span
+                  initial={{ opacity: 0, width: 0 }}
+                  animate={{ opacity: 1, width: 'auto' }}
+                  exit={{ opacity: 0, width: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden whitespace-nowrap text-sm font-medium"
+                >
+                  Notifikasi
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
         {/* Navigation - Centered */}
-        <nav className="flex flex-1 flex-col items-center justify-center gap-2">
+        <nav className="flex flex-1 flex-col items-center justify-center gap-2 px-2">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href, item.exact);
@@ -106,18 +99,30 @@ export function StudentSidebar() {
             // Primary action button (Create Portfolio)
             if (item.isPrimary) {
               return (
-                <Tooltip key={item.href}>
+                <Tooltip key={item.href} delayDuration={sidebarCollapsed ? 0 : 99999}>
                   <TooltipTrigger asChild>
                     <Link
                       href={item.href}
                       className={cn(
-                        'relative flex h-11 w-11 items-center justify-center rounded-xl transition-colors',
-                        'bg-primary text-primary-foreground',
-                        'hover:bg-primary/90',
-                        'my-4' // Add vertical margin for spacing
+                        'relative flex items-center rounded-xl transition-colors my-4',
+                        'bg-primary text-primary-foreground hover:bg-primary/90',
+                        sidebarCollapsed ? 'h-11 w-11 justify-center' : 'h-11 w-full gap-3 px-4 justify-start'
                       )}
                     >
-                      <Icon className="h-5 w-5" />
+                      <Icon className="h-5 w-5 shrink-0" />
+                      <AnimatePresence>
+                        {!sidebarCollapsed && (
+                          <motion.span
+                            initial={{ opacity: 0, width: 0 }}
+                            animate={{ opacity: 1, width: 'auto' }}
+                            exit={{ opacity: 0, width: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden whitespace-nowrap text-sm font-medium"
+                          >
+                            {item.label}
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
                     </Link>
                   </TooltipTrigger>
                   <TooltipContent side="right" className="font-medium">
@@ -129,18 +134,32 @@ export function StudentSidebar() {
 
             // Regular navigation items
             return (
-              <Tooltip key={item.href}>
+              <Tooltip key={item.href} delayDuration={sidebarCollapsed ? 0 : 99999}>
                 <TooltipTrigger asChild>
                   <Link
                     href={item.href}
                     className={cn(
-                      'flex h-10 w-10 items-center justify-center rounded-lg transition-all',
+                      'flex items-center rounded-lg transition-all',
+                      sidebarCollapsed ? 'h-10 w-10 justify-center' : 'h-10 w-full gap-3 px-3',
                       active
                         ? 'bg-muted text-foreground'
                         : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
                     )}
                   >
-                    <Icon className="h-5 w-5" />
+                    <Icon className="h-5 w-5 shrink-0" />
+                    <AnimatePresence>
+                      {!sidebarCollapsed && (
+                        <motion.span
+                          initial={{ opacity: 0, width: 0 }}
+                          animate={{ opacity: 1, width: 'auto' }}
+                          exit={{ opacity: 0, width: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden whitespace-nowrap text-sm"
+                        >
+                          {item.label}
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
                   </Link>
                 </TooltipTrigger>
                 <TooltipContent side="right">{item.label}</TooltipContent>
@@ -150,16 +169,32 @@ export function StudentSidebar() {
 
           {/* Admin Panel Switcher */}
           {hasAdminAccess && (
-            <Tooltip>
+            <Tooltip delayDuration={sidebarCollapsed ? 0 : 99999}>
               <TooltipTrigger asChild>
                 <button
                   onClick={() => {
                     setViewMode('admin');
                     router.push('/admin');
                   }}
-                  className="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-all hover:bg-muted/60 hover:text-foreground"
+                  className={cn(
+                    'flex items-center rounded-lg text-muted-foreground transition-all hover:bg-muted/60 hover:text-foreground',
+                    sidebarCollapsed ? 'h-10 w-10 justify-center' : 'h-10 w-full gap-3 px-3'
+                  )}
                 >
-                  <Shield className="h-5 w-5" />
+                  <Shield className="h-5 w-5 shrink-0" />
+                  <AnimatePresence>
+                    {!sidebarCollapsed && (
+                      <motion.span
+                        initial={{ opacity: 0, width: 0 }}
+                        animate={{ opacity: 1, width: 'auto' }}
+                        exit={{ opacity: 0, width: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden whitespace-nowrap text-sm"
+                      >
+                        Admin Panel
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
                 </button>
               </TooltipTrigger>
               <TooltipContent side="right">Switch to Admin Panel</TooltipContent>
@@ -168,18 +203,32 @@ export function StudentSidebar() {
 
           {/* Search Popover */}
           <Popover>
-            <Tooltip>
+            <Tooltip delayDuration={sidebarCollapsed ? 0 : 99999}>
               <TooltipTrigger asChild>
                 <PopoverTrigger asChild>
                   <button
                     className={cn(
-                      'flex h-10 w-10 items-center justify-center rounded-lg transition-all',
+                      'flex items-center rounded-lg transition-all',
+                      sidebarCollapsed ? 'h-10 w-10 justify-center' : 'h-10 w-full gap-3 px-3',
                       isSearchActive
                         ? 'bg-muted text-foreground'
                         : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
                     )}
                   >
-                    <Search className="h-5 w-5" />
+                    <Search className="h-5 w-5 shrink-0" />
+                    <AnimatePresence>
+                      {!sidebarCollapsed && (
+                        <motion.span
+                          initial={{ opacity: 0, width: 0 }}
+                          animate={{ opacity: 1, width: 'auto' }}
+                          exit={{ opacity: 0, width: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden whitespace-nowrap text-sm"
+                        >
+                          Cari
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
                   </button>
                 </PopoverTrigger>
               </TooltipTrigger>
@@ -213,26 +262,42 @@ export function StudentSidebar() {
         </nav>
 
         {/* User Avatar - Above Changelog */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Link
-              href={`/${user?.username}`}
-              className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:opacity-80"
-            >
-              <Avatar className="h-9 w-9 cursor-pointer border-2 border-transparent transition-all hover:border-primary">
-                <AvatarImage src={user?.avatar_url} alt={user?.nama} />
-                <AvatarFallback className="bg-primary text-sm font-medium text-primary-foreground">
-                  {user?.nama?.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-            </Link>
-          </TooltipTrigger>
-          <TooltipContent side="right">Profil Saya</TooltipContent>
-        </Tooltip>
-
-        {/* Changelog - Bottom */}
-        <ChangelogNavItem pathname={pathname} />
-      </aside>
+        <div className="px-2">
+          <Tooltip delayDuration={sidebarCollapsed ? 0 : 99999}>
+            <TooltipTrigger asChild>
+              <Link
+                href={`/${user?.username}`}
+                className={cn(
+                  'flex items-center rounded-lg transition-colors hover:opacity-80',
+                  sidebarCollapsed ? 'h-10 w-10 justify-center' : 'h-10 w-full gap-3 px-2'
+                )}
+              >
+                <Avatar className="h-9 w-9 cursor-pointer border-2 border-transparent transition-all hover:border-primary shrink-0">
+                  <AvatarImage src={user?.avatar_url} alt={user?.nama} />
+                  <AvatarFallback className="bg-primary text-sm font-medium text-primary-foreground">
+                    {user?.nama?.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <AnimatePresence>
+                  {!sidebarCollapsed && (
+                    <motion.div
+                      initial={{ opacity: 0, width: 0 }}
+                      animate={{ opacity: 1, width: 'auto' }}
+                      exit={{ opacity: 0, width: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden min-w-0 flex-1"
+                    >
+                      <p className="truncate text-sm font-medium">{user?.nama}</p>
+                      <p className="truncate text-xs text-muted-foreground">@{user?.username}</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">Profil Saya</TooltipContent>
+          </Tooltip>
+        </div>
+      </motion.aside>
     </TooltipProvider>
   );
 }

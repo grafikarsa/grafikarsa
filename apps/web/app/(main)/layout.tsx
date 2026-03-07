@@ -29,7 +29,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     (user?.capabilities && user.capabilities.length > 0);
 
   // UI Store for view mode
-  const { viewMode } = useUIStore();
+  const { viewMode, sidebarCollapsed } = useUIStore();
 
   if (isLoading) {
     return <LoadingScreen />;
@@ -67,7 +67,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       <div className="hidden md:block">
         <StudentSidebar />
       </div>
-      <div className="flex flex-1 flex-col md:pl-16">
+      <div 
+        className="flex flex-1 flex-col transition-all duration-300"
+        style={{ 
+          paddingLeft: sidebarCollapsed ? '64px' : '240px' 
+        }}
+      >
         <StudentHeader />
         {/* Add pb-20 on mobile for bottom nav clearance */}
         <main className="flex-1 p-4 pb-24 md:p-6 md:pb-6">{children}</main>

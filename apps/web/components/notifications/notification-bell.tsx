@@ -15,6 +15,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from '@/lib/utils/format';
 
@@ -107,119 +113,128 @@ export function NotificationBell() {
   };
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-          {unreadCount > 0 && (
-            <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white">
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </span>
-          )}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80">
-        <DropdownMenuLabel className="flex items-center justify-between">
-          <span>Notifikasi</span>
-          {unreadCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
-              onClick={() => markAllAsReadMutation.mutate()}
-              disabled={markAllAsReadMutation.isPending}
-            >
-              <Check className="mr-1 h-3 w-3" />
-              Tandai semua dibaca
-            </Button>
-          )}
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {notifications.length === 0 ? (
-          <div className="py-6 text-center text-sm text-muted-foreground">
-            Tidak ada notifikasi
-          </div>
-        ) : (
-          <>
-            {notifications.map((notification) => {
-              const link = getNotificationLink(notification);
-              const isNewFollower = notification.type === 'new_follower';
-              // Cast data to any to safely access enriched fields which might be mixed types
-              const notifData = notification.data as any;
+    <TooltipProvider delayDuration={0}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenu open={open} onOpenChange={setOpen}>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="relative">
+                <Bell className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80">
+              <DropdownMenuLabel className="flex items-center justify-between">
+                <span>Notifikasi</span>
+                {unreadCount > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
+                    onClick={() => markAllAsReadMutation.mutate()}
+                    disabled={markAllAsReadMutation.isPending}
+                  >
+                    <Check className="mr-1 h-3 w-3" />
+                    Tandai semua dibaca
+                  </Button>
+                )}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {notifications.length === 0 ? (
+                <div className="py-6 text-center text-sm text-muted-foreground">
+                  Tidak ada notifikasi
+                </div>
+              ) : (
+                <>
+                  {notifications.map((notification) => {
+                    const link = getNotificationLink(notification);
+                    const isNewFollower = notification.type === 'new_follower';
+                    // Cast data to any to safely access enriched fields which might be mixed types
+                    const notifData = notification.data as any;
 
-              const isFeedback = notification.type === 'feedback_updated';
-              const feedbackData = isFeedback ? notifData : null;
+                    const isFeedback = notification.type === 'feedback_updated';
+                    const feedbackData = isFeedback ? notifData : null;
 
-              const showFollowBack = isNewFollower && notifData?.follower_username && !notifData?.follower_is_following;
+                    const showFollowBack = isNewFollower && notifData?.follower_username && !notifData?.follower_is_following;
 
-              const handleFollowBack = (e: React.MouseEvent, username: string) => {
-                e.preventDefault();
-                e.stopPropagation();
-                usersApi.follow(username).then(() => {
-                  queryClient.invalidateQueries({ queryKey: ['notifications'] });
-                  queryClient.invalidateQueries({ queryKey: ['followers'] });
-                  queryClient.invalidateQueries({ queryKey: ['following'] });
-                });
-              };
+                    const handleFollowBack = (e: React.MouseEvent, username: string) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      usersApi.follow(username).then(() => {
+                        queryClient.invalidateQueries({ queryKey: ['notifications'] });
+                        queryClient.invalidateQueries({ queryKey: ['followers'] });
+                        queryClient.invalidateQueries({ queryKey: ['following'] });
+                      });
+                    };
 
-              const content = (
-                <div className="flex gap-3">
-                  <div className="mt-0.5">{notificationIcons[notification.type]}</div>
-                  <div className="flex-1 space-y-1">
-                    <p className={cn('text-sm', !notification.is_read && 'font-medium')}>
-                      {notification.message || notification.title}
-                    </p>
-                    {isFeedback && feedbackData && (
-                      <div className="text-xs text-muted-foreground">
-                        <p className="font-medium text-foreground/80">Oleh: {feedbackData.actor_role}</p>
-                        {feedbackData.admin_note && (
-                          <p className="mt-0.5 line-clamp-2 italic">"{feedbackData.admin_note}"</p>
+                    const content = (
+                      <div className="flex gap-3">
+                        <div className="mt-0.5">{notificationIcons[notification.type]}</div>
+                        <div className="flex-1 space-y-1">
+                          <p className={cn('text-sm', !notification.is_read && 'font-medium')}>
+                            {notification.message || notification.title}
+                          </p>
+                          {isFeedback && feedbackData && (
+                            <div className="text-xs text-muted-foreground">
+                              <p className="font-medium text-foreground/80">Oleh: {feedbackData.actor_role}</p>
+                              {feedbackData.admin_note && (
+                                <p className="mt-0.5 line-clamp-2 italic">"{feedbackData.admin_note}"</p>
+                              )}
+                            </div>
+                          )}
+                          {showFollowBack && (
+                            <div className="mt-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs"
+                                onClick={(e) => handleFollowBack(e, notifData.follower_username)}
+                              >
+                                <UserPlus className="mr-1.5 h-3 w-3" />
+                                Follback
+                              </Button>
+                            </div>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(notification.created_at)}
+                          </p>
+                        </div>
+                        {!notification.is_read && (
+                          <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-blue-500" />
                         )}
                       </div>
-                    )}
-                    {showFollowBack && (
-                      <div className="mt-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-xs"
-                          onClick={(e) => handleFollowBack(e, notifData.follower_username)}
-                        >
-                          <UserPlus className="mr-1.5 h-3 w-3" />
-                          Follback
-                        </Button>
-                      </div>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(notification.created_at)}
-                    </p>
-                  </div>
-                  {!notification.is_read && (
-                    <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-blue-500" />
-                  )}
-                </div>
-              );
+                    );
 
-              return (
-                <DropdownMenuItem
-                  key={notification.id}
-                  className={cn('cursor-pointer p-3', !notification.is_read && 'bg-muted/50')}
-                  onClick={() => handleNotificationClick(notification)}
-                  asChild={!!link}
-                >
-                  {link ? <Link href={link}>{content}</Link> : content}
-                </DropdownMenuItem>
-              );
-            })}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild className="cursor-pointer justify-center">
-              <Link href="/notifications" className="text-sm text-primary">
-                Lihat semua notifikasi
-              </Link>
-            </DropdownMenuItem>
-          </>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+                    return (
+                      <DropdownMenuItem
+                        key={notification.id}
+                        className={cn('cursor-pointer p-3', !notification.is_read && 'bg-muted/50')}
+                        onClick={() => handleNotificationClick(notification)}
+                        asChild={!!link}
+                      >
+                        {link ? <Link href={link}>{content}</Link> : content}
+                      </DropdownMenuItem>
+                    );
+                  })}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild className="cursor-pointer justify-center">
+                    <Link href="/notifications" className="text-sm text-primary">
+                      Lihat semua notifikasi
+                    </Link>
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </TooltipTrigger>
+        <TooltipContent>
+          Notifikasi {unreadCount > 0 && `(${unreadCount} baru)`}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

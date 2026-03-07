@@ -4,11 +4,18 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { LogOut, Settings, History } from 'lucide-react';
+import { LogOut, PanelLeft, Newspaper } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useThemeValue } from '@/lib/hooks/use-theme-value';
+import { useUIStore } from '@/lib/stores/ui-store';
 import { ThemeToggle } from './theme-toggle';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 import { getUnreadCount } from '@/lib/api/changelog';
@@ -24,6 +31,7 @@ export function StudentHeader() {
   const pathname = usePathname();
   const { logout, isLogoutPending } = useAuth();
   const { theme, mounted } = useThemeValue();
+  const { toggleSidebar } = useUIStore();
 
   // Fetch changelog unread count
   const { data } = useQuery({
@@ -69,8 +77,27 @@ export function StudentHeader() {
         </Link>
       </div>
 
-      {/* Desktop: Page title on left */}
-      <h1 className="hidden text-lg font-semibold md:block">{title || 'Grafikarsa'}</h1>
+      {/* Desktop: Collapse button + Page title on left */}
+      <div className="hidden items-center gap-3 md:flex">
+        <TooltipProvider delayDuration={0}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleSidebar}
+                className="h-9 w-9"
+              >
+                <PanelLeft className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Toggle Sidebar
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <h1 className="text-lg font-semibold">{title || 'Grafikarsa'}</h1>
+      </div>
 
       {/* Desktop: Center Logo */}
       <Link
@@ -91,29 +118,61 @@ export function StudentHeader() {
 
       {/* Mobile: Changelog + Theme + Notification on right */}
       <div className="flex items-center gap-1 md:hidden">
-        <Link
-          href="/changelog"
-          className="relative flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-        >
-          <History className="h-5 w-5" />
-          {unreadCount > 0 && (
-            <Badge
-              variant="destructive"
-              className="absolute -right-1 -top-1 h-4 min-w-4 justify-center px-1 text-[10px]"
-            >
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </Badge>
-          )}
-        </Link>
+        <TooltipProvider delayDuration={0}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link
+                href="/changelog"
+                className="relative flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              >
+                <Newspaper className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <Badge
+                    variant="destructive"
+                    className="absolute -right-1 -top-1 h-4 min-w-4 justify-center px-1 text-[10px]"
+                  >
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </Badge>
+                )}
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent>
+              Changelog {unreadCount > 0 && `(${unreadCount} baru)`}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         <div className="flex h-9 w-9 items-center justify-center">
           <ThemeToggle />
         </div>
         <NotificationBell />
       </div>
 
-      {/* Desktop: Theme toggle + Logout on right */}
+      {/* Desktop: Theme toggle + Changelog + Logout on right */}
       <div className="hidden items-center gap-2 md:flex">
         <ThemeToggle />
+        <TooltipProvider delayDuration={0}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link
+                href="/changelog"
+                className="relative flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              >
+                <Newspaper className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <Badge
+                    variant="destructive"
+                    className="absolute -right-1 -top-1 h-4 min-w-4 justify-center px-1 text-[10px]"
+                  >
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </Badge>
+                )}
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent>
+              Changelog {unreadCount > 0 && `(${unreadCount} baru)`}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         <Button
           variant="ghost"
           size="sm"
