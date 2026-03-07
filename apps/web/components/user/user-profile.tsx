@@ -92,27 +92,28 @@ export function UserProfile({ profile }: UserProfileProps) {
 
   return (
     <>
-      {/* Banner - Full width, edge-to-edge */}
-      {/* Counteracting MainLayout padding: p-4 (mobile) and p-6 (desktop) */}
-      <div className="-mx-4 -mt-4 relative w-[calc(100%+2rem)] aspect-[3/1] md:aspect-auto md:h-80 bg-gradient-to-r from-primary/20 to-primary/10 md:-mx-6 md:-mt-6 md:w-[calc(100%+3rem)]">
-        {profile.banner_url && (
-          <Image
-            src={profile.banner_url ?? ''}
-            alt="Banner"
-            fill
-            className="object-cover"
-            priority
-            unoptimized
-          />
-        )}
+      {/* Banner - Contained with rounded corners and 3:1 aspect ratio */}
+      <div className="container mx-auto max-w-5xl px-6 pt-4 md:px-12 md:pt-6 lg:px-16">
+        <div className="relative w-full aspect-[3/1] overflow-hidden rounded-2xl bg-gradient-to-r from-primary/20 to-primary/10">
+          {profile.banner_url && (
+            <Image
+              src={profile.banner_url ?? ''}
+              alt="Banner"
+              fill
+              className="object-cover"
+              priority
+              unoptimized
+            />
+          )}
+        </div>
       </div>
 
       {/* Profile Content */}
       <div className="container mx-auto max-w-5xl px-6 pb-4 md:px-12 lg:px-16">
         {/* Avatar & Actions Row */}
-        <div className="relative flex items-end justify-between">
-          {/* Avatar - overlapping banner */}
-          <Avatar className="-mt-10 h-20 w-20 border-4 border-background shadow-sm md:-mt-16 md:h-32 md:w-32">
+        <div className="relative flex items-end justify-between -mt-12 md:-mt-20">
+          {/* Avatar - overlapping banner with better positioning */}
+          <Avatar className="h-24 w-24 border-4 border-background shadow-lg md:h-36 md:w-36 md:border-[6px]">
             <AvatarImage src={profile.avatar_url} alt={profile.nama} />
             <AvatarFallback className="text-2xl md:text-4xl">
               {profile.nama?.charAt(0).toUpperCase()}
@@ -120,65 +121,111 @@ export function UserProfile({ profile }: UserProfileProps) {
           </Avatar>
 
           {/* Actions */}
-          <div className="flex items-center gap-2 pb-0 md:pb-2">
-            {/* Share Button - Global */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 w-8 p-0 md:h-9 md:w-9">
-                  <Share2 className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={handleCopyLink} className="cursor-pointer">
-                  <Link2 className="mr-2 h-4 w-4" />
-                  Salin Link
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleCopyEmail} className="cursor-pointer">
-                  <Mail className="mr-2 h-4 w-4" />
-                  Salin Email
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleShareWhatsApp} className="cursor-pointer">
-                  <MessageCircle className="mr-2 h-4 w-4" />
-                  WhatsApp
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
+          <div className="flex items-center gap-2 pb-2 md:pb-4">
             {isOwner ? (
-              <Link href={`/${profile.username}/edit`}>
-                <Button variant="outline" size="sm" className="h-8 text-xs md:h-9 md:px-4 md:text-sm">
-                  <Edit className="mr-2 h-3 w-3 md:h-4 md:w-4" />
-                  Edit Profil
-                </Button>
-              </Link>
+              <>
+                <Link href={`/${profile.username}/edit`}>
+                  <Button variant="outline" size="sm" className="h-9 text-xs md:h-10 md:px-4 md:text-sm">
+                    <Edit className="mr-2 h-3.5 w-3.5 md:h-4 md:w-4" />
+                    Edit Profil
+                  </Button>
+                </Link>
+                {/* Share Button for owner */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-9 w-9 p-0 md:h-10 md:w-10">
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={handleCopyLink} className="cursor-pointer">
+                      <Link2 className="mr-2 h-4 w-4" />
+                      Salin Link
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleCopyEmail} className="cursor-pointer">
+                      <Mail className="mr-2 h-4 w-4" />
+                      Salin Email
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleShareWhatsApp} className="cursor-pointer">
+                      <MessageCircle className="mr-2 h-4 w-4" />
+                      WhatsApp
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
             ) : isAuthenticated && !isAdmin ? (
               <div className="flex gap-2">
                 <Button
                   variant={profile.is_following ? 'outline' : 'default'}
                   size="sm"
-                  className="h-8 text-xs md:h-9 md:px-4 md:text-sm"
+                  className="h-9 text-xs md:h-10 md:px-4 md:text-sm"
                   onClick={() => followMutation.mutate()}
                   disabled={followMutation.isPending}
                 >
-                  {followMutation.isPending && <Loader2 className="mr-2 h-3 w-3 animate-spin md:h-4 md:w-4" />}
+                  {followMutation.isPending && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin md:h-4 md:w-4" />}
                   {profile.is_following ? 'Unfollow' : 'Follow'}
                 </Button>
+                {/* Share Button for visitors */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-9 w-9 p-0 md:h-10 md:w-10">
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={handleCopyLink} className="cursor-pointer">
+                      <Link2 className="mr-2 h-4 w-4" />
+                      Salin Link
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleCopyEmail} className="cursor-pointer">
+                      <Mail className="mr-2 h-4 w-4" />
+                      Salin Email
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleShareWhatsApp} className="cursor-pointer">
+                      <MessageCircle className="mr-2 h-4 w-4" />
+                      WhatsApp
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-            ) : null}
+            ) : (
+              /* Share Button for non-authenticated users */
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-9 w-9 p-0 md:h-10 md:w-10">
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={handleCopyLink} className="cursor-pointer">
+                    <Link2 className="mr-2 h-4 w-4" />
+                    Salin Link
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleCopyEmail} className="cursor-pointer">
+                    <Mail className="mr-2 h-4 w-4" />
+                    Salin Email
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleShareWhatsApp} className="cursor-pointer">
+                    <MessageCircle className="mr-2 h-4 w-4" />
+                    WhatsApp
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
 
         {/* Name & Username */}
-        <div className="mt-3 md:mt-4">
-          <div className="flex flex-col gap-1 md:flex-row md:items-center md:gap-2">
-            <h1 className="text-xl font-bold md:text-2xl">{profile.nama}</h1>
+        <div className="mt-4 md:mt-5">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
+            <h1 className="text-2xl font-bold md:text-3xl">{profile.nama}</h1>
             {/* Special Role Badges */}
             {profile.special_roles && profile.special_roles.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {profile.special_roles.map((sr) => (
                   <Badge
                     key={sr.id}
-                    className="px-1.5 py-0 text-[10px] font-medium md:px-2 md:py-0.5 md:text-xs"
+                    className="px-2 py-0.5 text-xs font-medium md:px-2.5 md:py-1 md:text-sm"
                     style={{
                       backgroundColor: generateBgColor(sr.color),
                       color: sr.color,
@@ -191,16 +238,16 @@ export function UserProfile({ profile }: UserProfileProps) {
                 ))}
               </div>
             )}
-            {/* Dev Badge for testing/demo if needed, or based on role */}
+            {/* Admin Badge */}
             {profile.role === 'admin' && (
-              <Badge variant="secondary" className="w-fit text-[10px] md:text-xs">Administrator</Badge>
+              <Badge variant="secondary" className="w-fit text-xs md:text-sm">Administrator</Badge>
             )}
           </div>
-          <p className="text-sm text-muted-foreground md:text-base">@{profile.username}</p>
+          <p className="mt-1 text-sm text-muted-foreground md:text-base">@{profile.username}</p>
         </div>
 
         {/* Info Badges */}
-        <div className="mt-3 flex flex-wrap gap-2 md:mt-3">
+        <div className="mt-4 flex flex-wrap gap-2 md:mt-4">
           <Badge variant="outline" className="capitalize text-xs md:text-sm">
             {profile.role}
           </Badge>
@@ -213,18 +260,18 @@ export function UserProfile({ profile }: UserProfileProps) {
           )}
         </div>
 
-        {/* Stats */}
-        <div className="mt-4 flex gap-4 text-xs md:mt-5 md:gap-6 md:text-sm">
+        {/* Stats - More prominent with better spacing */}
+        <div className="mt-5 flex gap-6 text-sm md:mt-6 md:gap-8 md:text-base">
           <button
             onClick={() => setFollowModalType('followers')}
-            className="hover:underline"
+            className="transition-colors hover:text-primary"
           >
             <span className="font-bold text-foreground">{profile.follower_count || 0}</span>{' '}
             <span className="text-muted-foreground">Followers</span>
           </button>
           <button
             onClick={() => setFollowModalType('following')}
-            className="hover:underline"
+            className="transition-colors hover:text-primary"
           >
             <span className="font-bold text-foreground">{profile.following_count || 0}</span>{' '}
             <span className="text-muted-foreground">Following</span>
@@ -236,11 +283,11 @@ export function UserProfile({ profile }: UserProfileProps) {
         </div>
 
         {/* Bio */}
-        {profile.bio && <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground md:mt-4 md:text-sm">{profile.bio}</p>}
+        {profile.bio && <p className="mt-4 max-w-3xl text-sm leading-relaxed md:mt-5 md:text-base">{profile.bio}</p>}
 
         {/* Social Links */}
         {profile.social_links && profile.social_links.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-2 md:mt-4">
+          <div className="mt-4 flex flex-wrap gap-2 md:mt-5">
             {profile.social_links.map((link) => {
               const Icon = socialIcons[link.platform] || Globe;
               return (
@@ -252,7 +299,7 @@ export function UserProfile({ profile }: UserProfileProps) {
                   className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                   title={link.platform}
                 >
-                  <Icon className="h-4 w-4 md:h-5 md:w-5" />
+                  <Icon className="h-5 w-5" />
                 </a>
               );
             })}
@@ -268,7 +315,7 @@ export function UserProfile({ profile }: UserProfileProps) {
         />
 
         {/* Divider */}
-        <div className="mb-6 mt-6 border-t md:mb-8 md:mt-8" />
+        <div className="mb-8 mt-8 border-t md:mb-10 md:mt-10" />
       </div>
     </>
   );
