@@ -47,7 +47,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -62,7 +61,6 @@ import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { adminFeedbackApi, Feedback, FeedbackStatus } from '@/lib/api/admin';
 import { formatDate } from '@/lib/utils/format';
 import { cn } from '@/lib/utils';
-import { useUIStore } from '@/lib/stores/ui-store'; // Reuse store (optional) or local state
 
 const statusOptions = [
   { value: 'all', label: 'Semua Status' },
@@ -169,195 +167,225 @@ export default function AdminFeedbackPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-9 w-48" />
-        <div className="grid gap-4 sm:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-24" />
-          ))}
+      <div className="flex flex-col -m-4 sm:-m-6 lg:-m-8">
+        {/* Sticky Header Skeleton */}
+        <div className="sticky top-0 z-10 bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 lg:px-8 border-b">
+          <div className="mx-auto w-full max-w-[1600px] space-y-4">
+            <div className="grid gap-4 sm:grid-cols-4">
+              {[...Array(4)].map((_, i) => (
+                <Skeleton key={i} className="h-24" />
+              ))}
+            </div>
+            <div className="flex flex-col gap-4 md:flex-row">
+              <Skeleton className="h-10 flex-1" />
+              <Skeleton className="h-10 w-32" />
+              <Skeleton className="h-10 w-32" />
+              <Skeleton className="h-10 w-24" />
+              <Skeleton className="h-10 w-20" />
+            </div>
+          </div>
         </div>
-        <div className="space-y-3">
-          {[...Array(5)].map((_, i) => (
-            <Skeleton key={i} className="h-24" />
-          ))}
+        <div className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+          <div className="mx-auto w-full max-w-[1600px]">
+            <div className="space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <Skeleton key={i} className="h-24" />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Stats */}
-      {stats && (
-        <div className="grid gap-4 sm:grid-cols-4">
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-muted p-2">
-                <MessageSquareText className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.total}</p>
-                <p className="text-sm text-muted-foreground">Total</p>
-              </div>
+    <div className="flex flex-col -m-4 sm:-m-6 lg:-m-8">
+      {/* Sticky Header - Stats, Filters & Actions (Full Width) */}
+      <div className="sticky top-0 z-10 bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 lg:px-8 border-b">
+        <div className="mx-auto w-full max-w-[1600px] space-y-4">
+          {/* Stats Cards */}
+          {stats && (
+            <div className="grid gap-4 sm:grid-cols-4">
+              <Card className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-lg bg-muted p-2">
+                    <MessageSquareText className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{stats.total}</p>
+                    <p className="text-sm text-muted-foreground">Total</p>
+                  </div>
+                </div>
+              </Card>
+              <Card className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-lg bg-yellow-100 p-2 dark:bg-yellow-900/30">
+                    <Clock className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{stats.pending}</p>
+                    <p className="text-sm text-muted-foreground">Pending</p>
+                  </div>
+                </div>
+              </Card>
+              <Card className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-lg bg-blue-100 p-2 dark:bg-blue-900/30">
+                    <Eye className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{stats.read}</p>
+                    <p className="text-sm text-muted-foreground">Dibaca</p>
+                  </div>
+                </div>
+              </Card>
+              <Card className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-lg bg-green-100 p-2 dark:bg-green-900/30">
+                    <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{stats.resolved}</p>
+                    <p className="text-sm text-muted-foreground">Selesai</p>
+                  </div>
+                </div>
+              </Card>
             </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-yellow-100 p-2 dark:bg-yellow-900/30">
-                <Clock className="h-5 w-5 text-yellow-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.pending}</p>
-                <p className="text-sm text-muted-foreground">Pending</p>
-              </div>
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-blue-100 p-2 dark:bg-blue-900/30">
-                <Eye className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.read}</p>
-                <p className="text-sm text-muted-foreground">Dibaca</p>
-              </div>
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-green-100 p-2 dark:bg-green-900/30">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.resolved}</p>
-                <p className="text-sm text-muted-foreground">Selesai</p>
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
+          )}
 
-      {/* Toolbar & Filters */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-1 flex-wrap gap-3">
-          <div className="relative min-w-[200px] flex-1 md:max-w-xs">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Cari feedback..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="pl-9"
-            />
+          {/* Toolbar & Filters */}
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Cari feedback..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="pl-9"
+                />
+              </div>
+              <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={kategori} onValueChange={(v) => { setKategori(v); setPage(1); }}>
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {kategoriOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button variant="secondary" onClick={handleSearch}>
+                <Search className="mr-2 h-4 w-4" />
+                Cari
+              </Button>
+              {/* View Switcher */}
+              <div className="flex items-center rounded-lg border bg-background p-1">
+                <button
+                  onClick={() => setViewMode('table')}
+                  className={cn(
+                    'rounded px-2.5 py-1.5 transition-colors hover:bg-muted',
+                    viewMode === 'table' ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground'
+                  )}
+                  title="Tampilan Tabel"
+                >
+                  <LayoutList className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode('kanban')}
+                  className={cn(
+                    'rounded px-2.5 py-1.5 transition-colors hover:bg-muted',
+                    viewMode === 'kanban' ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground'
+                  )}
+                  title="Tampilan Kanban Board"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
           </div>
-          <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
-            <SelectTrigger className="w-32 md:w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {statusOptions.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={kategori} onValueChange={(v) => { setKategori(v); setPage(1); }}>
-            <SelectTrigger className="w-32 md:w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {kategoriOptions.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button variant="secondary" onClick={handleSearch}>
-            <Search className="mr-2 h-4 w-4" />
-            Cari
-          </Button>
-        </div>
-
-        {/* View Switcher */}
-        <div className="flex items-center rounded-lg border bg-background p-1">
-          <button
-            onClick={() => setViewMode('table')}
-            className={cn(
-              'rounded px-2.5 py-1.5 transition-colors hover:bg-muted',
-              viewMode === 'table' ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground'
-            )}
-            title="Tampilan Tabel"
-          >
-            <LayoutList className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => setViewMode('kanban')}
-            className={cn(
-              'rounded px-2.5 py-1.5 transition-colors hover:bg-muted',
-              viewMode === 'kanban' ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground'
-            )}
-            title="Tampilan Kanban Board"
-          >
-            <LayoutGrid className="h-4 w-4" />
-          </button>
         </div>
       </div>
 
-      {debugMode && <DebugBanner pageName="Feedback" />}
+      {/* Content Area with proper padding */}
+      <div className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-[1600px] space-y-6">
+          {debugMode && <DebugBanner pageName="Feedback" />}
 
-      {/* Main Content */}
-      {displayFeedbacks.length === 0 ? (
-        <Card className="border-dashed py-16">
-          <div className="flex flex-col items-center justify-center">
-            <MessageSquareText className="h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-lg font-semibold">Tidak ada feedback</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {searchQuery || status !== 'all' || kategori !== 'all'
-                ? 'Tidak ada feedback yang sesuai filter'
-                : 'Belum ada feedback masuk'}
-            </p>
-          </div>
-        </Card>
-      ) : (
-        <>
-          {viewMode === 'table' ? (
-            <FeedbackTable
-              feedbacks={feedbacks}
-              onView={(f) => setSelectedFeedback(f)}
-              onDelete={(f) => setDeleteTarget(f)}
-            />
+          {/* Main Content */}
+          {displayFeedbacks.length === 0 ? (
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <div className="flex flex-col items-center justify-center px-6">
+                <div className="rounded-full bg-primary/10 p-4">
+                  <MessageSquareText className="h-10 w-10 text-primary" />
+                </div>
+                <h3 className="mt-6 text-xl font-semibold">
+                  {searchQuery || status !== 'all' || kategori !== 'all'
+                    ? 'Tidak ada feedback yang sesuai'
+                    : 'Belum ada feedback'}
+                </h3>
+                <p className="mt-2 text-sm text-muted-foreground text-center max-w-sm">
+                  {searchQuery || status !== 'all' || kategori !== 'all'
+                    ? 'Coba ubah kata kunci pencarian atau filter untuk menemukan feedback yang Anda cari.'
+                    : 'Feedback dari pengguna akan muncul di sini. Feedback membantu meningkatkan kualitas platform berdasarkan masukan pengguna.'}
+                </p>
+              </div>
+            </div>
           ) : (
-            <FeedbackKanban
-              feedbacks={feedbacks}
-              onView={(f) => setSelectedFeedback(f)}
-            />
+            <>
+              {viewMode === 'table' ? (
+                <FeedbackTable
+                  feedbacks={displayFeedbacks}
+                  onView={(f) => setSelectedFeedback(f)}
+                  onDelete={(f) => setDeleteTarget(f)}
+                />
+              ) : (
+                <FeedbackKanban
+                  feedbacks={displayFeedbacks}
+                  onView={(f) => setSelectedFeedback(f)}
+                />
+              )}
+            </>
           )}
-        </>
-      )}
 
-      {/* Pagination (Table only or both? Usually Tables paginate, Kanban might scroll. 
-          For now show pagination for both since data is paginated from API) */}
-      {pagination && pagination.total_pages > 1 && (
-        <div className="flex items-center justify-center gap-2 pt-4">
-          <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
-            Previous
-          </Button>
-          <span className="text-sm text-muted-foreground">
-            Halaman {page} dari {pagination.total_pages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.min(pagination.total_pages, p + 1))}
-            disabled={page === pagination.total_pages}
-          >
-            Next
-          </Button>
+          {/* Pagination */}
+          {pagination && pagination.total_pages > 1 && (
+            <div className="flex items-center justify-center gap-2 pt-4">
+              <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
+                Previous
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                Halaman {page} dari {pagination.total_pages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.min(pagination.total_pages, p + 1))}
+                disabled={page === pagination.total_pages}
+              >
+                Next
+              </Button>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
+      {/* Modals - Outside scrollable area */}
       {/* Detail Dialog */}
       <FeedbackDetailDialog
         feedback={selectedFeedback}
@@ -416,18 +444,18 @@ function FeedbackTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {displayFeedbacks.map((item) => {
-            const KategoriIcon = kategoriIcons[item.kategori];
+          {feedbacks.map((item: Feedback) => {
+            const KategoriIcon = kategoriIcons[item.kategori as keyof typeof kategoriIcons];
             return (
               <TableRow key={item.id} className="group hover:bg-muted/50">
                 <TableCell>
-                  <Badge className={cn('capitalize', statusStyles[item.status])}>
+                  <Badge className={cn('capitalize', statusStyles[item.status as FeedbackStatus])}>
                     {item.status === 'pending' ? 'Pending' : item.status === 'read' ? 'Dibaca' : 'Selesai'}
                   </Badge>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <KategoriIcon className={cn('h-4 w-4', kategoriColors[item.kategori])} />
+                    <KategoriIcon className={cn('h-4 w-4', kategoriColors[item.kategori as keyof typeof kategoriColors])} />
                     <span className="text-sm capitalize">{item.kategori}</span>
                   </div>
                 </TableCell>
