@@ -111,10 +111,9 @@ export function StudentSidebar() {
                     <Link
                       href={item.href}
                       className={cn(
-                        'relative flex h-11 w-11 items-center justify-center rounded-xl transition-all',
-                        'bg-primary text-primary-foreground shadow-lg shadow-primary/25',
-                        'hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/30 hover:scale-105',
-                        'active:scale-95',
+                        'relative flex h-11 w-11 items-center justify-center rounded-xl transition-colors',
+                        'bg-primary text-primary-foreground',
+                        'hover:bg-primary/90',
                         'my-4' // Add vertical margin for spacing
                       )}
                     >
