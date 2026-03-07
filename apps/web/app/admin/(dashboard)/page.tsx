@@ -148,13 +148,13 @@ export default function AdminDashboardPage() {
           const isActionable = 'actionable' in stat && stat.actionable;
           return (
             <Link key={stat.title} href={stat.href} className="group">
-              <Card className={`transition-all hover:shadow-md ${isUrgent ? 'border-orange-500/50 bg-orange-50/50 dark:bg-orange-950/10' : 'hover:border-primary/50'}`}>
+              <Card className={`transition-all hover:shadow-md ${isUrgent ? 'border-orange-500/50 bg-orange-50 dark:bg-orange-950/30 dark:border-orange-500/30' : 'hover:border-primary/50'}`}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 p-3">
                   <CardTitle className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">
                     {stat.title}
                   </CardTitle>
-                  <div className={`rounded-md p-1 ${stat.bg} group-hover:scale-110 transition-transform ${isUrgent ? 'animate-pulse' : ''}`}>
-                    <Icon className={`h-4 w-4 ${stat.color}`} strokeWidth={2} />
+                  <div className={`rounded-md p-1 ${stat.bg} dark:bg-opacity-20 group-hover:scale-110 transition-transform ${isUrgent ? 'animate-pulse' : ''}`}>
+                    <Icon className={`h-4 w-4 ${stat.color} dark:opacity-90`} strokeWidth={2} />
                   </div>
                 </CardHeader>
                 <CardContent className="p-3 pt-0">
@@ -182,8 +182,8 @@ export default function AdminDashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <div className="space-y-1">
               <CardTitle className="flex items-center gap-2.5 text-lg">
-                <div className="rounded-lg bg-orange-500/10 p-2">
-                  <ClipboardCheck className="h-5 w-5 text-orange-500" strokeWidth={2} />
+                <div className="rounded-lg bg-orange-500/10 p-2 dark:bg-orange-500/20">
+                  <ClipboardCheck className="h-5 w-5 text-orange-500 dark:text-orange-400" strokeWidth={2} />
                 </div>
                 Portfolio Menunggu Review
               </CardTitle>
@@ -207,8 +207,8 @@ export default function AdminDashboardPage() {
               </div>
             ) : !data?.recent_pending_portfolios?.length ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="rounded-full bg-green-500/10 p-4">
-                  <ClipboardCheck className="h-8 w-8 text-green-500" />
+                <div className="rounded-full bg-green-500/10 p-4 dark:bg-green-500/20">
+                  <ClipboardCheck className="h-8 w-8 text-green-500 dark:text-green-400" />
                 </div>
                 <p className="mt-3 font-semibold text-green-600 dark:text-green-400">Tidak ada portfolio pending</p>
                 <p className="text-sm text-muted-foreground mt-1">Semua portfolio sudah direview</p>
@@ -248,7 +248,7 @@ export default function AdminDashboardPage() {
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1.5">
-                      <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800">
+                      <Badge variant="outline" className="bg-yellow-50 text-yellow-800 border-yellow-300 dark:bg-yellow-500/20 dark:text-yellow-300 dark:border-yellow-500/40">
                         Pending
                       </Badge>
                       <span className="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
@@ -279,8 +279,8 @@ export default function AdminDashboardPage() {
           <CardContent className="flex-1 space-y-2">
             <Link href="/admin/moderation" className="block">
               <Button variant="outline" className="w-full justify-start gap-3 h-auto py-3" size="lg">
-                <div className="rounded-md bg-orange-500/10 p-2">
-                  <ClipboardCheck className="h-5 w-5 text-orange-500" />
+                <div className="rounded-md bg-orange-500/10 p-2 dark:bg-orange-500/20">
+                  <ClipboardCheck className="h-5 w-5 text-orange-500 dark:text-orange-400" />
                 </div>
                 <div className="flex-1 text-left">
                   <p className="font-semibold text-sm">Moderasi Portfolio</p>
@@ -296,8 +296,8 @@ export default function AdminDashboardPage() {
 
             <Link href="/admin/assessments" className="block">
               <Button variant="outline" className="w-full justify-start gap-3 h-auto py-3" size="lg">
-                <div className="rounded-md bg-blue-500/10 p-2">
-                  <BarChart3 className="h-5 w-5 text-blue-500" />
+                <div className="rounded-md bg-blue-500/10 p-2 dark:bg-blue-500/20">
+                  <BarChart3 className="h-5 w-5 text-blue-500 dark:text-blue-400" />
                 </div>
                 <div className="flex-1 text-left">
                   <p className="font-semibold text-sm">Penilaian Portfolio</p>
@@ -308,8 +308,8 @@ export default function AdminDashboardPage() {
 
             <Link href="/admin/users" className="block">
               <Button variant="outline" className="w-full justify-start gap-3 h-auto py-3" size="lg">
-                <div className="rounded-md bg-green-500/10 p-2">
-                  <Users className="h-5 w-5 text-green-500" />
+                <div className="rounded-md bg-green-500/10 p-2 dark:bg-green-500/20">
+                  <Users className="h-5 w-5 text-green-500 dark:text-green-400" />
                 </div>
                 <div className="flex-1 text-left">
                   <p className="font-semibold text-sm">Kelola Users</p>
@@ -320,8 +320,8 @@ export default function AdminDashboardPage() {
 
             <Link href="/admin/portfolios" className="block">
               <Button variant="outline" className="w-full justify-start gap-3 h-auto py-3" size="lg">
-                <div className="rounded-md bg-purple-500/10 p-2">
-                  <FolderOpen className="h-5 w-5 text-purple-500" />
+                <div className="rounded-md bg-purple-500/10 p-2 dark:bg-purple-500/20">
+                  <FolderOpen className="h-5 w-5 text-purple-500 dark:text-purple-400" />
                 </div>
                 <div className="flex-1 text-left">
                   <p className="font-semibold text-sm">Semua Portfolio</p>
@@ -332,8 +332,8 @@ export default function AdminDashboardPage() {
 
             <Link href="/admin/feedback" className="block">
               <Button variant="outline" className="w-full justify-start gap-3 h-auto py-3" size="lg">
-                <div className="rounded-md bg-amber-500/10 p-2">
-                  <FileText className="h-5 w-5 text-amber-500" />
+                <div className="rounded-md bg-amber-500/10 p-2 dark:bg-amber-500/20">
+                  <FileText className="h-5 w-5 text-amber-500 dark:text-amber-400" />
                 </div>
                 <div className="flex-1 text-left">
                   <p className="font-semibold text-sm">Feedback</p>
@@ -376,8 +376,8 @@ export default function AdminDashboardPage() {
                     href="/admin/moderation"
                     className="flex items-center gap-3 rounded-lg border p-3 transition-all hover:bg-muted hover:border-primary/50"
                   >
-                    <div className="rounded-md bg-orange-500/10 p-2">
-                      <ClipboardCheck className="h-4 w-4 text-orange-500" />
+                    <div className="rounded-md bg-orange-500/10 p-2 dark:bg-orange-500/20">
+                      <ClipboardCheck className="h-4 w-4 text-orange-500 dark:text-orange-400" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium text-sm">{portfolio.judul}</p>
@@ -385,7 +385,7 @@ export default function AdminDashboardPage() {
                         {portfolio.user_nama} menunggu review
                       </p>
                     </div>
-                    <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800 text-xs">
+                    <Badge variant="outline" className="bg-orange-50 text-orange-800 border-orange-300 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-500/40 text-xs">
                       Pending
                     </Badge>
                   </Link>
@@ -454,14 +454,14 @@ export default function AdminDashboardPage() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-green-500" />
+                      <div className="h-2 w-2 rounded-full bg-green-500 dark:bg-green-400" />
                       <span className="font-medium">Published</span>
                     </div>
                     <span className="font-bold">{data?.portfolios.published ?? 0}</span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
                     <div 
-                      className="h-full bg-green-500 transition-all"
+                      className="h-full bg-green-500 dark:bg-green-400 transition-all"
                       style={{ 
                         width: `${((data?.portfolios.published ?? 0) / (data?.portfolios.total || 1)) * 100}%` 
                       }}
@@ -473,14 +473,14 @@ export default function AdminDashboardPage() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-orange-500" />
+                      <div className="h-2 w-2 rounded-full bg-orange-500 dark:bg-orange-400" />
                       <span className="font-medium">Pending Review</span>
                     </div>
                     <span className="font-bold">{data?.portfolios.pending_review ?? 0}</span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
                     <div 
-                      className="h-full bg-orange-500 transition-all"
+                      className="h-full bg-orange-500 dark:bg-orange-400 transition-all"
                       style={{ 
                         width: `${((data?.portfolios.pending_review ?? 0) / (data?.portfolios.total || 1)) * 100}%` 
                       }}
@@ -492,14 +492,14 @@ export default function AdminDashboardPage() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-gray-500" />
+                      <div className="h-2 w-2 rounded-full bg-gray-500 dark:bg-gray-400" />
                       <span className="font-medium">Draft</span>
                     </div>
                     <span className="font-bold">{data?.portfolios.draft ?? 0}</span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
                     <div 
-                      className="h-full bg-gray-500 transition-all"
+                      className="h-full bg-gray-500 dark:bg-gray-400 transition-all"
                       style={{ 
                         width: `${((data?.portfolios.draft ?? 0) / (data?.portfolios.total || 1)) * 100}%` 
                       }}
@@ -511,14 +511,14 @@ export default function AdminDashboardPage() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-red-500" />
+                      <div className="h-2 w-2 rounded-full bg-red-500 dark:bg-red-400" />
                       <span className="font-medium">Rejected</span>
                     </div>
                     <span className="font-bold">{data?.portfolios.rejected ?? 0}</span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
                     <div 
-                      className="h-full bg-red-500 transition-all"
+                      className="h-full bg-red-500 dark:bg-red-400 transition-all"
                       style={{ 
                         width: `${((data?.portfolios.rejected ?? 0) / (data?.portfolios.total || 1)) * 100}%` 
                       }}
@@ -530,14 +530,14 @@ export default function AdminDashboardPage() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-gray-400" />
+                      <div className="h-2 w-2 rounded-full bg-gray-400 dark:bg-gray-500" />
                       <span className="font-medium">Archived</span>
                     </div>
                     <span className="font-bold">{data?.portfolios.archived ?? 0}</span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
                     <div 
-                      className="h-full bg-gray-400 transition-all"
+                      className="h-full bg-gray-400 dark:bg-gray-500 transition-all"
                       style={{ 
                         width: `${((data?.portfolios.archived ?? 0) / (data?.portfolios.total || 1)) * 100}%` 
                       }}
