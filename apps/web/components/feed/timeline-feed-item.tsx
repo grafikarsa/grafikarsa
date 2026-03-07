@@ -1,14 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Heart, Share2, Eye } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { PortfolioCard } from '@/components/portfolio/portfolio-card';
 import { portfoliosApi } from '@/lib/api';
 import { ApiResponse, FeedItem } from '@/lib/types';
 import { formatDistanceToNow } from '@/lib/utils/format';
@@ -105,10 +104,10 @@ export function TimelineFeedItem({ item, algorithm, onShare }: TimelineFeedItemP
   const username = item.user?.username || 'user';
 
   return (
-    <Card className="overflow-hidden border-0 border-b rounded-none shadow-none hover:bg-muted/30 transition-colors">
+    <Card className="overflow-hidden border-0 border-b rounded-none shadow-none bg-background">
       <div className="p-4">
         {/* Author Header */}
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-3 mb-4">
           <Link href={`/${username}`} onClick={(e) => e.stopPropagation()}>
             <Avatar className="h-10 w-10">
               <AvatarImage src={item.user?.avatar_url} alt={item.user?.nama} />
@@ -144,40 +143,15 @@ export function TimelineFeedItem({ item, algorithm, onShare }: TimelineFeedItemP
           </div>
         </div>
 
-        {/* Content */}
-        <Link href={`/${username}/${item.slug}`} className="block mt-3">
-          {/* Title */}
-          <h3 className="font-semibold text-base leading-tight mb-2 hover:text-primary transition-colors">
-            {item.judul}
-          </h3>
-
-          {/* Preview Text */}
-          {item.preview_text && (
-            <p className="text-sm text-muted-foreground line-clamp-3 mb-3">{item.preview_text}</p>
-          )}
-
-          {/* Thumbnail */}
-          {item.thumbnail_url && (
-            <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-muted">
-              <Image src={item.thumbnail_url} alt={item.judul} fill className="object-cover" />
-            </div>
-          )}
-        </Link>
-
-        {/* Tags */}
-        {item.tags && item.tags.length > 0 && (
-          <div className="flex gap-2 mt-3 overflow-x-auto scrollbar-hide pb-1">
-            {item.tags.map((tag) => (
-              <Badge
-                key={tag.id}
-                variant="secondary"
-                className="rounded-full px-2.5 py-0.5 text-xs font-normal whitespace-nowrap shrink-0"
-              >
-                {tag.nama}
-              </Badge>
-            ))}
-          </div>
-        )}
+        {/* Portfolio Card */}
+        <div>
+          <PortfolioCard
+            portfolio={item}
+            showStatus={false}
+            showActions={false}
+            username={username}
+          />
+        </div>
 
         {/* Actions */}
         <div className="flex items-center gap-1 mt-3 -ml-2">

@@ -2,7 +2,8 @@
 
 import * as React from 'react';
 import Image from 'next/image';
-import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogClose, DialogTitle } from '@/components/ui/dialog';
+import { VisuallyHidden } from '@/components/ui/visually-hidden';
 import { X, ZoomIn } from 'lucide-react';
 
 interface LightboxProps {
@@ -16,6 +17,9 @@ export function Lightbox({ src, alt, isOpen, onClose }: LightboxProps) {
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <DialogContent className="max-w-screen-xl border-none bg-black/90 p-0 shadow-none sm:max-w-screen-xl">
+                <VisuallyHidden>
+                    <DialogTitle>{alt}</DialogTitle>
+                </VisuallyHidden>
                 <div className="relative flex h-[90vh] w-full items-center justify-center p-4">
                     <DialogClose className="absolute right-4 top-4 z-50 rounded-full bg-black/50 p-2 text-white hover:bg-white/20">
                         <X className="h-6 w-6" />
