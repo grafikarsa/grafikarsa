@@ -113,7 +113,7 @@ export function UserProfile({ profile }: UserProfileProps) {
         {/* Avatar & Actions Row */}
         <div className="relative flex items-end justify-between -mt-12 md:-mt-20">
           {/* Avatar - overlapping banner with better positioning */}
-          <Avatar className="h-24 w-24 border-4 border-background shadow-lg md:h-36 md:w-36 md:border-[6px]">
+          <Avatar className="h-24 w-24 border-4 border-background md:h-36 md:w-36 md:border-[6px]">
             <AvatarImage src={profile.avatar_url} alt={profile.nama} />
             <AvatarFallback className="text-2xl md:text-4xl">
               {profile.nama?.charAt(0).toUpperCase()}
