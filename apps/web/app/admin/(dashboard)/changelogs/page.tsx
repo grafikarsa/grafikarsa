@@ -102,173 +102,194 @@ export default function AdminChangelogsPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-9 w-48" />
-          <Skeleton className="h-10 w-40" />
+      <div className="flex flex-col -m-4 sm:-m-6 lg:-m-8">
+        {/* Sticky Header Skeleton */}
+        <div className="sticky top-0 z-10 bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 lg:px-8 border-b">
+          <div className="mx-auto w-full max-w-[1600px] flex gap-3">
+            <Skeleton className="h-10 flex-1" />
+            <Skeleton className="h-10 w-24" />
+            <Skeleton className="h-10 w-40" />
+          </div>
         </div>
-        <div className="space-y-3">
-          {[...Array(5)].map((_, i) => (
-            <Skeleton key={i} className="h-24" />
-          ))}
+        <div className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+          <div className="mx-auto w-full max-w-[1600px] space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <Skeleton key={i} className="h-24" />
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Search and Action Button in same row */}
-      <div className="flex gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Cari changelog..."
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className="pl-9"
-          />
+    <div className="flex flex-col -m-4 sm:-m-6 lg:-m-8">
+      {/* Sticky Header - Search & Actions */}
+      <div className="sticky top-0 z-10 bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 lg:px-8 border-b">
+        <div className="mx-auto w-full max-w-[1600px]">
+          <div className="flex gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Cari changelog..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="pl-9"
+              />
+            </div>
+            <Button variant="secondary" onClick={handleSearch}>
+              <Search className="mr-2 h-4 w-4" />
+              Cari
+            </Button>
+            <Button onClick={() => setIsCreating(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Buat Changelog
+            </Button>
+          </div>
         </div>
-        <Button variant="secondary" onClick={handleSearch}>
-          <Search className="mr-2 h-4 w-4" />
-          Cari
-        </Button>
-        <Button onClick={() => setIsCreating(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Buat Changelog
-        </Button>
       </div>
 
-      {debugMode && <DebugBanner pageName="Changelog" />}
+      {/* Content Area with proper padding */}
+      <div className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-[1600px] space-y-6">
+          {debugMode && <DebugBanner pageName="Changelog" />}
 
-      {/* Changelog List */}
-      {displayChangelogs.length === 0 ? (
-        <Card className="border-dashed py-16">
-          <div className="flex flex-col items-center justify-center">
-            <FileText className="h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-lg font-semibold">Belum ada changelog</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {searchQuery ? 'Tidak ada changelog yang sesuai pencarian' : 'Buat changelog pertama'}
-            </p>
-            {!searchQuery && (
-              <Button className="mt-4" onClick={() => setIsCreating(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Buat Changelog
-              </Button>
-            )}
-          </div>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {displayChangelogs.map((changelog: ChangelogListItem) => (
-            <Card key={changelog.id} className="p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant="outline" className="font-mono">
-                      v{changelog.version}
-                    </Badge>
-                    <Badge
-                      variant={changelog.is_published ? 'default' : 'secondary'}
-                      className={cn(
-                        changelog.is_published
-                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                          : ''
-                      )}
-                    >
-                      {changelog.is_published ? 'Published' : 'Draft'}
-                    </Badge>
-                    {changelog.categories.map((cat: string) => (
-                      <span
-                        key={cat}
-                        className={cn(
-                          'rounded-full px-2 py-0.5 text-xs font-medium capitalize',
-                          categoryColors[cat] || ''
-                        )}
-                      >
-                        {cat}
-                      </span>
-                    ))}
-                  </div>
-                  <h3 className="mt-2 font-semibold">{changelog.title}</h3>
-                  {changelog.description && (
-                    <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
-                      {changelog.description}
-                    </p>
-                  )}
-                  <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
-                    <span>{formatDate(changelog.release_date)}</span>
-                  </div>
+          {/* Changelog List */}
+          {displayChangelogs.length === 0 ? (
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <div className="flex flex-col items-center justify-center px-6">
+                <div className="rounded-full bg-primary/10 p-4">
+                  <FileText className="h-10 w-10 text-primary" />
                 </div>
-                <div className="flex items-center gap-2">
-                  {changelog.is_published ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => unpublishMutation.mutate(changelog.id)}
-                      disabled={unpublishMutation.isPending}
-                    >
-                      <EyeOff className="mr-1 h-4 w-4" />
-                      Unpublish
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => publishMutation.mutate(changelog.id)}
-                      disabled={publishMutation.isPending}
-                    >
-                      <Eye className="mr-1 h-4 w-4" />
-                      Publish
-                    </Button>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setEditingId(changelog.id)}
-                  >
-                    <Pencil className="h-4 w-4" />
+                <h3 className="mt-6 text-xl font-semibold">
+                  {searchQuery ? 'Tidak ada changelog yang sesuai' : 'Belum ada changelog'}
+                </h3>
+                <p className="mt-2 text-sm text-muted-foreground text-center max-w-sm">
+                  {searchQuery
+                    ? 'Coba ubah kata kunci pencarian untuk menemukan changelog yang Anda cari.'
+                    : 'Changelog membantu pengguna mengetahui fitur baru, perbaikan, dan perubahan pada platform.'}
+                </p>
+                {!searchQuery && (
+                  <Button className="mt-4" onClick={() => setIsCreating(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Buat Changelog
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setDeleteTarget(changelog)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+                )}
               </div>
-            </Card>
-          ))}
-        </div>
-      )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {displayChangelogs.map((changelog: ChangelogListItem) => (
+                <Card key={changelog.id} className="p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant="outline" className="font-mono">
+                          v{changelog.version}
+                        </Badge>
+                        <Badge
+                          variant={changelog.is_published ? 'default' : 'secondary'}
+                          className={cn(
+                            changelog.is_published
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                              : ''
+                          )}
+                        >
+                          {changelog.is_published ? 'Published' : 'Draft'}
+                        </Badge>
+                        {changelog.categories.map((cat: string) => (
+                          <span
+                            key={cat}
+                            className={cn(
+                              'rounded-full px-2 py-0.5 text-xs font-medium capitalize',
+                              categoryColors[cat] || ''
+                            )}
+                          >
+                            {cat}
+                          </span>
+                        ))}
+                      </div>
+                      <h3 className="mt-2 font-semibold">{changelog.title}</h3>
+                      {changelog.description && (
+                        <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
+                          {changelog.description}
+                        </p>
+                      )}
+                      <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                        <Calendar className="h-3 w-3" />
+                        <span>{formatDate(changelog.release_date)}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {changelog.is_published ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => unpublishMutation.mutate(changelog.id)}
+                          disabled={unpublishMutation.isPending}
+                        >
+                          <EyeOff className="mr-1 h-4 w-4" />
+                          Unpublish
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => publishMutation.mutate(changelog.id)}
+                          disabled={publishMutation.isPending}
+                        >
+                          <Eye className="mr-1 h-4 w-4" />
+                          Publish
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setEditingId(changelog.id)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setDeleteTarget(changelog)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
 
-      {/* Pagination */}
-      {pagination && pagination.total_pages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-          >
-            Previous
-          </Button>
-          <span className="text-sm text-muted-foreground">
-            Halaman {page} dari {pagination.total_pages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.min(pagination.total_pages, p + 1))}
-            disabled={page === pagination.total_pages}
-          >
-            Next
-          </Button>
+          {/* Pagination */}
+          {pagination && pagination.total_pages > 1 && (
+            <div className="flex items-center justify-center gap-2 pt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                Previous
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                Halaman {page} dari {pagination.total_pages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.min(pagination.total_pages, p + 1))}
+                disabled={page === pagination.total_pages}
+              >
+                Next
+              </Button>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Create/Edit Modal */}
       <ChangelogFormModal
