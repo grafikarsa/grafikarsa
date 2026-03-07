@@ -78,7 +78,7 @@ export function StudentSidebar() {
   const navItems = [
     { href: '/', label: 'Feed', icon: Home, exact: true },
     ...(aiEnabled ? [{ href: '/ai-ideas', label: 'AI Ide Proyek', icon: Sparkles }] : []),
-    { href: `/${user?.username}/portfolios/new`, label: 'Buat Portofolio', icon: Plus },
+    { href: `/${user?.username}/portfolios/new`, label: 'Buat Portofolio', icon: Plus, isPrimary: true },
   ];
 
   const isActive = (href: string, exact?: boolean) => {
@@ -103,6 +103,32 @@ export function StudentSidebar() {
             const Icon = item.icon;
             const active = isActive(item.href, item.exact);
 
+            // Primary action button (Create Portfolio)
+            if (item.isPrimary) {
+              return (
+                <Tooltip key={item.href}>
+                  <TooltipTrigger asChild>
+                    <Link
+                      href={item.href}
+                      className={cn(
+                        'relative flex h-11 w-11 items-center justify-center rounded-xl transition-all',
+                        'bg-primary text-primary-foreground shadow-lg shadow-primary/25',
+                        'hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/30 hover:scale-105',
+                        'active:scale-95',
+                        'my-4' // Add vertical margin for spacing
+                      )}
+                    >
+                      <Icon className="h-5 w-5" />
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="font-medium">
+                    {item.label}
+                  </TooltipContent>
+                </Tooltip>
+              );
+            }
+
+            // Regular navigation items
             return (
               <Tooltip key={item.href}>
                 <TooltipTrigger asChild>
