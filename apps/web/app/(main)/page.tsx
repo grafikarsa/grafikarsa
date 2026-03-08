@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuthStore } from '@/lib/stores/auth-store';
-import { NewHeroSection, AboutSection, FaqSection, TopStudentsSection, TopProjectsSection } from '@/components/landing';
+import { NewHeroSection, AboutSection, FaqSection, TopStudentsSection, TopProjectsSection, FooterSection } from '@/components/landing';
 import { SmartFeedList } from '@/components/feed/smart-feed-list';
 
 export default function HomePage() {
@@ -15,6 +15,7 @@ export default function HomePage() {
         <TopStudentsSection />
         <TopProjectsSection />
         <FaqSection />
+        <FooterSection />
       </>
     );
   }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { Search, LogIn } from 'lucide-react';
@@ -12,7 +12,6 @@ import { cn } from '@/lib/utils';
 
 export function NewHeroSection() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [isPaused, setIsPaused] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['top-projects-hero'],
@@ -22,50 +21,8 @@ export function NewHeroSection() {
 
   const projects = data?.data || [];
 
-  // Duplicate projects for seamless infinite scroll (4 sets for better coverage)
-  const duplicatedProjects = projects.length > 0 ? [...projects, ...projects, ...projects, ...projects] : [];
-
-  useEffect(() => {
-    const scrollContainer = scrollContainerRef.current;
-    if (!scrollContainer || projects.length === 0) {
-      console.log('Animation not starting:', { 
-        hasContainer: !!scrollContainer, 
-        projectsLength: projects.length 
-      });
-      return;
-    }
-
-    console.log('Starting animation with', projects.length, 'projects');
-
-    // Use transform instead of scrollLeft for smoother animation
-    let translateX = 0;
-    const scrollSpeed = 0.5;
-    let animationFrameId: number;
-    const cardWidth = 320 + 24; // card width + gap
-    const singleSetWidth = cardWidth * projects.length;
-
-    const animate = () => {
-      if (!isPaused) {
-        translateX -= scrollSpeed;
-        
-        // Reset when we've scrolled past the first set
-        if (Math.abs(translateX) >= singleSetWidth) {
-          translateX = 0;
-        }
-        
-        scrollContainer.style.transform = `translateX(${translateX}px)`;
-      }
-
-      animationFrameId = requestAnimationFrame(animate);
-    };
-
-    // Start animation
-    animationFrameId = requestAnimationFrame(animate);
-
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, [projects, isPaused]);
+  // Duplicate projects 2x for seamless infinite scroll (reduced from 4x)
+  const duplicatedProjects = projects.length > 0 ? [...projects, ...projects] : [];
 
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-background py-12">
@@ -75,7 +32,7 @@ export function NewHeroSection() {
         <h1 
           className={cn(
             GeistPixelCircle.className,
-            "text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-bold tracking-wider mb-4"
+            "text-5xl xs:text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-bold tracking-wider mb-4"
           )}
         >
           GRAFIKARSA
@@ -118,13 +75,16 @@ export function NewHeroSection() {
           {/* Right Fade */}
           <div className="absolute right-0 top-0 bottom-0 w-32 md:w-48 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
 
-          {/* Scrolling Container Wrapper */}
+          {/* Scrolling Container - Using CSS Animation */}
           <div className="py-6 px-6">
             <div 
               ref={scrollContainerRef}
-              className="flex gap-6 will-change-transform"
-              onMouseEnter={() => setIsPaused(true)}
-              onMouseLeave={() => setIsPaused(false)}
+              className="flex gap-6 animate-scroll-horizontal"
+              role="region"
+              aria-label="Portfolio showcase"
+              tabIndex={0}
+              onFocus={(e) => e.currentTarget.style.animationPlayState = 'paused'}
+              onBlur={(e) => e.currentTarget.style.animationPlayState = 'running'}
             >
               {duplicatedProjects.map((project, index) => (
                 <div key={`${project.id}-${index}`} className="flex-shrink-0">

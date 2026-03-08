@@ -42,7 +42,7 @@ export function PortfolioStack() {
   }, [cards.length]);
 
   return (
-    <div className="relative h-full w-full flex items-center justify-center">
+    <div className="relative h-full w-full flex items-center justify-center" role="img" aria-label="Portfolio showcase animation">
       {cards.map((card, i) => {
         const offset = (i - activeIndex + cards.length) % cards.length;
         // Fan spread: rotate and translate like a card fan
@@ -67,6 +67,7 @@ export function PortfolioStack() {
                 alt={card.title}
                 fill
                 className="object-cover"
+                loading="lazy"
               />
             </div>
             <div className="p-3">
@@ -111,7 +112,7 @@ export function FloatingAvatars() {
   }, [users.length]);
 
   return (
-    <div className="h-full w-full p-3 flex flex-col justify-center">
+    <div className="h-full w-full p-3 flex flex-col justify-center" role="img" aria-label="Follow users animation">
       <div className="space-y-1.5">
         {users.map((user, i) => (
           <div
@@ -134,6 +135,7 @@ export function FloatingAvatars() {
               size="sm"
               variant={followedIndex !== null && i <= followedIndex ? 'secondary' : 'default'}
               className="h-5 text-[9px] px-2"
+              aria-label={`${followedIndex !== null && i <= followedIndex ? 'Following' : 'Follow'} ${user.name}`}
             >
               {followedIndex !== null && i <= followedIndex ? 'Following' : 'Follow'}
             </Button>
@@ -159,10 +161,10 @@ export function FeedScrollAnimation() {
   const allItems = [...items, ...items];
 
   return (
-    <div className="h-full w-full overflow-hidden relative">
+    <div className="h-full w-full overflow-hidden relative" role="img" aria-label="Activity feed animation">
       {/* Fade masks */}
-      <div className="absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-card to-transparent z-10" />
-      <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-card to-transparent z-10" />
+      <div className="absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-card to-transparent z-10 pointer-events-none" />
+      <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-card to-transparent z-10 pointer-events-none" />
       
       {/* Marquee container */}
       <div className="animate-marquee-vertical space-y-1.5 p-2.5">
@@ -207,7 +209,7 @@ export function LikeAnimation() {
   }, []);
 
   return (
-    <div className="h-full w-full flex items-center justify-center">
+    <div className="h-full w-full flex items-center justify-center" role="img" aria-label="Like animation">
       <div className="relative">
         {/* Burst particles */}
         {showBurst && (
@@ -215,7 +217,7 @@ export function LikeAnimation() {
             {[...Array(6)].map((_, i) => (
               <Heart
                 key={i}
-                className="absolute h-4 w-4 text-red-500 fill-red-500 animate-ping"
+                className="absolute h-4 w-4 text-red-500 fill-red-500 animate-ping pointer-events-none"
                 style={{
                   left: '50%',
                   top: '50%',
@@ -223,6 +225,7 @@ export function LikeAnimation() {
                   animationDuration: '0.6s',
                   animationDelay: `${i * 0.05}s`,
                 }}
+                aria-hidden="true"
               />
             ))}
           </>
@@ -239,16 +242,18 @@ export function LikeAnimation() {
           style={{
             filter: isLiked ? 'drop-shadow(0 0 8px rgba(239, 68, 68, 0.5))' : 'none',
           }}
+          aria-label={isLiked ? 'Liked' : 'Not liked'}
         />
         
         {/* Ripple effect */}
         {showBurst && (
           <div 
-            className="absolute inset-0 rounded-full border-2 border-red-500 animate-ping"
+            className="absolute inset-0 rounded-full border-2 border-red-500 animate-ping pointer-events-none"
             style={{ 
               transform: 'scale(1.5)',
               animationDuration: '0.6s',
             }}
+            aria-hidden="true"
           />
         )}
       </div>
@@ -282,7 +287,7 @@ export function UploadAnimation() {
   }, []);
 
   return (
-    <div className="h-full w-full p-3 flex items-center justify-center overflow-hidden">
+    <div className="h-full w-full p-3 flex items-center justify-center overflow-hidden" role="img" aria-label="Upload progress animation">
       {/* Success splash background */}
       {showSplash && (
         <>
@@ -292,16 +297,19 @@ export function UploadAnimation() {
             style={{
               background: 'radial-gradient(circle at center, rgba(34, 197, 94, 0.25) 0%, transparent 70%)',
             }}
+            aria-hidden="true"
           />
           {/* Expanding rings */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div 
               className="absolute w-24 h-24 rounded-full border-2 border-green-500/40 animate-ping"
               style={{ animationDuration: '1s' }}
+              aria-hidden="true"
             />
             <div 
               className="absolute w-36 h-36 rounded-full border border-green-500/20 animate-ping"
               style={{ animationDuration: '1.5s', animationDelay: '0.2s' }}
+              aria-hidden="true"
             />
           </div>
           {/* Particle burst */}
@@ -316,6 +324,7 @@ export function UploadAnimation() {
                 animationDuration: '0.8s',
                 animationDelay: `${i * 0.05}s`,
               }}
+              aria-hidden="true"
             />
           ))}
         </>
@@ -331,13 +340,13 @@ export function UploadAnimation() {
         )}>
           {status === 'done' ? (
             <div className="text-green-500 animate-in zoom-in duration-300">
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-label="Upload complete">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
           ) : (
             <div className="text-muted-foreground">
-              <svg className="h-4 w-4 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-4 w-4 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-label="Uploading">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
               </svg>
             </div>
@@ -360,6 +369,11 @@ export function UploadAnimation() {
                 showSplash ? "bg-green-500" : "bg-primary"
               )}
               style={{ width: `${progress}%` }}
+              role="progressbar"
+              aria-valuenow={progress}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Upload progress"
             />
           </div>
         </div>

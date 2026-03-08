@@ -2,7 +2,7 @@
 
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useUIStore } from '@/lib/stores/ui-store';
-import { GuestNavbar, StudentSidebar, StudentHeader, Footer } from '@/components/layout';
+import { GuestNavbar, StudentSidebar, StudentHeader } from '@/components/layout';
 import { AdminSidebar } from '@/components/layout/admin-sidebar';
 import { AdminHeader } from '@/components/layout/admin-header';
 import { BottomNav } from '@/components/layout/bottom-nav';
@@ -55,7 +55,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       <div className="flex min-h-screen flex-col">
         <GuestNavbar />
         <main className="flex-1">{children}</main>
-        <Footer />
       </div>
     );
   }

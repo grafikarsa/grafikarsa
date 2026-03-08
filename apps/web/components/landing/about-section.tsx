@@ -64,12 +64,12 @@ export function AboutSection() {
         </div>
 
         {/* Bento Grid - 5 items layout */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3 auto-rows-[200px]">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:auto-rows-[200px]">
           {bentoItems.map((item) => (
             <div
               key={item.title}
               className={cn(
-                'group relative overflow-hidden rounded-2xl border bg-card transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5',
+                'group relative overflow-hidden rounded-2xl border bg-card transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 min-h-[200px]',
                 item.className
               )}
             >

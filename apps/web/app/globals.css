@@ -41,6 +41,7 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --breakpoint-xs: 475px;
 }
 
 :root {
@@ -148,6 +149,33 @@
 
 .animate-marquee-vertical {
   animation: marquee-vertical 15s linear infinite;
+}
+
+/* Horizontal infinite scroll animation for hero */
+@keyframes scroll-horizontal {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-scroll-horizontal {
+  animation: scroll-horizontal 40s linear infinite;
+}
+
+.animate-scroll-horizontal:hover {
+  animation-play-state: paused;
+}
+
+/* Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .animate-scroll-horizontal,
+  .animate-marquee-vertical,
+  .animate-float {
+    animation-play-state: paused;
+  }
 }
 
 /* Scrollbar hide utility */
