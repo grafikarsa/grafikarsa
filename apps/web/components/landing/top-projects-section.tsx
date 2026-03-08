@@ -24,7 +24,7 @@ const rankLabels = {
 
 function ProjectCardSkeleton() {
   return (
-    <div className="w-[320px] space-y-2">
+    <div className="space-y-2">
       <Skeleton className="mx-auto h-6 w-20 rounded-full" />
       <div className="rounded-xl border bg-card overflow-hidden p-3">
         <Skeleton className="h-[240px] rounded-xl" />
@@ -67,12 +67,10 @@ export function TopProjectsSection() {
             </h2>
             <p className="mt-2 text-muted-foreground">Portofolio dengan kualitas dan apresiasi tertinggi</p>
           </div>
-          <div className="flex justify-center">
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,320px))] gap-6">
-              {[1, 2, 3].map((i) => (
-                <ProjectCardSkeleton key={i} />
-              ))}
-            </div>
+          <div className="grid gap-6 md:grid-cols-3">
+            {[1, 2, 3].map((i) => (
+              <ProjectCardSkeleton key={i} />
+            ))}
           </div>
         </div>
       </section>
@@ -97,42 +95,40 @@ export function TopProjectsSection() {
           </h2>
           <p className="mt-2 text-muted-foreground">Portofolio dengan kualitas dan apresiasi tertinggi</p>
         </div>
-        <div className="flex justify-center">
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,320px))] gap-6">
-            {projects.map((project, index) => {
-              const rank = (index + 1) as 1 | 2 | 3;
-              // Convert TopProject to PortfolioCard type
-              const portfolioCardData: PortfolioCardType = {
-                id: project.id,
-                judul: project.judul,
-                slug: project.slug,
-                thumbnail_url: project.thumbnail_url || undefined,
-                published_at: project.published_at || undefined,
-                created_at: project.published_at || new Date().toISOString(),
-                updated_at: project.published_at || new Date().toISOString(),
-                like_count: project.like_count,
-                user: {
-                  id: project.user_id,
-                  username: project.username,
-                  nama: project.user_nama,
-                  avatar_url: project.user_avatar || undefined,
-                  role: 'student',
-                },
-              };
+        <div className="grid gap-6 md:grid-cols-3">
+          {projects.map((project, index) => {
+            const rank = (index + 1) as 1 | 2 | 3;
+            // Convert TopProject to PortfolioCard type
+            const portfolioCardData: PortfolioCardType = {
+              id: project.id,
+              judul: project.judul,
+              slug: project.slug,
+              thumbnail_url: project.thumbnail_url || undefined,
+              published_at: project.published_at || undefined,
+              created_at: project.published_at || new Date().toISOString(),
+              updated_at: project.published_at || new Date().toISOString(),
+              like_count: project.like_count,
+              user: {
+                id: project.user_id,
+                username: project.username,
+                nama: project.user_nama,
+                avatar_url: project.user_avatar || undefined,
+                role: 'student',
+              },
+            };
 
-              return (
-                <div key={project.id} className="relative">
-                  {/* Rank Badge */}
-                  <div className="flex justify-center mb-2">
-                    <Badge variant="outline" className={cn('text-sm px-3 py-1 font-medium', rankStyles[rank])}>
-                      {rankLabels[rank]}
-                    </Badge>
-                  </div>
-                  <PortfolioCard portfolio={portfolioCardData} />
+            return (
+              <div key={project.id} className="relative">
+                {/* Rank Badge */}
+                <div className="flex justify-center mb-2">
+                  <Badge variant="outline" className={cn('text-sm px-3 py-1 font-medium', rankStyles[rank])}>
+                    {rankLabels[rank]}
+                  </Badge>
                 </div>
-              );
-            })}
-          </div>
+                <PortfolioCard portfolio={portfolioCardData} />
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>
