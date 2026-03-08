@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Loader2, Send, Paperclip, X, FileText, Image as ImageIcon } from 'lucide-react';
+import { Loader2, Send, Paperclip, X, FileText, Image as ImageIcon, Bug, Lightbulb, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Select,
@@ -16,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { feedbackApi, FeedbackKategori } from '@/lib/api/feedback';
 import { uploadsApi } from '@/lib/api/admin';
+import { cn } from '@/lib/utils';
 
 interface FeedbackFormProps {
     onSuccess?: () => void;
@@ -113,20 +114,35 @@ export function FeedbackForm({ onSuccess, onCancel }: FeedbackFormProps) {
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-4 py-2">
+        <form onSubmit={handleSubmit} className="space-y-5 py-2">
             <div className="space-y-2">
                 <Label htmlFor="kategori">Kategori</Label>
                 <Select
                     value={kategori}
                     onValueChange={(v) => setKategori(v as FeedbackKategori)}
                 >
-                    <SelectTrigger id="kategori">
+                    <SelectTrigger id="kategori" className="h-11">
                         <SelectValue placeholder="Pilih kategori" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="saran">💡 Saran Fitur</SelectItem>
-                        <SelectItem value="bug">🐛 Lapor Bug</SelectItem>
-                        <SelectItem value="lainnya">📝 Lainnya</SelectItem>
+                        <SelectItem value="bug" className="cursor-pointer">
+                            <div className="flex items-center gap-2">
+                                <Bug className="h-4 w-4 text-red-500" />
+                                <span>Lapor Bug</span>
+                            </div>
+                        </SelectItem>
+                        <SelectItem value="saran" className="cursor-pointer">
+                            <div className="flex items-center gap-2">
+                                <Lightbulb className="h-4 w-4 text-amber-500" />
+                                <span>Saran Fitur</span>
+                            </div>
+                        </SelectItem>
+                        <SelectItem value="lainnya" className="cursor-pointer">
+                            <div className="flex items-center gap-2">
+                                <MessageSquare className="h-4 w-4 text-blue-500" />
+                                <span>Lainnya</span>
+                            </div>
+                        </SelectItem>
                     </SelectContent>
                 </Select>
             </div>
@@ -135,19 +151,32 @@ export function FeedbackForm({ onSuccess, onCancel }: FeedbackFormProps) {
                 <Textarea
                     id="pesan"
                     placeholder="Ceritakan detail masukanmu..."
-                    rows={4}
+                    rows={5}
                     value={pesan}
                     onChange={(e) => setPesan(e.target.value)}
                     className="resize-none whitespace-pre-wrap"
                 />
-                <p className="text-xs text-muted-foreground text-right">
-                    {pesan.length}/2000 karakter (min. 10)
-                </p>
+                <div className="flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground">
+                        Minimal 10 karakter
+                    </p>
+                    <p className={cn(
+                        "text-xs transition-colors",
+                        pesan.length < 10 ? "text-muted-foreground" : 
+                        pesan.length > 1900 ? "text-amber-600" : 
+                        "text-green-600"
+                    )}>
+                        {pesan.length}/2000
+                    </p>
+                </div>
             </div>
 
             {/* Attachment Section */}
             <div className="space-y-2">
-                <Label>Lampiran (Opsional)</Label>
+                <Label className="flex items-center gap-2">
+                    <Paperclip className="h-3.5 w-3.5" />
+                    Lampiran (Opsional)
+                </Label>
                 <div className="flex items-center gap-2">
                     <input
                         ref={fileInputRef}
@@ -164,6 +193,7 @@ export function FeedbackForm({ onSuccess, onCancel }: FeedbackFormProps) {
                             size="sm"
                             onClick={() => fileInputRef.current?.click()}
                             disabled={uploading}
+                            className="w-full justify-center"
                         >
                             {uploading ? (
                                 <>
@@ -173,38 +203,42 @@ export function FeedbackForm({ onSuccess, onCancel }: FeedbackFormProps) {
                             ) : (
                                 <>
                                     <Paperclip className="mr-2 h-4 w-4" />
-                                    Lampirkan File
+                                    Pilih File
                                 </>
                             )}
                         </Button>
                     ) : (
-                        <div className="flex items-center gap-2 rounded-md border border-border bg-muted px-3 py-2 text-sm">
+                        <div className="flex w-full items-center gap-2 rounded-md border border-border bg-muted px-3 py-2.5 text-sm">
                             {getFileIcon(attachmentFile)}
-                            <span className="flex-1 truncate">{attachmentFile.name}</span>
+                            <span className="flex-1 truncate font-medium">{attachmentFile.name}</span>
                             <Button
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                className="h-5 w-5"
+                                className="h-6 w-6 shrink-0"
                                 onClick={handleRemoveAttachment}
                             >
-                                <X className="h-3 w-3" />
+                                <X className="h-3.5 w-3.5" />
                             </Button>
                         </div>
                     )}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                    Gambar, PDF, atau DOC (maks. 5MB). Berguna untuk screenshot bug atau mockup fitur.
+                    Screenshot, PDF, atau DOC (maks. 5MB)
                 </p>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 pt-4 border-t">
                 {onCancel && (
-                    <Button type="button" variant="outline" onClick={onCancel}>
+                    <Button type="button" variant="ghost" onClick={onCancel}>
                         Batal
                     </Button>
                 )}
-                <Button type="submit" disabled={mutation.isPending || pesan.length < 10 || uploading}>
+                <Button 
+                    type="submit" 
+                    disabled={mutation.isPending || pesan.length < 10 || uploading}
+                    className="min-w-[100px]"
+                >
                     {mutation.isPending ? (
                         <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />

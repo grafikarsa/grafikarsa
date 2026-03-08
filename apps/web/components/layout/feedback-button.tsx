@@ -42,10 +42,10 @@ export function FeedbackButton() {
                     <MessageSquarePlus className="h-6 w-6" />
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                    <DialogTitle>Kirim Masukan</DialogTitle>
-                    <DialogDescription>
+            <DialogContent className="sm:max-w-lg">
+                <DialogHeader className="space-y-3">
+                    <DialogTitle className="text-xl">Kirim Masukan</DialogTitle>
+                    <DialogDescription className="text-base">
                         Bantu kami meningkatkan Grafikarsa. Laporkan bug atau berikan saran fitur baru.
                     </DialogDescription>
                 </DialogHeader>
