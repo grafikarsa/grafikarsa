@@ -1,175 +1,258 @@
 # AI Agent Instructions
 
-This document provides instructions for AI coding agents working on this project.
+This document provides comprehensive instructions for AI coding agents working on the Grafikarsa project.
 
-## Frontend, Design & UI/UX Tasks
+---
 
-**CRITICAL: When working on any frontend, design, or UI/UX related tasks, you MUST use the `ui-ux-pro-max` skill.**
+## 📋 Project Context
 
-### When to Use UI/UX Pro Max Skill
+**Project Name:** Grafikarsa  
+**Description:** Platform Katalog Portofolio & Social Network untuk Warga SMKN 4 Malang
 
-Use this skill when:
-- Designing new UI components or pages
-- Building or modifying frontend interfaces
-- Implementing design systems
-- Choosing color palettes and typography
-- Creating landing pages, dashboards, or admin panels
-- Reviewing code for UX issues
-- Implementing accessibility requirements
-- Working with React, Next.js, Vue, Svelte, or any frontend framework
+### Purpose
+Grafikarsa adalah platform showcase portfolio dan social networking yang dirancang khusus untuk siswa dan alumni SMKN 4 Malang. Platform ini memungkinkan siswa untuk:
+- Menampilkan karya kreatif mereka dalam bentuk portfolio
+- Membangun jaringan dengan sesama siswa dan alumni
+- Mendapatkan feedback dan apresiasi dari komunitas
+- Mengeksplorasi karya inspiratif dari teman-teman mereka
+
+### Tech Stack
+
+**Frontend:**
+- Next.js 15 (App Router)
+- React 19
+- TypeScript
+- Tailwind CSS v4
+- shadcn/ui components
+- Framer Motion (animations)
+- React Query (data fetching)
+- Zustand (state management)
+
+**Backend:**
+- Go (Fiber framework)
+- PostgreSQL (database)
+- MinIO (object storage)
+
+**Deployment:**
+- Docker
+- VPS
+
+### Design System
+
+**Colors:**
+- Primary: Blue (#3B82F6)
+- Using CSS variables for theming (light/dark mode)
+- Semantic color tokens: `bg-primary`, `text-foreground`, `bg-muted`, etc.
+
+**Typography:**
+- Font: Inter (system font)
+- Monospace: JetBrains Mono
+
+**Icons:**
+- Lucide React (NEVER use emojis as UI icons)
+
+**UI Library:**
+- shadcn/ui components
+- Consistent border radius: `--radius: 0.625rem`
+
+**Image Standards:**
+- Avatar: 1:1 ratio (800x800px recommended)
+- Banner: 3:1 ratio (1500x500px recommended)
+- Portfolio Thumbnail: 4:3 ratio (1200x900px recommended)
+- See `docs/ui/image-standards.md` for details
+
+### Key Features
+
+1. **Portfolio Management**
+   - Create, edit, delete portfolios
+   - Modular content blocks (text, image, video, links, tables)
+   - Draft, review, and publish workflow
+   - Series templates for structured portfolios
+
+2. **Social Features**
+   - Follow/unfollow users
+   - Like and comment on portfolios
+   - Activity feed (smart, recent, following)
+   - User profiles with stats
+
+3. **Admin Dashboard**
+   - User management
+   - Portfolio moderation (approve/reject)
+   - Tag management
+   - Series template management
+   - Special roles assignment
+
+4. **Discovery**
+   - Browse portfolios by tags, class, major
+   - Search users and portfolios
+   - Explore feed with smart algorithm
+
+### User Roles
+
+- **Guest:** Can browse public portfolios and user profiles
+- **Student:** Can create portfolios, follow users, interact with content
+- **Admin:** Full access to moderation and management features
+
+---
+
+## 🛠️ Agent Skills Reference
+
+This project uses specialized agent skills for different types of tasks. Each skill provides focused expertise and best practices for its domain.
+
+### Skills Overview Table
+
+| Skill | Location | Use When | Key Features |
+|-------|----------|----------|--------------|
+| **frontend-design** | `.kiro/skills/frontend-design/` | Building UI components, pages, or interfaces | Grafikarsa design system, shadcn/ui patterns, accessibility guidelines, responsive design |
+| **golang-pro** | `.kiro/skills/golang-pro/` | Writing or modifying Go backend code | Go best practices, Fiber framework patterns, database operations, API design |
+| **systematic-debugging** | `.kiro/skills/systematic-debugging/` | Encountering bugs, test failures, or unexpected behavior | Root cause analysis, hypothesis testing, defense-in-depth validation |
+| **test-driven-development** | `.kiro/skills/test-driven-development/` | Writing tests or implementing TDD workflow | Test patterns, mocking strategies, test organization |
+| **context7** | `.agents/skills/context7/` | Working with external libraries or need up-to-date documentation | Fetch current library docs, verify API signatures, check latest versions, library best practices |
+
+---
+
+## 📚 Detailed Skills Guide
+
+### 1. Frontend Design Skill
+
+**Location:** `.kiro/skills/frontend-design/SKILL.md`
+
+**Use this skill when:**
+- Building new UI components or pages
+- Modifying existing frontend interfaces
+- Implementing responsive layouts
+- Adding animations or interactions
+- Creating forms, modals, cards, or any UI element
 - Styling with Tailwind CSS or shadcn/ui
-- Creating responsive layouts
-- Implementing animations and interactions
-- Building forms, modals, cards, tables, charts, etc.
+- Working with React, Next.js, or TypeScript
 
-### Skill Location
-
-```
-.agents/skills/ui-ux-pro-max/
-```
-
-### How to Use
-
-The skill provides a comprehensive design intelligence system with:
-- 50+ UI styles
-- 97 color palettes
-- 57 font pairings
-- 99 UX guidelines
-- 25 chart types
-- 9 technology stacks
-
-**Always start with the design system generator:**
-
-```bash
-python3 .agents/skills/ui-ux-pro-max/scripts/search.py "<product_type> <industry> <keywords>" --design-system -p "Project Name"
-```
-
-**Example for this project (Grafikarsa - Portfolio Platform):**
-
-```bash
-# For admin dashboard
-python3 .agents/skills/ui-ux-pro-max/scripts/search.py "admin dashboard education portfolio management" --design-system -p "Grafikarsa Admin"
-
-# For student portfolio pages
-python3 .agents/skills/ui-ux-pro-max/scripts/search.py "portfolio showcase creative student education" --design-system -p "Grafikarsa Portfolio"
-
-# For landing page
-python3 .agents/skills/ui-ux-pro-max/scripts/search.py "education platform portfolio showcase school" --design-system -p "Grafikarsa Landing"
-```
-
-### Workflow
-
-1. **Analyze Requirements** - Extract product type, style keywords, industry, stack
-2. **Generate Design System** - Run `--design-system` command (REQUIRED)
-3. **Supplement with Detailed Searches** - Use domain-specific searches as needed
-4. **Get Stack Guidelines** - Use `--stack` flag for implementation best practices
-5. **Implement** - Build the UI following the design system
-6. **Review** - Check against the pre-delivery checklist
-
-### Pre-Delivery Checklist
-
-Before delivering any frontend code, verify:
-
-#### Visual Quality
-- [ ] No emojis used as icons (use SVG from Lucide React instead)
-- [ ] All icons from consistent icon set (Lucide React)
-- [ ] Hover states don't cause layout shift
-- [ ] Use theme colors directly (bg-primary, text-foreground)
-
-#### Interaction
-- [ ] All clickable elements have `cursor-pointer`
-- [ ] Hover states provide clear visual feedback
-- [ ] Transitions are smooth (150-300ms)
-- [ ] Focus states visible for keyboard navigation
-
-#### Light/Dark Mode
-- [ ] Light mode text has sufficient contrast (4.5:1 minimum)
-- [ ] Glass/transparent elements visible in light mode
-- [ ] Borders visible in both modes
-- [ ] Test both modes before delivery
-
-#### Layout
-- [ ] Responsive at 375px, 768px, 1024px, 1440px
-- [ ] No horizontal scroll on mobile
-- [ ] No content hidden behind fixed navbars
-- [ ] Consistent spacing and padding
-
-#### Accessibility
-- [ ] All images have alt text
-- [ ] Form inputs have labels
-- [ ] Color is not the only indicator
-- [ ] `prefers-reduced-motion` respected
-- [ ] Minimum 44x44px touch targets
-- [ ] Keyboard navigation works properly
-
-### Common Anti-Patterns to Avoid
-
-❌ **Don't:**
-- Use emojis as UI icons (🎨 🚀 ⚙️)
-- Use `bg-white/10` in light mode (too transparent)
-- Use gray-400 or lighter for body text in light mode
-- Mix different icon sizes randomly
-- Create hover states that shift layout
-- Stick navbar to `top-0 left-0 right-0` without spacing
-- Use instant state changes or transitions >500ms
-
-✅ **Do:**
-- Use SVG icons from Lucide React
-- Use `bg-white/80` or higher in light mode
-- Use `text-slate-900` for body text in light mode
-- Use consistent icon sizing (w-5 h-5 or w-6 h-6)
-- Use color/opacity transitions on hover
-- Add spacing for floating navbars (`top-4 left-4 right-4`)
+**Key Guidelines:**
+- Follow Grafikarsa design system (colors, typography, spacing)
+- Use shadcn/ui components consistently
+- Always use Lucide React icons (NEVER emojis)
+- Ensure WCAG 2.1 AA accessibility compliance
+- Test in both light and dark modes
+- Implement mobile-first responsive design
 - Use smooth transitions (150-300ms)
+- Provide helpful loading and empty states
 
-## Backend & Go Tasks
+**Pre-Delivery Checklist:**
+- [ ] No emojis used as icons
+- [ ] Proper color contrast (4.5:1 minimum)
+- [ ] Responsive at 375px, 768px, 1024px, 1440px
+- [ ] Keyboard navigation works
+- [ ] Light and dark modes tested
+- [ ] All images have alt text
+- [ ] Touch targets are 44x44px minimum
 
-When working on backend code (Go), refer to:
-```
-.agents/skills/golang-pro/
-```
+**Common Patterns:**
+```tsx
+// Page layout
+<div className="container mx-auto max-w-5xl px-6 py-8 md:px-12 lg:px-16">
+  <h1 className="mb-6 text-3xl font-bold">Page Title</h1>
+  {/* Content */}
+</div>
 
-## Debugging & Troubleshooting
+// Card grid
+<div className="grid grid-cols-[repeat(auto-fill,minmax(320px,320px))] gap-6">
+  {items.map(item => <Card key={item.id}>...</Card>)}
+</div>
 
-**CRITICAL: When encountering ANY bug, test failure, or unexpected behavior, you MUST use the `systematic-debugging` skill BEFORE proposing fixes.**
-
-### When to Use Systematic Debugging
-
-Use this skill for ANY technical issue:
-- Test failures
-- Bugs in production or development
-- Unexpected behavior
-- Performance problems
-- Build failures
-- Integration issues
-- CI/CD pipeline failures
-
-**ESPECIALLY use when:**
-- Under time pressure (emergencies make guessing tempting)
-- "Just one quick fix" seems obvious
-- You've already tried multiple fixes
-- Previous fix didn't work
-- You don't fully understand the issue
-
-### Skill Location
-
-```
-.agents/skills/systematic-debugging/
+// Image with aspect ratio
+<div className="relative aspect-[4/3] overflow-hidden rounded-lg">
+  <Image src={url} alt="Description" fill className="object-cover object-center" />
+</div>
 ```
 
-### The Iron Law
+---
 
+### 2. Golang Pro Skill
+
+**Location:** `.kiro/skills/golang-pro/`
+
+**Use this skill when:**
+- Writing or modifying Go backend code
+- Implementing API endpoints
+- Working with database operations
+- Adding authentication/authorization logic
+- Optimizing backend performance
+- Handling file uploads (MinIO)
+- Writing Go tests
+
+**Key Guidelines:**
+- Follow Go best practices and idioms
+- Use Fiber framework patterns
+- Implement proper error handling
+- Write clean, testable code
+- Use dependency injection
+- Follow repository pattern
+- Implement proper logging
+
+**Project Structure:**
+```
+apps/backend/
+├── cmd/
+│   └── api/          # Main application entry
+├── internal/
+│   ├── auth/         # JWT authentication
+│   ├── config/       # Configuration
+│   ├── database/     # Database connection
+│   ├── domain/       # Domain models
+│   ├── dto/          # Data transfer objects
+│   ├── handler/      # HTTP handlers
+│   ├── middleware/   # Middleware
+│   ├── repository/   # Database repositories
+│   ├── service/      # Business logic
+│   └── storage/      # MinIO storage
+```
+
+**Common Patterns:**
+```go
+// Handler pattern
+func (h *Handler) GetPortfolio(c *fiber.Ctx) error {
+    id := c.Params("id")
+    portfolio, err := h.portfolioRepo.GetByID(c.Context(), id)
+    if err != nil {
+        return c.Status(404).JSON(dto.ErrorResponse("Portfolio not found"))
+    }
+    return c.JSON(dto.SuccessResponse(portfolio))
+}
+
+// Repository pattern
+type PortfolioRepository interface {
+    GetByID(ctx context.Context, id string) (*domain.Portfolio, error)
+    Create(ctx context.Context, portfolio *domain.Portfolio) error
+    Update(ctx context.Context, portfolio *domain.Portfolio) error
+}
+```
+
+---
+
+### 3. Systematic Debugging Skill
+
+**Location:** `.kiro/skills/systematic-debugging/SKILL.md`
+
+**Use this skill when:**
+- Encountering ANY bug or unexpected behavior
+- Tests are failing
+- Performance issues arise
+- Build failures occur
+- Integration problems happen
+- CI/CD pipeline fails
+- **ESPECIALLY when:** Under time pressure, "quick fix" seems obvious, or previous fixes didn't work
+
+**The Iron Law:**
 ```
 NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST
 ```
 
-### The Four Phases (MUST complete in order)
+**The Four Phases (MUST complete in order):**
 
 1. **Root Cause Investigation**
    - Read error messages carefully
    - Reproduce consistently
    - Check recent changes
-   - Gather evidence in multi-component systems
+   - Gather evidence
    - Trace data flow
 
 2. **Pattern Analysis**
@@ -190,9 +273,7 @@ NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST
    - Verify fix works
    - No bundled changes
 
-### Red Flags - STOP and Follow Process
-
-If you catch yourself thinking:
+**Red Flags - STOP and Follow Process:**
 - "Quick fix for now, investigate later"
 - "Just try changing X and see if it works"
 - "Add multiple changes, run tests"
@@ -201,59 +282,242 @@ If you catch yourself thinking:
 - "I don't fully understand but this might work"
 - "One more fix attempt" (when already tried 2+)
 
-**ALL of these mean: STOP. Return to Phase 1.**
-
-### Supporting Techniques
-
-Available in `.agents/skills/systematic-debugging/`:
+**Supporting Techniques:**
 - `root-cause-tracing.md` - Trace bugs backward through call stack
 - `defense-in-depth.md` - Add validation at multiple layers
 - `condition-based-waiting.md` - Replace arbitrary timeouts with condition polling
 
-### Real-World Impact
-
+**Real-World Impact:**
 - Systematic approach: 15-30 minutes to fix
 - Random fixes approach: 2-3 hours of thrashing
 - First-time fix rate: 95% vs 40%
 - New bugs introduced: Near zero vs common
 
-## Project Context
+---
 
-**Project:** Grafikarsa - Platform Katalog Portofolio & Social Network SMKN 4 Malang
+### 4. Test-Driven Development Skill
 
-**Tech Stack:**
-- Frontend: Next.js 15, React 19, TypeScript, Tailwind CSS, shadcn/ui
-- Backend: Go (Fiber framework), PostgreSQL, MinIO
-- Deployment: Docker, VPS
+**Location:** `.kiro/skills/test-driven-development/SKILL.md`
 
-**Design System:**
-- Primary: Blue (#3B82F6)
-- UI Library: shadcn/ui
-- Icons: Lucide React
-- Fonts: Inter (system font)
+**Use this skill when:**
+- Writing new features with tests
+- Implementing TDD workflow
+- Refactoring existing code
+- Adding test coverage
+- Writing unit, integration, or e2e tests
 
-**Key Features:**
-- Student portfolio showcase
-- Admin dashboard for moderation
-- Social features (follow, like, comment)
-- Portfolio assessment system
-- Series templates for structured portfolios
-- Feed algorithm (smart, recent, following)
+**TDD Workflow:**
+1. Write a failing test
+2. Write minimal code to pass
+3. Refactor while keeping tests green
+4. Repeat
 
-## Important Notes
+**Testing Patterns:**
+```tsx
+// Frontend (React Testing Library)
+import { render, screen, fireEvent } from '@testing-library/react';
 
-1. **Always use the skill** - Don't skip the design system generation step
-2. **Read the full SKILL.md** - Located at `.agents/skills/ui-ux-pro-max/SKILL.md`
-3. **Follow the checklist** - Verify all items before delivering code
-4. **Be consistent** - Use the same design patterns across all pages
-5. **Test responsiveness** - Check on mobile, tablet, and desktop
-6. **Consider accessibility** - This is a school project, accessibility matters
+test('button click increments counter', () => {
+  render(<Counter />);
+  const button = screen.getByRole('button');
+  fireEvent.click(button);
+  expect(screen.getByText('Count: 1')).toBeInTheDocument();
+});
+```
 
-## Questions?
+```go
+// Backend (Go testing)
+func TestGetPortfolio(t *testing.T) {
+    repo := &MockPortfolioRepo{}
+    handler := NewHandler(repo)
+    
+    app := fiber.New()
+    app.Get("/portfolios/:id", handler.GetPortfolio)
+    
+    req := httptest.NewRequest("GET", "/portfolios/123", nil)
+    resp, _ := app.Test(req)
+    
+    assert.Equal(t, 200, resp.StatusCode)
+}
+```
 
-If you're unsure about design decisions:
-1. Run the design system generator with relevant keywords
-2. Search specific domains (style, color, typography, ux)
-3. Check the UX guidelines for best practices
-4. Review existing components in `apps/web/components/`
-5. Refer to the PRD at `docs/prd.md`
+---
+
+### 5. Context7 Documentation Fetcher
+
+**Location:** `.agents/skills/context7/SKILL.md`
+
+**Use this skill when:**
+- Working with ANY external library (React, Next.js, Tailwind, etc.)
+- Installing new dependencies or frameworks
+- User asks about library APIs, patterns, or best practices
+- Implementing features that rely on third-party packages
+- Debugging library-specific issues
+- Need current documentation beyond training data cutoff
+- **ESPECIALLY when:** Installing dependencies - ALWAYS check docs for latest versions
+
+**CRITICAL:** Use this PROACTIVELY. Don't guess library APIs or rely on outdated knowledge.
+
+**Workflow:**
+
+1. **Search for library:**
+```bash
+py ~/.agents/skills/context7/scripts/context7.py search "<library-name>"
+```
+
+Example:
+```bash
+py ~/.agents/skills/context7/scripts/context7.py search "next.js"
+```
+
+2. **Fetch documentation:**
+```bash
+py ~/.agents/skills/context7/scripts/context7.py context "<library-id>" "<query>"
+```
+
+Example:
+```bash
+py ~/.agents/skills/context7/scripts/context7.py context "/vercel/next.js" "app router middleware"
+```
+
+**Quick Reference:**
+
+| Task | Command |
+|------|---------|
+| Find React docs | `search "react"` |
+| Get React hooks info | `context "/facebook/react" "useEffect cleanup"` |
+| Find Next.js docs | `search "next.js"` |
+| Get Next.js routing | `context "/vercel/next.js" "app router dynamic routes"` |
+| Find Tailwind docs | `search "tailwind css"` |
+| Get Tailwind config | `context "/tailwindlabs/tailwindcss" "configuration"` |
+| Find Framer Motion | `search "framer motion"` |
+| Get animation patterns | `context "/framer/motion" "animation variants"` |
+
+**Common Use Cases for Grafikarsa:**
+```bash
+# Next.js 15 features
+py ~/.agents/skills/context7/scripts/context7.py context "/vercel/next.js" "server actions form handling"
+
+# React 19 features
+py ~/.agents/skills/context7/scripts/context7.py context "/facebook/react" "use hook transitions"
+
+# Tailwind CSS v4
+py ~/.agents/skills/context7/scripts/context7.py context "/tailwindlabs/tailwindcss" "v4 migration"
+
+# Framer Motion animations
+py ~/.agents/skills/context7/scripts/context7.py context "/framer/motion" "layout animations"
+
+# React Query patterns
+py ~/.agents/skills/context7/scripts/context7.py context "/tanstack/query" "mutations optimistic updates"
+```
+
+**Options:**
+- `--type txt|md` - Output format (default: txt)
+- `--tokens N` - Limit response tokens
+
+**Note:** API key is stored in `.agents/skills/context7/.env` (hidden file)
+
+---
+
+## 🎯 Decision Tree: Which Skill to Use?
+
+```
+Is the task about...
+
+├─ Need library documentation?
+│  └─ Use: context7 (FIRST!)
+│     Examples: Installing packages, checking API signatures, latest versions
+│
+├─ Frontend UI/UX?
+│  └─ Use: frontend-design
+│     Examples: Building components, styling, layouts, animations
+│
+├─ Backend Go code?
+│  └─ Use: golang-pro
+│     Examples: API endpoints, database queries, business logic
+│
+├─ Bug or unexpected behavior?
+│  └─ Use: systematic-debugging
+│     Examples: Test failures, errors, performance issues
+│
+└─ Writing tests?
+   └─ Use: test-driven-development
+      Examples: Unit tests, integration tests, TDD workflow
+```
+
+**Pro Tip:** When working with external libraries, ALWAYS start with `context7` to get current documentation before implementing.
+
+---
+
+## 📖 Additional Resources
+
+### Documentation
+- **PRD:** `docs/prd.md` - Product requirements and features
+- **Image Standards:** `docs/ui/image-standards.md` - Image specifications
+- **API Documentation:** Check backend code for endpoint details
+
+### Code Organization
+- **Frontend:** `apps/web/` - Next.js application
+- **Backend:** `apps/backend/` - Go API server
+- **Components:** `apps/web/components/` - Reusable UI components
+- **API Client:** `apps/web/lib/api/` - Frontend API integration
+- **Types:** `apps/web/lib/types/` - TypeScript type definitions
+
+### Common Commands
+```bash
+# Frontend development
+cd apps/web
+npm run dev
+
+# Backend development
+cd apps/backend
+go run cmd/api/main.go
+
+# Run tests
+npm test              # Frontend
+go test ./...         # Backend
+
+# Build for production
+npm run build         # Frontend
+go build cmd/api/main.go  # Backend
+```
+
+---
+
+## ⚠️ Critical Rules
+
+1. **ALWAYS use context7 when working with external libraries** - Don't rely on outdated knowledge
+2. **ALWAYS read the relevant skill documentation before starting work**
+3. **Follow the design system** - Don't deviate from established patterns
+4. **Test your changes** - Both manually and with automated tests
+5. **Consider accessibility** - This is a school project, accessibility matters
+6. **Use systematic debugging** - Don't guess when encountering bugs
+7. **Write clean, maintainable code** - Others will work on this
+8. **Document complex logic** - Help future developers understand
+9. **Ask for clarification** - If requirements are unclear, ask the user
+
+---
+
+## 🤝 Contributing Guidelines
+
+When working on this project:
+- Follow the established code style and patterns
+- Write meaningful commit messages
+- Test thoroughly before submitting
+- Update documentation when adding features
+- Consider backward compatibility
+- Think about edge cases and error handling
+- Optimize for performance and user experience
+
+---
+
+## 📞 Questions?
+
+If you're unsure about:
+- **Library APIs or versions:** Use `context7` to fetch current documentation
+- **Design decisions:** Check `frontend-design` skill and existing components
+- **Backend patterns:** Check `golang-pro` skill and existing handlers
+- **Debugging approach:** Follow `systematic-debugging` skill phases
+- **Testing strategy:** Refer to `test-driven-development` skill
+
+Remember: The skills are there to help you deliver high-quality, consistent code. Use them proactively!
