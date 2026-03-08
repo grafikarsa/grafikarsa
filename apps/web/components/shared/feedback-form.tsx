@@ -138,7 +138,7 @@ export function FeedbackForm({ onSuccess, onCancel }: FeedbackFormProps) {
                     rows={4}
                     value={pesan}
                     onChange={(e) => setPesan(e.target.value)}
-                    className="resize-none"
+                    className="resize-none whitespace-pre-wrap"
                 />
                 <p className="text-xs text-muted-foreground text-right">
                     {pesan.length}/2000 karakter (min. 10)
