@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuthStore } from '@/lib/stores/auth-store';
-import { HeroSection, AboutSection, FaqSection, TopStudentsSection, TopProjectsSection } from '@/components/landing';
+import { NewHeroSection, AboutSection, FaqSection, TopStudentsSection, TopProjectsSection } from '@/components/landing';
 import { SmartFeedList } from '@/components/feed/smart-feed-list';
 
 export default function HomePage() {
@@ -10,7 +10,7 @@ export default function HomePage() {
   if (!isAuthenticated) {
     return (
       <>
-        <HeroSection />
+        <NewHeroSection />
         <AboutSection />
         <TopStudentsSection />
         <TopProjectsSection />

@@ -52,6 +52,7 @@
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.23.26",
+    "geist": "^1.7.0",
     "lucide-react": "^0.559.0",
     "motion": "^12.23.26",
     "next": "16.0.8",
