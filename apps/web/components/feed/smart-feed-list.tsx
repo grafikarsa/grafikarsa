@@ -41,8 +41,6 @@ function FeedSkeleton() {
 function EmptyState({ algorithm }: { algorithm: FeedAlgorithm }) {
   const configs: Record<FeedAlgorithm, {
     icon: React.ElementType;
-    iconColor: string;
-    iconBg: string;
     title: string;
     description: string;
     tips: string[];
@@ -50,13 +48,11 @@ function EmptyState({ algorithm }: { algorithm: FeedAlgorithm }) {
   }> = {
     smart: {
       icon: Sparkles,
-      iconColor: 'text-primary',
-      iconBg: 'bg-primary/10',
       title: 'Belum Ada Rekomendasi',
-      description: 'Algoritma kami sedang mempelajari preferensi Anda. Bantu kami memberikan rekomendasi yang lebih baik!',
+      description: 'Algoritma kami sedang mempelajari preferensimu. Bantu kami memberikan rekomendasi yang lebih baik!',
       tips: [
-        'Like portfolio yang Anda sukai',
-        'Follow kreator favorit Anda',
+        'Like portfolio yang kamu sukai',
+        'Follow kreator favoritmu',
         'Berikan komentar pada karya menarik',
         'Eksplorasi berbagai kategori portfolio'
       ],
@@ -64,13 +60,11 @@ function EmptyState({ algorithm }: { algorithm: FeedAlgorithm }) {
     },
     recent: {
       icon: Clock,
-      iconColor: 'text-blue-600',
-      iconBg: 'bg-blue-100 dark:bg-blue-900/30',
       title: 'Belum Ada Portfolio Terbaru',
-      description: 'Jadilah yang pertama! Bagikan karya kreatif Anda dan inspirasi teman-teman lainnya.',
+      description: 'Jadilah yang pertama! Bagikan karya kreatifmu dan inspirasi teman-teman lainnya.',
       tips: [
-        'Upload portfolio pertama Anda',
-        'Showcase project terbaik Anda',
+        'Upload portfolio pertamamu',
+        'Showcase project terbaikmu',
         'Dapatkan feedback dari komunitas',
         'Bangun personal branding'
       ],
@@ -78,17 +72,15 @@ function EmptyState({ algorithm }: { algorithm: FeedAlgorithm }) {
     },
     following: {
       icon: Users,
-      iconColor: 'text-green-600',
-      iconBg: 'bg-green-100 dark:bg-green-900/30',
       title: 'Belum Follow Siapa Pun',
       description: 'Temukan dan follow kreator berbakat dari SMKN 4 Malang untuk melihat karya terbaru mereka!',
       tips: [
         'Cari teman sekelas atau alumni',
-        'Follow kreator dari jurusan Anda',
+        'Follow kreator dari jurusanmu',
         'Temukan inspirasi dari senior',
         'Bangun network profesional'
       ],
-      cta: { label: 'Cari Kreator', href: '/explore' }
+      cta: { label: 'Cari User', href: '/explore' }
     },
   };
 
@@ -99,10 +91,8 @@ function EmptyState({ algorithm }: { algorithm: FeedAlgorithm }) {
     <div className="flex min-h-[60vh] items-center justify-center px-4 py-12">
       <div className="w-full max-w-md text-center">
         {/* Icon */}
-        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5">
-          <div className={`flex h-14 w-14 items-center justify-center rounded-full ${config.iconBg}`}>
-            <Icon className={`h-7 w-7 ${config.iconColor}`} />
-          </div>
+        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
+          <Icon className="h-10 w-10 text-primary" />
         </div>
 
         {/* Title & Description */}
@@ -117,7 +107,7 @@ function EmptyState({ algorithm }: { algorithm: FeedAlgorithm }) {
         <div className="mb-8 rounded-xl border bg-muted/30 p-6 text-left">
           <div className="mb-3 flex items-center gap-2 text-sm font-medium">
             <Heart className="h-4 w-4 text-primary" />
-            <span>Tips untuk Anda:</span>
+            <span>Tips buat kamu:</span>
           </div>
           <ul className="space-y-2.5">
             {config.tips.map((tip, index) => (

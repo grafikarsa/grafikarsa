@@ -33,7 +33,7 @@ export function FeedbackForm({ onSuccess, onCancel }: FeedbackFormProps) {
     const mutation = useMutation({
         mutationFn: feedbackApi.createFeedback,
         onSuccess: () => {
-            toast.success('Terima kasih atas masukan Anda!');
+            toast.success('Terima kasih atas masukanmu!');
             setPesan('');
             setKategori('saran');
             setAttachmentFile(null);
@@ -134,7 +134,7 @@ export function FeedbackForm({ onSuccess, onCancel }: FeedbackFormProps) {
                 <Label htmlFor="pesan">Pesan</Label>
                 <Textarea
                     id="pesan"
-                    placeholder="Ceritakan detail masukan Anda..."
+                    placeholder="Ceritakan detail masukanmu..."
                     rows={4}
                     value={pesan}
                     onChange={(e) => setPesan(e.target.value)}

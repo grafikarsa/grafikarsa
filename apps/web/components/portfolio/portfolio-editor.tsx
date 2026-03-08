@@ -776,7 +776,7 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
           title="Ganti Series Template?"
           description={
             <>
-              Anda akan mengganti ke series <strong>&quot;{pendingSeriesChange?.nama}&quot;</strong>.
+              Kamu akan mengganti ke series <strong>&quot;{pendingSeriesChange?.nama}&quot;</strong>.
               <span className="mt-2 block text-amber-600">
                 ⚠️ Semua block konten yang sudah ada ({contentBlocks.length} blocks) akan DIHAPUS dan diganti dengan template baru ({pendingSeriesChange?.blocks?.length || 0} blocks).
               </span>

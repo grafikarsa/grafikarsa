@@ -188,7 +188,7 @@ export function RankingInfo({ type, triggerClassName, variant = 'ghost' }: Ranki
 
             <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
                 <p>
-                    <strong>Note:</strong> Sistem ini didesain agar adil (fair). Anda tidak bisa menjadi Top Student hanya dengan viral (likes), tapi harus rajin upload dan menjaga kualitas nilai dari guru.
+                    <strong>Note:</strong> Sistem ini didesain agar adil (fair). Kamu tidak bisa jadi Top Student hanya dengan viral (likes), tapi harus rajin upload dan menjaga kualitas nilai dari guru.
                 </p>
             </div>
         </div>
