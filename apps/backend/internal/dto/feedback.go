@@ -30,8 +30,9 @@ type UserBriefResponse struct {
 
 // CreateFeedbackRequest - request untuk membuat feedback
 type CreateFeedbackRequest struct {
-	Kategori FeedbackKategori `json:"kategori" validate:"required,oneof=bug saran lainnya"`
-	Pesan    string           `json:"pesan" validate:"required,min=10,max=2000"`
+	Kategori      FeedbackKategori `json:"kategori" validate:"required,oneof=bug saran lainnya"`
+	Pesan         string           `json:"pesan" validate:"required,min=10,max=2000"`
+	AttachmentURL *string          `json:"attachment_url,omitempty" validate:"omitempty,url"`
 }
 
 // UpdateFeedbackRequest - request untuk update feedback (admin)
@@ -42,17 +43,18 @@ type UpdateFeedbackRequest struct {
 
 // FeedbackResponse - response untuk feedback
 type FeedbackResponse struct {
-	ID         string             `json:"id"`
-	UserID     *string            `json:"user_id,omitempty"`
-	User       *UserBriefResponse `json:"user,omitempty"`
-	Kategori   FeedbackKategori   `json:"kategori"`
-	Pesan      string             `json:"pesan"`
-	Status     FeedbackStatus     `json:"status"`
-	AdminNotes *string            `json:"admin_notes,omitempty"`
-	ResolvedBy *string            `json:"resolved_by,omitempty"`
-	ResolvedAt *time.Time         `json:"resolved_at,omitempty"`
-	CreatedAt  time.Time          `json:"created_at"`
-	UpdatedAt  time.Time          `json:"updated_at"`
+	ID            string             `json:"id"`
+	UserID        *string            `json:"user_id,omitempty"`
+	User          *UserBriefResponse `json:"user,omitempty"`
+	Kategori      FeedbackKategori   `json:"kategori"`
+	Pesan         string             `json:"pesan"`
+	AttachmentURL *string            `json:"attachment_url,omitempty"`
+	Status        FeedbackStatus     `json:"status"`
+	AdminNotes    *string            `json:"admin_notes,omitempty"`
+	ResolvedBy    *string            `json:"resolved_by,omitempty"`
+	ResolvedAt    *time.Time         `json:"resolved_at,omitempty"`
+	CreatedAt     time.Time          `json:"created_at"`
+	UpdatedAt     time.Time          `json:"updated_at"`
 }
 
 // PaginationMeta - pagination metadata

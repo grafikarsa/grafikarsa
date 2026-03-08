@@ -334,18 +334,19 @@ const (
 
 // Feedback
 type Feedback struct {
-	ID         uuid.UUID        `gorm:"type:uuid;primaryKey" json:"id"`
-	UserID     *uuid.UUID       `gorm:"type:uuid" json:"user_id,omitempty"`
-	Kategori   FeedbackKategori `gorm:"type:feedback_kategori;not null" json:"kategori"`
-	Pesan      string           `gorm:"type:text;not null" json:"pesan"`
-	Status     FeedbackStatus   `gorm:"type:feedback_status;not null;default:'pending'" json:"status"`
-	AdminNotes *string          `gorm:"type:text" json:"admin_notes,omitempty"`
-	ResolvedBy *uuid.UUID       `gorm:"type:uuid" json:"resolved_by,omitempty"`
-	ResolvedAt *time.Time       `json:"resolved_at,omitempty"`
-	CreatedAt  time.Time        `gorm:"not null;default:CURRENT_TIMESTAMP" json:"created_at"`
-	UpdatedAt  time.Time        `gorm:"not null;default:CURRENT_TIMESTAMP" json:"updated_at"`
-	User       *User            `gorm:"foreignKey:UserID" json:"user,omitempty"`
-	Resolver   *User            `gorm:"foreignKey:ResolvedBy" json:"resolver,omitempty"`
+	ID            uuid.UUID        `gorm:"type:uuid;primaryKey" json:"id"`
+	UserID        *uuid.UUID       `gorm:"type:uuid" json:"user_id,omitempty"`
+	Kategori      FeedbackKategori `gorm:"type:feedback_kategori;not null" json:"kategori"`
+	Pesan         string           `gorm:"type:text;not null" json:"pesan"`
+	AttachmentURL *string          `gorm:"type:text" json:"attachment_url,omitempty"`
+	Status        FeedbackStatus   `gorm:"type:feedback_status;not null;default:'pending'" json:"status"`
+	AdminNotes    *string          `gorm:"type:text" json:"admin_notes,omitempty"`
+	ResolvedBy    *uuid.UUID       `gorm:"type:uuid" json:"resolved_by,omitempty"`
+	ResolvedAt    *time.Time       `json:"resolved_at,omitempty"`
+	CreatedAt     time.Time        `gorm:"not null;default:CURRENT_TIMESTAMP" json:"created_at"`
+	UpdatedAt     time.Time        `gorm:"not null;default:CURRENT_TIMESTAMP" json:"updated_at"`
+	User          *User            `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	Resolver      *User            `gorm:"foreignKey:ResolvedBy" json:"resolver,omitempty"`
 }
 
 func (Feedback) TableName() string { return "feedback" }

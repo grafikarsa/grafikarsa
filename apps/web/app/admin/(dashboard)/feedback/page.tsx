@@ -18,6 +18,8 @@ import {
   LayoutGrid,
   MoreHorizontal,
   Edit,
+  FileText,
+  Paperclip,
 } from 'lucide-react';
 import { getDebugEmptyState } from '@/lib/utils/debug';
 import { DebugBanner } from '@/components/admin/debug-banner';
@@ -460,9 +462,16 @@ function FeedbackTable({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <p className="line-clamp-2 max-w-[400px] text-sm">
-                    {item.pesan}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="line-clamp-2 max-w-[400px] text-sm">
+                      {item.pesan}
+                    </p>
+                    {item.attachment_url && (
+                      <span title="Ada lampiran">
+                        <Paperclip className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      </span>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell>
                   {item.user ? (
@@ -562,6 +571,12 @@ function FeedbackKanban({
                     <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-foreground/90">
                       {item.pesan}
                     </p>
+                    {item.attachment_url && (
+                      <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Paperclip className="h-3 w-3" />
+                        <span>Ada lampiran</span>
+                      </div>
+                    )}
                     {item.user && (
                       <div className="mt-3 flex items-center gap-2 border-t pt-2">
                         <Avatar className="h-5 w-5">
@@ -672,6 +687,37 @@ function FeedbackDetailDialog({
               <p className="whitespace-pre-wrap text-sm">{feedback.pesan}</p>
             </div>
           </div>
+
+          {/* Attachment */}
+          {feedback.attachment_url && (
+            <div className="space-y-2">
+              <span className="text-sm font-medium">Lampiran</span>
+              <div className="rounded-lg border border-border overflow-hidden">
+                {feedback.attachment_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                  <a href={feedback.attachment_url} target="_blank" rel="noopener noreferrer" className="block">
+                    <img 
+                      src={feedback.attachment_url} 
+                      alt="Attachment" 
+                      className="w-full h-auto max-h-96 object-contain bg-muted"
+                    />
+                  </a>
+                ) : (
+                  <a 
+                    href={feedback.attachment_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-3 hover:bg-muted transition-colors"
+                  >
+                    <FileText className="h-8 w-8 text-muted-foreground" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">Dokumen Terlampir</p>
+                      <p className="text-xs text-muted-foreground">Klik untuk membuka</p>
+                    </div>
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Change Status */}
           <div className="space-y-2">

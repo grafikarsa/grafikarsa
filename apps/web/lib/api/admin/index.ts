@@ -173,7 +173,7 @@ export interface ConfirmUploadResponse {
 
 export const uploadsApi = {
   presign: async (data: {
-    upload_type: 'avatar' | 'banner' | 'thumbnail' | 'portfolio_image' | 'document';
+    upload_type: 'avatar' | 'banner' | 'thumbnail' | 'portfolio_image' | 'document' | 'feedback_attachment';
     filename: string;
     content_type: string;
     file_size: number;
@@ -192,7 +192,7 @@ export const uploadsApi = {
 
   uploadFile: async (
     file: File,
-    uploadType: 'avatar' | 'banner' | 'thumbnail' | 'portfolio_image' | 'document',
+    uploadType: 'avatar' | 'banner' | 'thumbnail' | 'portfolio_image' | 'document' | 'feedback_attachment',
     portfolioId?: string,
     blockId?: string,
     targetUserId?: string
@@ -466,6 +466,7 @@ export interface Feedback {
   };
   kategori: FeedbackKategori;
   pesan: string;
+  attachment_url?: string;
   status: FeedbackStatus;
   admin_notes?: string;
   resolved_by?: string;

@@ -6,6 +6,7 @@ export type FeedbackKategori = 'bug' | 'saran' | 'lainnya';
 export interface CreateFeedbackRequest {
     kategori: FeedbackKategori;
     pesan: string;
+    attachment_url?: string;
 }
 
 export const feedbackApi = {

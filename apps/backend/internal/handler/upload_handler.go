@@ -37,11 +37,12 @@ type PendingUpload struct {
 }
 
 var uploadLimits = map[string]int64{
-	"avatar":          2 * 1024 * 1024,  // 2MB
-	"banner":          10 * 1024 * 1024, // 10MB (increased for GIF support)
-	"thumbnail":       5 * 1024 * 1024,  // 5MB
-	"portfolio_image": 10 * 1024 * 1024, // 10MB
-	"document":        20 * 1024 * 1024, // 20MB for PDF, DOC, PPT files
+	"avatar":             2 * 1024 * 1024,  // 2MB
+	"banner":             10 * 1024 * 1024, // 10MB (increased for GIF support)
+	"thumbnail":          5 * 1024 * 1024,  // 5MB
+	"portfolio_image":    10 * 1024 * 1024, // 10MB
+	"document":           20 * 1024 * 1024, // 20MB for PDF, DOC, PPT files
+	"feedback_attachment": 5 * 1024 * 1024,  // 5MB for feedback screenshots/docs
 }
 
 var allowedTypes = map[string][]string{
@@ -55,6 +56,12 @@ var allowedTypes = map[string][]string{
 		"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 		"application/vnd.ms-powerpoint",
 		"application/vnd.openxmlformats-officedocument.presentationml.presentation",
+	},
+	"feedback_attachment": {
+		"image/jpeg", "image/png", "image/webp", "image/gif",
+		"application/pdf",
+		"application/msword",
+		"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 	},
 }
 
@@ -158,6 +165,8 @@ func (h *UploadHandler) Presign(c *fiber.Ctx) error {
 		objectKey = fmt.Sprintf("portfolio-images/%s/%s%s", req.PortfolioID.String(), fileID, ext)
 	case "document":
 		objectKey = fmt.Sprintf("documents/%s/%s%s", req.PortfolioID.String(), fileID, ext)
+	case "feedback_attachment":
+		objectKey = fmt.Sprintf("feedback-attachments/%s%s", fileID, ext)
 	}
 
 	// Generate presigned URL
@@ -271,10 +280,11 @@ func (h *UploadHandler) Confirm(c *fiber.Ctx) error {
 	}
 
 	messages := map[string]string{
-		"avatar":          "Avatar berhasil diperbarui",
-		"banner":          "Banner berhasil diperbarui",
-		"thumbnail":       "Thumbnail portfolio berhasil diperbarui",
-		"portfolio_image": "Gambar berhasil diupload",
+		"avatar":              "Avatar berhasil diperbarui",
+		"banner":              "Banner berhasil diperbarui",
+		"thumbnail":           "Thumbnail portfolio berhasil diperbarui",
+		"portfolio_image":     "Gambar berhasil diupload",
+		"feedback_attachment": "File attachment berhasil diupload",
 	}
 
 	return c.JSON(dto.SuccessResponse(response, messages[pending.UploadType]))

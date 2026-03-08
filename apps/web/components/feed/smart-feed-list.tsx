@@ -3,7 +3,7 @@
 import { useEffect, useCallback, useRef, useState } from 'react';
 import { useInfiniteQuery, useQuery, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { RefreshCw, Loader2 } from 'lucide-react';
+import { RefreshCw, Loader2, Sparkles, Clock, Users, Heart, UserPlus, Search } from 'lucide-react';
 import { feedApi } from '@/lib/api';
 import { FeedAlgorithm, FeedItem } from '@/lib/types';
 import { useAuthStore } from '@/lib/stores/auth-store';
@@ -39,27 +39,112 @@ function FeedSkeleton() {
 }
 
 function EmptyState({ algorithm }: { algorithm: FeedAlgorithm }) {
-  const messages: Record<FeedAlgorithm, { title: string; description: string }> = {
+  const configs: Record<FeedAlgorithm, {
+    icon: React.ElementType;
+    iconColor: string;
+    iconBg: string;
+    title: string;
+    description: string;
+    tips: string[];
+    cta?: { label: string; href: string };
+  }> = {
     smart: {
-      title: 'Belum ada rekomendasi',
-      description: 'Like dan follow user lain untuk mendapatkan rekomendasi yang lebih baik!',
+      icon: Sparkles,
+      iconColor: 'text-primary',
+      iconBg: 'bg-primary/10',
+      title: 'Belum Ada Rekomendasi',
+      description: 'Algoritma kami sedang mempelajari preferensi Anda. Bantu kami memberikan rekomendasi yang lebih baik!',
+      tips: [
+        'Like portfolio yang Anda sukai',
+        'Follow kreator favorit Anda',
+        'Berikan komentar pada karya menarik',
+        'Eksplorasi berbagai kategori portfolio'
+      ],
+      cta: { label: 'Jelajahi Portfolio', href: '/explore' }
     },
     recent: {
-      title: 'Belum ada portfolio',
-      description: 'Belum ada portfolio yang dipublikasikan.',
+      icon: Clock,
+      iconColor: 'text-blue-600',
+      iconBg: 'bg-blue-100 dark:bg-blue-900/30',
+      title: 'Belum Ada Portfolio Terbaru',
+      description: 'Jadilah yang pertama! Bagikan karya kreatif Anda dan inspirasi teman-teman lainnya.',
+      tips: [
+        'Upload portfolio pertama Anda',
+        'Showcase project terbaik Anda',
+        'Dapatkan feedback dari komunitas',
+        'Bangun personal branding'
+      ],
+      cta: { label: 'Buat Portfolio', href: '/portfolio/new' }
     },
     following: {
-      title: 'Belum ada portfolio dari following',
-      description: 'Follow user lain untuk melihat karya mereka di sini!',
+      icon: Users,
+      iconColor: 'text-green-600',
+      iconBg: 'bg-green-100 dark:bg-green-900/30',
+      title: 'Belum Follow Siapa Pun',
+      description: 'Temukan dan follow kreator berbakat dari SMKN 4 Malang untuk melihat karya terbaru mereka!',
+      tips: [
+        'Cari teman sekelas atau alumni',
+        'Follow kreator dari jurusan Anda',
+        'Temukan inspirasi dari senior',
+        'Bangun network profesional'
+      ],
+      cta: { label: 'Cari Kreator', href: '/explore' }
     },
   };
 
-  const { title, description } = messages[algorithm];
+  const config = configs[algorithm];
+  const Icon = config.icon;
 
   return (
-    <div className="rounded-lg border border-dashed p-12 text-center">
-      <p className="font-medium">{title}</p>
-      <p className="text-sm text-muted-foreground mt-1">{description}</p>
+    <div className="flex min-h-[60vh] items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md text-center">
+        {/* Icon */}
+        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5">
+          <div className={`flex h-14 w-14 items-center justify-center rounded-full ${config.iconBg}`}>
+            <Icon className={`h-7 w-7 ${config.iconColor}`} />
+          </div>
+        </div>
+
+        {/* Title & Description */}
+        <h3 className="mb-2 text-xl font-semibold text-foreground">
+          {config.title}
+        </h3>
+        <p className="mb-8 text-sm text-muted-foreground leading-relaxed">
+          {config.description}
+        </p>
+
+        {/* Tips */}
+        <div className="mb-8 rounded-xl border bg-muted/30 p-6 text-left">
+          <div className="mb-3 flex items-center gap-2 text-sm font-medium">
+            <Heart className="h-4 w-4 text-primary" />
+            <span>Tips untuk Anda:</span>
+          </div>
+          <ul className="space-y-2.5">
+            {config.tips.map((tip, index) => (
+              <li key={index} className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                <span className="mt-1 flex h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                <span>{tip}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* CTA Button */}
+        {config.cta && (
+          <Button asChild size="lg" className="w-full sm:w-auto">
+            <a href={config.cta.href}>
+              {algorithm === 'following' ? (
+                <UserPlus className="mr-2 h-4 w-4" />
+              ) : algorithm === 'recent' ? (
+                <Sparkles className="mr-2 h-4 w-4" />
+              ) : (
+                <Search className="mr-2 h-4 w-4" />
+              )}
+              {config.cta.label}
+            </a>
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
@@ -226,9 +311,7 @@ export function SmartFeedList() {
           </Button>
         </div>
       ) : feedItems.length === 0 ? (
-        <div className="p-4">
-          <EmptyState algorithm={algorithm} />
-        </div>
+        <EmptyState algorithm={algorithm} />
       ) : (
         <>
           {/* Feed Items */}

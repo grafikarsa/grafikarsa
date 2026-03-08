@@ -59,10 +59,11 @@ func (h *FeedbackHandler) CreateFeedback(c *fiber.Ctx) error {
 	userID := middleware.GetUserID(c)
 
 	feedback := &domain.Feedback{
-		UserID:   userID,
-		Kategori: domain.FeedbackKategori(req.Kategori),
-		Pesan:    req.Pesan,
-		Status:   domain.FeedbackStatusPending,
+		UserID:        userID,
+		Kategori:      domain.FeedbackKategori(req.Kategori),
+		Pesan:         req.Pesan,
+		AttachmentURL: req.AttachmentURL,
+		Status:        domain.FeedbackStatusPending,
 	}
 
 	if err := h.feedbackRepo.Create(feedback); err != nil {
@@ -248,14 +249,15 @@ func (h *FeedbackHandler) AdminGetFeedbackStats(c *fiber.Ctx) error {
 
 func (h *FeedbackHandler) toResponse(f *domain.Feedback) dto.FeedbackResponse {
 	resp := dto.FeedbackResponse{
-		ID:         f.ID.String(),
-		Kategori:   dto.FeedbackKategori(f.Kategori),
-		Pesan:      f.Pesan,
-		Status:     dto.FeedbackStatus(f.Status),
-		AdminNotes: f.AdminNotes,
-		ResolvedAt: f.ResolvedAt,
-		CreatedAt:  f.CreatedAt,
-		UpdatedAt:  f.UpdatedAt,
+		ID:            f.ID.String(),
+		Kategori:      dto.FeedbackKategori(f.Kategori),
+		Pesan:         f.Pesan,
+		AttachmentURL: f.AttachmentURL,
+		Status:        dto.FeedbackStatus(f.Status),
+		AdminNotes:    f.AdminNotes,
+		ResolvedAt:    f.ResolvedAt,
+		CreatedAt:     f.CreatedAt,
+		UpdatedAt:     f.UpdatedAt,
 	}
 
 	if f.UserID != nil {
