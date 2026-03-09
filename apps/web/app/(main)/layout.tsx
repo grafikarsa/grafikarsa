@@ -7,6 +7,7 @@ import { AdminSidebar } from '@/components/layout/admin-sidebar';
 import { AdminHeader } from '@/components/layout/admin-header';
 import { BottomNav } from '@/components/layout/bottom-nav';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 function LoadingScreen() {
   return (
@@ -63,16 +64,15 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   return (
     <div className="flex min-h-screen">
       {/* Desktop sidebar - hidden on mobile */}
-      <div className="hidden md:block">
+      <div className="hidden md:block md:fixed md:inset-y-0 md:left-0 md:z-20">
         <StudentSidebar />
       </div>
       <div 
-        className="flex w-full flex-1 flex-col transition-all duration-300"
-        style={{ 
-          paddingLeft: typeof window !== 'undefined' && window.innerWidth >= 768 
-            ? (sidebarCollapsed ? 64 : 240) 
-            : 0
-        }}
+        className={cn(
+          "flex w-full flex-1 flex-col transition-all duration-300",
+          "md:ml-60", // Default margin for expanded sidebar
+          sidebarCollapsed && "md:ml-16" // Collapsed sidebar margin
+        )}
       >
         <StudentHeader />
         {/* Responsive padding: no padding on mobile for full-width feed, standard on desktop */}
