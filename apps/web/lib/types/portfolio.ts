@@ -159,8 +159,8 @@ export interface PortfolioCard {
   slug: string;
   thumbnail_url?: string;
   published_at?: string;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
   status?: PortfolioStatus;
   like_count?: number;
   view_count?: number;

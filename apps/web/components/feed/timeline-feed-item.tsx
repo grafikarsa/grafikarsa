@@ -104,9 +104,9 @@ export function TimelineFeedItem({ item, algorithm, onShare }: TimelineFeedItemP
 
   return (
     <article className="border-b bg-background">
-      <div className="p-4 md:p-5">
+      <div className="p-4 md:p-6">
         {/* Author Header */}
-        <div className="flex items-start gap-3 mb-3">
+        <div className="flex items-start gap-3 mb-4">
           <Link href={`/${username}`} onClick={(e) => e.stopPropagation()} className="shrink-0">
             <Avatar className="h-10 w-10 md:h-11 md:w-11">
               <AvatarImage src={item.user?.avatar_url} alt={item.user?.nama} />
@@ -144,22 +144,22 @@ export function TimelineFeedItem({ item, algorithm, onShare }: TimelineFeedItemP
 
         {/* Portfolio Card - Feed Variant (no user info, no card wrapper) */}
         <PortfolioCard
-          portfolio={item}
+          portfolio={item as any}
           showStatus={false}
           showActions={false}
           username={username}
           variant="feed"
         />
 
-        {/* Actions */}
-        <div className="flex items-center gap-1 mt-3 -ml-2">
+        {/* Actions - Right aligned */}
+        <div className="flex items-center justify-end gap-1 mt-4">
           {/* Like Button */}
           <Button
             variant="ghost"
             size="sm"
             className={cn(
-              'h-9 px-3 gap-2 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 active:scale-95 transition-all',
-              item.is_liked && 'text-red-500'
+              'h-9 px-3 gap-2 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 active:scale-95 transition-all rounded-full',
+              item.is_liked && 'text-red-500 bg-red-50 dark:bg-red-950/20'
             )}
             onClick={handleLike}
             disabled={likeMutation.isPending}
@@ -169,7 +169,7 @@ export function TimelineFeedItem({ item, algorithm, onShare }: TimelineFeedItemP
           </Button>
 
           {/* View Count */}
-          <div className="flex items-center gap-2 px-3 text-muted-foreground">
+          <div className="flex items-center gap-2 px-3 py-2 text-muted-foreground rounded-full">
             <Eye className="h-4 w-4" />
             <span className="text-sm">{item.view_count}</span>
           </div>
@@ -178,7 +178,7 @@ export function TimelineFeedItem({ item, algorithm, onShare }: TimelineFeedItemP
           <Button
             variant="ghost"
             size="sm"
-            className="h-9 px-3 text-muted-foreground hover:text-primary hover:bg-primary/5 active:scale-95 transition-all"
+            className="h-9 px-3 text-muted-foreground hover:text-primary hover:bg-primary/10 active:scale-95 transition-all rounded-full"
             onClick={handleShare}
           >
             <Share2 className="h-4 w-4" />

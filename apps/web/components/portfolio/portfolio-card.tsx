@@ -107,14 +107,21 @@ export function PortfolioCard({ portfolio, showStatus = false, showActions = fal
   // Feed variant: simplified content without card wrapper
   const content = (
     <Link href={`/${resolvedUsername}/${slug}`} className={cn("block", !isFeedVariant && "p-3")}>
+      {/* Title - Above thumbnail for feed variant */}
+      {isFeedVariant && (
+        <h3 className="mb-3 line-clamp-2 text-base font-semibold leading-snug group-hover:text-primary sm:text-lg">
+          {judul}
+        </h3>
+      )}
+
       {/* Thumbnail - 4:3 aspect ratio (landscape) */}
-      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-muted sm:rounded-xl">
+      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-muted">
         {thumbnail_url ? (
           <Image
             src={thumbnail_url}
             alt={judul}
             fill
-            className="object-cover object-center transition-transform group-hover:scale-105"
+            className="object-cover object-center transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
           <div className="flex h-full items-center justify-center text-xs text-muted-foreground sm:text-sm">
@@ -124,23 +131,25 @@ export function PortfolioCard({ portfolio, showStatus = false, showActions = fal
       </div>
 
       {/* Tag & Status */}
-      <div className="mt-2.5 flex items-center justify-between gap-2 sm:mt-3">
+      <div className="mt-3 flex items-center justify-between gap-2">
         {firstTag ? (
-          <Badge variant="secondary" className="max-w-[120px] truncate rounded-full px-2 py-0.5 text-[10px] font-normal sm:max-w-none sm:px-2.5 sm:text-xs">
+          <Badge variant="secondary" className="max-w-[120px] truncate rounded-full px-2.5 py-1 text-xs font-normal sm:max-w-none">
             {firstTag.nama}
           </Badge>
         ) : (
           <div />
         )}
         {showStatus && status && (
-          <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-medium sm:px-2.5 sm:py-1 sm:text-xs', statusStyles[status])}>
+          <span className={cn('rounded-full px-2.5 py-1 text-xs font-medium', statusStyles[status])}>
             {statusLabels[status]}
           </span>
         )}
       </div>
 
-      {/* Title */}
-      <h3 className="mt-1.5 line-clamp-2 text-sm font-semibold leading-tight group-hover:text-primary sm:mt-2 sm:text-base">{judul}</h3>
+      {/* Title - Below thumbnail for default variant */}
+      {!isFeedVariant && (
+        <h3 className="mt-2 line-clamp-2 text-sm font-semibold leading-tight group-hover:text-primary sm:mt-2.5 sm:text-base">{judul}</h3>
+      )}
 
       {/* User Info & Date - Only show in default variant */}
       {!isFeedVariant && user ? (
@@ -152,11 +161,11 @@ export function PortfolioCard({ portfolio, showStatus = false, showActions = fal
           <div className="flex flex-col overflow-hidden">
             <span className="truncate text-xs font-medium leading-tight sm:text-sm">{user.nama}</span>
             <span className="truncate text-[10px] text-muted-foreground sm:text-xs">
-              {published_at ? `Posted ${formatDate(published_at)}` : `Dibuat ${formatDate(created_at)}`}
+              {published_at ? `Posted ${formatDate(published_at)}` : created_at ? `Dibuat ${formatDate(created_at)}` : ''}
             </span>
           </div>
         </div>
-      ) : !isFeedVariant && !user ? (
+      ) : !isFeedVariant && !user && created_at ? (
         <p className="mt-3 text-xs text-muted-foreground">Dibuat {formatDate(created_at)}</p>
       ) : null}
     </Link>
