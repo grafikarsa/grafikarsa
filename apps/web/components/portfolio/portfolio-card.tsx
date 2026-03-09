@@ -31,6 +31,7 @@ interface PortfolioCardProps {
   showStatus?: boolean;
   showActions?: boolean;
   username?: string;
+  variant?: 'default' | 'feed'; // Feed variant removes user info and card wrapper
 }
 
 // Status styles matching admin dashboard
@@ -50,13 +51,14 @@ const statusLabels: Record<PortfolioStatus, string> = {
   archived: 'Diarsipkan',
 };
 
-export function PortfolioCard({ portfolio, showStatus = false, showActions = false, username }: PortfolioCardProps) {
+export function PortfolioCard({ portfolio, showStatus = false, showActions = false, username, variant = 'default' }: PortfolioCardProps) {
   const { id, judul, slug, thumbnail_url, published_at, created_at, user, tags, status } = portfolio;
   const queryClient = useQueryClient();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const resolvedUsername = user?.username || username;
   const firstTag = tags && tags.length > 0 ? tags[0] : null;
+  const isFeedVariant = variant === 'feed';
 
   // Mutations
   const submitMutation = useMutation({
@@ -102,63 +104,93 @@ export function PortfolioCard({ portfolio, showStatus = false, showActions = fal
   const canUnarchive = status === 'archived';
   const isLoading = submitMutation.isPending || archiveMutation.isPending;
 
+  // Feed variant: simplified content without card wrapper
+  const content = (
+    <Link href={`/${resolvedUsername}/${slug}`} className={cn("block", !isFeedVariant && "p-3")}>
+      {/* Thumbnail - 4:3 aspect ratio (landscape) */}
+      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-muted sm:rounded-xl">
+        {thumbnail_url ? (
+          <Image
+            src={thumbnail_url}
+            alt={judul}
+            fill
+            className="object-cover object-center transition-transform group-hover:scale-105"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center text-xs text-muted-foreground sm:text-sm">
+            No Image
+          </div>
+        )}
+      </div>
+
+      {/* Tag & Status */}
+      <div className="mt-2.5 flex items-center justify-between gap-2 sm:mt-3">
+        {firstTag ? (
+          <Badge variant="secondary" className="max-w-[120px] truncate rounded-full px-2 py-0.5 text-[10px] font-normal sm:max-w-none sm:px-2.5 sm:text-xs">
+            {firstTag.nama}
+          </Badge>
+        ) : (
+          <div />
+        )}
+        {showStatus && status && (
+          <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-medium sm:px-2.5 sm:py-1 sm:text-xs', statusStyles[status])}>
+            {statusLabels[status]}
+          </span>
+        )}
+      </div>
+
+      {/* Title */}
+      <h3 className="mt-1.5 line-clamp-2 text-sm font-semibold leading-tight group-hover:text-primary sm:mt-2 sm:text-base">{judul}</h3>
+
+      {/* User Info & Date - Only show in default variant */}
+      {!isFeedVariant && user ? (
+        <div className="mt-2.5 flex items-center gap-2 sm:mt-3">
+          <Avatar className="h-6 w-6 sm:h-8 sm:w-8">
+            <AvatarImage src={user.avatar_url} alt={user.nama} />
+            <AvatarFallback className="text-[10px] sm:text-xs">{user.nama?.charAt(0)}</AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col overflow-hidden">
+            <span className="truncate text-xs font-medium leading-tight sm:text-sm">{user.nama}</span>
+            <span className="truncate text-[10px] text-muted-foreground sm:text-xs">
+              {published_at ? `Posted ${formatDate(published_at)}` : `Dibuat ${formatDate(created_at)}`}
+            </span>
+          </div>
+        </div>
+      ) : !isFeedVariant && !user ? (
+        <p className="mt-3 text-xs text-muted-foreground">Dibuat {formatDate(created_at)}</p>
+      ) : null}
+    </Link>
+  );
+
+  // Feed variant: return content without card wrapper
+  if (isFeedVariant) {
+    return (
+      <div className="group w-full">
+        {content}
+        {/* Delete Confirmation */}
+        <ConfirmDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          title="Hapus Portfolio"
+          description={
+            <>
+              Yakin ingin menghapus <strong>{judul}</strong>? Tindakan ini tidak dapat dibatalkan.
+            </>
+          }
+          confirmText="Hapus"
+          variant="destructive"
+          isLoading={deleteMutation.isPending}
+          onConfirm={() => deleteMutation.mutate()}
+        />
+      </div>
+    );
+  }
+
+  // Default variant: return with card wrapper
   return (
     <TooltipProvider>
       <Card className="group w-full gap-0 overflow-hidden border py-0 transition-shadow hover:shadow-lg">
-        <Link href={`/${resolvedUsername}/${slug}`} className="block p-3">
-          {/* Thumbnail - 4:3 aspect ratio (landscape) */}
-          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-muted sm:rounded-xl">
-            {thumbnail_url ? (
-              <Image
-                src={thumbnail_url}
-                alt={judul}
-                fill
-                className="object-cover object-center transition-transform group-hover:scale-105"
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center text-xs text-muted-foreground sm:text-sm">
-                No Image
-              </div>
-            )}
-          </div>
-
-          {/* Tag & Status */}
-          <div className="mt-2.5 flex items-center justify-between gap-2 sm:mt-3">
-            {firstTag ? (
-              <Badge variant="secondary" className="max-w-[120px] truncate rounded-full px-2 py-0.5 text-[10px] font-normal sm:max-w-none sm:px-2.5 sm:text-xs">
-                {firstTag.nama}
-              </Badge>
-            ) : (
-              <div />
-            )}
-            {showStatus && status && (
-              <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-medium sm:px-2.5 sm:py-1 sm:text-xs', statusStyles[status])}>
-                {statusLabels[status]}
-              </span>
-            )}
-          </div>
-
-          {/* Title */}
-          <h3 className="mt-1.5 line-clamp-2 text-sm font-semibold leading-tight group-hover:text-primary sm:mt-2 sm:text-base">{judul}</h3>
-
-          {/* User Info & Date */}
-          {user ? (
-            <div className="mt-2.5 flex items-center gap-2 sm:mt-3">
-              <Avatar className="h-6 w-6 sm:h-8 sm:w-8">
-                <AvatarImage src={user.avatar_url} alt={user.nama} />
-                <AvatarFallback className="text-[10px] sm:text-xs">{user.nama?.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col overflow-hidden">
-                <span className="truncate text-xs font-medium leading-tight sm:text-sm">{user.nama}</span>
-                <span className="truncate text-[10px] text-muted-foreground sm:text-xs">
-                  {published_at ? `Posted ${formatDate(published_at)}` : `Dibuat ${formatDate(created_at)}`}
-                </span>
-              </div>
-            </div>
-          ) : (
-            <p className="mt-3 text-xs text-muted-foreground">Dibuat {formatDate(created_at)}</p>
-          )}
-        </Link>
+        {content}
 
         {/* Action Buttons */}
         {showActions && (
