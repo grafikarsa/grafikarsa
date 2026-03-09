@@ -144,7 +144,7 @@ export function TimelineFeedItem({ item, algorithm, onShare }: TimelineFeedItemP
         </div>
 
         {/* Portfolio Card */}
-        <div className="-mx-3 md:mx-0">
+        <div className="md:mx-0">
           <PortfolioCard
             portfolio={item}
             showStatus={false}
