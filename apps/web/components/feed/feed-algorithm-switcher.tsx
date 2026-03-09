@@ -38,8 +38,8 @@ export function FeedAlgorithmSwitcher({
   ];
 
   return (
-    <div className="flex relative">
-      {tabs.map((tab, index) => {
+    <div className="flex relative overflow-hidden">
+      {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = value === tab.value;
         
