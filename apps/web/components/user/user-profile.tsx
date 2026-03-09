@@ -93,7 +93,7 @@ export function UserProfile({ profile }: UserProfileProps) {
   return (
     <>
       {/* Banner - Extended width with 3:1 aspect ratio */}
-      <div className="container mx-auto max-w-6xl px-4 pt-4 md:px-6 md:pt-6 lg:px-8">
+      <div className="w-full px-4 pt-4 md:container md:mx-auto md:max-w-6xl md:px-6 md:pt-6 lg:px-8">
         <div className="relative w-full aspect-[3/1] overflow-hidden rounded-2xl bg-gradient-to-r from-primary/20 to-primary/10">
           {profile.banner_url && (
             <Image
@@ -109,7 +109,7 @@ export function UserProfile({ profile }: UserProfileProps) {
       </div>
 
       {/* Profile Content */}
-      <div className="container mx-auto max-w-5xl px-6 pb-4 md:px-12 lg:px-16">
+      <div className="w-full px-4 pb-4 md:container md:mx-auto md:max-w-5xl md:px-12 lg:px-16">
         {/* Avatar & Actions Row */}
         <div className="relative flex items-end justify-between -mt-12 md:-mt-20">
           {/* Avatar - overlapping banner with better positioning */}

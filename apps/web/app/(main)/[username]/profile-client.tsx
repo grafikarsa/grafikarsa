@@ -58,7 +58,6 @@ export function ProfileClient({ username, initialData }: ProfileClientProps) {
 
     if (!profile) {
         notFound();
-        return null;
     }
 
     const portfolios = portfoliosData?.data || [];
@@ -68,14 +67,14 @@ export function ProfileClient({ username, initialData }: ProfileClientProps) {
             <UserProfile profile={profile} />
 
             {/* Portfolios Section */}
-            <div className="container mx-auto max-w-5xl px-6 pb-12 md:px-12 lg:px-16" id="portfolios">
+            <div className="w-full px-4 pb-12 md:container md:mx-auto md:max-w-5xl md:px-12 lg:px-16" id="portfolios">
                 <h2 className="mb-6 text-xl font-semibold">Portofolio</h2>
 
                 {portfoliosLoading ? (
-                    <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,320px))] gap-6">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 md:gap-6">
                         {Array.from({ length: 6 }).map((_, i) => (
-                            <div key={i} className="w-[320px] space-y-3 rounded-lg border p-3">
-                                <Skeleton className="h-[240px] w-full rounded-lg" />
+                            <div key={i} className="space-y-3 rounded-lg border p-3">
+                                <Skeleton className="aspect-[4/3] w-full rounded-lg" />
                                 <Skeleton className="h-4 w-3/4" />
                                 <Skeleton className="h-4 w-1/2" />
                             </div>
@@ -104,8 +103,8 @@ export function ProfileClient({ username, initialData }: ProfileClientProps) {
                                 <p className="mb-6 text-sm text-muted-foreground">
                                     Mulai showcase karya terbaikmu dengan membuat portofolio pertama
                                 </p>
-                                <a
-                                    href="/portfolios/new"
+                                <Link
+                                    href={`/${username}/portfolios/new`}
                                     className="inline-flex items-center justify-center rounded-md bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
                                 >
                                     <svg
@@ -122,7 +121,7 @@ export function ProfileClient({ username, initialData }: ProfileClientProps) {
                                         />
                                     </svg>
                                     Buat Portofolio
-                                </a>
+                                </Link>
                             </>
                         ) : (
                             <>
@@ -149,7 +148,7 @@ export function ProfileClient({ username, initialData }: ProfileClientProps) {
                         )}
                     </div>
                 ) : (
-                    <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,320px))] gap-6">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 md:gap-6">
                         {portfolios.map((portfolio) => (
                             <PortfolioCard
                                 key={portfolio.id}

@@ -24,10 +24,10 @@ const ITEMS_PER_PAGE = 20;
 
 function PortfoliosSkeleton() {
   return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,320px))] gap-6">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 md:gap-6">
       {Array.from({ length: 8 }).map((_, i) => (
-        <div key={i} className="w-[320px] space-y-3 rounded-lg border bg-card p-3">
-          <Skeleton className="h-[240px] w-full rounded-lg" />
+        <div key={i} className="space-y-3 rounded-lg border bg-card p-3">
+          <Skeleton className="aspect-[4/3] w-full rounded-lg" />
           <Skeleton className="h-5 w-3/4" />
           <Skeleton className="h-4 w-1/2" />
           <div className="flex gap-2">
@@ -325,7 +325,7 @@ export default function PortfoliosPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,320px))] gap-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 md:gap-6">
             {portfolios.map((portfolio) => (
               <PortfolioCard key={portfolio.id} portfolio={portfolio} />
             ))}

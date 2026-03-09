@@ -104,7 +104,7 @@ export function PortfolioCard({ portfolio, showStatus = false, showActions = fal
 
   return (
     <TooltipProvider>
-      <Card className="group w-[320px] gap-0 overflow-hidden border py-0 transition-shadow hover:shadow-lg">
+      <Card className="group w-full gap-0 overflow-hidden border py-0 transition-shadow hover:shadow-lg">
         <Link href={`/${resolvedUsername}/${slug}`} className="block p-3">
           {/* Thumbnail - 4:3 aspect ratio (landscape) */}
           <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-muted sm:rounded-xl">

@@ -67,14 +67,16 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         <StudentSidebar />
       </div>
       <div 
-        className="flex flex-1 flex-col transition-all duration-300"
+        className="flex w-full flex-1 flex-col transition-all duration-300"
         style={{ 
-          paddingLeft: sidebarCollapsed ? '64px' : '240px' 
+          paddingLeft: typeof window !== 'undefined' && window.innerWidth >= 768 
+            ? (sidebarCollapsed ? 64 : 240) 
+            : 0
         }}
       >
         <StudentHeader />
-        {/* Add pb-20 on mobile for bottom nav clearance */}
-        <main className="flex-1 p-4 pb-24 md:p-6 md:pb-6">{children}</main>
+        {/* Responsive padding: no padding on mobile for full-width feed, standard on desktop */}
+        <main className="flex-1 pb-20 md:p-6 md:pb-6">{children}</main>
       </div>
       {/* Mobile bottom navigation */}
       <BottomNav />

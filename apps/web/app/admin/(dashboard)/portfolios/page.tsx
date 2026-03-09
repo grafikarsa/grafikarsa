@@ -323,7 +323,7 @@ export default function AdminPortfoliosPage() {
     return (
       <>
         {debugMode && <DebugBanner pageName="Kelola Portfolio" />}
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,320px))] gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-6">
           {displayPortfolios.map((portfolio) => (
             <PortfolioCardItem
               key={portfolio.id}

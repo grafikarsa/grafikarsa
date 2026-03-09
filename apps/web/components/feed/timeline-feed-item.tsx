@@ -105,38 +105,38 @@ export function TimelineFeedItem({ item, algorithm, onShare }: TimelineFeedItemP
 
   return (
     <Card className="overflow-hidden border-0 border-b rounded-none shadow-none bg-background">
-      <div className="p-4">
+      <div className="p-3 md:p-4">
         {/* Author Header */}
-        <div className="flex items-start gap-3 mb-4">
-          <Link href={`/${username}`} onClick={(e) => e.stopPropagation()}>
-            <Avatar className="h-10 w-10">
+        <div className="flex items-start gap-2.5 md:gap-3 mb-3 md:mb-4">
+          <Link href={`/${username}`} onClick={(e) => e.stopPropagation()} className="shrink-0">
+            <Avatar className="h-9 w-9 md:h-10 md:w-10">
               <AvatarImage src={item.user?.avatar_url} alt={item.user?.nama} />
               <AvatarFallback>{item.user?.nama?.charAt(0) || 'U'}</AvatarFallback>
             </Avatar>
           </Link>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
               <Link
                 href={`/${username}`}
-                className="font-semibold text-sm hover:underline"
+                className="font-semibold text-xs md:text-sm hover:underline truncate max-w-[120px] md:max-w-none"
                 onClick={(e) => e.stopPropagation()}
               >
                 {item.user?.nama}
               </Link>
               <Link
                 href={`/${username}`}
-                className="text-muted-foreground text-sm hover:underline"
+                className="text-muted-foreground text-xs md:text-sm hover:underline truncate max-w-[100px] md:max-w-none"
                 onClick={(e) => e.stopPropagation()}
               >
                 @{username}
               </Link>
               {item.user?.kelas_nama && (
-                <span className="text-muted-foreground text-xs">• {item.user.kelas_nama}</span>
+                <span className="text-muted-foreground text-[10px] md:text-xs hidden sm:inline">• {item.user.kelas_nama}</span>
               )}
             </div>
             {(item.published_at || item.created_at) && (
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5">
                 {formatDistanceToNow(item.published_at || item.created_at!)}
               </p>
             )}
@@ -144,7 +144,7 @@ export function TimelineFeedItem({ item, algorithm, onShare }: TimelineFeedItemP
         </div>
 
         {/* Portfolio Card */}
-        <div>
+        <div className="-mx-3 md:mx-0">
           <PortfolioCard
             portfolio={item}
             showStatus={false}
@@ -154,36 +154,36 @@ export function TimelineFeedItem({ item, algorithm, onShare }: TimelineFeedItemP
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-1 mt-3 -ml-2">
+        <div className="flex items-center gap-0.5 md:gap-1 mt-2.5 md:mt-3 -ml-1.5 md:-ml-2">
           {/* Like Button */}
           <Button
             variant="ghost"
             size="sm"
             className={cn(
-              'h-8 px-2 gap-1.5 text-muted-foreground hover:text-red-500',
+              'h-7 md:h-8 px-1.5 md:px-2 gap-1 md:gap-1.5 text-muted-foreground hover:text-red-500 active:scale-95 transition-transform',
               item.is_liked && 'text-red-500'
             )}
             onClick={handleLike}
             disabled={likeMutation.isPending}
           >
-            <Heart className={cn('h-4 w-4', item.is_liked && 'fill-current')} />
-            <span className="text-xs">{item.like_count}</span>
+            <Heart className={cn('h-3.5 w-3.5 md:h-4 md:w-4', item.is_liked && 'fill-current')} />
+            <span className="text-[11px] md:text-xs font-medium">{item.like_count}</span>
           </Button>
 
           {/* View Count */}
-          <div className="flex items-center gap-1.5 px-2 text-muted-foreground">
-            <Eye className="h-4 w-4" />
-            <span className="text-xs">{item.view_count}</span>
+          <div className="flex items-center gap-1 md:gap-1.5 px-1.5 md:px-2 text-muted-foreground">
+            <Eye className="h-3.5 w-3.5 md:h-4 md:w-4" />
+            <span className="text-[11px] md:text-xs">{item.view_count}</span>
           </div>
 
           {/* Share Button */}
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 px-2 text-muted-foreground hover:text-primary"
+            className="h-7 md:h-8 px-1.5 md:px-2 text-muted-foreground hover:text-primary active:scale-95 transition-transform"
             onClick={handleShare}
           >
-            <Share2 className="h-4 w-4" />
+            <Share2 className="h-3.5 w-3.5 md:h-4 md:w-4" />
           </Button>
         </div>
       </div>

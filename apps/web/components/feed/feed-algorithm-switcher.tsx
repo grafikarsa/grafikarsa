@@ -38,7 +38,7 @@ export function FeedAlgorithmSwitcher({
   ];
 
   return (
-    <div className="flex border-b relative">
+    <div className="flex relative">
       {tabs.map((tab, index) => {
         const Icon = tab.icon;
         const isActive = value === tab.value;
@@ -49,25 +49,26 @@ export function FeedAlgorithmSwitcher({
             onClick={() => !tab.disabled && onChange(tab.value)}
             disabled={tab.disabled}
             className={cn(
-              'flex-1 flex items-center justify-center gap-2 px-4 py-4 text-sm font-medium transition-colors duration-200 relative z-10',
+              'flex-1 flex items-center justify-center gap-1.5 md:gap-2 px-3 md:px-4 py-3 md:py-4 text-xs md:text-sm font-medium transition-colors duration-200 relative z-10',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+              'active:scale-95 transition-transform',
               isActive
                 ? 'text-foreground'
-                : 'text-muted-foreground',
+                : 'text-muted-foreground hover:text-foreground/80',
               tab.disabled 
                 ? 'opacity-50 cursor-not-allowed' 
                 : 'cursor-pointer'
             )}
           >
-            <Icon className="h-4 w-4" />
-            <span>{tab.label}</span>
+            <Icon className="h-3.5 w-3.5 md:h-4 md:w-4 shrink-0" />
+            <span className="whitespace-nowrap">{tab.label}</span>
           </button>
         );
       })}
       
       {/* Animated underline indicator */}
       <motion.div
-        className="absolute bottom-0 h-1 bg-primary rounded-t-full"
+        className="absolute bottom-0 h-0.5 md:h-1 bg-primary rounded-t-full"
         initial={false}
         animate={{
           left: `${tabs.findIndex(t => t.value === value) * (100 / tabs.length)}%`,

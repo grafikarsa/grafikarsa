@@ -16,22 +16,27 @@ const ITEMS_PER_PAGE = 20;
 
 function FeedSkeleton() {
   return (
-    <div className="space-y-4">
+    <div className="space-y-0">
       {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="p-4 border-b">
-          <div className="flex items-start gap-3">
-            <Skeleton className="h-10 w-10 rounded-full" />
-            <div className="flex-1 space-y-2">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-3 w-24" />
+        <div key={i} className="p-3 md:p-4 border-b">
+          <div className="flex items-start gap-2.5 md:gap-3">
+            <Skeleton className="h-9 w-9 md:h-10 md:w-10 rounded-full shrink-0" />
+            <div className="flex-1 space-y-1.5 md:space-y-2 min-w-0">
+              <Skeleton className="h-3.5 md:h-4 w-28 md:w-32" />
+              <Skeleton className="h-3 w-20 md:w-24" />
             </div>
           </div>
-          <div className="mt-3 space-y-2">
-            <Skeleton className="h-5 w-3/4" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-2/3" />
+          <div className="mt-3 space-y-1.5 md:space-y-2">
+            <Skeleton className="h-4 md:h-5 w-3/4" />
+            <Skeleton className="h-3 md:h-4 w-full" />
+            <Skeleton className="h-3 md:h-4 w-2/3" />
           </div>
-          <Skeleton className="mt-3 aspect-video w-full rounded-xl" />
+          <Skeleton className="mt-3 aspect-video w-full rounded-lg md:rounded-xl" />
+          <div className="mt-3 flex gap-2">
+            <Skeleton className="h-7 md:h-8 w-16 md:w-20 rounded-md" />
+            <Skeleton className="h-7 md:h-8 w-16 md:w-20 rounded-md" />
+            <Skeleton className="h-7 md:h-8 w-10 md:w-12 rounded-md" />
+          </div>
         </div>
       ))}
     </div>
@@ -88,32 +93,32 @@ function EmptyState({ algorithm }: { algorithm: FeedAlgorithm }) {
   const Icon = config.icon;
 
   return (
-    <div className="flex min-h-[60vh] items-center justify-center px-4 py-12">
+    <div className="flex min-h-[60vh] items-center justify-center px-4 md:px-6 py-8 md:py-12">
       <div className="w-full max-w-md text-center">
         {/* Icon */}
-        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
-          <Icon className="h-10 w-10 text-primary" />
+        <div className="mx-auto mb-4 md:mb-6 flex h-16 w-16 md:h-20 md:w-20 items-center justify-center rounded-full bg-primary/10">
+          <Icon className="h-8 w-8 md:h-10 md:w-10 text-primary" />
         </div>
 
         {/* Title & Description */}
-        <h3 className="mb-2 text-xl font-semibold text-foreground">
+        <h3 className="mb-2 text-lg md:text-xl font-semibold text-foreground">
           {config.title}
         </h3>
-        <p className="mb-8 text-sm text-muted-foreground leading-relaxed">
+        <p className="mb-6 md:mb-8 text-sm text-muted-foreground leading-relaxed px-2">
           {config.description}
         </p>
 
         {/* Tips */}
-        <div className="mb-8 rounded-xl border bg-muted/30 p-6 text-left">
-          <div className="mb-3 flex items-center gap-2 text-sm font-medium">
-            <Heart className="h-4 w-4 text-primary" />
+        <div className="mb-6 md:mb-8 rounded-lg md:rounded-xl border bg-muted/30 p-4 md:p-6 text-left">
+          <div className="mb-2.5 md:mb-3 flex items-center gap-2 text-xs md:text-sm font-medium">
+            <Heart className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
             <span>Tips buat kamu:</span>
           </div>
-          <ul className="space-y-2.5">
+          <ul className="space-y-2 md:space-y-2.5">
             {config.tips.map((tip, index) => (
-              <li key={index} className="flex items-start gap-2.5 text-sm text-muted-foreground">
+              <li key={index} className="flex items-start gap-2 md:gap-2.5 text-xs md:text-sm text-muted-foreground">
                 <span className="mt-1 flex h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                <span>{tip}</span>
+                <span className="leading-relaxed">{tip}</span>
               </li>
             ))}
           </ul>
@@ -121,7 +126,7 @@ function EmptyState({ algorithm }: { algorithm: FeedAlgorithm }) {
 
         {/* CTA Button */}
         {config.cta && (
-          <Button asChild size="lg" className="w-full sm:w-auto">
+          <Button asChild size="default" className="w-full sm:w-auto">
             <a href={config.cta.href}>
               {algorithm === 'following' ? (
                 <UserPlus className="mr-2 h-4 w-4" />
@@ -266,9 +271,9 @@ export function SmartFeedList() {
   const feedItems = data?.pages.flatMap((page) => page.data || []) || [];
 
   return (
-    <div className="max-w-2xl mx-auto -mt-4 md:-mt-6">
+    <div className="w-full md:max-w-2xl md:mx-auto">
       {/* Sticky Tab Switcher - positioned right below header */}
-      <div className="sticky top-14 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+      <div className="sticky top-14 md:top-16 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
         <FeedAlgorithmSwitcher
           value={algorithm}
           onChange={handleAlgorithmChange}
@@ -277,26 +282,28 @@ export function SmartFeedList() {
       </div>
 
       {/* Pull to refresh button (mobile) */}
-      <div className="flex justify-center py-2 sm:hidden">
+      <div className="flex justify-center py-3 border-b md:hidden">
         <Button
           variant="ghost"
           size="sm"
           onClick={handleRefresh}
           disabled={isPulling}
-          className="gap-2"
+          className="gap-2 text-xs"
         >
-          <RefreshCw className={`h-4 w-4 ${isPulling ? 'animate-spin' : ''}`} />
-          Refresh
+          <RefreshCw className={`h-3.5 w-3.5 ${isPulling ? 'animate-spin' : ''}`} />
+          Refresh Feed
         </Button>
       </div>
 
       {/* Content */}
       {isLoading ? (
-        <FeedSkeleton />
+        <div className="px-0 md:px-0">
+          <FeedSkeleton />
+        </div>
       ) : isError ? (
-        <div className="p-8 text-center">
-          <p className="text-muted-foreground">Gagal memuat feed.</p>
-          <Button variant="outline" onClick={() => refetch()} className="mt-4">
+        <div className="p-6 md:p-8 text-center">
+          <p className="text-sm md:text-base text-muted-foreground">Gagal memuat feed.</p>
+          <Button variant="outline" onClick={() => refetch()} className="mt-4" size="sm">
             Coba Lagi
           </Button>
         </div>
@@ -312,13 +319,16 @@ export function SmartFeedList() {
           </div>
 
           {/* Load more trigger */}
-          <div ref={loadMoreRef} className="py-8 flex justify-center">
+          <div ref={loadMoreRef} className="py-6 md:py-8 flex justify-center">
             {isFetchingNextPage ? (
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <Loader2 className="h-5 w-5 md:h-6 md:w-6 animate-spin text-muted-foreground" />
             ) : hasNextPage ? (
-              <span className="text-sm text-muted-foreground">Scroll untuk memuat lebih banyak</span>
+              <span className="text-xs md:text-sm text-muted-foreground">Scroll untuk memuat lebih banyak</span>
             ) : feedItems.length > 0 ? (
-              <span className="text-sm text-muted-foreground">Tidak ada lagi portfolio</span>
+              <div className="text-center space-y-2">
+                <span className="block text-xs md:text-sm text-muted-foreground">Tidak ada lagi portfolio</span>
+                <span className="block text-xs text-muted-foreground/70">Kamu sudah sampai di akhir feed</span>
+              </div>
             ) : null}
           </div>
         </>
