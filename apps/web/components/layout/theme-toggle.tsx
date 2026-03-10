@@ -33,8 +33,8 @@ export function ThemeToggle() {
 
   if (!mounted) {
     return (
-      <div className="flex h-9 w-14 items-center justify-center rounded-full bg-muted">
-        <Sun className="h-4 w-4 text-muted-foreground" />
+      <div className="flex h-6 w-11 items-center justify-center rounded-full bg-muted">
+        <Sun className="h-3 w-3 text-muted-foreground" />
       </div>
     );
   }
@@ -45,22 +45,17 @@ export function ThemeToggle() {
         <TooltipTrigger asChild>
           <button
             onClick={toggleTheme}
-            className="relative inline-flex h-9 w-14 items-center rounded-full bg-muted transition-colors hover:bg-muted/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             aria-label="Toggle theme"
           >
-            {/* Track background with gradient */}
-            <span
-              className={cn(
-                'absolute inset-0 rounded-full transition-colors duration-300',
-                theme === 'dark' ? 'bg-slate-800' : 'bg-amber-100'
-              )}
-            />
+            {/* Track background */}
+            <span className="absolute inset-0 rounded-full bg-muted transition-colors duration-300" />
             
             {/* Thumb with icon and bouncy animation */}
             <span
               className={cn(
-                'relative z-10 flex h-7 w-7 items-center justify-center rounded-full bg-white shadow-md transition-all duration-300 ease-out',
-                theme === 'dark' ? 'translate-x-6' : 'translate-x-1',
+                'relative z-10 flex h-5 w-5 items-center justify-center rounded-full bg-background shadow-sm transition-all duration-300 ease-out',
+                theme === 'dark' ? 'translate-x-5' : 'translate-x-0.5',
                 'hover:scale-110 active:scale-95'
               )}
               style={{
@@ -68,9 +63,9 @@ export function ThemeToggle() {
               }}
             >
               {theme === 'light' ? (
-                <Sun className="h-4 w-4 text-amber-500" />
+                <Sun className="h-3 w-3 text-foreground" />
               ) : (
-                <Moon className="h-4 w-4 text-slate-700" />
+                <Moon className="h-3 w-3 text-foreground" />
               )}
             </span>
           </button>
