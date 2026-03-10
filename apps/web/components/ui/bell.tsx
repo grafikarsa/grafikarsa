@@ -26,36 +26,35 @@ const BellIcon = forwardRef<BellIconHandle, BellIconProps>(
     const controls = useAnimation();
     const isControlledRef = useRef(false);
 
-    useImperativeHandle(ref, () => {
-      isControlledRef.current = true;
-
-      return {
-        startAnimation: () => controls.start("animate"),
-        stopAnimation: () => controls.start("normal"),
-      };
-    });
+    useImperativeHandle(ref, () => ({
+      startAnimation: () => {
+        isControlledRef.current = true;
+        controls.start("animate");
+      },
+      stopAnimation: () => {
+        isControlledRef.current = false;
+        controls.start("normal");
+      },
+    }));
 
     const handleMouseEnter = useCallback(
       (e: React.MouseEvent<HTMLDivElement>) => {
-        if (isControlledRef.current) {
-          onMouseEnter?.(e);
-        } else {
-          controls.start("animate");
-        }
+        controls.start("animate");
+        onMouseEnter?.(e);
       },
       [controls, onMouseEnter]
     );
 
     const handleMouseLeave = useCallback(
       (e: React.MouseEvent<HTMLDivElement>) => {
-        if (isControlledRef.current) {
-          onMouseLeave?.(e);
-        } else {
+        if (!isControlledRef.current) {
           controls.start("normal");
         }
+        onMouseLeave?.(e);
       },
       [controls, onMouseLeave]
     );
+    
     return (
       <div
         className={cn(className)}

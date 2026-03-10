@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Check, UserPlus, Heart, CheckCircle, XCircle, MessageSquare } from 'lucide-react';
 import { notificationsApi, usersApi } from '@/lib/api';
 import { Notification, NotificationType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { BellIcon } from '@/components/ui/bell';
+import { BellIcon, BellIconHandle } from '@/components/ui/bell';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -74,6 +74,7 @@ function getNotificationLink(notification: Notification | null | undefined): str
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
+  const bellRef = useRef<BellIconHandle>(null);
 
   const { data: countData } = useQuery({
     queryKey: ['notifications', 'count'],
@@ -106,6 +107,17 @@ export function NotificationBell() {
     (n): n is Notification => n != null
   );
 
+  // Auto-animate bell when there are unread notifications
+  useEffect(() => {
+    if (unreadCount > 0 && bellRef.current) {
+      const interval = setInterval(() => {
+        bellRef.current?.startAnimation();
+      }, 3000); // Ring every 3 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [unreadCount]);
+
   const handleNotificationClick = (notification: Notification) => {
     if (notification && !notification.is_read) {
       markAsReadMutation.mutate(notification.id);
@@ -120,9 +132,9 @@ export function NotificationBell() {
           <DropdownMenu open={open} onOpenChange={setOpen}>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="relative">
-                <BellIcon size={20} />
+                <BellIcon ref={bellRef} size={20} />
                 {unreadCount > 0 && (
-                  <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white">
+                  <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white animate-pulse">
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
                 )}
