@@ -3,10 +3,11 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Bell, Check, UserPlus, Heart, CheckCircle, XCircle, MessageSquare } from 'lucide-react';
+import { Check, UserPlus, Heart, CheckCircle, XCircle, MessageSquare } from 'lucide-react';
 import { notificationsApi, usersApi } from '@/lib/api';
 import { Notification, NotificationType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
+import { BellIcon } from '@/components/ui/bell';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -119,7 +120,7 @@ export function NotificationBell() {
           <DropdownMenu open={open} onOpenChange={setOpen}>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-5 w-5" />
+                <BellIcon size={20} />
                 {unreadCount > 0 && (
                   <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white">
                     {unreadCount > 99 ? '99+' : unreadCount}
