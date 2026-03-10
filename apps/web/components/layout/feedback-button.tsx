@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { MessageSquarePlus } from 'lucide-react';
+import { MessageCircleMore } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -35,11 +35,12 @@ export function FeedbackButton() {
             <DialogTrigger asChild>
                 <Button
                     variant="default"
-                    size="icon"
-                    className="fixed bottom-6 right-6 z-50 hidden h-12 w-12 rounded-full shadow-lg transition-transform hover:scale-105 md:flex"
+                    size="sm"
+                    className="fixed bottom-6 right-6 z-50 hidden h-10 gap-2 rounded-full px-4 shadow-lg transition-all hover:scale-105 hover:shadow-xl md:flex"
                     aria-label="Kirim Feedback"
                 >
-                    <MessageSquarePlus className="h-6 w-6" />
+                    <MessageCircleMore className="h-4 w-4" />
+                    <span className="text-sm font-medium">Feedback</span>
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-lg">
