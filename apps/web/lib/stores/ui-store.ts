@@ -14,7 +14,7 @@ export const useUIStore = create<UIState>()(
         (set) => ({
             viewMode: 'admin', // Default preference
             setViewMode: (mode) => set({ viewMode: mode }),
-            sidebarCollapsed: false,
+            sidebarCollapsed: true,
             setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
             toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
         }),
