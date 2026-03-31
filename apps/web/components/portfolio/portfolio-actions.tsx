@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Heart, Share2, MessageCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button'; // Assuming you have a Button component
+import { Share2, MessageCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AnimatedHeart } from '@/components/ui/animated-heart';
 import { portfoliosApi } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/lib/stores/auth-store';
@@ -75,7 +76,7 @@ export function PortfolioActions({ portfolio }: PortfolioActionsProps) {
                         className={cn("gap-2 px-2 hover:bg-transparent", portfolio.is_liked && "text-red-500")}
                         onClick={() => isAuthenticated ? likeMutation.mutate() : toast.error('Silakan login untuk menyukai')}
                     >
-                        <Heart className={cn("h-5 w-5", portfolio.is_liked && "fill-current")} />
+                        <AnimatedHeart isLiked={portfolio.is_liked} size={20} />
                         <span className="text-base font-semibold">{portfolio.like_count || 0}</span>
                     </Button>
 
@@ -145,7 +146,7 @@ export function PortfolioActions({ portfolio }: PortfolioActionsProps) {
                                 )}
                                 onClick={() => isAuthenticated ? likeMutation.mutate() : toast.error('Silakan login untuk menyukai')}
                             >
-                                <Heart className={cn("h-5 w-5", portfolio.is_liked && "fill-current")} />
+                                <AnimatedHeart isLiked={portfolio.is_liked} size={20} />
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent side="left">

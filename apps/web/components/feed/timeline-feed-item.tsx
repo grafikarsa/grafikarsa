@@ -3,9 +3,10 @@
 import Link from 'next/link';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Heart, Share2, Eye } from 'lucide-react';
+import { Share2, Eye } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { AnimatedHeart } from '@/components/ui/animated-heart';
 import { PortfolioCard } from '@/components/portfolio/portfolio-card';
 import { portfoliosApi } from '@/lib/api';
 import { ApiResponse, FeedItem } from '@/lib/types';
@@ -164,7 +165,7 @@ export function TimelineFeedItem({ item, algorithm, onShare }: TimelineFeedItemP
             onClick={handleLike}
             disabled={likeMutation.isPending}
           >
-            <Heart className={cn('h-4 w-4', item.is_liked && 'fill-current')} />
+            <AnimatedHeart isLiked={item.is_liked} size={16} />
             <span className="text-sm font-medium">{item.like_count}</span>
           </Button>
 
