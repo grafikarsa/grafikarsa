@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Share2, MessageCircle } from 'lucide-react';
@@ -30,19 +30,53 @@ interface PortfolioActionsProps {
 export function PortfolioActions({ portfolio }: PortfolioActionsProps) {
     const queryClient = useQueryClient();
     const { isAuthenticated } = useAuthStore();
+    
+    // Local state for optimistic UI
+    const [isLiked, setIsLiked] = useState(portfolio.is_liked);
+    const [likeCount, setLikeCount] = useState(portfolio.like_count);
 
-    // Optimistic UI state could be added here, but relying on RQ cache invalidation for now
+    // Sync with props when portfolio data changes
+    useEffect(() => {
+        setIsLiked(portfolio.is_liked);
+        setLikeCount(portfolio.like_count);
+    }, [portfolio.is_liked, portfolio.like_count]);
 
     const likeMutation = useMutation({
         mutationFn: () =>
-            portfolio.is_liked
+            isLiked
                 ? portfoliosApi.unlikePortfolio(portfolio.id)
                 : portfoliosApi.likePortfolio(portfolio.id),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['portfolio', portfolio.username, portfolio.slug] });
+        onMutate: async () => {
+            // Cancel outgoing refetches
+            await queryClient.cancelQueries({ queryKey: ['portfolio', portfolio.username, portfolio.slug] });
+
+            // Snapshot previous value
+            const previousIsLiked = isLiked;
+            const previousLikeCount = likeCount;
+
+            // Optimistically update local state
+            setIsLiked(!isLiked);
+            setLikeCount(isLiked ? likeCount - 1 : likeCount + 1);
+
+            return { previousIsLiked, previousLikeCount };
         },
-        onError: () => {
+        onError: (_err, _vars, context) => {
+            // Rollback on error
+            if (context) {
+                setIsLiked(context.previousIsLiked);
+                setLikeCount(context.previousLikeCount);
+            }
             toast.error('Gagal. Silakan coba lagi.');
+        },
+        onSuccess: (data) => {
+            // Update with server response
+            if (data.data) {
+                setIsLiked(data.data.is_liked);
+                setLikeCount(data.data.like_count);
+            }
+            // Invalidate both portfolio detail and feed caches
+            queryClient.invalidateQueries({ queryKey: ['portfolio', portfolio.username, portfolio.slug] });
+            queryClient.invalidateQueries({ queryKey: ['feed'] });
         },
     });
 
@@ -73,11 +107,12 @@ export function PortfolioActions({ portfolio }: PortfolioActionsProps) {
                     <Button
                         variant="ghost"
                         size="sm"
-                        className={cn("gap-2 px-2 hover:bg-transparent", portfolio.is_liked && "text-red-500")}
+                        className={cn("gap-2 px-2 hover:bg-transparent", isLiked && "text-red-500")}
                         onClick={() => isAuthenticated ? likeMutation.mutate() : toast.error('Silakan login untuk menyukai')}
+                        disabled={likeMutation.isPending}
                     >
-                        <AnimatedHeart isLiked={portfolio.is_liked} size={20} />
-                        <span className="text-base font-semibold">{portfolio.like_count || 0}</span>
+                        <AnimatedHeart isLiked={isLiked} size={20} />
+                        <span className="text-base font-semibold">{likeCount || 0}</span>
                     </Button>
 
                     {/* Comment Button */}
@@ -138,19 +173,20 @@ export function PortfolioActions({ portfolio }: PortfolioActionsProps) {
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Button
-                                variant={portfolio.is_liked ? "default" : "secondary"}
+                                variant={isLiked ? "default" : "secondary"}
                                 size="icon"
                                 className={cn(
                                     "h-12 w-12 rounded-full shadow-md transition-transform hover:scale-105",
-                                    portfolio.is_liked && "bg-red-500 hover:bg-red-600 text-white border-none"
+                                    isLiked && "bg-red-500 hover:bg-red-600 text-white border-none"
                                 )}
                                 onClick={() => isAuthenticated ? likeMutation.mutate() : toast.error('Silakan login untuk menyukai')}
+                                disabled={likeMutation.isPending}
                             >
-                                <AnimatedHeart isLiked={portfolio.is_liked} size={20} />
+                                <AnimatedHeart isLiked={isLiked} size={20} />
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent side="left">
-                            <p>{portfolio.like_count} Suka</p>
+                            <p>{likeCount} Suka</p>
                         </TooltipContent>
                     </Tooltip>
                 </TooltipProvider>

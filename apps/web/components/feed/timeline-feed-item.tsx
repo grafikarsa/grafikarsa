@@ -81,6 +81,13 @@ export function TimelineFeedItem({ item, algorithm, onShare }: TimelineFeedItemP
             })),
           };
         });
+        
+        // Invalidate portfolio detail cache to sync like state
+        if (item.user?.username && item.slug) {
+          queryClient.invalidateQueries({ 
+            queryKey: ['portfolio', item.user.username, item.slug] 
+          });
+        }
       }
     },
   });
