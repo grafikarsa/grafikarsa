@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { Search, LogIn } from 'lucide-react';
@@ -21,8 +21,27 @@ export function NewHeroSection() {
 
   const projects = data?.data || [];
 
-  // Duplicate projects 2x for seamless infinite scroll (reduced from 4x)
-  const duplicatedProjects = projects.length > 0 ? [...projects, ...projects] : [];
+  // Smart duplication: ensure enough cards to fill the viewport for seamless scroll
+  const CARD_WIDTH_WITH_GAP = 304; // ~280px card (lg) + 24px gap
+  const MAX_VIEWPORT_WIDTH = 2560; // Cover ultrawide screens
+
+  const { duplicatedProjects, animationDuration } = useMemo(() => {
+    if (projects.length === 0) return { duplicatedProjects: [], animationDuration: 40 };
+
+    // Calculate how many cards needed to fill one "set" that covers the viewport
+    const minCardsPerSet = Math.ceil(MAX_VIEWPORT_WIDTH / CARD_WIDTH_WITH_GAP) + 1;
+    const repetitions = Math.max(1, Math.ceil(minCardsPerSet / projects.length));
+    const oneSet = Array.from({ length: repetitions }, () => projects).flat();
+
+    // Duration scales with set size: ~4s per card, minimum 20s
+    const duration = Math.max(20, oneSet.length * 4);
+
+    return {
+      // Two identical sets → translateX(-50%) loops perfectly
+      duplicatedProjects: [...oneSet, ...oneSet],
+      animationDuration: duration,
+    };
+  }, [projects]);
 
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-background py-12">
@@ -79,15 +98,20 @@ export function NewHeroSection() {
           <div className="py-6 px-6">
             <div 
               ref={scrollContainerRef}
-              className="flex gap-6 animate-scroll-horizontal"
+              className="flex gap-6"
+              style={{
+                animation: `scroll-horizontal ${animationDuration}s linear infinite`,
+              }}
               role="region"
               aria-label="Portfolio showcase"
               tabIndex={0}
+              onMouseEnter={(e) => e.currentTarget.style.animationPlayState = 'paused'}
+              onMouseLeave={(e) => e.currentTarget.style.animationPlayState = 'running'}
               onFocus={(e) => e.currentTarget.style.animationPlayState = 'paused'}
               onBlur={(e) => e.currentTarget.style.animationPlayState = 'running'}
             >
               {duplicatedProjects.map((project, index) => (
-                <div key={`${project.id}-${index}`} className="flex-shrink-0">
+                <div key={`${project.id}-${index}`} className="w-[200px] flex-shrink-0 sm:w-[240px] md:w-[260px] lg:w-[280px]">
                   <PortfolioCard 
                     portfolio={{
                       id: project.id,
