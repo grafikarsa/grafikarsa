@@ -273,7 +273,7 @@ export function SmartFeedList() {
   return (
     <div className="w-full max-w-2xl mx-auto">
       {/* Sticky Tab Switcher - positioned right below header */}
-      <div className="sticky top-14 md:top-16 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b overflow-hidden">
+      <div className="sticky top-14 md:top-14 z-40 bg-background border-b">
         <FeedAlgorithmSwitcher
           value={algorithm}
           onChange={handleAlgorithmChange}
