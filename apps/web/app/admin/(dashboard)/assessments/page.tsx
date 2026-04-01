@@ -258,7 +258,7 @@ export default function AdminAssessmentsPage() {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 md:gap-6">
               {displayPortfolios.map((portfolio) => (
                 <PortfolioCard
                   key={portfolio.id}
@@ -337,10 +337,10 @@ function PortfolioCard({
   const hasAssessment = !!portfolio.assessment;
 
   return (
-    <Card className="group w-[320px] gap-0 overflow-hidden border py-0 transition-shadow hover:shadow-lg">
+    <Card className="group w-full gap-0 overflow-hidden border py-0 transition-shadow hover:shadow-lg">
       <div className="p-3 pb-4">
         {/* Thumbnail */}
-        <div className="relative h-[240px] w-full overflow-hidden rounded-xl bg-muted">
+        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-muted">
           {portfolio.thumbnail_url ? (
             <img
               src={portfolio.thumbnail_url}
