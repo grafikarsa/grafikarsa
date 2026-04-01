@@ -323,7 +323,7 @@ export default function AdminPortfoliosPage() {
     return (
       <>
         {debugMode && <DebugBanner pageName="Kelola Portfolio" />}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 md:gap-6">
           {displayPortfolios.map((portfolio) => (
             <PortfolioCardItem
               key={portfolio.id}
@@ -487,9 +487,9 @@ function PortfolioCardItem({
   const displayDate = portfolio.published_at || portfolio.created_at;
 
   return (
-    <Card className="group w-[320px] gap-0 overflow-hidden border py-0 transition-shadow hover:shadow-lg">
+    <Card className="group w-full gap-0 overflow-hidden border py-0 transition-shadow hover:shadow-lg">
       <div className="p-3 pb-4">
-        <div className="relative h-[240px] w-full overflow-hidden rounded-xl bg-muted">
+        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-muted">
           {portfolio.thumbnail_url ? (
             <Image src={portfolio.thumbnail_url} alt={portfolio.judul} fill className="object-cover transition-transform group-hover:scale-105" />
           ) : (
@@ -558,7 +558,7 @@ function PortfolioCardItem({
             </Avatar>
             <div className="flex flex-col">
               <span className="text-sm font-medium leading-tight">{portfolio.user.nama}</span>
-              <span className="text-xs text-muted-foreground">Posted on {formatDate(displayDate)}</span>
+              <span className="text-xs text-muted-foreground">Posted on {displayDate ? formatDate(displayDate) : 'N/A'}</span>
             </div>
           </div>
         )}
