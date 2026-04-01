@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, useRef, useState } from 'react';
+import { useEffect, useCallback, useRef, useState, memo } from 'react';
 import { useInfiniteQuery, useQuery, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { RefreshCw, Loader2, Sparkles, Clock, Users, Heart, UserPlus, Search } from 'lucide-react';
@@ -12,7 +12,7 @@ import { TimelineFeedItem } from './timeline-feed-item';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 
-const ITEMS_PER_PAGE = 20;
+const ITEMS_PER_PAGE = 15; // Reduced from 20 for faster initial load
 
 function FeedSkeleton() {
   return (
@@ -196,6 +196,8 @@ export function SmartFeedList() {
     },
     initialPageParam: 1,
     enabled: algorithm === 'recent' || isAuthenticated,
+    staleTime: 1000 * 60 * 2, // Cache for 2 minutes
+    gcTime: 1000 * 60 * 5, // Keep in cache for 5 minutes
   });
 
   // Save preference mutation
@@ -217,7 +219,7 @@ export function SmartFeedList() {
     [isAuthenticated, savePrefMutation]
   );
 
-  // Intersection observer for infinite scroll
+  // Intersection observer for infinite scroll with optimized threshold
   useEffect(() => {
     if (observerRef.current) {
       observerRef.current.disconnect();
@@ -229,7 +231,10 @@ export function SmartFeedList() {
           fetchNextPage();
         }
       },
-      { threshold: 0.1 }
+      { 
+        threshold: 0.1,
+        rootMargin: '200px' // Prefetch 200px before reaching the end
+      }
     );
 
     if (loadMoreRef.current) {
@@ -249,8 +254,8 @@ export function SmartFeedList() {
     toast.success('Feed diperbarui');
   };
 
-  // Share handler
-  const handleShare = async (item: FeedItem) => {
+  // Share handler - memoized
+  const handleShare = useCallback(async (item: FeedItem) => {
     const url = `${window.location.origin}/${item.user?.username}/${item.slug}`;
     if (navigator.share) {
       try {
@@ -265,7 +270,7 @@ export function SmartFeedList() {
       await navigator.clipboard.writeText(url);
       toast.success('Link disalin ke clipboard');
     }
-  };
+  }, []);
 
   // Flatten pages into single array
   const feedItems = data?.pages.flatMap((page) => page.data || []) || [];

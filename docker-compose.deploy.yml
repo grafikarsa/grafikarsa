@@ -49,6 +49,24 @@ services:
     networks:
       - grafikarsa-network
 
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: grafikarsa-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - grafikarsa-network
+
   # Go Backend API (from Docker Hub)
   backend:
     image: ${DOCKERHUB_USERNAME}/grafikarsa-backend:${IMAGE_TAG:-latest}
@@ -61,11 +79,16 @@ services:
       - APP_ENV=production
       - DB_HOST=db
       - MINIO_ENDPOINT=minio:9000
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       - GOOGLE_GEMINI_API_KEY=${GOOGLE_GEMINI_API_KEY}
     depends_on:
       db:
         condition: service_healthy
       minio:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - grafikarsa-network
@@ -90,6 +113,7 @@ services:
 volumes:
   postgres_data:
   minio_data:
+  redis_data:
 
 networks:
   grafikarsa-network:

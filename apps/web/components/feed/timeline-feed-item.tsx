@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import Link from 'next/link';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -21,7 +22,7 @@ interface TimelineFeedItemProps {
   onShare?: (item: FeedItem) => void;
 }
 
-export function TimelineFeedItem({ item, algorithm, onShare }: TimelineFeedItemProps) {
+function TimelineFeedItemComponent({ item, algorithm, onShare }: TimelineFeedItemProps) {
   const { user: currentUser } = useAuthStore();
   const queryClient = useQueryClient();
 
@@ -196,3 +197,14 @@ export function TimelineFeedItem({ item, algorithm, onShare }: TimelineFeedItemP
     </article>
   );
 }
+
+// Memoize component to prevent unnecessary re-renders
+export const TimelineFeedItem = memo(TimelineFeedItemComponent, (prevProps, nextProps) => {
+  // Only re-render if item data actually changed
+  return (
+    prevProps.item.id === nextProps.item.id &&
+    prevProps.item.is_liked === nextProps.item.is_liked &&
+    prevProps.item.like_count === nextProps.item.like_count &&
+    prevProps.algorithm === nextProps.algorithm
+  );
+});

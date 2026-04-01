@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"os/signal"
@@ -13,6 +14,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/go-redis/redis/v8"
 	"github.com/grafikarsa/backend/internal/auth"
 	"github.com/grafikarsa/backend/internal/config"
 	"github.com/grafikarsa/backend/internal/database"
@@ -30,6 +32,10 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
+	// Create context for initialization
+	ctx := context.Background()
+	_ = ctx // Use context for Redis ping
+
 	// Connect to database
 	db, err := database.Connect(cfg)
 	if err != nil {
@@ -40,6 +46,27 @@ func main() {
 	minioClient, err := storage.NewMinIOClient(cfg)
 	if err != nil {
 		log.Fatalf("Failed to connect to MinIO: %v", err)
+	}
+
+	// Initialize Redis client (optional - graceful degradation if not available)
+	var redisClient *redis.Client
+	if cfg.Redis.Host != "" {
+		redisClient = redis.NewClient(&redis.Options{
+			Addr:     cfg.Redis.Host + ":" + cfg.Redis.Port,
+			Password: cfg.Redis.Password,
+			DB:       cfg.Redis.DB,
+		})
+
+		// Test connection
+		ctx := context.Background()
+		if err := redisClient.Ping(ctx).Err(); err != nil {
+			log.Printf("Warning: Redis connection failed: %v (continuing without cache)", err)
+			redisClient = nil
+		} else {
+			log.Println("Redis connected successfully")
+		}
+	} else {
+		log.Println("Redis not configured (continuing without cache)")
 	}
 
 	// Initialize JWT service
@@ -75,7 +102,7 @@ func main() {
 	adminHandler := handler.NewAdminHandler(adminRepo, userRepo, portfolioRepo, notificationService)
 	uploadHandler := handler.NewUploadHandler(minioClient, userRepo, portfolioRepo)
 	publicHandler := handler.NewPublicHandler(adminRepo, userRepo)
-	feedHandler := handler.NewFeedHandler(feedRepo, feedService, interestRepo, userRepo)
+	feedHandler := handler.NewFeedHandler(feedRepo, feedService, interestRepo, userRepo, redisClient)
 	searchHandler := handler.NewSearchHandler(userRepo, portfolioRepo)
 	feedbackHandler := handler.NewFeedbackHandler(feedbackRepo, userRepo, notificationService)
 	assessmentHandler := handler.NewAssessmentHandler(assessmentRepo, portfolioRepo)

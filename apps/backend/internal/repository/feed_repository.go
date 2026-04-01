@@ -258,3 +258,31 @@ func (r *FeedRepository) IsLikedByUser(userID, portfolioID uuid.UUID) (bool, err
 		Count(&count).Error
 	return count > 0, err
 }
+
+// GetLikedPortfolioIDs returns a map of portfolio IDs that are liked by the user
+// This is a batch query to avoid N+1 problem
+func (r *FeedRepository) GetLikedPortfolioIDs(userID uuid.UUID, portfolioIDs []uuid.UUID) (map[uuid.UUID]bool, error) {
+	if len(portfolioIDs) == 0 {
+		return make(map[uuid.UUID]bool), nil
+	}
+
+	var likes []struct {
+		PortfolioID uuid.UUID `gorm:"column:portfolio_id"`
+	}
+
+	err := r.db.Table("portfolio_likes").
+		Select("portfolio_id").
+		Where("user_id = ? AND portfolio_id IN ?", userID, portfolioIDs).
+		Find(&likes).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	likedMap := make(map[uuid.UUID]bool)
+	for _, like := range likes {
+		likedMap[like.PortfolioID] = true
+	}
+
+	return likedMap, nil
+}

@@ -17,6 +17,7 @@ type Config struct {
 	JWT      JWTConfig
 	CORS     CORSConfig
 	AI       AIConfig
+	Redis    RedisConfig
 }
 
 type AppConfig struct {
@@ -59,6 +60,13 @@ type CORSConfig struct {
 
 type AIConfig struct {
 	GeminiAPIKey string
+}
+
+type RedisConfig struct {
+	Host     string
+	Port     string
+	Password string
+	DB       int
 }
 
 func Load() (*Config, error) {
@@ -115,6 +123,12 @@ func Load() (*Config, error) {
 		AI: AIConfig{
 			GeminiAPIKey: getEnv("GOOGLE_GEMINI_API_KEY", ""),
 		},
+		Redis: RedisConfig{
+			Host:     getEnv("REDIS_HOST", "localhost"),
+			Port:     getEnv("REDIS_PORT", "6379"),
+			Password: getEnv("REDIS_PASSWORD", ""),
+			DB:       getEnvInt("REDIS_DB", 0),
+		},
 	}
 
 	// Validate critical configuration
@@ -139,6 +153,16 @@ func getEnvBool(key string, defaultValue bool) bool {
 		b, err := strconv.ParseBool(value)
 		if err == nil {
 			return b
+		}
+	}
+	return defaultValue
+}
+
+func getEnvInt(key string, defaultValue int) int {
+	if value := os.Getenv(key); value != "" {
+		i, err := strconv.Atoi(value)
+		if err == nil {
+			return i
 		}
 	}
 	return defaultValue

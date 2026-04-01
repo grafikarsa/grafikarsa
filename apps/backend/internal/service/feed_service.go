@@ -2,6 +2,7 @@ package service
 
 import (
 	"math"
+	"sort"
 	"time"
 
 	"github.com/google/uuid"
@@ -342,14 +343,11 @@ func (s *FeedService) GetSmartFeed(
 		// Calculate final ranking score
 		rankingScore := s.CalculateRankingScore(signals)
 
-		// Check if liked by user
-		isLiked, _ := s.portfolioRepo.IsLiked(userID, p.ID)
-
 		rankedItems = append(rankedItems, RankedFeedItem{
 			Portfolio:    &p.Portfolio,
 			LikeCount:    p.LikeCount,
 			ViewCount:    p.ViewCount,
-			IsLiked:      isLiked,
+			IsLiked:      false, // Will be set by handler with batch query
 			RankingScore: rankingScore,
 			SignalScores: signals,
 		})
@@ -427,14 +425,9 @@ func (s *FeedService) CalculateAllSignalsFromFeedPortfolio(
 	}
 }
 
-// sortByRankingScore sorts items by ranking score in descending order
+// sortByRankingScore sorts items by ranking score in descending order using efficient algorithm
 func sortByRankingScore(items []RankedFeedItem) {
-	// Simple bubble sort for now (can be optimized with sort.Slice)
-	for i := 0; i < len(items)-1; i++ {
-		for j := i + 1; j < len(items); j++ {
-			if items[j].RankingScore > items[i].RankingScore {
-				items[i], items[j] = items[j], items[i]
-			}
-		}
-	}
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].RankingScore > items[j].RankingScore
+	})
 }
