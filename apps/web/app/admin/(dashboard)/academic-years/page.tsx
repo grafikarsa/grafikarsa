@@ -132,7 +132,7 @@ export default function AdminAcademicYearsPage() {
   return (
     <div className="flex flex-col -m-4 sm:-m-6 lg:-m-8">
       {/* Sticky Header - Actions (Full Width) */}
-      <div className="sticky top-0 z-10 bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 lg:px-8 border-b">
+      <div className="sticky top-0 z-50 bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 lg:px-8 border-b">
         <div className="mx-auto w-full max-w-[1600px] flex justify-end">
           <Button onClick={() => setIsCreateOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />

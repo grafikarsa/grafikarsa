@@ -34,7 +34,7 @@ const TagFilters = memo(({
   onCreateClick: () => void;
 }) => {
   return (
-    <div className="sticky top-0 z-10 bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 lg:px-8 border-b">
+    <div className="sticky top-0 z-50 bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 lg:px-8 border-b">
       <div className="mx-auto w-full max-w-[1600px] flex gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

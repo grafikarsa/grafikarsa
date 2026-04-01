@@ -274,7 +274,7 @@ export default function ModerationPage() {
       <Dialog open={!!selectedPortfolio} onOpenChange={() => setSelectedPortfolio(null)}>
         <DialogContent className="flex max-h-[90vh] max-w-4xl flex-col gap-0 overflow-hidden p-0">
           {/* Sticky Header */}
-          <div className="sticky top-0 z-10 border-b bg-background px-6 py-4">
+          <div className="sticky top-0 z-50 border-b bg-background px-6 py-4">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
                 <DialogTitle className="line-clamp-1 text-lg font-semibold">

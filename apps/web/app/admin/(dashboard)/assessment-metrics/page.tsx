@@ -116,7 +116,7 @@ export default function AdminAssessmentMetricsPage() {
     return (
       <div className="flex flex-col -m-4 sm:-m-6 lg:-m-8">
         {/* Sticky Header Skeleton */}
-        <div className="sticky top-0 z-10 bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 lg:px-8 border-b">
+        <div className="sticky top-0 z-50 bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 lg:px-8 border-b">
           <div className="mx-auto w-full max-w-[1600px] space-y-4">
             <div className="grid gap-4 sm:grid-cols-3">
               {[...Array(3)].map((_, i) => (
@@ -169,7 +169,7 @@ export default function AdminAssessmentMetricsPage() {
   return (
     <div className="flex flex-col -m-4 sm:-m-6 lg:-m-8">
       {/* Sticky Header - Stats, Search & Actions (Full Width) */}
-      <div className="sticky top-0 z-10 bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 lg:px-8 border-b">
+      <div className="sticky top-0 z-50 bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 lg:px-8 border-b">
         <div className="mx-auto w-full max-w-[1600px] space-y-4">
           {/* Stats Cards */}
           <div className="grid gap-4 sm:grid-cols-3">
