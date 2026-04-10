@@ -12,13 +12,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersApi } from '@/lib/api';
 import { toast } from 'sonner';
 import {
-  Github,
-  Instagram,
-  Linkedin,
-  Twitter,
-  Globe,
-  Youtube,
-  Facebook,
   Loader2,
   Edit,
   Share2,
@@ -33,16 +26,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { FollowModal } from './follow-modal';
-
-const socialIcons: Record<string, React.ComponentType<{ className?: string }>> = {
-  github: Github,
-  instagram: Instagram,
-  linkedin: Linkedin,
-  twitter: Twitter,
-  personal_website: Globe,
-  youtube: Youtube,
-  facebook: Facebook,
-};
+import { SocialChip } from './social-chip';
 
 interface UserProfileProps {
   profile: User;
@@ -288,21 +272,9 @@ export function UserProfile({ profile }: UserProfileProps) {
         {/* Social Links */}
         {profile.social_links && profile.social_links.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-2 md:mt-5">
-            {profile.social_links.map((link) => {
-              const Icon = socialIcons[link.platform] || Globe;
-              return (
-                <a
-                  key={link.platform}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                  title={link.platform}
-                >
-                  <Icon className="h-5 w-5" />
-                </a>
-              );
-            })}
+            {profile.social_links.map((link) => (
+              <SocialChip key={link.platform} link={link} />
+            ))}
           </div>
         )}
 

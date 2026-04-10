@@ -24,6 +24,8 @@ import { useAuthStore } from '@/lib/stores/auth-store';
 import { useDebounce } from '@/lib/hooks/use-debounce';
 import { cn } from '@/lib/utils';
 import { ImageCropper } from '@/components/common/image-cropper';
+import { socialPlatformConfigs } from '@/lib/constants/social-platforms';
+import { PlatformIcon } from './platform-icon';
 
 const profileSchema = z.object({
   nama: z.string().min(2, 'Nama minimal 2 karakter').max(100),
@@ -44,17 +46,25 @@ const passwordSchema = z.object({
 type ProfileFormData = z.infer<typeof profileSchema>;
 type PasswordFormData = z.infer<typeof passwordSchema>;
 
+// Generate social platforms list from config
 const socialPlatforms: { value: SocialPlatform; label: string; placeholder: string }[] = [
-  { value: 'instagram', label: 'Instagram', placeholder: 'https://instagram.com/username' },
-  { value: 'github', label: 'GitHub', placeholder: 'https://github.com/username' },
-  { value: 'linkedin', label: 'LinkedIn', placeholder: 'https://linkedin.com/in/username' },
-  { value: 'twitter', label: 'Twitter/X', placeholder: 'https://x.com/username' },
-  { value: 'youtube', label: 'YouTube', placeholder: 'https://youtube.com/@channel' },
-  { value: 'tiktok', label: 'TikTok', placeholder: 'https://tiktok.com/@username' },
-  { value: 'behance', label: 'Behance', placeholder: 'https://behance.net/username' },
-  { value: 'dribbble', label: 'Dribbble', placeholder: 'https://dribbble.com/username' },
-  { value: 'personal_website', label: 'Website', placeholder: 'https://yourwebsite.com' },
-];
+  'instagram',
+  'github',
+  'linkedin',
+  'twitter',
+  'youtube',
+  'tiktok',
+  'behance',
+  'dribbble',
+  'personal_website',
+].map((platform) => {
+  const config = socialPlatformConfigs[platform as SocialPlatform];
+  return {
+    value: platform as SocialPlatform,
+    label: config.label,
+    placeholder: config.placeholder,
+  };
+});
 
 interface UserEditFormProps {
   user: User;
@@ -588,7 +598,10 @@ export function UserEditForm({ user }: UserEditFormProps) {
           <div className="grid gap-3 sm:grid-cols-2">
             {socialPlatforms.map((platform) => (
               <div key={platform.value} className="space-y-1.5">
-                <Label htmlFor={platform.value} className="text-sm">{platform.label}</Label>
+                <Label htmlFor={platform.value} className="flex items-center gap-2 text-sm">
+                  <PlatformIcon platform={platform.value} size="sm" />
+                  {platform.label}
+                </Label>
                 <Input
                   id={platform.value}
                   type="url"

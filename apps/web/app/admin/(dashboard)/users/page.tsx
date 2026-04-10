@@ -74,6 +74,7 @@ import { User, UserRole, SpecialRole, generateBgColor } from '@/lib/types';
 import { useDebounce } from '@/lib/hooks/use-debounce';
 import { formatDate } from '@/lib/utils/format';
 import { Checkbox } from '@/components/ui/checkbox';
+import { SocialChip } from '@/components/user/social-chip';
 
 const roleOptions = [
   { value: 'all', label: 'Semua Role' },
@@ -682,17 +683,8 @@ function UserDetailModal({
                 <div className="mt-6">
                   <h3 className="mb-3 text-sm font-semibold">Social Links</h3>
                   <div className="flex flex-wrap gap-2">
-                    {detail.social_links.map((link, i) => (
-                      <a
-                        key={i}
-                        href={link.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm hover:bg-muted/80"
-                      >
-                        {link.platform}
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
+                    {detail.social_links.map((link) => (
+                      <SocialChip key={link.platform} link={link} />
                     ))}
                   </div>
                 </div>
