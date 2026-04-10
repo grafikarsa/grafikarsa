@@ -134,7 +134,7 @@ export function UserProfile({ profile }: UserProfileProps) {
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleShareWhatsApp} className="cursor-pointer">
                       <MessageCircle className="mr-2 h-4 w-4" />
-                      WhatsApp
+                      Share ke WhatsApp
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -169,7 +169,7 @@ export function UserProfile({ profile }: UserProfileProps) {
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleShareWhatsApp} className="cursor-pointer">
                       <MessageCircle className="mr-2 h-4 w-4" />
-                      WhatsApp
+                      Share ke WhatsApp
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -193,7 +193,7 @@ export function UserProfile({ profile }: UserProfileProps) {
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleShareWhatsApp} className="cursor-pointer">
                     <MessageCircle className="mr-2 h-4 w-4" />
-                    WhatsApp
+                    Share ke WhatsApp
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
