@@ -75,6 +75,13 @@ export interface User {
   // Special roles
   special_roles?: UserSpecialRole[];
   capabilities?: string[];
+  // Contact info
+  phone?: string;
+  address?: string;
+  // Privacy settings
+  show_email?: boolean;
+  show_phone?: boolean;
+  show_address?: boolean;
 }
 
 export interface UserCard {

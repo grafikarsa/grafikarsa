@@ -1,19 +1,17 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { profileApi } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ProfileEditForm } from '@/components/user/edit/profile-edit-form';
+import { PasswordEditForm } from '@/components/user/edit/password-edit-form';
 
-export default function EditProfilePage() {
+export default function EditPasswordPage() {
   const params = useParams();
-  const router = useRouter();
   const username = params.username as string;
-  const { user: currentUser, isAuthenticated, isLoading: authLoading } = useAuthStore();
+  const { user: currentUser, isAuthenticated } = useAuthStore();
 
-  // Use /me endpoint to get full profile data including email
   const { data, isLoading } = useQuery({
     queryKey: ['profile', 'me'],
     queryFn: () => profileApi.getMe(),
@@ -23,10 +21,9 @@ export default function EditProfilePage() {
   const profile = data?.data;
   const isOwner = currentUser?.username === username;
 
-  if (authLoading || isLoading) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
-        <Skeleton className="h-52 w-full rounded-xl" />
         <Skeleton className="h-64 w-full rounded-xl" />
       </div>
     );
@@ -36,5 +33,5 @@ export default function EditProfilePage() {
     return null;
   }
 
-  return <ProfileEditForm user={profile} />;
+  return <PasswordEditForm />;
 }

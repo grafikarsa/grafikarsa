@@ -174,6 +174,13 @@ type User struct {
 	KelasID      *uuid.UUID       `gorm:"type:uuid" json:"kelas_id,omitempty"`
 	TahunMasuk   *int             `gorm:"type:integer" json:"tahun_masuk,omitempty"`
 	TahunLulus   *int             `gorm:"type:integer" json:"tahun_lulus,omitempty"`
+	// Contact info
+	Phone        *string          `gorm:"type:varchar(20)" json:"phone,omitempty"`
+	Address      *string          `gorm:"type:text" json:"address,omitempty"`
+	// Privacy settings
+	ShowEmail    bool             `gorm:"not null;default:false" json:"show_email"`
+	ShowPhone    bool             `gorm:"not null;default:false" json:"show_phone"`
+	ShowAddress  bool             `gorm:"not null;default:false" json:"show_address"`
 	IsActive     bool             `gorm:"not null;default:true" json:"is_active"`
 	LastLoginAt  *time.Time       `json:"last_login_at,omitempty"`
 	Kelas        *Kelas           `gorm:"foreignKey:KelasID" json:"kelas,omitempty"`

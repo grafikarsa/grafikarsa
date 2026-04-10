@@ -157,7 +157,7 @@ func (h *UserHandler) GetByUsername(c *fiber.Ctx) error {
 	userDTO := dto.UserDetailDTO{
 		ID:             user.ID,
 		Username:       user.Username,
-		Email:          user.Email,
+		Email:          "", // Will be set below if show_email is true
 		Nama:           user.Nama,
 		Bio:            user.Bio,
 		AvatarURL:      user.AvatarURL,
@@ -168,12 +168,29 @@ func (h *UserHandler) GetByUsername(c *fiber.Ctx) error {
 		TahunLulus:     tahunLulus,
 		ClassHistory:   historyDTOs,
 		SocialLinks:    socialLinks,
+		// Contact info - only include if privacy settings allow
+		Phone:          nil,
+		Address:        nil,
+		ShowEmail:      user.ShowEmail,
+		ShowPhone:      user.ShowPhone,
+		ShowAddress:    user.ShowAddress,
 		SpecialRoles:   specialRoleDTOs,
 		FollowerCount:  followerCount,
 		FollowingCount: followingCount,
 		PortfolioCount: portfolioCount,
 		IsFollowing:    isFollowing,
 		CreatedAt:      user.CreatedAt,
+	}
+
+	// Only include contact info if user allows it to be shown
+	if user.ShowEmail {
+		userDTO.Email = user.Email
+	}
+	if user.ShowPhone {
+		userDTO.Phone = user.Phone
+	}
+	if user.ShowAddress {
+		userDTO.Address = user.Address
 	}
 
 	if user.Kelas != nil {

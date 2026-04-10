@@ -37,6 +37,13 @@ type UserDetailDTO struct {
 	Jurusan        *JurusanDTO          `json:"jurusan,omitempty"`
 	ClassHistory   []ClassHistoryDTO    `json:"class_history,omitempty"`
 	SocialLinks    []SocialLinkDTO      `json:"social_links,omitempty"`
+	// Contact info (only show if privacy settings allow)
+	Phone          *string              `json:"phone,omitempty"`
+	Address        *string              `json:"address,omitempty"`
+	// Privacy settings
+	ShowEmail      bool                 `json:"show_email"`
+	ShowPhone      bool                 `json:"show_phone"`
+	ShowAddress    bool                 `json:"show_address"`
 	SpecialRoles   []UserSpecialRoleDTO `json:"special_roles,omitempty"`
 	FollowerCount  int64                `json:"follower_count"`
 	FollowingCount int64                `json:"following_count"`
@@ -69,6 +76,13 @@ type ProfileDTO struct {
 	Kelas          *KelasDTO            `json:"kelas,omitempty"`
 	Jurusan        *JurusanDTO          `json:"jurusan,omitempty"`
 	SocialLinks    []SocialLinkDTO      `json:"social_links,omitempty"`
+	// Contact info
+	Phone          *string              `json:"phone,omitempty"`
+	Address        *string              `json:"address,omitempty"`
+	// Privacy settings
+	ShowEmail      bool                 `json:"show_email"`
+	ShowPhone      bool                 `json:"show_phone"`
+	ShowAddress    bool                 `json:"show_address"`
 	FollowerCount  int64                `json:"follower_count"`
 	FollowingCount int64                `json:"following_count"`
 	SpecialRoles   []ProfileSpecialRole `json:"special_roles,omitempty"`
@@ -97,10 +111,15 @@ type SocialLinkDTO struct {
 
 // Update Profile
 type UpdateProfileRequest struct {
-	Nama     *string `json:"nama,omitempty"`
-	Username *string `json:"username,omitempty"`
-	Bio      *string `json:"bio,omitempty"`
-	Email    *string `json:"email,omitempty"`
+	Nama        *string `json:"nama,omitempty"`
+	Username    *string `json:"username,omitempty"`
+	Bio         *string `json:"bio,omitempty"`
+	Email       *string `json:"email,omitempty"`
+	Phone       *string `json:"phone,omitempty"`
+	Address     *string `json:"address,omitempty"`
+	ShowEmail   *bool   `json:"show_email,omitempty"`
+	ShowPhone   *bool   `json:"show_phone,omitempty"`
+	ShowAddress *bool   `json:"show_address,omitempty"`
 }
 
 type UpdatePasswordRequest struct {

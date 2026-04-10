@@ -67,6 +67,11 @@ func (h *ProfileHandler) GetMe(c *fiber.Ctx) error {
 		TahunMasuk:     user.TahunMasuk,
 		TahunLulus:     tahunLulus,
 		SocialLinks:    socialLinks,
+		Phone:          user.Phone,
+		Address:        user.Address,
+		ShowEmail:      user.ShowEmail,
+		ShowPhone:      user.ShowPhone,
+		ShowAddress:    user.ShowAddress,
 		FollowerCount:  followerCount,
 		FollowingCount: followingCount,
 		CreatedAt:      user.CreatedAt,
@@ -149,6 +154,21 @@ func (h *ProfileHandler) UpdateMe(c *fiber.Ctx) error {
 	if req.Bio != nil {
 		user.Bio = req.Bio
 	}
+	if req.Phone != nil {
+		user.Phone = req.Phone
+	}
+	if req.Address != nil {
+		user.Address = req.Address
+	}
+	if req.ShowEmail != nil {
+		user.ShowEmail = *req.ShowEmail
+	}
+	if req.ShowPhone != nil {
+		user.ShowPhone = *req.ShowPhone
+	}
+	if req.ShowAddress != nil {
+		user.ShowAddress = *req.ShowAddress
+	}
 
 	if err := h.userRepo.Update(user); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(
@@ -157,11 +177,16 @@ func (h *ProfileHandler) UpdateMe(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(dto.SuccessResponse(map[string]interface{}{
-		"id":       user.ID,
-		"username": user.Username,
-		"email":    user.Email,
-		"nama":     user.Nama,
-		"bio":      user.Bio,
+		"id":           user.ID,
+		"username":     user.Username,
+		"email":        user.Email,
+		"nama":         user.Nama,
+		"bio":          user.Bio,
+		"phone":        user.Phone,
+		"address":      user.Address,
+		"show_email":   user.ShowEmail,
+		"show_phone":   user.ShowPhone,
+		"show_address": user.ShowAddress,
 	}, "Profil berhasil diperbarui"))
 }
 

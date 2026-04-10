@@ -18,6 +18,8 @@ import {
   Link2,
   MessageCircle,
   Mail,
+  Phone,
+  MapPin,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -199,7 +201,7 @@ export function UserProfile({ profile }: UserProfileProps) {
           </div>
         </div>
 
-        {/* Name & Username */}
+        {/* Name & Special Role Badges */}
         <div className="mt-4 md:mt-5">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
             <h1 className="text-2xl font-bold md:text-3xl">{profile.nama}</h1>
@@ -227,43 +229,94 @@ export function UserProfile({ profile }: UserProfileProps) {
               <Badge variant="secondary" className="w-fit text-xs md:text-sm">Administrator</Badge>
             )}
           </div>
-          <p className="mt-1 text-sm text-muted-foreground md:text-base">@{profile.username}</p>
         </div>
 
-        {/* Info Badges */}
-        <div className="mt-4 flex flex-wrap gap-2 md:mt-4">
-          <Badge variant="outline" className="capitalize text-xs md:text-sm">
-            {profile.role}
-          </Badge>
-          {profile.kelas && <Badge variant="secondary" className="text-xs md:text-sm">{profile.kelas.nama}</Badge>}
-          {profile.jurusan && <Badge variant="secondary" className="text-xs md:text-sm">{profile.jurusan.nama}</Badge>}
-          {profile.tahun_masuk && (
-            <Badge variant="outline" className="text-xs md:text-sm">
-              {profile.tahun_masuk} - {profile.tahun_lulus || 'Sekarang'}
-            </Badge>
-          )}
-        </div>
+        {/* Grid 2x3 Layout */}
+        <div className="mt-4 grid grid-cols-1 gap-4 md:mt-5 md:grid-cols-2 md:gap-x-16 md:gap-y-4">
+          {/* Row 1 Col 1: Username */}
+          <div className="flex items-center">
+            <p className="text-base text-muted-foreground md:text-lg">@{profile.username}</p>
+          </div>
 
-        {/* Stats - More prominent with better spacing */}
-        <div className="mt-5 flex gap-6 text-sm md:mt-6 md:gap-8 md:text-base">
-          <button
-            onClick={() => setFollowModalType('followers')}
-            className="transition-colors hover:text-primary"
-          >
-            <span className="font-bold text-foreground">{profile.follower_count || 0}</span>{' '}
-            <span className="text-muted-foreground">Followers</span>
-          </button>
-          <button
-            onClick={() => setFollowModalType('following')}
-            className="transition-colors hover:text-primary"
-          >
-            <span className="font-bold text-foreground">{profile.following_count || 0}</span>{' '}
-            <span className="text-muted-foreground">Following</span>
-          </button>
-          <span>
-            <span className="font-bold text-foreground">{profile.portfolio_count || 0}</span>{' '}
-            <span className="text-muted-foreground">Portofolio</span>
-          </span>
+          {/* Row 1 Col 2: Email */}
+          <div className="flex items-center justify-start md:justify-end">
+            {profile.show_email && profile.email ? (
+              <div className="flex items-center gap-2 text-base text-muted-foreground">
+                <Mail className="h-4 w-4 flex-shrink-0" />
+                <a href={`mailto:${profile.email}`} className="break-all hover:text-foreground hover:underline">
+                  {profile.email}
+                </a>
+              </div>
+            ) : (
+              <span className="text-base text-muted-foreground/50">-</span>
+            )}
+          </div>
+
+          {/* Row 2 Col 1: Info Badges */}
+          <div className="flex items-center">
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="outline" className="capitalize">
+                {profile.role}
+              </Badge>
+              {profile.kelas && <Badge variant="secondary">{profile.kelas.nama}</Badge>}
+              {profile.jurusan && <Badge variant="secondary">{profile.jurusan.nama}</Badge>}
+              {profile.tahun_masuk && (
+                <Badge variant="outline">
+                  {profile.tahun_masuk} - {profile.tahun_lulus || 'Sekarang'}
+                </Badge>
+              )}
+            </div>
+          </div>
+
+          {/* Row 2 Col 2: Phone */}
+          <div className="flex items-center justify-start md:justify-end">
+            {profile.show_phone && profile.phone ? (
+              <div className="flex items-center gap-2 text-base text-muted-foreground">
+                <Phone className="h-4 w-4 flex-shrink-0" />
+                <a href={`tel:${profile.phone}`} className="hover:text-foreground hover:underline">
+                  {profile.phone}
+                </a>
+              </div>
+            ) : (
+              <span className="text-base text-muted-foreground/50">-</span>
+            )}
+          </div>
+
+          {/* Row 3 Col 1: Stats */}
+          <div className="flex items-center">
+            <div className="flex gap-6 text-base">
+              <button
+                onClick={() => setFollowModalType('followers')}
+                className="transition-colors hover:text-primary"
+              >
+                <span className="font-bold text-foreground">{profile.follower_count || 0}</span>{' '}
+                <span className="text-muted-foreground">Followers</span>
+              </button>
+              <button
+                onClick={() => setFollowModalType('following')}
+                className="transition-colors hover:text-primary"
+              >
+                <span className="font-bold text-foreground">{profile.following_count || 0}</span>{' '}
+                <span className="text-muted-foreground">Following</span>
+              </button>
+              <span>
+                <span className="font-bold text-foreground">{profile.portfolio_count || 0}</span>{' '}
+                <span className="text-muted-foreground">Portofolio</span>
+              </span>
+            </div>
+          </div>
+
+          {/* Row 3 Col 2: Address */}
+          <div className="flex items-center justify-start md:justify-end">
+            {profile.show_address && profile.address ? (
+              <div className="flex items-center gap-2 text-base text-muted-foreground">
+                <MapPin className="h-4 w-4 flex-shrink-0" />
+                <span className="break-words text-right">{profile.address}</span>
+              </div>
+            ) : (
+              <span className="text-base text-muted-foreground/50">-</span>
+            )}
+          </div>
         </div>
 
         {/* Bio */}
