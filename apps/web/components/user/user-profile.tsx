@@ -287,14 +287,14 @@ export function UserProfile({ profile }: UserProfileProps) {
             <div className="flex gap-6 text-base">
               <button
                 onClick={() => setFollowModalType('followers')}
-                className="transition-colors hover:text-primary"
+                className="cursor-pointer transition-colors hover:text-primary hover:underline"
               >
                 <span className="font-bold text-foreground">{profile.follower_count || 0}</span>{' '}
                 <span className="text-muted-foreground">Followers</span>
               </button>
               <button
                 onClick={() => setFollowModalType('following')}
-                className="transition-colors hover:text-primary"
+                className="cursor-pointer transition-colors hover:text-primary hover:underline"
               >
                 <span className="font-bold text-foreground">{profile.following_count || 0}</span>{' '}
                 <span className="text-muted-foreground">Following</span>
