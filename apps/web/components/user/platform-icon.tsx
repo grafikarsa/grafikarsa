@@ -27,7 +27,7 @@ export function PlatformIcon({ platform, className, size = 'md' }: PlatformIconP
     return <IconComponent className={cn(sizeClass, className)} />;
   }
 
-  // Render SVG string with brand color
+  // Render SVG string with brand color (theme-aware)
   return (
     <span
       className={cn(
@@ -35,7 +35,13 @@ export function PlatformIcon({ platform, className, size = 'md' }: PlatformIconP
         sizeClass,
         className
       )}
-      style={{ color: config.brandColor }}
+      style={
+        {
+          '--icon-color': config.brandColor,
+          '--icon-dark-color': config.darkBrandColor,
+        } as React.CSSProperties
+      }
+      data-social-icon
       dangerouslySetInnerHTML={{ __html: config.icon as string }}
     />
   );

@@ -27,11 +27,18 @@ export function SocialChip({ link, className }: SocialChipProps) {
   if (!config) return null;
 
   const handle = extractSocialHandle(link.url, link.platform);
-  const brandColor = config.brandColor;
 
-  // Convert brand color to RGB for opacity
-  const rgb = hexToRgb(brandColor);
-  const bgColor = rgb ? `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.1)` : `${brandColor}1A`;
+  // Light mode colors
+  const lightRgb = hexToRgb(config.brandColor);
+  const lightBg = lightRgb
+    ? `rgb(${lightRgb.r}, ${lightRgb.g}, ${lightRgb.b}, 0.1)`
+    : `${config.brandColor}1A`;
+
+  // Dark mode colors
+  const darkRgb = hexToRgb(config.darkBrandColor);
+  const darkBg = darkRgb
+    ? `rgb(${darkRgb.r}, ${darkRgb.g}, ${darkRgb.b}, 0.15)`
+    : `${config.darkBrandColor}26`;
 
   return (
     <a
@@ -42,10 +49,15 @@ export function SocialChip({ link, className }: SocialChipProps) {
         'group inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition-all hover:scale-105 hover:shadow-sm',
         className
       )}
-      style={{
-        backgroundColor: bgColor,
-        color: brandColor,
-      }}
+      style={
+        {
+          '--chip-bg': lightBg,
+          '--chip-color': config.brandColor,
+          '--chip-dark-bg': darkBg,
+          '--chip-dark-color': config.darkBrandColor,
+        } as React.CSSProperties
+      }
+      data-social-chip
       title={`${config.label}: ${handle}`}
     >
       <PlatformIcon platform={link.platform} size="md" />

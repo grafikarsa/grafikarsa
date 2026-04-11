@@ -66,5 +66,8 @@ logs/
 # Cache
 .cache/
 
+# Override root .gitignore - we need lib/ for our source code
+!lib/
+
 # Cloudflare
 .wrangler/

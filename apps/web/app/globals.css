@@ -122,6 +122,23 @@
   }
 }
 
+/* Social chip theme-aware colors */
+[data-social-chip] {
+  background-color: var(--chip-bg);
+  color: var(--chip-color);
+}
+.dark [data-social-chip] {
+  background-color: var(--chip-dark-bg);
+  color: var(--chip-dark-color);
+}
+
+[data-social-icon] {
+  color: var(--icon-color);
+}
+.dark [data-social-icon] {
+  color: var(--icon-dark-color);
+}
+
 
 /* Custom animations for bento grid */
 @keyframes float {

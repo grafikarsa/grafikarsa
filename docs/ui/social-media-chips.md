@@ -27,22 +27,22 @@ Social media badges di halaman profil user menggunakan komponen chip yang menamp
 
 ## Platform Brand Colors
 
-| Platform | Brand Color | Example |
-|----------|-------------|---------|
-| Facebook | #1877F2 | Blue |
-| Instagram | #E4405F | Pink/Red gradient |
-| GitHub | #181717 | Black |
-| LinkedIn | #0A66C2 | Blue |
-| Twitter/X | #000000 | Black |
-| YouTube | #FF0000 | Red |
-| TikTok | #000000 | Black |
-| Behance | #1769FF | Blue |
-| Dribbble | #EA4C89 | Pink |
-| Threads | #000000 | Black |
-| Bluesky | #0085FF | Blue |
-| Medium | #000000 | Black |
-| GitLab | #FC6D26 | Orange |
-| Personal Website | #6366F1 | Indigo |
+| Platform | Brand Color (Light) | Brand Color (Dark) | Example |
+|----------|---------------------|-------------------|---------|
+| Facebook | #0866FF | #5B9FFF | Blue |
+| Instagram | #FF0069 | #FF5C96 | Pink/Red gradient |
+| GitHub | #181717 | #E6E6E6 | Black → Light gray |
+| LinkedIn | #0A66C2 | #4A9EE6 | Blue |
+| Twitter/X | #000000 | #E6E6E6 | Black → Light gray |
+| YouTube | #FF0000 | #FF5C5C | Red |
+| TikTok | #000000 | #E6E6E6 | Black → Light gray |
+| Behance | #1769FF | #6B9FFF | Blue |
+| Dribbble | #EA4C89 | #FF8CB8 | Pink |
+| Threads | #000000 | #E6E6E6 | Black → Light gray |
+| Bluesky | #1185FE | #5CA8FF | Blue |
+| Medium | #000000 | #E6E6E6 | Black → Light gray |
+| GitLab | #FC6D26 | #FF9A6B | Orange |
+| Personal Website | #6366F1 | #A5B4FC | Indigo |
 
 ## Username Extraction
 
@@ -122,22 +122,22 @@ import { SocialChip } from '@/components/user/social-chip';
 ### Instagram Chip
 ```
 [Instagram Icon] @johndoe
-Background: rgba(228, 64, 95, 0.1)
-Text: #E4405F
+Light: Background: rgba(228, 64, 95, 0.1), Text: #FF0069
+Dark:  Background: rgba(255, 92, 150, 0.15), Text: #FF5C96
 ```
 
 ### GitHub Chip
 ```
 [GitHub Icon] johndoe
-Background: rgba(24, 23, 23, 0.1)
-Text: #181717
+Light: Background: rgba(24, 23, 23, 0.1), Text: #181717
+Dark:  Background: rgba(230, 230, 230, 0.15), Text: #E6E6E6
 ```
 
 ### Personal Website Chip
 ```
 [Globe Icon] johndoe.com
-Background: rgba(99, 102, 241, 0.1)
-Text: #6366F1
+Light: Background: rgba(99, 102, 241, 0.1), Text: #6366F1
+Dark:  Background: rgba(165, 180, 252, 0.15), Text: #A5B4FC
 ```
 
 ## Migration Notes
