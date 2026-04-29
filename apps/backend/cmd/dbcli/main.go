@@ -1206,7 +1206,7 @@ func seedUsers(db *sql.DB, count int, kelasIDs []string) ([]string, error) {
 	var adminID string
 	err := db.QueryRow(`
 		INSERT INTO users (username, email, password_hash, nama, role, avatar_url, is_active)
-		VALUES ('admin', 'admin@grafikarsa.com', $1, 'Administrator', 'admin', 'https://i.pravatar.cc/300?u=admin', true)
+		VALUES ('admingrf', 'admingrf@grafikarsa.com', $1, 'Administrator', 'admin', 'https://i.pravatar.cc/300?u=admingrf', true)
 		ON CONFLICT (username) DO UPDATE SET password_hash = $1, updated_at = NOW()
 		RETURNING id
 	`, passwordHash).Scan(&adminID)

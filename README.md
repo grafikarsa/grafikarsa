@@ -48,6 +48,10 @@ cp .env.example .env
 make dev
 ```
 
+> **Default Admin User** — Setelah services berjalan, akun admin sudah tersedia:
+> - Username: `admin`
+> - Password: `password`
+
 Then in a separate terminal:
 
 ```bash

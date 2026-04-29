@@ -109,7 +109,7 @@ export default function AdminLoginPage() {
                 <Input
                   id="username"
                   type="text"
-                  placeholder="admin atau admin@grafikarsa.com"
+                  placeholder="admingrf atau admingrf@grafikarsa.com"
                   className="pr-10"
                   {...form.register('username')}
                 />

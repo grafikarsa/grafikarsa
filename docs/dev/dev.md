@@ -34,6 +34,9 @@ cp .env.example .env
 # 3. Start backend services (db + minio + backend with hot reload)
 make dev
 
+# Info: Default admin user sudah tersedia setelah services berjalan
+# Username: admingrf, Password: password
+
 # 4. Di terminal BARU, start web frontend
 cd apps/web
 npm install

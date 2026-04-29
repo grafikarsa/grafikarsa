@@ -788,9 +788,9 @@ INSERT INTO assessment_metrics (nama, deskripsi, urutan) VALUES
 ('Relevansi', 'Kesesuaian dengan tujuan dan target audience', 5);
 
 -- Insert default admin user
--- Username: admin, Password: password (bcrypt hash with cost 10)
+-- Username: admingrf, Password: password (bcrypt hash with cost 10)
 INSERT INTO users (username, email, password_hash, nama, role, is_active) VALUES
-('admin', 'admin@grafikarsa.com', '$2a$10$awvzkFPY1N91aqpBAunz3evxSxfx/841EFqTwdnw2SKYxYBQ2nneG', 'Administrator', 'admin', TRUE);
+('admingrf', 'admingrf@grafikarsa.com', '$2a$10$awvzkFPY1N91aqpBAunz3evxSxfx/841EFqTwdnw2SKYxYBQ2nneG', 'Administrator', 'admin', TRUE);
 
 -- ============================================================================
 -- VIEWS (untuk kemudahan query)
