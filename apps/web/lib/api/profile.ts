@@ -6,6 +6,8 @@ interface UpdateProfileRequest {
   username?: string;
   bio?: string;
   email?: string;
+  avatar_url?: string;
+  banner_url?: string;
 }
 
 interface UpdatePasswordRequest {
@@ -26,6 +28,11 @@ export const profileApi = {
   },
 
   updateMe: async (data: UpdateProfileRequest): Promise<ApiResponse<User>> => {
+    const response = await api.patch<ApiResponse<User>>('/me', data);
+    return response.data;
+  },
+
+  updateProfile: async (data: UpdateProfileRequest): Promise<ApiResponse<User>> => {
     const response = await api.patch<ApiResponse<User>>('/me', data);
     return response.data;
   },

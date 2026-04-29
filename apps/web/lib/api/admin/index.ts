@@ -250,6 +250,16 @@ export const uploadsApi = {
 
     return confirmRes.data.url;
   },
+
+  uploadAvatar: async (file: File): Promise<ApiResponse<{ url: string }>> => {
+    const url = await uploadsApi.uploadFile(file, 'avatar');
+    return { data: { url }, message: 'success', success: true } as ApiResponse<{ url: string }>;
+  },
+
+  uploadBanner: async (file: File): Promise<ApiResponse<{ url: string }>> => {
+    const url = await uploadsApi.uploadFile(file, 'banner');
+    return { data: { url }, message: 'success', success: true } as ApiResponse<{ url: string }>;
+  },
 };
 
 // Admin Majors API (Jurusan)
