@@ -154,6 +154,12 @@ func (h *ProfileHandler) UpdateMe(c *fiber.Ctx) error {
 	if req.Bio != nil {
 		user.Bio = req.Bio
 	}
+	if req.AvatarURL != nil {
+		user.AvatarURL = req.AvatarURL
+	}
+	if req.BannerURL != nil {
+		user.BannerURL = req.BannerURL
+	}
 	if req.Phone != nil {
 		user.Phone = req.Phone
 	}
@@ -182,6 +188,8 @@ func (h *ProfileHandler) UpdateMe(c *fiber.Ctx) error {
 		"email":        user.Email,
 		"nama":         user.Nama,
 		"bio":          user.Bio,
+		"avatar_url":   user.AvatarURL,
+		"banner_url":   user.BannerURL,
 		"phone":        user.Phone,
 		"address":      user.Address,
 		"show_email":   user.ShowEmail,

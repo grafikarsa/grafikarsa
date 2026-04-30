@@ -75,6 +75,23 @@ export function ProfileEditForm({ user }: ProfileEditFormProps) {
   });
 
   const handleImageSelect = (type: 'avatar' | 'banner', file: File) => {
+    const allowedTypes = type === 'banner'
+      ? ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+      : ['image/jpeg', 'image/png', 'image/webp'];
+
+    if (!allowedTypes.includes(file.type)) {
+      toast.error(type === 'banner'
+        ? 'Format file harus JPG, PNG, WebP, atau GIF'
+        : 'Format file harus JPG, PNG, atau WebP');
+      return;
+    }
+
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      toast.error('Ukuran file terlalu besar (max 10MB)');
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (e) => {
       setCropperImage(e.target?.result as string);
@@ -85,13 +102,7 @@ export function ProfileEditForm({ user }: ProfileEditFormProps) {
     reader.readAsDataURL(file);
   };
 
-  const handleCropComplete = async (croppedBlob: Blob) => {
-    if (!pendingFile) return;
-
-    const extension = pendingFile.name.split('.').pop() || 'jpg';
-    const croppedFile = new File([croppedBlob], `${cropType}.${extension}`, {
-      type: croppedBlob.type,
-    });
+  const handleCropComplete = async (croppedFile: File) => {
 
     if (cropType === 'avatar') {
       setAvatarUploading(true);
@@ -279,17 +290,25 @@ export function ProfileEditForm({ user }: ProfileEditFormProps) {
       </form>
 
       {/* Image Cropper Modal */}
-      {cropperOpen && cropperImage && (
-        <ImageCropper
-          image={cropperImage}
-          aspect={cropType === 'avatar' ? 1 : 3}
-          onCropComplete={handleCropComplete}
-          onCancel={() => {
+      <ImageCropper
+        open={cropperOpen}
+        onOpenChange={(open) => {
+          if (!open) {
             setCropperOpen(false);
             setPendingFile(null);
-          }}
-        />
-      )}
+          }
+        }}
+        imageSrc={cropperImage}
+        aspect={cropType === 'avatar' ? 1 : 3}
+        cropShape={cropType === 'avatar' ? 'round' : 'rect'}
+        onCropComplete={handleCropComplete}
+        title={cropType === 'avatar' ? 'Sesuaikan Foto Profil' : 'Sesuaikan Banner Profil'}
+        description={
+          cropType === 'avatar'
+            ? 'Posisikan wajah di tengah. Area 10-15% dari tepi akan terpotong saat ditampilkan dalam lingkaran.'
+            : 'Posisikan elemen penting di area tengah. Bagian kiri dan kanan mungkin terpotong pada layar kecil.'
+        }
+      />
     </div>
   );
 }

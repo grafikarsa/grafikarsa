@@ -115,6 +115,8 @@ type UpdateProfileRequest struct {
 	Username    *string `json:"username,omitempty"`
 	Bio         *string `json:"bio,omitempty"`
 	Email       *string `json:"email,omitempty"`
+	AvatarURL   *string `json:"avatar_url,omitempty"`
+	BannerURL   *string `json:"banner_url,omitempty"`
 	Phone       *string `json:"phone,omitempty"`
 	Address     *string `json:"address,omitempty"`
 	ShowEmail   *bool   `json:"show_email,omitempty"`
