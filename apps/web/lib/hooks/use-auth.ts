@@ -67,7 +67,6 @@ export function useAuth(options?: UseAuthOptions) {
     },
     onError: (rawError: unknown) => {
       const error = extractApiError(rawError);
-      console.log('[auth] login error:', error.code, error.message, rawError);
       if (error.code === 'CAPTCHA_REQUIRED' || error.code === 'CAPTCHA_INVALID') {
         options?.onCaptchaRequired?.();
         return;
