@@ -389,6 +389,7 @@ export interface PortfolioExportUser {
   avatar_url?: string;
   nisn?: string;
   nis?: string;
+  nip?: string;
   kelas_nama?: string;
   jurusan_nama?: string;
 }

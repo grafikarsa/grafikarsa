@@ -418,7 +418,7 @@ func (h *AdminHandler) GetKelasStudents(c *fiber.Ctx) error {
 	var result []map[string]interface{}
 	for _, u := range users {
 		result = append(result, map[string]interface{}{
-			"id": u.ID, "username": u.Username, "nama": u.Nama, "nisn": u.NISN, "nis": u.NIS, "avatar_url": u.AvatarURL,
+			"id": u.ID, "username": u.Username, "nama": u.Nama, "nisn": u.NISN, "nis": u.NIS, "nip": u.NIP, "avatar_url": u.AvatarURL,
 		})
 	}
 
@@ -752,7 +752,7 @@ func (h *AdminHandler) ListUsers(c *fiber.Ctx) error {
 	for _, u := range users {
 		uDTO := dto.AdminUserDTO{
 			ID: u.ID, Username: u.Username, Email: u.Email, Nama: u.Nama, AvatarURL: u.AvatarURL, BannerURL: u.BannerURL,
-			Role: string(u.Role), NISN: u.NISN, NIS: u.NIS, TahunMasuk: u.TahunMasuk, TahunLulus: u.TahunLulus,
+			Role: string(u.Role), NISN: u.NISN, NIS: u.NIS, NIP: u.NIP, TahunMasuk: u.TahunMasuk, TahunLulus: u.TahunLulus,
 			IsActive: u.IsActive, LastLoginAt: u.LastLoginAt, CreatedAt: u.CreatedAt,
 		}
 		if u.Kelas != nil {
@@ -786,7 +786,7 @@ func (h *AdminHandler) GetUser(c *fiber.Ctx) error {
 	result := dto.AdminUserDetailDTO{
 		AdminUserDTO: dto.AdminUserDTO{
 			ID: user.ID, Username: user.Username, Email: user.Email, Nama: user.Nama, AvatarURL: user.AvatarURL, BannerURL: user.BannerURL,
-			Role: string(user.Role), NISN: user.NISN, NIS: user.NIS, TahunMasuk: user.TahunMasuk, TahunLulus: user.TahunLulus,
+			Role: string(user.Role), NISN: user.NISN, NIS: user.NIS, NIP: user.NIP, TahunMasuk: user.TahunMasuk, TahunLulus: user.TahunLulus,
 			IsActive: user.IsActive, LastLoginAt: user.LastLoginAt, CreatedAt: user.CreatedAt,
 		},
 		Bio: user.Bio, BannerURL: user.BannerURL, UpdatedAt: user.UpdatedAt,
@@ -853,7 +853,7 @@ func (h *AdminHandler) CreateUser(c *fiber.Ctx) error {
 
 	user := &domain.User{
 		Username: req.Username, Email: req.Email, PasswordHash: string(hashedPassword), Nama: req.Nama,
-		Role: role, NISN: req.NISN, NIS: req.NIS, KelasID: req.KelasID, TahunMasuk: req.TahunMasuk, IsActive: true,
+		Role: role, NISN: req.NISN, NIS: req.NIS, NIP: req.NIP, KelasID: req.KelasID, TahunMasuk: req.TahunMasuk, IsActive: true,
 	}
 
 	if err := h.userRepo.Create(user); err != nil {
@@ -863,7 +863,7 @@ func (h *AdminHandler) CreateUser(c *fiber.Ctx) error {
 	user, _ = h.userRepo.FindByID(user.ID)
 	result := dto.AdminUserDTO{
 		ID: user.ID, Username: user.Username, Email: user.Email, Nama: user.Nama,
-		Role: string(user.Role), NISN: user.NISN, NIS: user.NIS, TahunMasuk: user.TahunMasuk,
+		Role: string(user.Role), NISN: user.NISN, NIS: user.NIS, NIP: user.NIP, TahunMasuk: user.TahunMasuk,
 		IsActive: user.IsActive, CreatedAt: user.CreatedAt,
 	}
 	if user.Kelas != nil {
@@ -919,6 +919,9 @@ func (h *AdminHandler) UpdateUser(c *fiber.Ctx) error {
 	if req.NIS != nil {
 		user.NIS = req.NIS
 	}
+	if req.NIP != nil {
+		user.NIP = req.NIP
+	}
 	if req.KelasID != nil {
 		user.KelasID = req.KelasID
 	}
@@ -944,7 +947,7 @@ func (h *AdminHandler) UpdateUser(c *fiber.Ctx) error {
 
 	return c.JSON(dto.SuccessResponse(map[string]interface{}{
 		"id": user.ID, "username": user.Username, "email": user.Email, "nama": user.Nama, "role": user.Role,
-		"nisn": user.NISN, "nis": user.NIS, "tahun_masuk": user.TahunMasuk, "tahun_lulus": user.TahunLulus,
+		"nisn": user.NISN, "nis": user.NIS, "nip": user.NIP, "tahun_masuk": user.TahunMasuk, "tahun_lulus": user.TahunLulus,
 		"avatar_url": user.AvatarURL, "banner_url": user.BannerURL, "updated_at": user.UpdatedAt,
 	}, "User berhasil diperbarui"))
 }
@@ -1355,7 +1358,7 @@ func (h *AdminHandler) DeletePortfolio(c *fiber.Ctx) error {
 
 // Dashboard Stats
 func (h *AdminHandler) GetDashboardStats(c *fiber.Ctx) error {
-	userTotal, students, alumni, admins, userNewMonth, _ := h.adminRepo.GetUserStats()
+	userTotal, students, alumni, admins, teachers, userNewMonth, _ := h.adminRepo.GetUserStats()
 	portfolioTotal, published, pending, draft, rejected, archived, portfolioNewMonth, _ := h.adminRepo.GetPortfolioStats()
 	jurusanCount, _ := h.adminRepo.GetJurusanCount()
 	kelasTotal, kelasActive, _ := h.adminRepo.GetKelasStats()
@@ -1399,7 +1402,7 @@ func (h *AdminHandler) GetDashboardStats(c *fiber.Ctx) error {
 
 	return c.JSON(dto.SuccessResponse(dto.DashboardStatsDTO{
 		Users: dto.UserStatsDTO{
-			Total: userTotal, Students: students, Alumni: alumni, Admins: admins, NewThisMonth: userNewMonth,
+			Total: userTotal, Students: students, Alumni: alumni, Admins: admins, Teachers: teachers, NewThisMonth: userNewMonth,
 		},
 		Portfolios: dto.PortfolioStatsDTO{
 			Total: portfolioTotal, Published: published, PendingReview: pending, Draft: draft,
@@ -1862,6 +1865,9 @@ func (h *AdminHandler) GetSeriesExportData(c *fiber.Ctx) error {
 		}
 		if p.User.NIS != nil {
 			userDTO.NIS = p.User.NIS
+		}
+		if p.User.NIP != nil {
+			userDTO.NIP = p.User.NIP
 		}
 		if p.User.Kelas != nil {
 			userDTO.KelasNama = &p.User.Kelas.Nama

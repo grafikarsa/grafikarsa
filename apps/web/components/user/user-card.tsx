@@ -28,6 +28,8 @@ export function UserCard({ user }: UserCardProps) {
         return 'Alumni';
       case 'admin':
         return 'Admin';
+      case 'teacher':
+        return 'Guru';
       default:
         return role;
     }

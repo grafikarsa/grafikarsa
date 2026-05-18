@@ -397,11 +397,12 @@ func (r *AdminRepository) ListPendingPortfolios(search string, jurusanID *uuid.U
 }
 
 // Dashboard Stats
-func (r *AdminRepository) GetUserStats() (total, students, alumni, admins, newThisMonth int64, err error) {
+func (r *AdminRepository) GetUserStats() (total, students, alumni, admins, teachers, newThisMonth int64, err error) {
 	r.db.Model(&domain.User{}).Where("deleted_at IS NULL").Count(&total)
 	r.db.Model(&domain.User{}).Where("deleted_at IS NULL AND role = 'student'").Count(&students)
 	r.db.Model(&domain.User{}).Where("deleted_at IS NULL AND role = 'alumni'").Count(&alumni)
 	r.db.Model(&domain.User{}).Where("deleted_at IS NULL AND role = 'admin'").Count(&admins)
+	r.db.Model(&domain.User{}).Where("deleted_at IS NULL AND role = 'teacher'").Count(&teachers)
 
 	startOfMonth := time.Now().AddDate(0, 0, -time.Now().Day()+1)
 	r.db.Model(&domain.User{}).Where("deleted_at IS NULL AND created_at >= ?", startOfMonth).Count(&newThisMonth)

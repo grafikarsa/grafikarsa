@@ -1,4 +1,4 @@
-export type UserRole = 'student' | 'alumni' | 'admin';
+export type UserRole = 'student' | 'alumni' | 'admin' | 'teacher';
 
 export type SocialPlatform =
   | 'facebook'
@@ -58,6 +58,7 @@ export interface User {
   role: UserRole;
   nisn?: string;
   nis?: string;
+  nip?: string;
   tahun_masuk?: number;
   tahun_lulus?: number;
   kelas?: Kelas;

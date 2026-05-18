@@ -71,6 +71,7 @@ type ProfileDTO struct {
 	Role           string               `json:"role"`
 	NISN           *string              `json:"nisn,omitempty"`
 	NIS            *string              `json:"nis,omitempty"`
+	NIP            *string              `json:"nip,omitempty"`
 	TahunMasuk     *int                 `json:"tahun_masuk,omitempty"`
 	TahunLulus     *int                 `json:"tahun_lulus,omitempty"`
 	Kelas          *KelasDTO            `json:"kelas,omitempty"`

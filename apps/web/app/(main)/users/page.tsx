@@ -166,7 +166,7 @@ export default function UsersPage() {
     <div className="container mx-auto px-4 pb-24 pt-20 md:px-12 lg:px-16 md:pt-24">
       {/* Header - Centered */}
       <div className="mx-auto mb-6 max-w-2xl text-center md:mb-8">
-        <h1 className="mb-2 text-2xl font-bold md:text-4xl">Siswa & Alumni</h1>
+        <h1 className="mb-2 text-2xl font-bold md:text-4xl">Siswa, Alumni & Guru</h1>
         <p className="text-sm text-muted-foreground md:text-base">
           Temukan dan terhubung dengan warga SMKN 4 Malang
         </p>
@@ -201,6 +201,7 @@ export default function UsersPage() {
               <SelectItem value="all">Semua Role</SelectItem>
               <SelectItem value="student">Siswa</SelectItem>
               <SelectItem value="alumni">Alumni</SelectItem>
+              <SelectItem value="teacher">Guru</SelectItem>
             </SelectContent>
           </Select>
         </div>

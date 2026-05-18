@@ -41,6 +41,13 @@ export function UserProfile({ profile }: UserProfileProps) {
   const isAdmin = currentUser?.role === 'admin';
   const [followModalType, setFollowModalType] = useState<'followers' | 'following' | null>(null);
 
+  const roleLabels: Record<string, string> = {
+    student: 'Siswa',
+    alumni: 'Alumni',
+    admin: 'Admin',
+    teacher: 'Guru',
+  };
+
   const followMutation = useMutation({
     mutationFn: () =>
       profile.is_following
@@ -255,9 +262,7 @@ export function UserProfile({ profile }: UserProfileProps) {
           {/* Row 2 Col 1: Info Badges */}
           <div className="flex items-center">
             <div className="flex flex-wrap gap-2">
-              <Badge variant="outline" className="capitalize">
-                {profile.role}
-              </Badge>
+              <Badge variant="outline">{roleLabels[profile.role] || profile.role}</Badge>
               {profile.kelas && <Badge variant="secondary">{profile.kelas.nama}</Badge>}
               {profile.jurusan && <Badge variant="secondary">{profile.jurusan.nama}</Badge>}
               {profile.tahun_masuk && (

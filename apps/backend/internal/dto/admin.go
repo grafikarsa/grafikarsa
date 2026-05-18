@@ -114,6 +114,7 @@ type AdminUserDTO struct {
 	Role        string      `json:"role"`
 	NISN        *string     `json:"nisn,omitempty"`
 	NIS         *string     `json:"nis,omitempty"`
+	NIP         *string     `json:"nip,omitempty"`
 	Kelas       *KelasDTO   `json:"kelas,omitempty"`
 	Jurusan     *JurusanDTO `json:"jurusan,omitempty"`
 	TahunMasuk  *int        `json:"tahun_masuk,omitempty"`
@@ -140,6 +141,7 @@ type CreateUserRequest struct {
 	Role       string     `json:"role"`
 	NISN       *string    `json:"nisn,omitempty"`
 	NIS        *string    `json:"nis,omitempty"`
+	NIP        *string    `json:"nip,omitempty"`
 	KelasID    *uuid.UUID `json:"kelas_id,omitempty"`
 	TahunMasuk *int       `json:"tahun_masuk,omitempty"`
 }
@@ -151,6 +153,7 @@ type UpdateUserRequest struct {
 	Role       *string    `json:"role,omitempty"`
 	NISN       *string    `json:"nisn,omitempty"`
 	NIS        *string    `json:"nis,omitempty"`
+	NIP        *string    `json:"nip,omitempty"`
 	KelasID    *uuid.UUID `json:"kelas_id,omitempty"`
 	TahunMasuk *int       `json:"tahun_masuk,omitempty"`
 	TahunLulus *int       `json:"tahun_lulus,omitempty"`
@@ -204,6 +207,7 @@ type UserStatsDTO struct {
 	Students     int64 `json:"students"`
 	Alumni       int64 `json:"alumni"`
 	Admins       int64 `json:"admins"`
+	Teachers     int64 `json:"teachers"`
 	NewThisMonth int64 `json:"new_this_month"`
 }
 

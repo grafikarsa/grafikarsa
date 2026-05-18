@@ -64,6 +64,7 @@ func (h *ProfileHandler) GetMe(c *fiber.Ctx) error {
 		Role:           string(user.Role),
 		NISN:           user.NISN,
 		NIS:            user.NIS,
+		NIP:            user.NIP,
 		TahunMasuk:     user.TahunMasuk,
 		TahunLulus:     tahunLulus,
 		SocialLinks:    socialLinks,

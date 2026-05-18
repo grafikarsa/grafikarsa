@@ -52,6 +52,7 @@ interface DashboardStats {
     students: number;
     alumni: number;
     admins: number;
+    teachers: number;
     new_this_month: number;
   };
   portfolios: {
@@ -73,12 +74,14 @@ const roleStyles: Record<string, string> = {
   student: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
   alumni: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
   admin: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  teacher: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
 };
 
 const roleIcons: Record<string, React.ReactNode> = {
   student: <GraduationCap className="h-3 w-3" />,
   alumni: <Users className="h-3 w-3" />,
   admin: <Shield className="h-3 w-3" />,
+  teacher: <BarChart3 className="h-3 w-3" />,
 };
 
 export default function AdminDashboardPage() {
@@ -409,7 +412,7 @@ export default function AdminDashboardPage() {
                       </p>
                     </div>
                     <Badge className={`text-xs ${roleStyles[user.role] || ''}`}>
-                      {user.role === 'student' ? 'Siswa' : user.role === 'alumni' ? 'Alumni' : 'Admin'}
+                      {user.role === 'student' ? 'Siswa' : user.role === 'alumni' ? 'Alumni' : user.role === 'teacher' ? 'Guru' : 'Admin'}
                     </Badge>
                   </Link>
                 ))}

@@ -26,6 +26,7 @@ import {
   Upload,
   ImageIcon,
   MoreVertical,
+  BarChart3,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -81,6 +82,7 @@ const roleOptions = [
   { value: 'student', label: 'Siswa' },
   { value: 'alumni', label: 'Alumni' },
   { value: 'admin', label: 'Admin' },
+  { value: 'teacher', label: 'Guru' },
 ];
 
 const statusOptions = [
@@ -93,12 +95,14 @@ const roleStyles: Record<string, string> = {
   student: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
   alumni: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
   admin: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  teacher: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
 };
 
 const roleIcons: Record<string, React.ReactNode> = {
   student: <GraduationCap className="h-3 w-3" />,
   alumni: <Users className="h-3 w-3" />,
   admin: <Shield className="h-3 w-3" />,
+  teacher: <BarChart3 className="h-3 w-3" />,
 };
 
 export default function AdminUsersPage() {
@@ -344,12 +348,12 @@ export default function AdminUsersPage() {
                       <TableCell>
                         <Badge className={`gap-1 capitalize ${roleStyles[user.role] || ''}`}>
                           {roleIcons[user.role]}
-                          {user.role === 'student' ? 'Siswa' : user.role === 'alumni' ? 'Alumni' : 'Admin'}
+                          {user.role === 'student' ? 'Siswa' : user.role === 'alumni' ? 'Alumni' : user.role === 'teacher' ? 'Guru' : 'Admin'}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         <span className="text-sm">
-                          {user.kelas?.nama || (user.role === 'alumni' ? 'Lulus' : '-')}
+                          {user.kelas?.nama || (user.role === 'alumni' || user.role === 'teacher' ? '—' : '-')}
                         </span>
                       </TableCell>
                       <TableCell>
@@ -573,7 +577,7 @@ function UserDetailModal({
                 <div className="flex items-center gap-2">
                   <Badge className={`gap-1 capitalize ${roleStyles[detail.role] || ''}`}>
                     {roleIcons[detail.role]}
-                    {detail.role === 'student' ? 'Siswa' : detail.role === 'alumni' ? 'Alumni' : 'Admin'}
+                    {detail.role === 'student' ? 'Siswa' : detail.role === 'alumni' ? 'Alumni' : detail.role === 'teacher' ? 'Guru' : 'Admin'}
                   </Badge>
                   <Badge
                     className={detail.is_active ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : ''}
@@ -662,6 +666,18 @@ function UserDetailModal({
                     </div>
                   </div>
                 )}
+
+                {detail.nip && (
+                  <div className="flex items-center gap-3 rounded-lg border p-3">
+                    <div className="rounded-full bg-muted p-2">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">NIP</p>
+                      <p className="text-sm font-medium">{detail.nip}</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Class History */}
@@ -740,6 +756,7 @@ function UserFormModal({
     role: 'student' as UserRole,
     nisn: '',
     nis: '',
+    nip: '',
     kelas_id: '',
     tahun_masuk: new Date().getFullYear(),
     tahun_lulus: null as number | null,
@@ -847,6 +864,7 @@ function UserFormModal({
           role: user.role || 'student',
           nisn: user.nisn || '',
           nis: user.nis || '',
+          nip: (user as unknown as { nip?: string })?.nip || '',
           kelas_id: user.kelas?.id || '',
           tahun_masuk: user.tahun_masuk || new Date().getFullYear(),
           tahun_lulus: user.tahun_lulus || null,
@@ -862,6 +880,7 @@ function UserFormModal({
           role: 'student',
           nisn: '',
           nis: '',
+          nip: '',
           kelas_id: '',
           tahun_masuk: new Date().getFullYear(),
           tahun_lulus: null,
@@ -958,9 +977,10 @@ function UserFormModal({
         const updateData: Record<string, unknown> = {
           nama: formData.nama,
           role: formData.role,
-          nisn: formData.nisn || null,
-          nis: formData.nis || null,
-          kelas_id: formData.role === 'alumni' ? null : (formData.kelas_id || null),
+          nisn: formData.role === 'student' || formData.role === 'alumni' ? (formData.nisn || null) : null,
+          nis: formData.role === 'student' || formData.role === 'alumni' ? (formData.nis || null) : null,
+          nip: formData.role === 'teacher' ? (formData.nip || null) : null,
+          kelas_id: formData.role === 'alumni' || formData.role === 'teacher' ? null : (formData.kelas_id || null),
           tahun_masuk: formData.tahun_masuk,
           tahun_lulus: formData.role === 'alumni' ? formData.tahun_lulus : null,
           avatar_url: formData.avatar_url || null,
@@ -992,8 +1012,9 @@ function UserFormModal({
           email: formData.email,
           password: formData.password,
           role: formData.role,
-          nisn: formData.nisn || undefined,
-          nis: formData.nis || undefined,
+          nisn: formData.role === 'student' || formData.role === 'alumni' ? (formData.nisn || undefined) : undefined,
+          nis: formData.role === 'student' || formData.role === 'alumni' ? (formData.nis || undefined) : undefined,
+          nip: formData.role === 'teacher' ? (formData.nip || undefined) : undefined,
           tahun_masuk: formData.tahun_masuk,
           avatar_url: formData.avatar_url || undefined,
           banner_url: formData.banner_url || undefined,
@@ -1149,17 +1170,18 @@ function UserFormModal({
                   <SelectItem value="student">Siswa</SelectItem>
                   <SelectItem value="alumni">Alumni</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="teacher">Guru</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="kelas">Kelas</Label>
               <Select
-                value={formData.role === 'alumni' ? 'none' : (formData.kelas_id || 'none')}
+                value={formData.role === 'alumni' || formData.role === 'teacher' ? 'none' : (formData.kelas_id || 'none')}
                 onValueChange={(v) => setFormData({ ...formData, kelas_id: v === 'none' ? '' : v })}
-                disabled={formData.role === 'alumni'}
+                disabled={formData.role === 'alumni' || formData.role === 'teacher'}
               >
-                <SelectTrigger className={formData.role === 'alumni' ? 'bg-muted' : ''}>
+                <SelectTrigger className={formData.role === 'alumni' || formData.role === 'teacher' ? 'bg-muted' : ''}>
                   <SelectValue placeholder="Pilih kelas" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1174,29 +1196,46 @@ function UserFormModal({
               {formData.role === 'alumni' && (
                 <p className="text-xs text-muted-foreground">Alumni tidak memiliki kelas aktif</p>
               )}
+              {formData.role === 'teacher' && (
+                <p className="text-xs text-muted-foreground">Guru tidak memiliki kelas aktif</p>
+              )}
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          {(formData.role === 'student' || formData.role === 'alumni') && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="nisn">NISN</Label>
+                <Input
+                  id="nisn"
+                  value={formData.nisn}
+                  onChange={(e) => setFormData({ ...formData, nisn: e.target.value })}
+                  placeholder="0098115881"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="nis">NIS</Label>
+                <Input
+                  id="nis"
+                  value={formData.nis}
+                  onChange={(e) => setFormData({ ...formData, nis: e.target.value })}
+                  placeholder="25491/02000"
+                />
+              </div>
+            </div>
+          )}
+
+          {formData.role === 'teacher' && (
             <div className="space-y-2">
-              <Label htmlFor="nisn">NISN</Label>
+              <Label htmlFor="nip">NIP</Label>
               <Input
-                id="nisn"
-                value={formData.nisn}
-                onChange={(e) => setFormData({ ...formData, nisn: e.target.value })}
-                placeholder="0098115881"
+                id="nip"
+                value={formData.nip}
+                onChange={(e) => setFormData({ ...formData, nip: e.target.value })}
+                placeholder="198501012010011001"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="nis">NIS</Label>
-              <Input
-                id="nis"
-                value={formData.nis}
-                onChange={(e) => setFormData({ ...formData, nis: e.target.value })}
-                placeholder="25491/02000"
-              />
-            </div>
-          </div>
+          )}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">

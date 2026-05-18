@@ -370,7 +370,7 @@ func createExtensions(db *sql.DB) error {
 func createEnumTypes(db *sql.DB) error {
 	enums := []string{
 		`DO $$ BEGIN
-			CREATE TYPE user_role AS ENUM ('student', 'alumni', 'admin');
+			CREATE TYPE user_role AS ENUM ('student', 'alumni', 'admin', 'teacher');
 		EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
 
 		`DO $$ BEGIN
@@ -465,6 +465,7 @@ func createTables(db *sql.DB) error {
 			role user_role NOT NULL DEFAULT 'student',
 			nisn VARCHAR(20),
 			nis VARCHAR(30),
+			nip VARCHAR(30),
 			kelas_id UUID REFERENCES kelas(id) ON DELETE SET NULL,
 			tahun_masuk INTEGER,
 			tahun_lulus INTEGER,
@@ -474,6 +475,7 @@ func createTables(db *sql.DB) error {
 			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 			deleted_at TIMESTAMPTZ,
 			CONSTRAINT users_nisn_numeric CHECK (nisn IS NULL OR nisn ~ '^\d+$'),
+			CONSTRAINT users_nip_numeric CHECK (nip IS NULL OR nip ~ '^\d+$'),
 			CONSTRAINT users_tahun_masuk_valid CHECK (tahun_masuk IS NULL OR (tahun_masuk >= 2000 AND tahun_masuk <= 2100)),
 			CONSTRAINT users_tahun_lulus_valid CHECK (tahun_lulus IS NULL OR tahun_lulus >= tahun_masuk)
 		)`,

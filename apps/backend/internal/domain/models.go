@@ -16,6 +16,7 @@ const (
 	RoleStudent UserRole = "student"
 	RoleAlumni  UserRole = "alumni"
 	RoleAdmin   UserRole = "admin"
+	RoleTeacher UserRole = "teacher"
 )
 
 type PortfolioStatus string
@@ -171,6 +172,7 @@ type User struct {
 	Role         UserRole         `gorm:"type:user_role;not null;default:'student'" json:"role"`
 	NISN         *string          `gorm:"type:varchar(20)" json:"nisn,omitempty"`
 	NIS          *string          `gorm:"type:varchar(30)" json:"nis,omitempty"`
+	NIP          *string          `gorm:"type:varchar(30)" json:"nip,omitempty"`
 	KelasID      *uuid.UUID       `gorm:"type:uuid" json:"kelas_id,omitempty"`
 	TahunMasuk   *int             `gorm:"type:integer" json:"tahun_masuk,omitempty"`
 	TahunLulus   *int             `gorm:"type:integer" json:"tahun_lulus,omitempty"`

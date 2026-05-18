@@ -99,6 +99,7 @@ type PortfolioExportUserDTO struct {
 	AvatarURL   *string   `json:"avatar_url,omitempty"`
 	NISN        *string   `json:"nisn,omitempty"`
 	NIS         *string   `json:"nis,omitempty"`
+	NIP         *string   `json:"nip,omitempty"`
 	KelasNama   *string   `json:"kelas_nama,omitempty"`
 	JurusanNama *string   `json:"jurusan_nama,omitempty"`
 }
