@@ -152,7 +152,8 @@ func (h *PortfolioHandler) GetBySlug(c *fiber.Ctx) error {
 	if portfolio.Status != domain.StatusPublished {
 		isOwner := currentUserID != nil && *currentUserID == portfolio.UserID
 		isAdmin := middleware.GetUserRole(c) == "admin"
-		if !isOwner && !isAdmin {
+		hasModerationCapability := middleware.HasCapability(c, "moderation")
+		if !isOwner && !isAdmin && !hasModerationCapability {
 			return c.Status(fiber.StatusNotFound).JSON(dto.ErrorResponse(
 				"PORTFOLIO_NOT_FOUND", "Portfolio tidak ditemukan",
 			))
@@ -192,7 +193,8 @@ func (h *PortfolioHandler) GetByID(c *fiber.Ctx) error {
 	// Check access
 	isOwner := currentUserID != nil && *currentUserID == portfolio.UserID
 	isAdmin := middleware.GetUserRole(c) == "admin"
-	if !isOwner && !isAdmin {
+	hasModerationCapability := middleware.HasCapability(c, "moderation")
+	if !isOwner && !isAdmin && !hasModerationCapability {
 		return c.Status(fiber.StatusForbidden).JSON(dto.ErrorResponse(
 			"FORBIDDEN", "Anda tidak memiliki akses ke portfolio ini",
 		))
@@ -329,8 +331,8 @@ func (h *PortfolioHandler) Update(c *fiber.Ctx) error {
 	}
 
 	isOwner := currentUserID != nil && *currentUserID == portfolio.UserID
-	isAdmin := middleware.GetUserRole(c) == "admin"
-	if !isOwner && !isAdmin {
+	isAdminOrMod := middleware.IsAdminOrHasCapability(c, "moderation")
+	if !isOwner && !isAdminOrMod {
 		return c.Status(fiber.StatusForbidden).JSON(dto.ErrorResponse(
 			"FORBIDDEN", "Anda tidak memiliki akses untuk mengedit portfolio ini",
 		))
@@ -478,8 +480,8 @@ func (h *PortfolioHandler) Archive(c *fiber.Ctx) error {
 	}
 
 	isOwner := currentUserID != nil && *currentUserID == portfolio.UserID
-	isAdmin := middleware.GetUserRole(c) == "admin"
-	if !isOwner && !isAdmin {
+	isAdminOrMod := middleware.IsAdminOrHasCapability(c, "moderation")
+	if !isOwner && !isAdminOrMod {
 		return c.Status(fiber.StatusForbidden).JSON(dto.ErrorResponse(
 			"FORBIDDEN", "Anda tidak memiliki akses",
 		))
@@ -515,8 +517,8 @@ func (h *PortfolioHandler) Unarchive(c *fiber.Ctx) error {
 	}
 
 	isOwner := currentUserID != nil && *currentUserID == portfolio.UserID
-	isAdmin := middleware.GetUserRole(c) == "admin"
-	if !isOwner && !isAdmin {
+	isAdminOrMod := middleware.IsAdminOrHasCapability(c, "moderation")
+	if !isOwner && !isAdminOrMod {
 		return c.Status(fiber.StatusForbidden).JSON(dto.ErrorResponse(
 			"FORBIDDEN", "Anda tidak memiliki akses",
 		))

@@ -70,6 +70,11 @@ func (m *AuthMiddleware) Required() fiber.Handler {
 		c.Locals("userRole", claims.Role)
 		c.Locals("jti", claims.JTI)
 
+		// For non-admin users, cache empty capabilities (will be populated by capability middleware)
+		if claims.Role != "admin" {
+			c.Locals("userCapabilities", []string{})
+		}
+
 		return c.Next()
 	}
 }
@@ -139,6 +144,33 @@ func GetUserRole(c *fiber.Ctx) string {
 		return ""
 	}
 	return role.(string)
+}
+
+// HasCapability checks if user has the specified capability from context cache
+func HasCapability(c *fiber.Ctx, capability string) bool {
+	capabilities, ok := c.Locals("userCapabilities").([]string)
+	if !ok {
+		return false
+	}
+	for _, cap := range capabilities {
+		if cap == capability {
+			return true
+		}
+	}
+	return false
+}
+
+// SetUserCapabilities stores user capabilities in context for later use
+func SetUserCapabilities(c *fiber.Ctx, capabilities []string) {
+	c.Locals("userCapabilities", capabilities)
+}
+
+// IsAdminOrHasCapability checks if user is admin OR has the specified capability
+func IsAdminOrHasCapability(c *fiber.Ctx, capability string) bool {
+	if GetUserRole(c) == "admin" {
+		return true
+	}
+	return HasCapability(c, capability)
 }
 
 // GetJWTService returns the JWT service for token validation

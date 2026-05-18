@@ -44,12 +44,22 @@ func (m *CapabilityMiddleware) RequireCapability(capability string) fiber.Handle
 
 		// Check if user has the required capability
 		hasCapability, err := m.adminRepo.HasCapability(userID, capability)
-		if err != nil || !hasCapability {
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(
+				"INTERNAL_ERROR",
+				"Terjadi kesalahan saat memverifikasi akses",
+			))
+		}
+		if !hasCapability {
 			return c.Status(fiber.StatusForbidden).JSON(dto.ErrorResponse(
 				"FORBIDDEN",
 				"Anda tidak memiliki akses untuk fitur ini",
 			))
 		}
+
+		// Populate capabilities in context for later use by HasCapability()
+		capabilities, _ := m.adminRepo.GetUserCapabilities(userID)
+		c.Locals("userCapabilities", capabilities)
 
 		return c.Next()
 	}
