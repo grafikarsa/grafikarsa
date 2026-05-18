@@ -100,7 +100,7 @@ func main() {
 	captchaHandler := handler.NewCaptchaHandler(captchaService)
 	userHandler := handler.NewUserHandler(userRepo, followRepo, notificationService)
 	profileHandler := handler.NewProfileHandler(userRepo, adminRepo)
-	portfolioHandler := handler.NewPortfolioHandler(portfolioRepo, userRepo, viewRepo, interestRepo, notificationService)
+	portfolioHandler := handler.NewPortfolioHandler(portfolioRepo, userRepo, viewRepo, interestRepo, notificationService, adminRepo)
 	contentBlockHandler := handler.NewContentBlockHandler(portfolioRepo)
 	adminHandler := handler.NewAdminHandler(adminRepo, userRepo, portfolioRepo, notificationService)
 	uploadHandler := handler.NewUploadHandler(minioClient, userRepo, portfolioRepo)

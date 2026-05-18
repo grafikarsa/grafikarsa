@@ -19,15 +19,17 @@ type PortfolioHandler struct {
 	viewRepo      *repository.ViewRepository
 	interestRepo  *repository.InterestRepository
 	notifService  *service.NotificationService
+	adminRepo     *repository.AdminRepository
 }
 
-func NewPortfolioHandler(portfolioRepo *repository.PortfolioRepository, userRepo *repository.UserRepository, viewRepo *repository.ViewRepository, interestRepo *repository.InterestRepository, notifService *service.NotificationService) *PortfolioHandler {
+func NewPortfolioHandler(portfolioRepo *repository.PortfolioRepository, userRepo *repository.UserRepository, viewRepo *repository.ViewRepository, interestRepo *repository.InterestRepository, notifService *service.NotificationService, adminRepo *repository.AdminRepository) *PortfolioHandler {
 	return &PortfolioHandler{
 		portfolioRepo: portfolioRepo,
 		userRepo:      userRepo,
 		viewRepo:      viewRepo,
 		interestRepo:  interestRepo,
 		notifService:  notifService,
+		adminRepo:     adminRepo,
 	}
 }
 
@@ -333,9 +335,18 @@ func (h *PortfolioHandler) Update(c *fiber.Ctx) error {
 	isOwner := currentUserID != nil && *currentUserID == portfolio.UserID
 	isAdminOrMod := middleware.IsAdminOrHasCapability(c, "moderation")
 	if !isOwner && !isAdminOrMod {
-		return c.Status(fiber.StatusForbidden).JSON(dto.ErrorResponse(
-			"FORBIDDEN", "Anda tidak memiliki akses untuk mengedit portfolio ini",
-		))
+		if currentUserID != nil && !middleware.HasCapability(c, "moderation") && middleware.GetUserRole(c) != "admin" {
+			hasMod, _ := h.adminRepo.HasCapability(*currentUserID, "moderation")
+			if hasMod {
+				isAdminOrMod = true
+				c.Locals("userCapabilities", []string{"moderation"})
+			}
+		}
+		if !isOwner && !isAdminOrMod {
+			return c.Status(fiber.StatusForbidden).JSON(dto.ErrorResponse(
+				"FORBIDDEN", "Anda tidak memiliki akses untuk mengedit portfolio ini",
+			))
+		}
 	}
 
 	var req dto.UpdatePortfolioRequest
@@ -482,9 +493,18 @@ func (h *PortfolioHandler) Archive(c *fiber.Ctx) error {
 	isOwner := currentUserID != nil && *currentUserID == portfolio.UserID
 	isAdminOrMod := middleware.IsAdminOrHasCapability(c, "moderation")
 	if !isOwner && !isAdminOrMod {
-		return c.Status(fiber.StatusForbidden).JSON(dto.ErrorResponse(
-			"FORBIDDEN", "Anda tidak memiliki akses",
-		))
+		if currentUserID != nil && !middleware.HasCapability(c, "moderation") && middleware.GetUserRole(c) != "admin" {
+			hasMod, _ := h.adminRepo.HasCapability(*currentUserID, "moderation")
+			if hasMod {
+				isAdminOrMod = true
+				c.Locals("userCapabilities", []string{"moderation"})
+			}
+		}
+		if !isOwner && !isAdminOrMod {
+			return c.Status(fiber.StatusForbidden).JSON(dto.ErrorResponse(
+				"FORBIDDEN", "Anda tidak memiliki akses",
+			))
+		}
 	}
 
 	portfolio.Status = domain.StatusArchived
@@ -519,9 +539,18 @@ func (h *PortfolioHandler) Unarchive(c *fiber.Ctx) error {
 	isOwner := currentUserID != nil && *currentUserID == portfolio.UserID
 	isAdminOrMod := middleware.IsAdminOrHasCapability(c, "moderation")
 	if !isOwner && !isAdminOrMod {
-		return c.Status(fiber.StatusForbidden).JSON(dto.ErrorResponse(
-			"FORBIDDEN", "Anda tidak memiliki akses",
-		))
+		if currentUserID != nil && !middleware.HasCapability(c, "moderation") && middleware.GetUserRole(c) != "admin" {
+			hasMod, _ := h.adminRepo.HasCapability(*currentUserID, "moderation")
+			if hasMod {
+				isAdminOrMod = true
+				c.Locals("userCapabilities", []string{"moderation"})
+			}
+		}
+		if !isOwner && !isAdminOrMod {
+			return c.Status(fiber.StatusForbidden).JSON(dto.ErrorResponse(
+				"FORBIDDEN", "Anda tidak memiliki akses",
+			))
+		}
 	}
 
 	portfolio.Status = domain.StatusDraft
