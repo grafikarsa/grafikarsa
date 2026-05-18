@@ -5,6 +5,7 @@ import { authApi, profileApi } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import axios from 'axios';
 
 interface LoginInput {
   username: string;
@@ -15,6 +16,19 @@ interface LoginInput {
 
 interface UseAuthOptions {
   onCaptchaRequired?: () => void;
+}
+
+function extractApiError(error: unknown): Error & { code?: string } {
+  if (axios.isAxiosError(error) && error.response?.data) {
+    const body = error.response.data as { error?: { code?: string; message?: string } };
+    const err = new Error(body.error?.message || 'Terjadi kesalahan') as Error & { code?: string };
+    err.code = body.error?.code;
+    return err;
+  }
+  if (error instanceof Error) {
+    return error as Error & { code?: string };
+  }
+  return new Error('Terjadi kesalahan') as Error & { code?: string };
 }
 
 export function useAuth(options?: UseAuthOptions) {
@@ -44,7 +58,8 @@ export function useAuth(options?: UseAuthOptions) {
       toast.success('Login berhasil!');
       router.push('/');
     },
-    onError: (error: Error & { code?: string }) => {
+    onError: (rawError: unknown) => {
+      const error = extractApiError(rawError);
       if (error.code === 'CAPTCHA_REQUIRED' || error.code === 'CAPTCHA_INVALID') {
         options?.onCaptchaRequired?.();
         return;
