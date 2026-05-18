@@ -19,16 +19,23 @@ interface UseAuthOptions {
 }
 
 function extractApiError(error: unknown): Error & { code?: string } {
-  if (axios.isAxiosError(error) && error.response?.data) {
-    const body = error.response.data as { error?: { code?: string; message?: string } };
-    const err = new Error(body.error?.message || 'Terjadi kesalahan') as Error & { code?: string };
-    err.code = body.error?.code;
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data;
+    const body = typeof data === 'string' ? safeJsonParse(data) : data;
+    const code = body?.error?.code;
+    const message = body?.error?.message || body?.message || error.message;
+    const err = new Error(message) as Error & { code?: string };
+    err.code = code;
     return err;
   }
   if (error instanceof Error) {
     return error as Error & { code?: string };
   }
   return new Error('Terjadi kesalahan') as Error & { code?: string };
+}
+
+function safeJsonParse(str: string) {
+  try { return JSON.parse(str); } catch { return null; }
 }
 
 export function useAuth(options?: UseAuthOptions) {
@@ -60,12 +67,12 @@ export function useAuth(options?: UseAuthOptions) {
     },
     onError: (rawError: unknown) => {
       const error = extractApiError(rawError);
+      console.log('[auth] login error:', error.code, error.message, rawError);
       if (error.code === 'CAPTCHA_REQUIRED' || error.code === 'CAPTCHA_INVALID') {
         options?.onCaptchaRequired?.();
         return;
       }
-      const message = error.message || 'Login gagal. Periksa username dan password.';
-      toast.error(message);
+      toast.error(error.message);
     },
   });
 
