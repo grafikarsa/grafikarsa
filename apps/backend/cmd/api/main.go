@@ -93,9 +93,11 @@ func main() {
 	feedService := service.NewFeedService(portfolioRepo, followRepo, viewRepo, interestRepo)
 	commentService := service.NewCommentService(commentRepo, userRepo, portfolioRepo, notificationRepo)
 	commentService.SetNotificationService(notificationService)
+	captchaService := service.NewCaptchaService(redisClient)
 
 	// Initialize handlers
-	authHandler := handler.NewAuthHandler(userRepo, authRepo, jwtService)
+	authHandler := handler.NewAuthHandler(userRepo, authRepo, jwtService, captchaService)
+	captchaHandler := handler.NewCaptchaHandler(captchaService)
 	userHandler := handler.NewUserHandler(userRepo, followRepo, notificationService)
 	profileHandler := handler.NewProfileHandler(userRepo, adminRepo)
 	portfolioHandler := handler.NewPortfolioHandler(portfolioRepo, userRepo, viewRepo, interestRepo, notificationService)
@@ -205,6 +207,7 @@ func main() {
 	})
 
 	authRoutes := api.Group("/auth")
+	authRoutes.Get("/captcha", captchaHandler.Generate)
 	authRoutes.Post("/login", authRateLimiter, authHandler.Login)
 	authRoutes.Post("/refresh", authRateLimiter, authHandler.Refresh)
 	authRoutes.Post("/logout", authMiddleware.Required(), authHandler.Logout)

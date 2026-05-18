@@ -4,8 +4,10 @@ import "github.com/google/uuid"
 
 // Login
 type LoginRequest struct {
-	Username string `json:"username" validate:"required"`
-	Password string `json:"password" validate:"required"`
+	Username      string `json:"username" validate:"required"`
+	Password      string `json:"password" validate:"required"`
+	CaptchaID     string `json:"captcha_id"`
+	CaptchaAnswer int    `json:"captcha_answer"`
 }
 
 type LoginResponse struct {

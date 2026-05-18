@@ -4,6 +4,14 @@ export interface ApiResponse<T> {
   data?: T;
   message?: string;
   meta?: PaginationMeta;
+  error?: {
+    code: string;
+    message: string;
+    details?: Array<{
+      field: string;
+      message: string;
+    }>;
+  };
 }
 
 export interface ApiError {

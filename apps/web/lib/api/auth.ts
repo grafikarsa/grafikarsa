@@ -4,6 +4,13 @@ import { ApiResponse, User } from '@/lib/types';
 interface LoginRequest {
   username: string;
   password: string;
+  captcha_id?: string;
+  captcha_answer?: number;
+}
+
+interface CaptchaResponse {
+  id: string;
+  question: string;
 }
 
 interface LoginResponse {
@@ -34,6 +41,11 @@ interface Session {
 }
 
 export const authApi = {
+  getCaptcha: async (): Promise<ApiResponse<CaptchaResponse>> => {
+    const response = await api.get<ApiResponse<CaptchaResponse>>('/auth/captcha');
+    return response.data;
+  },
+
   login: async (data: LoginRequest): Promise<ApiResponse<LoginResponse>> => {
     const response = await api.post<ApiResponse<LoginResponse>>('/auth/login', data);
     return response.data;

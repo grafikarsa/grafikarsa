@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useAuth } from '@/lib/hooks/use-auth';
+import { authApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -19,11 +20,12 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { FloatingPaths } from '@/components/floating-paths';
-import { ChevronLeft, Loader2, User } from 'lucide-react';
+import { ChevronLeft, Loader2, User, ShieldAlert, RefreshCw } from 'lucide-react';
 
 const loginSchema = z.object({
   username: z.string().min(1, 'Username wajib diisi'),
   password: z.string().min(1, 'Password wajib diisi'),
+  captcha_answer: z.string().min(1, 'Jawaban CAPTCHA wajib diisi').optional(),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -31,14 +33,41 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuthStore();
-  const { login, isLoginPending } = useAuth();
+
+  const [captchaId, setCaptchaId] = useState<string>('');
+  const [captchaQuestion, setCaptchaQuestion] = useState<string>('');
+  const [showCaptcha, setShowCaptcha] = useState(false);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       username: '',
       password: '',
+      captcha_answer: '',
     },
+  });
+
+  const fetchCaptcha = useCallback(async () => {
+    try {
+      const response = await authApi.getCaptcha();
+      if (response.success && response.data) {
+        setCaptchaId(response.data.id);
+        setCaptchaQuestion(response.data.question);
+        setShowCaptcha(true);
+      }
+    } catch {
+      // If captcha fetch fails, still allow login attempt
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showCaptcha) {
+      form.setValue('captcha_answer', '');
+    }
+  }, [showCaptcha, form]);
+
+  const { login, isLoginPending } = useAuth({
+    onCaptchaRequired: fetchCaptcha,
   });
 
   useEffect(() => {
@@ -52,7 +81,17 @@ export default function LoginPage() {
   }
 
   const onSubmit = (data: LoginFormValues) => {
-    login(data);
+    const payload: { username: string; password: string; captcha_id?: string; captcha_answer?: number } = {
+      username: data.username,
+      password: data.password,
+    };
+
+    if (showCaptcha && captchaId && data.captcha_answer) {
+      payload.captcha_id = captchaId;
+      payload.captcha_answer = parseInt(data.captcha_answer, 10);
+    }
+
+    login(payload);
   };
 
   return (
@@ -99,6 +138,13 @@ export default function LoginPage() {
             </p>
           </div>
 
+          {showCaptcha && (
+            <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
+              <ShieldAlert className="h-4 w-4 shrink-0" />
+              <span>Verifikasi CAPTCHA diperlukan. Terlalu banyak percobaan login.</span>
+            </div>
+          )}
+
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
@@ -139,6 +185,44 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
+
+              {showCaptcha && captchaQuestion && (
+                <FormField
+                  control={form.control}
+                  name="captcha_answer"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Verifikasi</FormLabel>
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-md bg-secondary px-3 py-2 text-sm font-medium tabular-nums">
+                          {captchaQuestion}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 shrink-0"
+                          onClick={fetchCaptcha}
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <FormControl>
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          placeholder="Jawaban"
+                          maxLength={2}
+                          className="mt-2 w-24"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <Button type="submit" className="w-full" disabled={isLoginPending}>
                 {isLoginPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

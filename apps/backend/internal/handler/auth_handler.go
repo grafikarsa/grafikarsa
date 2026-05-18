@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -10,20 +11,23 @@ import (
 	"github.com/grafikarsa/backend/internal/dto"
 	"github.com/grafikarsa/backend/internal/middleware"
 	"github.com/grafikarsa/backend/internal/repository"
+	"github.com/grafikarsa/backend/internal/service"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthHandler struct {
-	userRepo *repository.UserRepository
-	authRepo *repository.AuthRepository
-	jwt      *auth.JWTService
+	userRepo       *repository.UserRepository
+	authRepo       *repository.AuthRepository
+	jwt            *auth.JWTService
+	captchaService *service.CaptchaService
 }
 
-func NewAuthHandler(userRepo *repository.UserRepository, authRepo *repository.AuthRepository, jwt *auth.JWTService) *AuthHandler {
+func NewAuthHandler(userRepo *repository.UserRepository, authRepo *repository.AuthRepository, jwt *auth.JWTService, captchaService *service.CaptchaService) *AuthHandler {
 	return &AuthHandler{
-		userRepo: userRepo,
-		authRepo: authRepo,
-		jwt:      jwt,
+		userRepo:       userRepo,
+		authRepo:       authRepo,
+		jwt:            jwt,
+		captchaService: captchaService,
 	}
 }
 
@@ -35,14 +39,35 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		))
 	}
 
+	ctx := context.Background()
+
+	// Check if CAPTCHA is required (after 3 failed attempts)
+	failedCount, _ := h.captchaService.GetFailedCount(ctx, req.Username)
+	if failedCount >= 3 {
+		if req.CaptchaID == "" || req.CaptchaAnswer == 0 {
+			return c.Status(fiber.StatusUnauthorized).JSON(dto.ErrorResponse(
+				"CAPTCHA_REQUIRED", "Verifikasi CAPTCHA diperlukan",
+			))
+		}
+
+		valid, err := h.captchaService.Verify(ctx, req.CaptchaID, req.CaptchaAnswer)
+		if err != nil || !valid {
+			return c.Status(fiber.StatusUnauthorized).JSON(dto.ErrorResponse(
+				"CAPTCHA_INVALID", "CAPTCHA salah atau telah kadaluarsa",
+			))
+		}
+	}
+
 	user, err := h.userRepo.FindByUsernameOrEmail(req.Username)
 	if err != nil {
+		h.captchaService.TrackFailedLogin(ctx, req.Username)
 		return c.Status(fiber.StatusUnauthorized).JSON(dto.ErrorResponse(
 			"INVALID_CREDENTIALS", "Username atau password salah",
 		))
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+		h.captchaService.TrackFailedLogin(ctx, req.Username)
 		return c.Status(fiber.StatusUnauthorized).JSON(dto.ErrorResponse(
 			"INVALID_CREDENTIALS", "Username atau password salah",
 		))
@@ -53,6 +78,9 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 			"ACCOUNT_DISABLED", "Akun Anda telah dinonaktifkan. Hubungi admin.",
 		))
 	}
+
+	// Reset failed login count on successful login
+	h.captchaService.ResetFailedLogin(ctx, req.Username)
 
 	// Generate tokens
 	accessToken, _, err := h.jwt.GenerateAccessToken(user.ID, string(user.Role))
