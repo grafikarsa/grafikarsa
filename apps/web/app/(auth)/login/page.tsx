@@ -43,7 +43,6 @@ export default function LoginPage() {
     defaultValues: {
       username: '',
       password: '',
-      captcha_answer: '',
     },
   });
 
