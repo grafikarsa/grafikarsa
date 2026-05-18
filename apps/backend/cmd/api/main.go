@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"os"
 	"os/signal"
@@ -148,7 +149,7 @@ func main() {
 
 	// Rate Limiting
 	app.Use(limiter.New(limiter.Config{
-		Max:        100,
+		Max:        5000,
 		Expiration: 1 * time.Minute,
 		Next: func(c *fiber.Ctx) bool {
 			return c.Method() == "OPTIONS"
@@ -175,15 +176,22 @@ func main() {
 		return c.JSON(fiber.Map{"status": "ok"})
 	})
 
-	// Auth routes
+	// Auth routes - rate limit per username (not per IP) to handle shared NAT
 	authRateLimiter := limiter.New(limiter.Config{
-		Max:        5,
+		Max:        10,
 		Expiration: 1 * time.Minute,
 		Next: func(c *fiber.Ctx) bool {
 			return c.Method() == "OPTIONS"
 		},
 		KeyGenerator: func(c *fiber.Ctx) string {
-			return c.IP()
+			body := c.Body()
+			var req struct {
+				Username string `json:"username"`
+			}
+			if err := json.Unmarshal(body, &req); err == nil && req.Username != "" {
+				return "auth:" + req.Username
+			}
+			return "auth:" + c.IP()
 		},
 		LimitReached: func(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
