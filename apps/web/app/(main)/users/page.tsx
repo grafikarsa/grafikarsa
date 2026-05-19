@@ -21,7 +21,7 @@ const ITEMS_PER_PAGE = 20;
 
 function UsersSkeleton() {
   return (
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: 8 }).map((_, i) => (
         <div key={i} className="rounded-3xl border bg-card p-4">
           <Skeleton className="aspect-square w-full rounded-2xl" />
@@ -250,7 +250,7 @@ export default function UsersPage() {
         </p>
       )}
 
-      {/* Users Grid - 4 columns */}
+      {/* Users Grid - 3 columns */}
       {isLoading ? (
         <UsersSkeleton />
       ) : error ? (
@@ -272,7 +272,7 @@ export default function UsersPage() {
         </div>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
             {users.map((user) => (
               <UserCard key={user.id} user={user} />
             ))}
