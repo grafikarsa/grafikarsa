@@ -503,9 +503,23 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
 
       // Always redirect to profile after save/submit
       router.push(`/${user?.username}`);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(error);
-      toast.error('Gagal menyimpan portfolio');
+      let message = 'Gagal menyimpan portfolio';
+      if (
+        error &&
+        typeof error === 'object' &&
+        'response' in error &&
+        (error as { response?: { data?: { error?: { message?: string; details?: { message: string }[] } } } }).response?.data?.error
+      ) {
+        const apiError = (error as { response: { data: { error: { message?: string; details?: { message: string }[] } } } }).response.data.error;
+        if (apiError.details && apiError.details.length > 0) {
+          message = apiError.details.map((d) => d.message).join('. ');
+        } else if (apiError.message) {
+          message = apiError.message;
+        }
+      }
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
       setSubmitProgress(0);

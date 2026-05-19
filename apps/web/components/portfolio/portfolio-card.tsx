@@ -74,7 +74,23 @@ export function PortfolioCard({ portfolio, showStatus = false, showActions = fal
         colors: ['#22c55e', '#10b981', '#ffffff'] // Primary green colors
       });
     },
-    onError: () => toast.error('Gagal mengirim portfolio'),
+    onError: (error: unknown) => {
+      let message = 'Gagal mengirim portfolio';
+      if (
+        error &&
+        typeof error === 'object' &&
+        'response' in error &&
+        (error as { response?: { data?: { error?: { message?: string; details?: { message: string }[] } } } }).response?.data?.error
+      ) {
+        const apiError = (error as { response: { data: { error: { message?: string; details?: { message: string }[] } } } }).response.data.error;
+        if (apiError.details && apiError.details.length > 0) {
+          message = apiError.details.map((d) => d.message).join('. ');
+        } else if (apiError.message) {
+          message = apiError.message;
+        }
+      }
+      toast.error(message);
+    },
   });
 
   const archiveMutation = useMutation({
