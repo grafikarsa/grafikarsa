@@ -530,7 +530,7 @@ function UserDetailModal({
         <DialogTitle className="sr-only">Detail User: {detail.nama}</DialogTitle>
         {/* Banner & Avatar */}
         <div className="relative">
-          <div className="h-32 bg-gradient-to-r from-primary/20 to-primary/5">
+          <div className="relative aspect-[3/1] w-full bg-gradient-to-r from-primary/20 to-primary/5">
             {detail.banner_url && (
               <Image
                 src={detail.banner_url}
@@ -1369,7 +1369,7 @@ function UserFormModal({
               {/* Banner */}
               <div className="space-y-2">
                 <Label>Banner</Label>
-                <div className="relative h-32 w-full overflow-hidden rounded-md border bg-muted">
+                <div className="relative aspect-[3/1] w-full overflow-hidden rounded-md border bg-muted">
                   {formData.banner_url ? (
                     <Image
                       src={formData.banner_url}
