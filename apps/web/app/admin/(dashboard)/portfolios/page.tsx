@@ -275,7 +275,7 @@ export default function AdminPortfoliosPage() {
   });
 
   const portfolios = data?.data || [];
-  const pagination = (data as { pagination?: { total_pages: number } })?.pagination;
+  const pagination = data?.meta;
 
   // Debug mode: Force empty state
   const debugMode = getDebugEmptyState();

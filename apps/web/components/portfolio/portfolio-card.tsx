@@ -74,7 +74,7 @@ export function PortfolioCard({ portfolio, showStatus = false, showActions = fal
         colors: ['#22c55e', '#10b981', '#ffffff'] // Primary green colors
       });
     },
-    onError: (error: unknown) => {
+      onError: (error: unknown) => {
       let message = 'Gagal mengirim portfolio';
       if (
         error &&
