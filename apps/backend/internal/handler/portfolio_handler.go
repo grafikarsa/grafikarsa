@@ -155,6 +155,9 @@ func (h *PortfolioHandler) GetBySlug(c *fiber.Ctx) error {
 		isOwner := currentUserID != nil && *currentUserID == portfolio.UserID
 		isAdmin := middleware.GetUserRole(c) == "admin"
 		hasModerationCapability := middleware.HasCapability(c, "moderation")
+		if !hasModerationCapability && !isAdmin && currentUserID != nil {
+			hasModerationCapability, _ = h.adminRepo.HasCapability(*currentUserID, "moderation")
+		}
 		if !isOwner && !isAdmin && !hasModerationCapability {
 			return c.Status(fiber.StatusNotFound).JSON(dto.ErrorResponse(
 				"PORTFOLIO_NOT_FOUND", "Portfolio tidak ditemukan",
@@ -196,6 +199,10 @@ func (h *PortfolioHandler) GetByID(c *fiber.Ctx) error {
 	isOwner := currentUserID != nil && *currentUserID == portfolio.UserID
 	isAdmin := middleware.GetUserRole(c) == "admin"
 	hasModerationCapability := middleware.HasCapability(c, "moderation")
+	if !hasModerationCapability && !isAdmin && currentUserID != nil {
+		// Fallback: check from DB (capabilities may not be populated in context on non-admin routes)
+		hasModerationCapability, _ = h.adminRepo.HasCapability(*currentUserID, "moderation")
+	}
 	if !isOwner && !isAdmin && !hasModerationCapability {
 		return c.Status(fiber.StatusForbidden).JSON(dto.ErrorResponse(
 			"FORBIDDEN", "Anda tidak memiliki akses ke portfolio ini",
