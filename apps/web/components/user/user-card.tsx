@@ -39,7 +39,7 @@ export function UserCard({ user }: UserCardProps) {
     <Link href={`/${username}`}>
       <div className="group overflow-hidden rounded-xl border bg-card transition-all hover:shadow-lg hover:-translate-y-1">
         {/* Banner */}
-        <div className="relative h-20 w-full bg-gradient-to-br from-primary/20 via-primary/10 to-background sm:h-24">
+        <div className="relative aspect-[3/1] w-full bg-gradient-to-br from-primary/20 via-primary/10 to-background">
           {banner_url && (
             <Image
               src={banner_url}
