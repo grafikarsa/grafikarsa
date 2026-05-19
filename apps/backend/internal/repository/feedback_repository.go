@@ -28,7 +28,13 @@ func (r *FeedbackRepository) FindByID(id uuid.UUID) (*domain.Feedback, error) {
 }
 
 func (r *FeedbackRepository) Update(feedback *domain.Feedback) error {
-	return r.db.Save(feedback).Error
+	return r.db.Model(&domain.Feedback{}).Where("id = ?", feedback.ID).Updates(map[string]interface{}{
+		"status":        feedback.Status,
+		"admin_notes":   feedback.AdminNotes,
+		"resolved_by":   feedback.ResolvedBy,
+		"resolved_at":   feedback.ResolvedAt,
+		"attachment_url": feedback.AttachmentURL,
+	}).Error
 }
 
 func (r *FeedbackRepository) Delete(id uuid.UUID) error {

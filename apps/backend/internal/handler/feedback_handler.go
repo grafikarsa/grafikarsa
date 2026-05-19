@@ -172,6 +172,7 @@ func (h *FeedbackHandler) AdminUpdateFeedback(c *fiber.Ctx) error {
 	}
 
 	if err := h.feedbackRepo.Update(feedback); err != nil {
+		log.Printf("[AdminUpdateFeedback] Failed to update feedback %s: %v", id, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse("UPDATE_FAILED", "Gagal mengupdate feedback"))
 	}
 
