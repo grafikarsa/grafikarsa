@@ -260,9 +260,9 @@ func (h *UploadHandler) Confirm(c *fiber.Ctx) error {
 		user.BannerURL = &publicURL
 		h.userRepo.Update(user)
 	case "thumbnail":
-		portfolio, _ := h.portfolioRepo.FindByID(*pending.PortfolioID)
-		portfolio.ThumbnailURL = &publicURL
-		h.portfolioRepo.Update(portfolio)
+		h.portfolioRepo.UpdateColumns(*pending.PortfolioID, map[string]interface{}{
+			"thumbnail_url": publicURL,
+		})
 	}
 
 	pending.Confirmed = true

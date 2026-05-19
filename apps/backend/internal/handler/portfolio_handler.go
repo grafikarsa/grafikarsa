@@ -363,17 +363,20 @@ func (h *PortfolioHandler) Update(c *fiber.Ctx) error {
 		))
 	}
 
+	columns := map[string]interface{}{}
 	if req.Judul != nil {
-		portfolio.Judul = *req.Judul
+		columns["judul"] = *req.Judul
 	}
 	if req.ThumbnailURL != nil {
-		portfolio.ThumbnailURL = req.ThumbnailURL
+		columns["thumbnail_url"] = *req.ThumbnailURL
 	}
 
-	if err := h.portfolioRepo.Update(portfolio); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(
-			"INTERNAL_ERROR", "Gagal memperbarui portfolio",
-		))
+	if len(columns) > 0 {
+		if err := h.portfolioRepo.UpdateColumns(id, columns); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(
+				"INTERNAL_ERROR", "Gagal memperbarui portfolio",
+			))
+		}
 	}
 
 	if req.TagIDs != nil {
@@ -383,6 +386,8 @@ func (h *PortfolioHandler) Update(c *fiber.Ctx) error {
 	if req.SeriesID != nil {
 		h.portfolioRepo.UpdateSeriesID(portfolio.ID, req.SeriesID)
 	}
+
+	portfolio, _ = h.portfolioRepo.FindByID(id)
 
 	return c.JSON(dto.SuccessResponse(map[string]interface{}{
 		"id":         portfolio.ID,
@@ -468,8 +473,9 @@ func (h *PortfolioHandler) Submit(c *fiber.Ctx) error {
 		))
 	}
 
-	portfolio.Status = domain.StatusPendingReview
-	if err := h.portfolioRepo.Update(portfolio); err != nil {
+	if err := h.portfolioRepo.UpdateColumns(id, map[string]interface{}{
+		"status": domain.StatusPendingReview,
+	}); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(
 			"INTERNAL_ERROR", "Gagal submit portfolio",
 		))
@@ -514,8 +520,9 @@ func (h *PortfolioHandler) Archive(c *fiber.Ctx) error {
 		}
 	}
 
-	portfolio.Status = domain.StatusArchived
-	if err := h.portfolioRepo.Update(portfolio); err != nil {
+	if err := h.portfolioRepo.UpdateColumns(id, map[string]interface{}{
+		"status": domain.StatusArchived,
+	}); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(
 			"INTERNAL_ERROR", "Gagal mengarsipkan portfolio",
 		))
@@ -560,8 +567,9 @@ func (h *PortfolioHandler) Unarchive(c *fiber.Ctx) error {
 		}
 	}
 
-	portfolio.Status = domain.StatusDraft
-	if err := h.portfolioRepo.Update(portfolio); err != nil {
+	if err := h.portfolioRepo.UpdateColumns(id, map[string]interface{}{
+		"status": domain.StatusDraft,
+	}); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse(
 			"INTERNAL_ERROR", "Gagal mengembalikan portfolio",
 		))

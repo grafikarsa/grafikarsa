@@ -1333,19 +1333,21 @@ func (h *AdminHandler) UpdatePortfolio(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse("VALIDATION_ERROR", "Request body tidak valid"))
 	}
 
+	columns := map[string]interface{}{}
 	if req.Judul != nil {
-		portfolio.Judul = *req.Judul
+		columns["judul"] = *req.Judul
 	}
 	if req.Status != nil {
-		portfolio.Status = domain.PortfolioStatus(*req.Status)
-		if portfolio.Status == domain.StatusPublished && portfolio.PublishedAt == nil {
-			now := time.Now()
-			portfolio.PublishedAt = &now
+		columns["status"] = domain.PortfolioStatus(*req.Status)
+		if domain.PortfolioStatus(*req.Status) == domain.StatusPublished && portfolio.PublishedAt == nil {
+			columns["published_at"] = time.Now()
 		}
 	}
 
-	if err := h.portfolioRepo.Update(portfolio); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse("INTERNAL_ERROR", "Gagal memperbarui portfolio"))
+	if len(columns) > 0 {
+		if err := h.portfolioRepo.UpdateColumns(id, columns); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse("INTERNAL_ERROR", "Gagal memperbarui portfolio"))
+		}
 	}
 
 	if req.TagIDs != nil {
