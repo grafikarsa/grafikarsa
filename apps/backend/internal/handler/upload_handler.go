@@ -247,18 +247,28 @@ func (h *UploadHandler) Confirm(c *fiber.Ctx) error {
 		if pending.TargetUserID != nil {
 			updateUserID = *pending.TargetUserID
 		}
-		user, _ := h.userRepo.FindByID(updateUserID)
+		user, err := h.userRepo.FindByID(updateUserID)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse("INTERNAL_ERROR", "Gagal menemukan user"))
+		}
 		user.AvatarURL = &publicURL
-		h.userRepo.Update(user)
+		if err := h.userRepo.Update(user); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse("INTERNAL_ERROR", "Gagal memperbarui avatar"))
+		}
 	case "banner":
 		// Use TargetUserID if set (admin uploading for another user), otherwise use UserID
 		updateUserID := pending.UserID
 		if pending.TargetUserID != nil {
 			updateUserID = *pending.TargetUserID
 		}
-		user, _ := h.userRepo.FindByID(updateUserID)
+		user, err := h.userRepo.FindByID(updateUserID)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse("INTERNAL_ERROR", "Gagal menemukan user"))
+		}
 		user.BannerURL = &publicURL
-		h.userRepo.Update(user)
+		if err := h.userRepo.Update(user); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse("INTERNAL_ERROR", "Gagal memperbarui banner"))
+		}
 	case "thumbnail":
 		h.portfolioRepo.UpdateColumns(*pending.PortfolioID, map[string]interface{}{
 			"thumbnail_url": publicURL,

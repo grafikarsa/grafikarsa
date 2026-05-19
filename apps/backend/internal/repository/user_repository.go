@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/grafikarsa/backend/internal/domain"
 	"gorm.io/gorm"
@@ -58,7 +60,31 @@ func (r *UserRepository) FindByUsernameOrEmail(identifier string) (*domain.User,
 }
 
 func (r *UserRepository) Update(user *domain.User) error {
-	return r.db.Save(user).Error
+	now := time.Now()
+	return r.db.Model(&domain.User{}).Where("id = ?", user.ID).Updates(map[string]interface{}{
+		"username":      user.Username,
+		"email":         user.Email,
+		"password_hash": user.PasswordHash,
+		"nama":          user.Nama,
+		"bio":           user.Bio,
+		"avatar_url":    user.AvatarURL,
+		"banner_url":    user.BannerURL,
+		"role":          user.Role,
+		"nisn":          user.NISN,
+		"nis":           user.NIS,
+		"nip":           user.NIP,
+		"kelas_id":      user.KelasID,
+		"tahun_masuk":   user.TahunMasuk,
+		"tahun_lulus":   user.TahunLulus,
+		"phone":         user.Phone,
+		"address":       user.Address,
+		"show_email":    user.ShowEmail,
+		"show_phone":    user.ShowPhone,
+		"show_address":  user.ShowAddress,
+		"is_active":     user.IsActive,
+		"last_login_at": user.LastLoginAt,
+		"updated_at":    now,
+	}).Error
 }
 
 func (r *UserRepository) Delete(id uuid.UUID) error {
