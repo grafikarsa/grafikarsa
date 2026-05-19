@@ -62,6 +62,10 @@ func (r *PortfolioRepository) Update(portfolio *domain.Portfolio) error {
 	return r.db.Save(portfolio).Error
 }
 
+func (r *PortfolioRepository) UpdateColumns(id uuid.UUID, columns map[string]interface{}) error {
+	return r.db.Model(&domain.Portfolio{}).Where("id = ?", id).Updates(columns).Error
+}
+
 func (r *PortfolioRepository) Delete(id uuid.UUID) error {
 	return r.db.Where("id = ?", id).Delete(&domain.Portfolio{}).Error
 }

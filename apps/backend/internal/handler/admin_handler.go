@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"strconv"
 	"time"
 
@@ -1238,15 +1239,22 @@ func (h *AdminHandler) ApprovePortfolio(c *fiber.Ctx) error {
 	adminID := middleware.GetUserID(c)
 	now := time.Now()
 
+	if err := h.portfolioRepo.UpdateColumns(id, map[string]interface{}{
+		"status":            domain.StatusPublished,
+		"admin_review_note": req.Note,
+		"reviewed_by":       adminID,
+		"reviewed_at":       now,
+		"published_at":      now,
+	}); err != nil {
+		log.Printf("[ApprovePortfolio] Failed to update portfolio %s: %v", id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse("INTERNAL_ERROR", "Gagal menyetujui portfolio"))
+	}
+
 	portfolio.Status = domain.StatusPublished
 	portfolio.AdminReviewNote = &req.Note
 	portfolio.ReviewedBy = adminID
 	portfolio.ReviewedAt = &now
 	portfolio.PublishedAt = &now
-
-	if err := h.portfolioRepo.Update(portfolio); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse("INTERNAL_ERROR", "Gagal menyetujui portfolio"))
-	}
 
 	// Send notification to portfolio owner
 	if h.notifService != nil {
@@ -1284,14 +1292,20 @@ func (h *AdminHandler) RejectPortfolio(c *fiber.Ctx) error {
 	adminID := middleware.GetUserID(c)
 	now := time.Now()
 
+	if err := h.portfolioRepo.UpdateColumns(id, map[string]interface{}{
+		"status":            domain.StatusRejected,
+		"admin_review_note": req.Note,
+		"reviewed_by":       adminID,
+		"reviewed_at":       now,
+	}); err != nil {
+		log.Printf("[RejectPortfolio] Failed to update portfolio %s: %v", id, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse("INTERNAL_ERROR", "Gagal menolak portfolio"))
+	}
+
 	portfolio.Status = domain.StatusRejected
 	portfolio.AdminReviewNote = &req.Note
 	portfolio.ReviewedBy = adminID
 	portfolio.ReviewedAt = &now
-
-	if err := h.portfolioRepo.Update(portfolio); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse("INTERNAL_ERROR", "Gagal menolak portfolio"))
-	}
 
 	// Send notification to portfolio owner
 	if h.notifService != nil {
