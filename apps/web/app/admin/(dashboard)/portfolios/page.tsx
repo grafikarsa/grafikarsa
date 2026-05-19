@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, memo, useRef } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   DndContext,
@@ -213,7 +213,9 @@ export default function AdminPortfoliosPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
-  const [page, setPage] = useState(1);
+
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const [selectedPortfolio, setSelectedPortfolio] = useState<PortfolioCard | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -224,28 +226,63 @@ export default function AdminPortfoliosPage() {
   // Memoize callbacks to prevent unnecessary re-creation
   const handleSearchChange = useCallback((value: string) => {
     setSearch(value);
-    setPage(1);
   }, []);
 
   const handleStatusChange = useCallback((value: string) => {
     setStatus(value);
-    setPage(1);
   }, []);
 
   const handleCreateClick = useCallback(() => {
     setShowCreateModal(true);
   }, []);
 
-  const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['admin-portfolios', search, status, page],
-    queryFn: () =>
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isFetching,
+  } = useInfiniteQuery({
+    queryKey: ['admin-portfolios', search, status],
+    queryFn: ({ pageParam = 1 }) =>
       adminPortfoliosApi.getPortfolios({
         search: search || undefined,
         status: status === 'all' ? undefined : status,
-        page,
+        page: pageParam,
         limit: 21,
       }),
+    getNextPageParam: (lastPage) => {
+      if (!lastPage.meta) return undefined;
+      const { current_page, total_pages } = lastPage.meta;
+      return current_page < total_pages ? current_page + 1 : undefined;
+    },
+    initialPageParam: 1,
   });
+
+  // Intersection observer for infinite scroll
+  useEffect(() => {
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+    }
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1, rootMargin: '200px' }
+    );
+
+    if (loadMoreRef.current) {
+      observerRef.current.observe(loadMoreRef.current);
+    }
+
+    return () => {
+      observerRef.current?.disconnect();
+    };
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const { data: detailData, isLoading: detailLoading } = useQuery({
     queryKey: ['portfolio-detail', selectedPortfolio?.id],
@@ -274,8 +311,11 @@ export default function AdminPortfoliosPage() {
     onError: () => toast.error('Gagal mengubah status portfolio'),
   });
 
-  const portfolios = data?.data || [];
-  const pagination = data?.meta;
+  const portfolios = useMemo(
+    () => data?.pages.flatMap((page) => page.data || []) || [],
+    [data]
+  );
+  const totalCount = data?.pages[0]?.meta?.total_count;
 
   // Debug mode: Force empty state
   const debugMode = getDebugEmptyState();
@@ -284,8 +324,8 @@ export default function AdminPortfoliosPage() {
   // Memoize content area - only re-render when actual data changes (search triggers query)
   // NOT when search input changes (that only affects the input field in PortfolioFilters)
   const contentArea = useMemo(() => {
-    // Show loading overlay during refetch
-    const showLoadingOverlay = isFetching && data;
+    // Show loading overlay during refetch (but not initial load or infinite scroll)
+    const showLoadingOverlay = isFetching && !isFetchingNextPage && data;
 
     if (displayPortfolios.length === 0) {
       // Different empty states based on context
@@ -323,6 +363,11 @@ export default function AdminPortfoliosPage() {
     return (
       <>
         {debugMode && <DebugBanner pageName="Kelola Portfolio" />}
+        {totalCount !== undefined && (
+          <p className="mb-4 text-sm text-muted-foreground">
+            {totalCount} portfolio ditemukan
+          </p>
+        )}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 md:gap-6">
           {displayPortfolios.map((portfolio) => (
             <PortfolioCardItem
@@ -342,29 +387,16 @@ export default function AdminPortfoliosPage() {
           ))}
         </div>
 
-        {pagination && pagination.total_pages > 1 && (
-          <div className="flex items-center justify-center gap-2 mt-8">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-            >
-              Previous
-            </Button>
-            <span className="text-sm text-muted-foreground">
-              Halaman {page} dari {pagination.total_pages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.min(pagination.total_pages, p + 1))}
-              disabled={page === pagination.total_pages}
-            >
-              Next
-            </Button>
-          </div>
-        )}
+        {/* Infinite scroll sentinel */}
+        <div ref={loadMoreRef} className="py-8 flex justify-center">
+          {isFetchingNextPage ? (
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          ) : hasNextPage ? (
+            <span className="text-sm text-muted-foreground">Scroll untuk memuat lebih banyak</span>
+          ) : displayPortfolios.length > 0 ? (
+            <span className="text-sm text-muted-foreground">Semua portfolio sudah dimuat</span>
+          ) : null}
+        </div>
 
         {showLoadingOverlay && (
           <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
@@ -376,9 +408,8 @@ export default function AdminPortfoliosPage() {
         )}
       </>
     );
-    // Note: 'search' is in dependencies because it's the debounced value from PortfolioFilters
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [portfolios, pagination, page, search, status, isFetching, data, updateStatusMutation.isPending]);
+  }, [portfolios, totalCount, search, status, isFetching, isFetchingNextPage, data, updateStatusMutation.isPending]);
 
   // Initial loading - show full skeleton
   if (isLoading && !data) {

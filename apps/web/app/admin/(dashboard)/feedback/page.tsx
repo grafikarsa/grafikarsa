@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -20,6 +21,7 @@ import {
   Edit,
   FileText,
   Paperclip,
+  ExternalLink,
 } from 'lucide-react';
 import { getDebugEmptyState } from '@/lib/utils/debug';
 import { DebugBanner } from '@/components/admin/debug-banner';
@@ -61,7 +63,7 @@ import {
 } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { adminFeedbackApi, Feedback, FeedbackStatus } from '@/lib/api/admin';
-import { formatDate } from '@/lib/utils/format';
+import { formatDate, formatDateTime } from '@/lib/utils/format';
 import { cn } from '@/lib/utils';
 
 const statusOptions = [
@@ -488,7 +490,7 @@ function FeedbackTable({
                 </TableCell>
                 <TableCell>
                   <span className="text-sm text-muted-foreground">
-                    {formatDate(item.created_at)}
+                    {formatDateTime(item.created_at)}
                   </span>
                 </TableCell>
                 <TableCell className="text-right">
@@ -565,7 +567,7 @@ function FeedbackKanban({
                         <KategoriIcon className="h-4 w-4" />
                       </div>
                       <span className="text-[10px] text-muted-foreground">
-                        {formatDate(item.created_at)}
+                        {formatDateTime(item.created_at)}
                       </span>
                     </div>
                     <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-foreground/90">
@@ -652,7 +654,7 @@ function FeedbackDetailDialog({
             Feedback {feedback.kategori.charAt(0).toUpperCase() + feedback.kategori.slice(1)}
           </DialogTitle>
           <DialogDescription>
-            Dikirim pada {formatDate(feedback.created_at)}
+            Dikirim pada {formatDateTime(feedback.created_at)}
             {feedback.user && ` oleh ${feedback.user.nama}`}
           </DialogDescription>
         </DialogHeader>
@@ -668,16 +670,20 @@ function FeedbackDetailDialog({
 
           {/* User Info */}
           {feedback.user && (
-            <div className="flex items-center gap-3 rounded-lg bg-muted p-3">
+            <Link
+              href={`/${feedback.user.username}`}
+              className="flex items-center gap-3 rounded-lg bg-muted p-3 transition-colors hover:bg-muted/80"
+            >
               <Avatar className="h-10 w-10">
                 <AvatarImage src={feedback.user.avatar_url} />
                 <AvatarFallback>{feedback.user.nama?.charAt(0)}</AvatarFallback>
               </Avatar>
-              <div>
+              <div className="flex-1 min-w-0">
                 <p className="font-medium">{feedback.user.nama}</p>
                 <p className="text-sm text-muted-foreground">@{feedback.user.username}</p>
               </div>
-            </div>
+              <ExternalLink className="h-4 w-4 text-muted-foreground shrink-0" />
+            </Link>
           )}
 
           {/* Pesan */}
