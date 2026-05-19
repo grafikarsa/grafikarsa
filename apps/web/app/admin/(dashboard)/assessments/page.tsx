@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   Search,
@@ -71,21 +71,61 @@ export default function AdminAssessmentsPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<FilterType>('all');
-  const [page, setPage] = useState(1);
   const [selectedPortfolio, setSelectedPortfolio] = useState<PortfolioForAssessment | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<PortfolioForAssessment | null>(null);
   const debouncedSearch = useDebounce(search, 300);
 
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['admin-assessments', debouncedSearch, filter, page],
-    queryFn: () =>
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isError,
+    refetch,
+  } = useInfiniteQuery({
+    queryKey: ['admin-assessments', debouncedSearch, filter],
+    queryFn: ({ pageParam = 1 }) =>
       adminAssessmentsApi.getPortfolios({
         search: debouncedSearch || undefined,
         filter: filter === 'all' ? undefined : filter,
-        page,
+        page: pageParam,
         limit: 20,
       }),
+    getNextPageParam: (lastPage) => {
+      if (!lastPage.meta) return undefined;
+      const { current_page, total_pages } = lastPage.meta;
+      return current_page < total_pages ? current_page + 1 : undefined;
+    },
+    initialPageParam: 1,
   });
+
+  // Intersection observer for infinite scroll
+  useEffect(() => {
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+    }
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1, rootMargin: '200px' }
+    );
+
+    if (loadMoreRef.current) {
+      observerRef.current.observe(loadMoreRef.current);
+    }
+
+    return () => {
+      observerRef.current?.disconnect();
+    };
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // Fetch stats for accurate counts
   const { data: statsData } = useQuery({
@@ -103,12 +143,14 @@ export default function AdminAssessmentsPage() {
     onError: () => toast.error('Gagal menghapus penilaian'),
   });
 
-  const portfolios = data?.data || [];
-  const pagination = data?.meta;
+  const portfolios = useMemo(
+    () => data?.pages.flatMap((page) => page.data || []) || [],
+    [data]
+  );
   const stats = statsData?.data;
 
   // Stats - use stats endpoint for accurate totals
-  const totalCount = stats?.total_published || pagination?.total_count || 0;
+  const totalCount = stats?.total_published || data?.pages[0]?.meta?.total_count || 0;
   const assessedCount = stats?.assessed || 0;
   const pendingCount = stats?.pending || 0;
 
@@ -258,41 +300,29 @@ export default function AdminAssessmentsPage() {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 md:gap-6">
-              {displayPortfolios.map((portfolio) => (
-                <PortfolioCard
-                  key={portfolio.id}
-                  portfolio={portfolio}
-                  onAssess={() => setSelectedPortfolio(portfolio)}
-                  onDelete={() => setDeleteTarget(portfolio)}
-                />
-              ))}
-            </div>
-          )}
+            <>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 md:gap-6">
+                {displayPortfolios.map((portfolio) => (
+                  <PortfolioCard
+                    key={portfolio.id}
+                    portfolio={portfolio}
+                    onAssess={() => setSelectedPortfolio(portfolio)}
+                    onDelete={() => setDeleteTarget(portfolio)}
+                  />
+                ))}
+              </div>
 
-          {/* Pagination */}
-          {pagination && pagination.total_pages > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-8">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-              >
-                Previous
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                Halaman {page} dari {pagination.total_pages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.min(pagination.total_pages, p + 1))}
-                disabled={page === pagination.total_pages}
-              >
-                Next
-              </Button>
-            </div>
+              {/* Infinite scroll sentinel */}
+              <div ref={loadMoreRef} className="py-8 flex justify-center">
+                {isFetchingNextPage ? (
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                ) : hasNextPage ? (
+                  <span className="text-sm text-muted-foreground">Scroll untuk memuat lebih banyak</span>
+                ) : displayPortfolios.length > 0 ? (
+                  <span className="text-sm text-muted-foreground">Semua portfolio sudah dimuat</span>
+                ) : null}
+              </div>
+            </>
           )}
         </div>
       </div>
