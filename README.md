@@ -3,7 +3,7 @@
 A portfolio catalog platform for SMKN 4 Malang students and alumni.
 
 Grafikarsa enables students to create, manage, and showcase their work through a structured portfolio system with content blocks, social features, and an admin moderation workflow.
-
+ 
 ---
 
 ## Tech Stack
