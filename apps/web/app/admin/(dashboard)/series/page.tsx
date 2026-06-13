@@ -802,14 +802,16 @@ function MovePortfoliosDialog({
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
-  const [targetSeriesId, setTargetSeriesId] = useState<string | null>(null);
+  const [targetSeriesId, setTargetSeriesId] = useState<string | undefined>(undefined);
   const [step, setStep] = useState<'select' | 'confirm'>('select');
 
   const moveMutation = useMutation({
-    mutationFn: () => adminSeriesApi.movePortfoliosSeries(sourceSeries!.id, targetSeriesId),
+    mutationFn: () => adminSeriesApi.movePortfoliosSeries(sourceSeries!.id, targetSeriesId === 'none' ? null : (targetSeriesId || null)),
     onSuccess: (data) => {
       const movedCount = data?.data?.moved_count || 0;
-      const targetName = targetSeriesId
+      const targetName = targetSeriesId === 'none'
+        ? 'Tanpa Series'
+        : targetSeriesId
         ? allSeries.find((s) => s.id === targetSeriesId)?.nama || 'series tujuan'
         : 'Tanpa Series';
       toast.success(`${movedCount} portfolio berhasil dipindahkan ke "${targetName}"`);
@@ -822,7 +824,7 @@ function MovePortfoliosDialog({
   });
 
   const handleClose = () => {
-    setTargetSeriesId(null);
+    setTargetSeriesId(undefined);
     setStep('select');
     onClose();
   };
@@ -836,7 +838,9 @@ function MovePortfoliosDialog({
   };
 
   const targetSeriesOptions = allSeries.filter((s) => s.id !== sourceSeries?.id);
-  const selectedTargetName = targetSeriesId
+  const selectedTargetName = targetSeriesId === 'none'
+    ? 'Tanpa Series'
+    : targetSeriesId
     ? allSeries.find((s) => s.id === targetSeriesId)?.nama
     : null;
 
@@ -866,13 +870,16 @@ function MovePortfoliosDialog({
             <div className="space-y-2">
               <Label>Series Tujuan</Label>
               <Select
-                value={targetSeriesId || 'none'}
-                onValueChange={(val) => setTargetSeriesId(val === 'none' ? null : val)}
+                value={targetSeriesId}
+                onValueChange={(val) => setTargetSeriesId(val)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Pilih series tujuan" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="" disabled>
+                    Pilih series tujuan
+                  </SelectItem>
                   <SelectItem value="none">
                     <span className="text-muted-foreground">Tanpa Series (hapus assignment)</span>
                   </SelectItem>
@@ -894,7 +901,7 @@ function MovePortfoliosDialog({
               </Select>
             </div>
 
-            {targetSeriesId === null && (
+            {targetSeriesId === 'none' && (
               <p className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 rounded-md p-2">
                 Portfolio akan dihapus dari series ini (series_id menjadi NULL). Portfolio tidak akan terhapus, hanya relasi series-nya saja.
               </p>
@@ -910,7 +917,7 @@ function MovePortfoliosDialog({
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Ke:</span>
                 <span className="font-medium">
-                  {targetSeriesId ? selectedTargetName : 'Tanpa Series'}
+                  {selectedTargetName || 'Tanpa Series'}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
@@ -935,7 +942,7 @@ function MovePortfoliosDialog({
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={moveMutation.isPending || (step === 'select' && targetSeriesId === undefined)}
+            disabled={moveMutation.isPending || (step === 'select' && targetSeriesId == null)}
           >
             {moveMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {step === 'select' ? 'Lanjutkan' : 'Pindahkan'}
