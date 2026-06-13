@@ -450,6 +450,14 @@ export const adminSeriesApi = {
     return response.data;
   },
 
+  movePortfoliosSeries: async (sourceSeriesId: string, targetSeriesId: string | null) => {
+    const response = await api.post<ApiResponse<{ moved_count: number }>>(
+      `/admin/series/${sourceSeriesId}/move-portfolios`,
+      { target_series_id: targetSeriesId }
+    );
+    return response.data;
+  },
+
   // Export endpoints
   getExportPreview: async (id: string, params?: { jurusan_id?: string; kelas_id?: string }) => {
     const response = await api.get<ApiResponse<ExportPreviewResponse>>(`/admin/series/${id}/export/preview`, { params });

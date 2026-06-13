@@ -301,6 +301,14 @@ func (r *AdminRepository) GetSeriesPortfolioCount(id uuid.UUID) (int64, error) {
 	return count, err
 }
 
+// MovePortfoliosToSeries moves all portfolios from one series to another (or NULL)
+func (r *AdminRepository) MovePortfoliosToSeries(sourceSeriesID uuid.UUID, targetSeriesID *uuid.UUID) (int64, error) {
+	result := r.db.Model(&domain.Portfolio{}).
+		Where("series_id = ? AND deleted_at IS NULL", sourceSeriesID).
+		Update("series_id", targetSeriesID)
+	return result.RowsAffected, result.Error
+}
+
 // UpdateSeriesBlocks replaces all blocks for a series
 func (r *AdminRepository) UpdateSeriesBlocks(seriesID uuid.UUID, blocks []domain.SeriesBlock) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
