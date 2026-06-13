@@ -19,6 +19,7 @@ import {
   ChevronUp,
   FileDown,
   Search,
+  ArrowRightLeft,
 } from 'lucide-react';
 import { getDebugEmptyState } from '@/lib/utils/debug';
 import { DebugBanner } from '@/components/admin/debug-banner';
@@ -84,6 +85,7 @@ export default function AdminSeriesPage() {
   const [deleteSeries, setDeleteSeries] = useState<Series | null>(null);
   const [previewSeriesId, setPreviewSeriesId] = useState<string | null>(null);
   const [exportSeries, setExportSeries] = useState<Series | null>(null);
+  const [moveSeries, setMoveSeries] = useState<Series | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-series', searchQuery],
@@ -210,6 +212,17 @@ export default function AdminSeriesPage() {
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
+              setMoveSeries(s);
+            }}
+          >
+            <ArrowRightLeft className="h-4 w-4 mr-1" />
+            Ganti Series
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
               setExportSeries(s);
             }}
           >
@@ -327,6 +340,13 @@ export default function AdminSeriesPage() {
         series={exportSeries}
         open={!!exportSeries}
         onClose={() => setExportSeries(null)}
+      />
+
+      <MovePortfoliosDialog
+        sourceSeries={moveSeries}
+        allSeries={series}
+        open={!!moveSeries}
+        onClose={() => setMoveSeries(null)}
       />
     </div>
   );
@@ -763,6 +783,162 @@ function SeriesPreviewDialog({
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             Tutup
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function MovePortfoliosDialog({
+  sourceSeries,
+  allSeries,
+  open,
+  onClose,
+}: {
+  sourceSeries: Series | null;
+  allSeries: Series[];
+  open: boolean;
+  onClose: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [targetSeriesId, setTargetSeriesId] = useState<string | null>(null);
+  const [step, setStep] = useState<'select' | 'confirm'>('select');
+
+  const moveMutation = useMutation({
+    mutationFn: () => adminSeriesApi.movePortfoliosSeries(sourceSeries!.id, targetSeriesId),
+    onSuccess: (data) => {
+      const movedCount = data?.data?.moved_count || 0;
+      const targetName = targetSeriesId
+        ? allSeries.find((s) => s.id === targetSeriesId)?.nama || 'series tujuan'
+        : 'Tanpa Series';
+      toast.success(`${movedCount} portfolio berhasil dipindahkan ke "${targetName}"`);
+      queryClient.invalidateQueries({ queryKey: ['admin-series'] });
+      handleClose();
+    },
+    onError: () => {
+      toast.error('Gagal memindahkan portfolio');
+    },
+  });
+
+  const handleClose = () => {
+    setTargetSeriesId(null);
+    setStep('select');
+    onClose();
+  };
+
+  const handleConfirm = () => {
+    if (step === 'select') {
+      setStep('confirm');
+    } else {
+      moveMutation.mutate();
+    }
+  };
+
+  const targetSeriesOptions = allSeries.filter((s) => s.id !== sourceSeries?.id);
+  const selectedTargetName = targetSeriesId
+    ? allSeries.find((s) => s.id === targetSeriesId)?.nama
+    : null;
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <ArrowRightLeft className="h-5 w-5" />
+            {step === 'select' ? 'Ganti Series' : 'Konfirmasi'}
+          </DialogTitle>
+          {step === 'select' ? (
+            <div className="text-muted-foreground text-sm">
+              Pindahkan semua portfolio dari series{' '}
+              <strong className="text-foreground">&quot;{sourceSeries?.nama}&quot;</strong>{' '}
+              ({sourceSeries?.portfolio_count || 0} portfolio) ke series lain.
+            </div>
+          ) : (
+            <div className="text-muted-foreground text-sm">
+              Apakah Anda yakin ingin memindahkan semua portfolio?
+            </div>
+          )}
+        </DialogHeader>
+
+        {step === 'select' ? (
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Series Tujuan</Label>
+              <Select
+                value={targetSeriesId || 'none'}
+                onValueChange={(val) => setTargetSeriesId(val === 'none' ? null : val)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih series tujuan" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">
+                    <span className="text-muted-foreground">Tanpa Series (hapus assignment)</span>
+                  </SelectItem>
+                  <Separator className="my-1" />
+                  {targetSeriesOptions.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      <div className="flex items-center gap-2">
+                        <span>{s.nama}</span>
+                        {!s.is_active && (
+                          <Badge variant="secondary" className="text-xs">Nonaktif</Badge>
+                        )}
+                        <span className="text-xs text-muted-foreground">
+                          ({s.portfolio_count || 0} portfolio)
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {targetSeriesId === null && (
+              <p className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 rounded-md p-2">
+                Portfolio akan dihapus dari series ini (series_id menjadi NULL). Portfolio tidak akan terhapus, hanya relasi series-nya saja.
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3 py-2">
+            <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Dari:</span>
+                <span className="font-medium">{sourceSeries?.nama}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Ke:</span>
+                <span className="font-medium">
+                  {targetSeriesId ? selectedTargetName : 'Tanpa Series'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Jumlah portfolio:</span>
+                <span className="font-medium">{sourceSeries?.portfolio_count || 0}</span>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Content blocks portfolio tidak akan diubah. Hanya assignment series yang akan dipindahkan.
+            </p>
+          </div>
+        )}
+
+        <DialogFooter>
+          {step === 'confirm' && (
+            <Button variant="outline" onClick={() => setStep('select')}>
+              Kembali
+            </Button>
+          )}
+          <Button variant="outline" onClick={handleClose}>
+            Batal
+          </Button>
+          <Button
+            onClick={handleConfirm}
+            disabled={moveMutation.isPending || (step === 'select' && targetSeriesId === undefined)}
+          >
+            {moveMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {step === 'select' ? 'Lanjutkan' : 'Pindahkan'}
           </Button>
         </DialogFooter>
       </DialogContent>

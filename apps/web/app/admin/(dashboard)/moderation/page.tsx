@@ -336,7 +336,7 @@ export default function ModerationPage() {
                 <DialogTitle className="line-clamp-1 text-lg font-semibold">
                   {selectedPortfolio?.judul}
                 </DialogTitle>
-                <DialogDescription className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
                   <div className="flex items-center gap-1.5">
                     <Avatar className="h-5 w-5">
                       <AvatarImage src={selectedPortfolio?.user?.avatar_url} />
@@ -367,7 +367,7 @@ export default function ModerationPage() {
                       </span>
                     </>
                   )}
-                </DialogDescription>
+                </div>
               </div>
             </div>
 

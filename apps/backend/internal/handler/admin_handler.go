@@ -718,6 +718,44 @@ func (h *AdminHandler) DeleteSeries(c *fiber.Ctx) error {
 	return c.JSON(dto.SuccessResponse(nil, "Series berhasil dihapus"))
 }
 
+func (h *AdminHandler) MovePortfoliosSeries(c *fiber.Ctx) error {
+	sourceID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse("VALIDATION_ERROR", "ID series sumber tidak valid"))
+	}
+
+	// Verify source series exists
+	_, err = h.adminRepo.FindSeriesByID(sourceID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(dto.ErrorResponse("NOT_FOUND", "Series sumber tidak ditemukan"))
+	}
+
+	var req dto.MovePortfoliosSeriesRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse("VALIDATION_ERROR", "Request body tidak valid"))
+	}
+
+	// Verify target series exists (if not null)
+	if req.TargetSeriesID != nil {
+		if *req.TargetSeriesID == sourceID {
+			return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse("VALIDATION_ERROR", "Series tujuan tidak boleh sama dengan series sumber"))
+		}
+		_, err = h.adminRepo.FindSeriesByID(*req.TargetSeriesID)
+		if err != nil {
+			return c.Status(fiber.StatusNotFound).JSON(dto.ErrorResponse("NOT_FOUND", "Series tujuan tidak ditemukan"))
+		}
+	}
+
+	rowsAffected, err := h.adminRepo.MovePortfoliosToSeries(sourceID, req.TargetSeriesID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse("INTERNAL_ERROR", "Gagal memindahkan portfolio"))
+	}
+
+	return c.JSON(dto.SuccessResponse(fiber.Map{
+		"moved_count": rowsAffected,
+	}, "Portfolio berhasil dipindahkan"))
+}
+
 // User Management Handlers
 func (h *AdminHandler) ListUsers(c *fiber.Ctx) error {
 	search := c.Query("search")

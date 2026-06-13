@@ -192,6 +192,10 @@ type AdminUpdatePortfolioRequest struct {
 	TagIDs []uuid.UUID `json:"tag_ids,omitempty"`
 }
 
+type MovePortfoliosSeriesRequest struct {
+	TargetSeriesID *uuid.UUID `json:"target_series_id"` // null = hapus assignment (set ke NULL)
+}
+
 // Dashboard Stats
 type DashboardStatsDTO struct {
 	Users                   UserStatsDTO                `json:"users"`

@@ -342,6 +342,7 @@ func main() {
 	adminRoutes.Post("/series", capMiddleware.RequireCapability("series"), adminHandler.CreateSeries)
 	adminRoutes.Patch("/series/:id", capMiddleware.RequireCapability("series"), adminHandler.UpdateSeries)
 	adminRoutes.Delete("/series/:id", capMiddleware.RequireCapability("series"), adminHandler.DeleteSeries)
+	adminRoutes.Post("/series/:id/move-portfolios", capMiddleware.RequireCapability("series"), adminHandler.MovePortfoliosSeries)
 	adminRoutes.Get("/series/:id/export/preview", capMiddleware.RequireCapability("series"), adminHandler.GetSeriesExportPreview)
 	adminRoutes.Get("/series/:id/export", capMiddleware.RequireCapability("series"), adminHandler.GetSeriesExportData)
 
