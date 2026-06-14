@@ -853,15 +853,15 @@ function MovePortfoliosDialog({
             {step === 'select' ? 'Ganti Series' : 'Konfirmasi'}
           </DialogTitle>
           {step === 'select' ? (
-            <div className="text-muted-foreground text-sm">
+            <DialogDescription className="text-muted-foreground text-sm">
               Pindahkan semua portfolio dari series{' '}
               <strong className="text-foreground">&quot;{sourceSeries?.nama}&quot;</strong>{' '}
               ({sourceSeries?.portfolio_count || 0} portfolio) ke series lain.
-            </div>
+            </DialogDescription>
           ) : (
-            <div className="text-muted-foreground text-sm">
+            <DialogDescription className="text-muted-foreground text-sm">
               Apakah Anda yakin ingin memindahkan semua portfolio?
-            </div>
+            </DialogDescription>
           )}
         </DialogHeader>
 
@@ -877,9 +877,6 @@ function MovePortfoliosDialog({
                   <SelectValue placeholder="Pilih series tujuan" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="" disabled>
-                    Pilih series tujuan
-                  </SelectItem>
                   <SelectItem value="none">
                     <span className="text-muted-foreground">Tanpa Series (hapus assignment)</span>
                   </SelectItem>
