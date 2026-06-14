@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { pdf } from '@react-pdf/renderer';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import QRCode from 'qrcode';
 import { toast } from 'sonner';
 import {
@@ -30,7 +31,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
-import { adminSeriesApi, adminMajorsApi, adminClassesApi, Major, Class, SeriesExportResponse } from '@/lib/api/admin';
+import { adminSeriesApi, adminMajorsApi, adminClassesApi, SeriesExportResponse } from '@/lib/api/admin';
 import { Series } from '@/lib/types';
 import { PdfDocument } from './pdf-document';
 
@@ -47,7 +48,6 @@ export function ExportPdfModal({ series, open, onClose }: ExportPdfModalProps) {
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState('');
 
-  // Reset filters when modal opens
   useEffect(() => {
     if (open) {
       setJurusanId('all');
@@ -57,14 +57,12 @@ export function ExportPdfModal({ series, open, onClose }: ExportPdfModalProps) {
     }
   }, [open]);
 
-  // Fetch majors
   const { data: majorsData } = useQuery({
     queryKey: ['admin-majors'],
     queryFn: () => adminMajorsApi.getMajors(),
     enabled: open,
   });
 
-  // Fetch classes (filtered by jurusan if selected)
   const { data: classesData } = useQuery({
     queryKey: ['admin-classes', jurusanId],
     queryFn: () =>
@@ -75,7 +73,6 @@ export function ExportPdfModal({ series, open, onClose }: ExportPdfModalProps) {
     enabled: open,
   });
 
-  // Fetch export preview
   const { data: previewData, isLoading: isLoadingPreview } = useQuery({
     queryKey: ['export-preview', series?.id, jurusanId, kelasId],
     queryFn: () =>
@@ -90,10 +87,51 @@ export function ExportPdfModal({ series, open, onClose }: ExportPdfModalProps) {
   const classes = classesData?.data || [];
   const preview = previewData?.data;
 
-  // Reset kelas when jurusan changes
   useEffect(() => {
     setKelasId('all');
   }, [jurusanId]);
+
+  const fetchImageAsBase64 = useCallback(async (url: string): Promise<string | null> => {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) return null;
+      const blob = await response.blob();
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const fetchAllImages = useCallback(async (exportData: SeriesExportResponse): Promise<Map<string, string>> => {
+    const imageCache = new Map<string, string>();
+    const urls = new Set<string>();
+
+    for (const portfolio of exportData.portfolios) {
+      if (portfolio.user.avatar_url) urls.add(portfolio.user.avatar_url);
+      if (portfolio.thumbnail_url) urls.add(portfolio.thumbnail_url);
+      for (const block of portfolio.content_blocks) {
+        if (block.block_type === 'image' && block.payload.url) {
+          urls.add(String(block.payload.url));
+        }
+      }
+    }
+
+    const urlArray = Array.from(urls);
+    for (let i = 0; i < urlArray.length; i += 5) {
+      const batch = urlArray.slice(i, i + 5);
+      const results = await Promise.all(batch.map(fetchImageAsBase64));
+      batch.forEach((url, idx) => {
+        if (results[idx]) imageCache.set(url, results[idx]!);
+      });
+    }
+
+    return imageCache;
+  }, [fetchImageAsBase64]);
 
   const generateQrCodes = useCallback(async (usernames: string[]): Promise<Map<string, string>> => {
     const qrCodes = new Map<string, string>();
@@ -113,51 +151,31 @@ export function ExportPdfModal({ series, open, onClose }: ExportPdfModalProps) {
     return qrCodes;
   }, []);
 
-  // Fetch image and convert to base64
-  const fetchImageAsBase64 = useCallback(async (url: string): Promise<string | null> => {
-    try {
-      const response = await fetch(url);
-      if (!response.ok) return null;
-      const blob = await response.blob();
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = () => resolve(null);
-        reader.readAsDataURL(blob);
-      });
-    } catch {
-      return null;
-    }
-  }, []);
+  const addPageNumbers = async (blob: Blob): Promise<Blob> => {
+    const pdfBytes = await blob.arrayBuffer();
+    const pdfDoc = await PDFDocument.load(pdfBytes);
+    const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const pages = pdfDoc.getPages();
+    const totalPages = pages.length;
 
-  // Fetch all images and cache them
-  const fetchAllImages = useCallback(async (exportData: SeriesExportResponse): Promise<Map<string, string>> => {
-    const imageCache = new Map<string, string>();
-    const urls = new Set<string>();
+    for (let i = 0; i < pages.length; i++) {
+      const page = pages[i];
+      const { width, height } = page.getSize();
+      const text = `Halaman ${i + 1} dari ${totalPages}`;
+      const textWidth = helvetica.widthOfTextAtSize(text, 7);
 
-    // Collect all image URLs
-    for (const portfolio of exportData.portfolios) {
-      if (portfolio.user.avatar_url) urls.add(portfolio.user.avatar_url);
-      if (portfolio.thumbnail_url) urls.add(portfolio.thumbnail_url);
-      for (const block of portfolio.content_blocks) {
-        if (block.block_type === 'image' && block.payload.url) {
-          urls.add(String(block.payload.url));
-        }
-      }
-    }
-
-    // Fetch all images in parallel (max 5 concurrent)
-    const urlArray = Array.from(urls);
-    for (let i = 0; i < urlArray.length; i += 5) {
-      const batch = urlArray.slice(i, i + 5);
-      const results = await Promise.all(batch.map(fetchImageAsBase64));
-      batch.forEach((url, idx) => {
-        if (results[idx]) imageCache.set(url, results[idx]!);
+      page.drawText(text, {
+        x: (width - textWidth) / 2,
+        y: 20,
+        size: 7,
+        font: helvetica,
+        color: rgb(0.53, 0.53, 0.53),
       });
     }
 
-    return imageCache;
-  }, [fetchImageAsBase64]);
+    const finalBytes = await pdfDoc.save();
+    return new Blob([new Uint8Array(finalBytes)], { type: 'application/pdf' });
+  };
 
   const handleExport = async () => {
     if (!series) return;
@@ -167,7 +185,6 @@ export function ExportPdfModal({ series, open, onClose }: ExportPdfModalProps) {
     setProgressMessage('Mengambil data portofolio...');
 
     try {
-      // Fetch export data
       const response = await adminSeriesApi.getExportData(series.id, {
         jurusan_id: jurusanId !== 'all' ? jurusanId : undefined,
         kelas_id: kelasId !== 'all' ? kelasId : undefined,
@@ -183,16 +200,19 @@ export function ExportPdfModal({ series, open, onClose }: ExportPdfModalProps) {
       setProgress(20);
       setProgressMessage(`Memproses ${data.portfolios.length} portofolio...`);
 
+      // Build filter labels
+      const jurusanLabel = jurusanId === 'all'
+        ? 'Semua Jurusan'
+        : (majors.find((m) => m.id === jurusanId)?.nama || jurusanId);
+      const kelasLabel = kelasId === 'all'
+        ? 'Semua Kelas'
+        : (classes.find((c) => c.id === kelasId)?.nama || kelasId);
+
       // Generate QR codes
       setProgress(30);
       setProgressMessage('Membuat QR codes...');
       const usernames = [...new Set(data.portfolios.map((p) => p.user.username))];
       const qrCodes = await generateQrCodes(usernames);
-
-      // Fetch logo
-      setProgress(40);
-      setProgressMessage('Mengambil logo...');
-      const logoBase64 = await fetchImageAsBase64('/logo.png');
 
       // Fetch all images
       setProgress(50);
@@ -202,19 +222,24 @@ export function ExportPdfModal({ series, open, onClose }: ExportPdfModalProps) {
       setProgress(70);
       setProgressMessage('Membuat dokumen PDF...');
 
-      // Generate PDF
-      const doc = <PdfDocument data={data} qrCodes={qrCodes} imageCache={imageCache} logoBase64={logoBase64 || undefined} />;
+      // Pass 1: Render PDF with @react-pdf/renderer (no page numbers)
+      const doc = <PdfDocument data={data} qrCodes={qrCodes} imageCache={imageCache} jurusanLabel={jurusanLabel} kelasLabel={kelasLabel} />;
       const blob = await pdf(doc).toBlob();
+
+      setProgress(80);
+      setProgressMessage('Menambahkan nomor halaman...');
+
+      // Pass 2: Post-process with pdf-lib to add accurate page numbers
+      const finalBlob = await addPageNumbers(blob);
 
       setProgress(90);
       setProgressMessage('Menyiapkan download...');
 
       // Download
-      const url = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(finalBlob);
       const link = document.createElement('a');
       link.href = url;
       const timestamp = new Date().toISOString().slice(0, 10);
-      // Include usernames in filename (max 3)
       const usernameList = usernames.slice(0, 3).join('_');
       const usernameSuffix = usernames.length > 3 ? `_dan_${usernames.length - 3}_lainnya` : '';
       const filename = `${series.nama.replace(/[^a-zA-Z0-9]/g, '_')}_${usernameList}${usernameSuffix}_${timestamp}.pdf`;
