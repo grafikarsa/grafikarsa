@@ -121,6 +121,7 @@ func main() {
 
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
+		ReadBufferSize: 16384, // 16KB - increase header size limit
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
 			if e, ok := err.(*fiber.Error); ok {
