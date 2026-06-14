@@ -1,9 +1,24 @@
+<div align="center">
+
 # Grafikarsa
- 
-A portfolio catalog platform for SMKN 4 Malang students and alumni.
+
+**A portfolio catalog platform for SMKN 4 Malang students and alumni.**
+
+[![License](https://img.shields.io/badge/license-Proprietary-blue.svg)](LICENSE)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev/)
+[![Go](https://img.shields.io/badge/Go-1.24-00ADD8?logo=go)](https://go.dev/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql)](https://www.postgresql.org/)
+[![Docker](https://img.shields.io/badge/Docker-24-2496ED?logo=docker)](https://www.docker.com/)
+
+<br/>
 
 Grafikarsa enables students to create, manage, and showcase their work through a structured portfolio system with content blocks, social features, and an admin moderation workflow.
- 
+
+**[Indonesia](#grafikarsa-1) · [English](#grafikarsa)**
+
+</div>
+
 ---
 
 ## Tech Stack
@@ -112,11 +127,26 @@ This software was developed for SMKN 4 Malang. See [LICENSE](LICENSE) for detail
 
 ---
 
+<div align="center">
+
 # Grafikarsa
 
-Platform katalog portofolio untuk siswa dan alumni SMKN 4 Malang.
+**Platform katalog portofolio untuk siswa dan alumni SMKN 4 Malang.**
+
+[![License](https://img.shields.io/badge/license-Proprietary-blue.svg)](LICENSE)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev/)
+[![Go](https://img.shields.io/badge/Go-1.24-00ADD8?logo=go)](https://go.dev/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql)](https://www.postgresql.org/)
+[![Docker](https://img.shields.io/badge/Docker-24-2496ED?logo=docker)](https://www.docker.com/)
+
+<br/>
 
 Grafikarsa memungkinkan siswa membuat, mengelola, dan memamerkan karya mereka melalui sistem portofolio terstruktur dengan content blocks, fitur sosial, dan alur moderasi admin.
+
+**[English](#grafikarsa) · [Indonesia](#grafikarsa-1)**
+
+</div>
 
 ---
 
