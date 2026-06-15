@@ -169,7 +169,7 @@ export function ExportPdfModal({ series, open, onClose }: ExportPdfModalProps) {
         y: 20,
         size: 7,
         font: helvetica,
-        color: rgb(0.53, 0.53, 0.53),
+        color: rgb(1, 1, 1),
       });
     }
 
@@ -219,11 +219,16 @@ export function ExportPdfModal({ series, open, onClose }: ExportPdfModalProps) {
       setProgressMessage('Mengambil gambar...');
       const imageCache = await fetchAllImages(data);
 
+      // Fetch background image
+      setProgress(60);
+      setProgressMessage('Menyiapkan background...');
+      const bgImageBase64 = await fetchImageAsBase64('/images/export/bg.png');
+
       setProgress(70);
       setProgressMessage('Membuat dokumen PDF...');
 
       // Pass 1: Render PDF with @react-pdf/renderer (no page numbers)
-      const doc = <PdfDocument data={data} qrCodes={qrCodes} imageCache={imageCache} jurusanLabel={jurusanLabel} kelasLabel={kelasLabel} />;
+      const doc = <PdfDocument data={data} qrCodes={qrCodes} imageCache={imageCache} jurusanLabel={jurusanLabel} kelasLabel={kelasLabel} bgImage={bgImageBase64 || undefined} />;
       const blob = await pdf(doc).toBlob();
 
       setProgress(80);
