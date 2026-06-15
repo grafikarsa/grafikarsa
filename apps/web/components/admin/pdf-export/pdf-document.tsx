@@ -189,8 +189,14 @@ const s = StyleSheet.create({
     textDecoration: 'underline',
   },
   profileQr: {
-    width: 40,
-    height: 40,
+    width: 56,
+    height: 56,
+  },
+  profileQrLabel: {
+    fontSize: 5,
+    color: C.white,
+    textAlign: 'center',
+    marginTop: 2,
   },
 
   // Thumbnail
@@ -580,6 +586,13 @@ function PortfolioPage({ portfolio, series, qrCode, imageCache, bgImage }: Portf
             {user.nis && <ProfileRow label="NIS" value={user.nis} />}
             <ProfileRow label="Profil" value={profileUrl} isLink />
           </View>
+          {/* QR Code */}
+          {qrCode && (
+            <View style={{ alignItems: 'center' }}>
+              <Image src={qrCode} style={s.profileQr} />
+              <Text style={s.profileQrLabel}>profil grafikarsa</Text>
+            </View>
+          )}
           {/* Thumbnail on right side */}
           {thumbnailBase64 ? (
             <View style={s.thumbnailContainer}>
