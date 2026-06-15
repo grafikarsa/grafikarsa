@@ -50,7 +50,7 @@ export default function ModerationPage() {
   } = useInfiniteQuery({
     queryKey: ['admin-moderation'],
     queryFn: ({ pageParam = 1 }) =>
-      adminPortfoliosApi.getPortfolios({ status: 'pending_review', page: pageParam, limit: 21 }),
+      adminPortfoliosApi.getPortfolios({ status: 'pending_review', page: pageParam, limit: 21, sort: 'created_at' }),
     getNextPageParam: (lastPage) => {
       if (!lastPage.meta) return undefined;
       const { current_page, total_pages } = lastPage.meta;

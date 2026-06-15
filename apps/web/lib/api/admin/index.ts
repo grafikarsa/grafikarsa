@@ -96,7 +96,7 @@ export const adminUsersApi = {
 
 // Admin Portfolios API
 export const adminPortfoliosApi = {
-  getPortfolios: async (params?: PaginationParams & { search?: string; status?: string }) => {
+  getPortfolios: async (params?: PaginationParams & { search?: string; status?: string; sort?: string }) => {
     const response = await api.get<ApiResponse<PortfolioCard[]>>('/admin/portfolios', { params });
     return response.data;
   },
