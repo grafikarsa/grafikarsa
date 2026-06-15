@@ -12,6 +12,8 @@ import {
   FileText,
   Users,
   BookOpen,
+  CheckCircle2,
+  Circle,
 } from 'lucide-react';
 import {
   Dialog,
@@ -30,10 +32,40 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Progress } from '@/components/ui/progress';
 import { adminSeriesApi, adminMajorsApi, adminClassesApi, SeriesExportResponse } from '@/lib/api/admin';
 import { Series } from '@/lib/types';
 import { PdfDocument } from './pdf-document';
+
+// ── Export Step Types ──────────────────────────────────────────────────────
+type StepStatus = 'pending' | 'active' | 'done';
+
+interface ExportStep {
+  id: string;
+  label: string;
+  status: StepStatus;
+  detail?: string;
+}
+
+const STEP_DEFS = [
+  { id: 'fetch', label: 'Mengambil data portofolio' },
+  { id: 'process', label: 'Memproses portofolio' },
+  { id: 'qr', label: 'Membuat QR codes' },
+  { id: 'images', label: 'Mengambil gambar' },
+  { id: 'bg', label: 'Menyiapkan background' },
+  { id: 'render', label: 'Membuat dokumen PDF' },
+  { id: 'number', label: 'Menambahkan nomor halaman' },
+  { id: 'download', label: 'Menyiapkan download' },
+] as const;
+
+function formatElapsed(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
+
+function makeInitialSteps(): ExportStep[] {
+  return STEP_DEFS.map((def) => ({ ...def, status: 'pending' as StepStatus }));
+}
 
 interface ExportPdfModalProps {
   series: Series | null;
@@ -45,17 +77,25 @@ export function ExportPdfModal({ series, open, onClose }: ExportPdfModalProps) {
   const [jurusanId, setJurusanId] = useState<string>('all');
   const [kelasId, setKelasId] = useState<string>('all');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [progressMessage, setProgressMessage] = useState('');
+  const [steps, setSteps] = useState<ExportStep[]>([]);
+  const [elapsedTime, setElapsedTime] = useState(0);
 
   useEffect(() => {
     if (open) {
       setJurusanId('all');
       setKelasId('all');
-      setProgress(0);
-      setProgressMessage('');
+      setSteps([]);
+      setElapsedTime(0);
     }
   }, [open]);
+
+  // Elapsed timer
+  useEffect(() => {
+    if (!isGenerating) return;
+    setElapsedTime(0);
+    const timer = setInterval(() => setElapsedTime((t) => t + 1), 1000);
+    return () => clearInterval(timer);
+  }, [isGenerating]);
 
   const { data: majorsData } = useQuery({
     queryKey: ['admin-majors'],
@@ -107,7 +147,10 @@ export function ExportPdfModal({ series, open, onClose }: ExportPdfModalProps) {
     }
   }, []);
 
-  const fetchAllImages = useCallback(async (exportData: SeriesExportResponse): Promise<Map<string, string>> => {
+  const fetchAllImages = useCallback(async (
+    exportData: SeriesExportResponse,
+    onProgress?: (fetched: number, total: number) => void,
+  ): Promise<Map<string, string>> => {
     const imageCache = new Map<string, string>();
     const urls = new Set<string>();
 
@@ -122,20 +165,27 @@ export function ExportPdfModal({ series, open, onClose }: ExportPdfModalProps) {
     }
 
     const urlArray = Array.from(urls);
+    let fetched = 0;
     for (let i = 0; i < urlArray.length; i += 5) {
       const batch = urlArray.slice(i, i + 5);
       const results = await Promise.all(batch.map(fetchImageAsBase64));
       batch.forEach((url, idx) => {
         if (results[idx]) imageCache.set(url, results[idx]!);
       });
+      fetched += batch.length;
+      onProgress?.(fetched, urlArray.length);
     }
 
     return imageCache;
   }, [fetchImageAsBase64]);
 
-  const generateQrCodes = useCallback(async (usernames: string[]): Promise<Map<string, string>> => {
+  const generateQrCodes = useCallback(async (
+    usernames: string[],
+    onProgress?: (done: number, total: number) => void,
+  ): Promise<Map<string, string>> => {
     const qrCodes = new Map<string, string>();
-    for (const username of usernames) {
+    for (let i = 0; i < usernames.length; i++) {
+      const username = usernames[i];
       try {
         const url = `https://grafikarsa.com/${username}`;
         const dataUrl = await QRCode.toDataURL(url, {
@@ -147,6 +197,7 @@ export function ExportPdfModal({ series, open, onClose }: ExportPdfModalProps) {
       } catch (err) {
         console.error(`Failed to generate QR for ${username}:`, err);
       }
+      onProgress?.(i + 1, usernames.length);
     }
     return qrCodes;
   }, []);
@@ -181,10 +232,14 @@ export function ExportPdfModal({ series, open, onClose }: ExportPdfModalProps) {
     if (!series) return;
 
     setIsGenerating(true);
-    setProgress(10);
-    setProgressMessage('Mengambil data portofolio...');
+    const initSteps = makeInitialSteps();
+    setSteps(initSteps);
 
     try {
+      // Step 1: Fetch data
+      initSteps[0].status = 'active';
+      setSteps([...initSteps]);
+
       const response = await adminSeriesApi.getExportData(series.id, {
         jurusan_id: jurusanId !== 'all' ? jurusanId : undefined,
         kelas_id: kelasId !== 'all' ? kelasId : undefined,
@@ -197,8 +252,12 @@ export function ExportPdfModal({ series, open, onClose }: ExportPdfModalProps) {
       }
 
       const data = response.data;
-      setProgress(20);
-      setProgressMessage(`Memproses ${data.portfolios.length} portofolio...`);
+      initSteps[0].status = 'done';
+
+      // Step 2: Process
+      initSteps[1].status = 'active';
+      initSteps[1].detail = `${data.portfolios.length} portofolio`;
+      setSteps([...initSteps]);
 
       // Build filter labels
       const jurusanLabel = jurusanId === 'all'
@@ -208,39 +267,57 @@ export function ExportPdfModal({ series, open, onClose }: ExportPdfModalProps) {
         ? 'Semua Kelas'
         : (classes.find((c) => c.id === kelasId)?.nama || kelasId);
 
-      // Generate QR codes
-      setProgress(30);
-      setProgressMessage('Membuat QR codes...');
+      initSteps[1].status = 'done';
+
+      // Step 3: QR codes
+      initSteps[2].status = 'active';
+      setSteps([...initSteps]);
+
       const usernames = [...new Set(data.portfolios.map((p) => p.user.username))];
-      const qrCodes = await generateQrCodes(usernames);
+      const qrCodes = await generateQrCodes(usernames, (done, total) => {
+        initSteps[2].detail = `${done}/${total}`;
+        setSteps([...initSteps]);
+      });
+      initSteps[2].status = 'done';
+      initSteps[2].detail = `${usernames.length} kode`;
 
-      // Fetch all images
-      setProgress(50);
-      setProgressMessage('Mengambil gambar...');
-      const imageCache = await fetchAllImages(data);
+      // Step 4: Fetch images
+      initSteps[3].status = 'active';
+      setSteps([...initSteps]);
 
-      // Fetch background image
-      setProgress(60);
-      setProgressMessage('Menyiapkan background...');
+      const imageCache = await fetchAllImages(data, (fetched, total) => {
+        initSteps[3].detail = `${fetched}/${total}`;
+        setSteps([...initSteps]);
+      });
+      initSteps[3].status = 'done';
+      initSteps[3].detail = `${imageCache.size} gambar`;
+
+      // Step 5: Background
+      initSteps[4].status = 'active';
+      setSteps([...initSteps]);
+
       const bgImageBase64 = await fetchImageAsBase64('/images/export/bg.png');
+      initSteps[4].status = 'done';
 
-      setProgress(70);
-      setProgressMessage('Membuat dokumen PDF...');
+      // Step 6: Render PDF
+      initSteps[5].status = 'active';
+      setSteps([...initSteps]);
 
-      // Pass 1: Render PDF with @react-pdf/renderer (no page numbers)
       const doc = <PdfDocument data={data} qrCodes={qrCodes} imageCache={imageCache} jurusanLabel={jurusanLabel} kelasLabel={kelasLabel} bgImage={bgImageBase64 || undefined} />;
       const blob = await pdf(doc).toBlob();
+      initSteps[5].status = 'done';
 
-      setProgress(80);
-      setProgressMessage('Menambahkan nomor halaman...');
+      // Step 7: Page numbers
+      initSteps[6].status = 'active';
+      setSteps([...initSteps]);
 
-      // Pass 2: Post-process with pdf-lib to add accurate page numbers
       const finalBlob = await addPageNumbers(blob);
+      initSteps[6].status = 'done';
 
-      setProgress(90);
-      setProgressMessage('Menyiapkan download...');
+      // Step 8: Download
+      initSteps[7].status = 'active';
+      setSteps([...initSteps]);
 
-      // Download
       const url = URL.createObjectURL(finalBlob);
       const link = document.createElement('a');
       link.href = url;
@@ -254,8 +331,8 @@ export function ExportPdfModal({ series, open, onClose }: ExportPdfModalProps) {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      setProgress(100);
-      setProgressMessage('Selesai!');
+      initSteps[7].status = 'done';
+      setSteps([...initSteps]);
       toast.success(`PDF berhasil di-download: ${filename}`);
 
       setTimeout(() => {
@@ -287,12 +364,34 @@ export function ExportPdfModal({ series, open, onClose }: ExportPdfModalProps) {
         </DialogHeader>
 
         {isGenerating ? (
-          <div className="py-8">
-            <div className="flex flex-col items-center text-center">
-              <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
-              <p className="text-sm font-medium">{progressMessage}</p>
-              <Progress value={progress} className="mt-4 h-2 w-full" />
-              <p className="mt-2 text-xs text-muted-foreground">{Math.round(progress)}%</p>
+          <div className="py-4">
+            <div className="space-y-2">
+              {steps.map((step) => (
+                <div key={step.id} className="flex items-center gap-3">
+                  {step.status === 'done' ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+                  ) : step.status === 'active' ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
+                  ) : (
+                    <Circle className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <span className={`text-sm ${step.status === 'pending' ? 'text-muted-foreground/50' : ''}`}>
+                      {step.label}
+                    </span>
+                    {step.detail && (
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        {step.detail}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 pt-3 border-t text-center">
+              <span className="text-xs text-muted-foreground">
+                Waktu berlalu: {formatElapsed(elapsedTime)}
+              </span>
             </div>
           </div>
         ) : (
