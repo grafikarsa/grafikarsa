@@ -233,15 +233,13 @@ const s = StyleSheet.create({
   contentDivider: {
     width: '100%',
     height: 1,
-    backgroundColor: C.black,
+    backgroundColor: C.white,
     marginBottom: 12,
   },
 
   // Block card
   blockCard: {
     marginBottom: 4,
-    borderWidth: 1,
-    borderColor: C.border,
     padding: 4,
   },
   blockInstruction: {
@@ -259,9 +257,9 @@ const s = StyleSheet.create({
 
   // Text block
   textContent: {
-    fontSize: 6.5,
+    fontSize: 8,
     color: C.white,
-    lineHeight: 1.4,
+    lineHeight: 1.5,
   },
 
   // Image block
@@ -269,13 +267,14 @@ const s = StyleSheet.create({
     marginBottom: 3,
   },
   imageBlockImg: {
-    maxWidth: CONTENT_W - 18,
-    maxHeight: 140,
+    width: COL_W - 10,
+    maxHeight: 160,
     objectFit: 'contain',
     backgroundColor: C.bg,
   },
   imageBlockPlaceholder: {
-    height: 60,
+    width: COL_W - 10,
+    height: 80,
     backgroundColor: C.bg,
     justifyContent: 'center',
     alignItems: 'center',
@@ -611,15 +610,7 @@ function PortfolioPage({ portfolio, series, qrCode, imageCache, bgImage }: Portf
         <Text style={s.contentHeader}>Konten Portofolio</Text>
         <View style={s.contentDivider} />
 
-        {portfolio.content_blocks
-          .sort((a, b) => a.block_order - b.block_order)
-          .map((block) => (
-            <ContentBlock
-              key={block.id}
-              block={block}
-              imageCache={imageCache}
-            />
-          ))}
+        <SplitColumns blocks={portfolio.content_blocks} imageCache={imageCache} />
 
       </View>
 
@@ -699,6 +690,50 @@ function TwoColumnBlocks({ blocks, imageCache }: TwoColumnBlocksProps) {
   flushPair();
 
   return <>{rows}</>;
+}
+
+// ── Split Columns (Text Left, Images Right) ────────────────────────────────
+const IMAGE_TYPES = new Set(['image']);
+
+interface SplitColumnsProps {
+  blocks: PortfolioExportItem['content_blocks'];
+  imageCache: Map<string, string>;
+}
+
+function SplitColumns({ blocks, imageCache }: SplitColumnsProps) {
+  const sorted = [...blocks].sort((a, b) => a.block_order - b.block_order);
+  const fullBlocks = sorted.filter((b) => FULL_WIDTH_TYPES.has(b.block_type));
+  const textBlocks = sorted.filter((b) => !IMAGE_TYPES.has(b.block_type) && !FULL_WIDTH_TYPES.has(b.block_type));
+  const imageBlocks = sorted.filter((b) => IMAGE_TYPES.has(b.block_type));
+
+  return (
+    <>
+      {fullBlocks.map((block) => (
+        <View key={block.id} style={{ marginBottom: 4 }}>
+          <ContentBlock block={block} imageCache={imageCache} />
+        </View>
+      ))}
+
+      {(textBlocks.length > 0 || imageBlocks.length > 0) && (
+        <View style={s.twoColRow}>
+          <View style={s.twoColCell}>
+            {textBlocks.map((block) => (
+              <View key={block.id} style={{ marginBottom: 4 }}>
+                <ContentBlock block={block} imageCache={imageCache} />
+              </View>
+            ))}
+          </View>
+          <View style={s.twoColCell}>
+            {imageBlocks.map((block) => (
+              <View key={block.id} style={{ marginBottom: 4 }}>
+                <ContentBlock block={block} imageCache={imageCache} />
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+    </>
+  );
 }
 
 // ── Content Block ───────────────────────────────────────────────────────────
