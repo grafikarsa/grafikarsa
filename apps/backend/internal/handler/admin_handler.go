@@ -1173,6 +1173,7 @@ func (h *AdminHandler) ListAllPortfolios(c *fiber.Ctx) error {
 	search := c.Query("search")
 	page, _ := strconv.Atoi(c.Query("page", "1"))
 	limit, _ := strconv.Atoi(c.Query("limit", "20"))
+	sort := c.Query("sort", "-created_at")
 
 	var status *string
 	var userID, jurusanID *uuid.UUID
@@ -1189,7 +1190,7 @@ func (h *AdminHandler) ListAllPortfolios(c *fiber.Ctx) error {
 		jurusanID = &parsed
 	}
 
-	portfolios, total, err := h.adminRepo.ListPortfolios(search, status, userID, jurusanID, page, limit)
+	portfolios, total, err := h.adminRepo.ListPortfolios(search, status, userID, jurusanID, sort, page, limit)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse("INTERNAL_ERROR", "Gagal mengambil data portfolio"))
 	}

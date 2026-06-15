@@ -366,7 +366,7 @@ func (r *AdminRepository) ListUsers(search string, role *string, kelasID, jurusa
 }
 
 // Admin Portfolios
-func (r *AdminRepository) ListPortfolios(search string, status *string, userID, jurusanID *uuid.UUID, page, limit int) ([]domain.Portfolio, int64, error) {
+func (r *AdminRepository) ListPortfolios(search string, status *string, userID, jurusanID *uuid.UUID, sort string, page, limit int) ([]domain.Portfolio, int64, error) {
 	var portfolios []domain.Portfolio
 	var total int64
 
@@ -390,10 +390,17 @@ func (r *AdminRepository) ListPortfolios(search string, status *string, userID, 
 
 	query.Count(&total)
 
+	orderClause := "created_at DESC"
+	if sort == "created_at" {
+		orderClause = "created_at ASC"
+	} else if sort == "-created_at" {
+		orderClause = "created_at DESC"
+	}
+
 	offset := (page - 1) * limit
 	err := query.Preload("User.Kelas.Jurusan").
 		Offset(offset).Limit(limit).
-		Order("created_at DESC").
+		Order(orderClause).
 		Find(&portfolios).Error
 
 	return portfolios, total, err
@@ -401,7 +408,7 @@ func (r *AdminRepository) ListPortfolios(search string, status *string, userID, 
 
 func (r *AdminRepository) ListPendingPortfolios(search string, jurusanID *uuid.UUID, sort string, page, limit int) ([]domain.Portfolio, int64, error) {
 	status := "pending_review"
-	return r.ListPortfolios(search, &status, nil, jurusanID, page, limit)
+	return r.ListPortfolios(search, &status, nil, jurusanID, sort, page, limit)
 }
 
 // Dashboard Stats
