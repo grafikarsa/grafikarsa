@@ -32,7 +32,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { adminSeriesApi, adminMajorsApi, adminClassesApi, SeriesExportResponse } from '@/lib/api/admin';
+import { adminSeriesApi, SeriesExportResponse } from '@/lib/api/admin';
+import { publicApi } from '@/lib/api/public';
 import { Series } from '@/lib/types';
 import { PdfDocument } from './pdf-document';
 
@@ -98,17 +99,16 @@ export function ExportPdfModal({ series, open, onClose }: ExportPdfModalProps) {
   }, [isGenerating]);
 
   const { data: majorsData } = useQuery({
-    queryKey: ['admin-majors'],
-    queryFn: () => adminMajorsApi.getMajors(),
+    queryKey: ['public-jurusan'],
+    queryFn: () => publicApi.getJurusan(),
     enabled: open,
   });
 
   const { data: classesData } = useQuery({
-    queryKey: ['admin-classes', jurusanId],
+    queryKey: ['public-kelas', jurusanId],
     queryFn: () =>
-      adminClassesApi.getClasses({
+      publicApi.getKelas({
         jurusan_id: jurusanId !== 'all' ? jurusanId : undefined,
-        limit: 100,
       }),
     enabled: open,
   });
