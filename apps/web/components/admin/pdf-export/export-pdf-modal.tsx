@@ -211,7 +211,7 @@ export function ExportPdfModal({ series, open, onClose }: ExportPdfModalProps) {
 
     for (let i = 0; i < pages.length; i++) {
       const page = pages[i];
-      const { width, height } = page.getSize();
+      const { width } = page.getSize();
       const text = `Halaman ${i + 1} dari ${totalPages}`;
       const textWidth = helvetica.widthOfTextAtSize(text, 7);
 
@@ -350,7 +350,7 @@ export function ExportPdfModal({ series, open, onClose }: ExportPdfModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-fit">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="rounded-full bg-primary/10 p-2">
@@ -397,38 +397,40 @@ export function ExportPdfModal({ series, open, onClose }: ExportPdfModalProps) {
         ) : (
           <>
             <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>Jurusan</Label>
-                <Select value={jurusanId} onValueChange={setJurusanId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih jurusan" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Semua Jurusan</SelectItem>
-                    {majors.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>
-                        {m.nama}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <div className="flex gap-3">
+                <div className="flex-1 space-y-2">
+                  <Label>Jurusan</Label>
+                  <Select value={jurusanId} onValueChange={setJurusanId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih jurusan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Jurusan</SelectItem>
+                      {majors.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.nama}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div className="space-y-2">
-                <Label>Kelas</Label>
-                <Select value={kelasId} onValueChange={setKelasId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih kelas" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Semua Kelas</SelectItem>
-                    {classes.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.nama}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex-1 space-y-2">
+                  <Label>Kelas</Label>
+                  <Select value={kelasId} onValueChange={setKelasId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih kelas" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Kelas</SelectItem>
+                      {classes.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.nama}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               {/* Preview */}
