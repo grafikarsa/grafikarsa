@@ -41,7 +41,7 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm";  -- untuk fuzzy search
 -- ENUM TYPES
 -- ============================================================================
 
-CREATE TYPE user_role AS ENUM ('student', 'alumni', 'admin');
+CREATE TYPE user_role AS ENUM ('student', 'alumni', 'admin', 'teacher');
 CREATE TYPE portfolio_status AS ENUM ('draft', 'pending_review', 'rejected', 'published', 'archived');
 CREATE TYPE content_block_type AS ENUM ('text', 'image', 'table', 'youtube', 'button', 'embed', 'figma', 'canva', 'ppt', 'pdf', 'doc');
 CREATE TYPE social_platform AS ENUM (
@@ -200,6 +200,18 @@ CREATE TABLE users (
     tahun_masuk INTEGER,
     tahun_lulus INTEGER,
     
+    -- Teacher-specific fields (nullable for non-teachers)
+    nip VARCHAR(30),
+    
+    -- Contact information
+    phone VARCHAR(20),
+    address TEXT,
+    
+    -- Privacy settings
+    show_email BOOLEAN NOT NULL DEFAULT FALSE,
+    show_phone BOOLEAN NOT NULL DEFAULT FALSE,
+    show_address BOOLEAN NOT NULL DEFAULT FALSE,
+    
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     last_login_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -207,6 +219,7 @@ CREATE TABLE users (
     deleted_at TIMESTAMPTZ,
     
     CONSTRAINT users_nisn_numeric CHECK (nisn IS NULL OR nisn ~ '^\d+$'),
+    CONSTRAINT users_nip_numeric CHECK (nip IS NULL OR nip ~ '^\d+$'),
     CONSTRAINT users_tahun_masuk_valid CHECK (tahun_masuk IS NULL OR (tahun_masuk >= 2000 AND tahun_masuk <= 2100)),
     CONSTRAINT users_tahun_lulus_valid CHECK (tahun_lulus IS NULL OR tahun_lulus >= tahun_masuk)
 );
@@ -216,10 +229,19 @@ CREATE INDEX idx_users_email ON users(email) WHERE deleted_at IS NULL;
 CREATE INDEX idx_users_role ON users(role) WHERE deleted_at IS NULL;
 CREATE INDEX idx_users_kelas ON users(kelas_id) WHERE deleted_at IS NULL AND kelas_id IS NOT NULL;
 CREATE INDEX idx_users_nama_trgm ON users USING gin(nama gin_trgm_ops) WHERE deleted_at IS NULL;
+CREATE INDEX idx_users_show_email ON users(show_email) WHERE show_email = TRUE;
+CREATE INDEX idx_users_show_phone ON users(show_phone) WHERE show_phone = TRUE;
+CREATE INDEX idx_users_show_address ON users(show_address) WHERE show_address = TRUE;
 
-COMMENT ON TABLE users IS 'Data user (student, alumni, admin)';
+COMMENT ON TABLE users IS 'Data user (student, alumni, admin, teacher)';
 COMMENT ON COLUMN users.password_hash IS 'Bcrypt hashed password';
 COMMENT ON COLUMN users.kelas_id IS 'Kelas saat ini (untuk student aktif)';
+COMMENT ON COLUMN users.nip IS 'Nomor Induk Pegawai (untuk teacher)';
+COMMENT ON COLUMN users.phone IS 'Nomor telepon user (opsional)';
+COMMENT ON COLUMN users.address IS 'Alamat lengkap user (opsional)';
+COMMENT ON COLUMN users.show_email IS 'Tampilkan email di profil publik (default: false)';
+COMMENT ON COLUMN users.show_phone IS 'Tampilkan nomor telepon di profil publik (default: false)';
+COMMENT ON COLUMN users.show_address IS 'Tampilkan alamat di profil publik (default: false)';
 
 -- User Social Links (normalized)
 CREATE TABLE user_social_links (
@@ -316,6 +338,7 @@ CREATE TABLE follows (
 
 CREATE INDEX idx_follows_follower ON follows(follower_id);
 CREATE INDEX idx_follows_following ON follows(following_id);
+CREATE INDEX idx_follows_follower_following ON follows(follower_id, following_id);
 
 COMMENT ON TABLE follows IS 'Relasi follow antar user';
 
@@ -349,6 +372,8 @@ CREATE INDEX idx_portfolios_published ON portfolios(published_at DESC) WHERE sta
 CREATE INDEX idx_portfolios_pending ON portfolios(created_at) WHERE status = 'pending_review' AND deleted_at IS NULL;
 CREATE INDEX idx_portfolios_slug ON portfolios(slug) WHERE deleted_at IS NULL;
 CREATE INDEX idx_portfolios_series ON portfolios(series_id) WHERE deleted_at IS NULL AND series_id IS NOT NULL;
+CREATE INDEX idx_portfolios_user_published ON portfolios(user_id, published_at DESC) WHERE status = 'published' AND deleted_at IS NULL;
+CREATE INDEX idx_portfolios_smart_feed ON portfolios(status, published_at DESC, user_id) INCLUDE (id, judul, slug, thumbnail_url, created_at) WHERE status = 'published' AND deleted_at IS NULL;
 
 COMMENT ON TABLE portfolios IS 'Portofolio karya user';
 COMMENT ON COLUMN portfolios.slug IS 'URL-friendly identifier, auto-generated dari judul';
@@ -365,6 +390,7 @@ CREATE TABLE portfolio_tags (
 );
 
 CREATE INDEX idx_portfolio_tags_tag ON portfolio_tags(tag_id);
+CREATE INDEX idx_portfolio_tags_portfolio ON portfolio_tags(portfolio_id, tag_id);
 
 COMMENT ON TABLE portfolio_tags IS 'Relasi many-to-many portfolio dan tags';
 
@@ -399,6 +425,7 @@ CREATE TABLE portfolio_likes (
 );
 
 CREATE INDEX idx_portfolio_likes_portfolio ON portfolio_likes(portfolio_id);
+CREATE INDEX idx_portfolio_likes_user_portfolio ON portfolio_likes(user_id, portfolio_id);
 
 COMMENT ON TABLE portfolio_likes IS 'Like/favorit portofolio oleh user';
 
@@ -429,6 +456,7 @@ CREATE TABLE feedback (
     pesan TEXT NOT NULL,
     status feedback_status NOT NULL DEFAULT 'pending',
     admin_notes TEXT,
+    attachment_url TEXT,
     resolved_by UUID REFERENCES users(id) ON DELETE SET NULL,
     resolved_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -439,6 +467,7 @@ CREATE INDEX idx_feedback_user ON feedback(user_id) WHERE user_id IS NOT NULL;
 CREATE INDEX idx_feedback_status ON feedback(status);
 CREATE INDEX idx_feedback_kategori ON feedback(kategori);
 CREATE INDEX idx_feedback_created ON feedback(created_at DESC);
+CREATE INDEX idx_feedback_has_attachment ON feedback(attachment_url) WHERE attachment_url IS NOT NULL;
 
 COMMENT ON TABLE feedback IS 'Feedback dari user (bug report, saran, dll)';
 COMMENT ON COLUMN feedback.user_id IS 'NULL jika feedback dari guest (tidak login)';
@@ -1225,3 +1254,14 @@ CREATE TRIGGER trg_changelog_section_blocks_updated_at
     BEFORE UPDATE ON changelog_section_blocks 
     FOR EACH ROW 
     EXECUTE FUNCTION update_updated_at();
+
+-- ============================================================================
+-- INDEX COMMENTS (from migrations)
+-- ============================================================================
+
+COMMENT ON INDEX idx_portfolios_user_published IS 'Optimizes queries for user published portfolios';
+COMMENT ON INDEX idx_portfolios_smart_feed IS 'Optimizes smart feed algorithm queries';
+COMMENT ON INDEX idx_follows_follower_following IS 'Optimizes follow relationship queries';
+COMMENT ON INDEX idx_portfolio_likes_user_portfolio IS 'Optimizes batch like queries (N+1 prevention)';
+COMMENT ON INDEX idx_portfolio_tags_portfolio IS 'Optimizes tag lookup for portfolios';
+COMMENT ON INDEX idx_feedback_has_attachment IS 'Optimizes queries on feedback with attachments';
