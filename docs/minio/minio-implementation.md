@@ -670,10 +670,15 @@ MINIO_PUBLIC_URL=http://localhost:9000/grafikarsa
 
 ### Docker Compose
 
+> ⚠️ Update Sep 2026: `minio/minio` & `minio/mc` DIHAPUS dari Docker Hub
+> (pull = `access denied`). Pakai fork komunitas `pgsty/minio`.
+> Bucket + public-read dibuat otomatis oleh backend (`NewMinIOClient`),
+> jadi service `minio-setup` (mc) tidak dipakai lagi.
+
 ```yaml
 services:
   minio:
-    image: minio/minio:latest
+    image: pgsty/minio:latest
     container_name: grafikarsa-minio
     command: server /data --console-address ":9001"
     environment:
@@ -685,26 +690,10 @@ services:
       - "9000:9000"  # API
       - "9001:9001"  # Console
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 10s
       timeout: 5s
       retries: 5
-
-  minio-setup:
-    image: minio/mc:latest
-    depends_on:
-      minio:
-        condition: service_healthy
-    entrypoint: >
-      /bin/sh -c "
-      mc alias set myminio http://minio:9000 ${MINIO_ACCESS_KEY} ${MINIO_SECRET_KEY};
-      mc mb myminio/${MINIO_BUCKET} --ignore-existing;
-      mc anonymous set download myminio/${MINIO_BUCKET}/avatars;
-      mc anonymous set download myminio/${MINIO_BUCKET}/banners;
-      mc anonymous set download myminio/${MINIO_BUCKET}/thumbnails;
-      mc anonymous set download myminio/${MINIO_BUCKET}/portfolio-images;
-      exit 0;
-      "
 
 volumes:
   minio_data:

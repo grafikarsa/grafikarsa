@@ -106,12 +106,14 @@ else
 fi
 
 # --- 5. Bucket MinIO ---
+# Bucket + public-read policy dibuat OTOMATIS oleh backend saat startup
+# (lihat NewMinIOClient) — tidak perlu mc manual.
 echo "⏳ Menunggu MinIO..."
 for i in $(seq 1 24); do
-  if docker exec grafikarsa-minio mc ready local >/dev/null 2>&1; then break; fi
+  if docker exec grafikarsa-minio curl -sf http://localhost:9000/minio/health/live >/dev/null 2>&1; then break; fi
   sleep 5
 done
-docker exec grafikarsa-minio sh -c "mc alias set local http://localhost:9000 \"\$MINIO_ROOT_USER\" \"\$MINIO_ROOT_PASSWORD\" >/dev/null 2>&1; mc mb local/$MINIO_BUCKET --ignore-existing >/dev/null 2>&1; mc anonymous set download local/$MINIO_BUCKET >/dev/null 2>&1; echo '✅ Bucket $MINIO_BUCKET public-read.'"
+echo "ℹ️  Bucket \"$MINIO_BUCKET\" dibuat + public-read oleh backend (cek log backend)."
 
 echo ""
 echo "✅ SELESAI."

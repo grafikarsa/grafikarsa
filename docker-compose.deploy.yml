@@ -68,8 +68,11 @@ services:
       - grafikarsa-network
 
   # MinIO Object Storage (internal only, publik via /storage/*)
+  # NOTE: pakai pgsty/minio (fork komunitas) karena minio/minio DIHAPUS
+  # dari Docker Hub pada Sep 2026 ("pull access denied"). Jangan kembalikan
+  # ke minio/minio tanpa verifikasi `docker pull` di server.
   minio:
-    image: minio/minio:latest
+    image: pgsty/minio:latest
     container_name: grafikarsa-minio
     restart: unless-stopped
     environment:
@@ -79,8 +82,8 @@ services:
       - minio_data:/data
     command: server /data --console-address ":9001"
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 5s
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
       timeout: 5s
       retries: 10
     networks:

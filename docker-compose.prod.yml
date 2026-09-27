@@ -25,9 +25,9 @@ services:
     networks:
       - grafikarsa-network
 
-  # MinIO Object Storage
+  # MinIO Object Storage (pgsty fork: minio/minio dihapus dari Hub Sep 2026)
   minio:
-    image: minio/minio:latest
+    image: pgsty/minio:latest
     container_name: grafikarsa-minio-prod
     restart: unless-stopped
     ports:
@@ -40,8 +40,8 @@ services:
       - minio_data_prod:/data
     command: server /data --console-address ":9001"
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 5s
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
       timeout: 5s
       retries: 10
     networks:
