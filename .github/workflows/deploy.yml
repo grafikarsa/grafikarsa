@@ -5,26 +5,56 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Single-domain deploy. Secrets utama:
+#   DOCKERHUB_USERNAME, DOCKERHUB_TOKEN, DOMAIN,
+#   SSH_HOST, SSH_PORT, SSH_USERNAME, SSH_PRIVATE_KEY
+# URL publik diturunkan otomatis dari DOMAIN (atau pakai secret
+# NEXT_PUBLIC_* lama jika masih diset) — tidak ada secret api.* /
+# storage.* terpisah yang wajib.
+
 env:
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  DOMAIN: ${{ secrets.DOMAIN }}
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
+      - name: Derive public URLs from DOMAIN
+        id: urls
+        run: |
+          # Back-compat: pakai secret URL lama jika masih diset,
+          # jika tidak turunkan dari DOMAIN (default: grafikarsa.com).
+          DOM="${DOMAIN:-grafikarsa.com}"
+          if [[ "$DOM" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            SCHEME="http"   # IP tanpa domain
+          else
+            SCHEME="https"  # domain valid (Caddy auto HTTPS)
+          fi
+          API_URL="${{ secrets.NEXT_PUBLIC_API_URL }}"
+          APP_URL="${{ secrets.NEXT_PUBLIC_APP_URL }}"
+          STORAGE_URL="${{ secrets.NEXT_PUBLIC_STORAGE_URL }}"
+          [ -z "$API_URL" ] && API_URL="$SCHEME://$DOM/api/v1"
+          [ -z "$APP_URL" ] && APP_URL="$SCHEME://$DOM"
+          [ -z "$STORAGE_URL" ] && STORAGE_URL="$SCHEME://$DOM/storage/grafikarsa"
+          echo "api_url=$API_URL" >> "$GITHUB_OUTPUT"
+          echo "app_url=$APP_URL" >> "$GITHUB_OUTPUT"
+          echo "storage_url=$STORAGE_URL" >> "$GITHUB_OUTPUT"
+          echo "Derived: $APP_URL"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      
+
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      
+
       - name: Build and push backend
         uses: docker/build-push-action@v6
         with:
@@ -36,7 +66,7 @@ jobs:
           target: production
           cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-backend:latest
           cache-to: type=inline
-      
+
       - name: Build and push frontend
         uses: docker/build-push-action@v6
         with:
@@ -47,14 +77,15 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-web:${{ github.sha }}
           target: production
           build-args: |
-            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
-            NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}
-            NEXT_PUBLIC_STORAGE_URL=${{ secrets.NEXT_PUBLIC_STORAGE_URL }}
-            NEXT_PUBLIC_MAINTENANCE_MODE=${{ secrets.NEXT_PUBLIC_MAINTENANCE_MODE }}
-            NEXT_PUBLIC_AI_FEATURES_ENABLED=${{ secrets.NEXT_PUBLIC_AI_FEATURES_ENABLED }}
+            NEXT_PUBLIC_API_URL=${{ steps.urls.outputs.api_url }}
+            NEXT_PUBLIC_APP_URL=${{ steps.urls.outputs.app_url }}
+            NEXT_PUBLIC_STORAGE_URL=${{ steps.urls.outputs.storage_url }}
+            NEXT_PUBLIC_MAINTENANCE_MODE=false
+            NEXT_PUBLIC_AI_FEATURES_ENABLED=true
+            INTERNAL_API_URL=http://backend:8080/api/v1
           cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-web:latest
           cache-to: type=inline
-      
+
       - name: Prepare server directories
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -65,11 +96,11 @@ jobs:
           script: |
             # Ensure the deploy directory exists
             mkdir -p /opt/grafikarsa
-            
+
             # Automated Cleanup: Use Docker to handle root-owned files (avoiding sudo)
             # This works because the deploy user has permission to run Docker
-            docker run --rm -v /opt/grafikarsa:/app busybox sh -c "rm -f /app/docker-compose.deploy.yml && rm -rf /app/db"
-            
+            docker run --rm -v /opt/grafikarsa:/app busybox sh -c "rm -f /app/docker-compose.deploy.yml /app/Caddyfile /app/Caddyfile.http-only && rm -rf /app/db"
+
             # Reset ownership to ensure scp-action can write new files
             docker run --rm -v /opt:/mnt busybox chown -R $(id -u):$(id -g) /mnt/grafikarsa
 
@@ -80,9 +111,9 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
-          source: "docker-compose.deploy.yml,db/"
+          source: "docker-compose.deploy.yml,Caddyfile,Caddyfile.http-only,db/"
           target: "/opt/grafikarsa"
-      
+
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -93,30 +124,39 @@ jobs:
           script: |
             cd /opt/grafikarsa
             echo "Starting deployment of version ${{ github.sha }}..."
-            
-            # Export variables for docker-compose
+
+            # Export variables for docker-compose (.env tetap sumber utama;
+            # ini hanya fallback agar deploy tidak gagal jika .env belum lengkap)
             export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
             export IMAGE_TAG=${{ github.sha }}
-            
+            export DOMAIN=${{ secrets.DOMAIN }}
+
             # Pull specific version and update
             docker compose -f docker-compose.deploy.yml pull
             docker compose -f docker-compose.deploy.yml up -d
-            
+
             # Cleanup old images
             docker image prune -f
-            
-            # Basic Health Check
+
+            # Health checks — via proxy container (internal network),
+            # karena backend/minio TIDAK expose port ke host lagi.
             echo "Checking health..."
             sleep 15
-            if curl -s --fail http://localhost:8080/api/v1/health > /dev/null; then
+            if docker exec grafikarsa-proxy wget -q -O /dev/null http://backend:8080/api/v1/health; then
               echo "✅ Backend is UP"
             else
               echo "❌ Backend HEALTH CHECK FAILED!"
               exit 1
             fi
-            
+            if docker exec grafikarsa-proxy wget -q -O /dev/null --header "Host: ${{ secrets.DOMAIN }}" http://127.0.0.1/; then
+              echo "✅ Frontend is UP"
+            else
+              echo "❌ Frontend HEALTH CHECK FAILED!"
+              exit 1
+            fi
+
             echo "✅ Deployment version ${{ github.sha }} complete!"
-      
+
       - name: Notify deployment status
         if: always()
         run: |
