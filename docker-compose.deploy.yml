@@ -1,13 +1,53 @@
 # ==============================================
-# GRAFIKARSA MONOREPO - SERVER DEPLOYMENT
+# GRAFIKARSA MONOREPO - SERVER DEPLOYMENT (single-domain)
 # ==============================================
-# This file is used on the production server.
-# Images are pulled from Docker Hub (pushed by CI/CD).
+# Satu-satunya yang butuh: file ini + Caddyfile + .env
+# Tidak perlu Nginx host / certbot / subdomain api.* & storage.*.
+#
+# Setup awal server baru:
+#   1. Copy 3 file ini ke /opt/grafikarsa (lihat scripts/server-init.sh)
+#   2. Isi .env (cukup DOMAIN + password + JWT secret)
+#   3. docker compose -f docker-compose.deploy.yml up -d
+#
+# Arsitektur:
+#   internet --80/443--> proxy (Caddy, auto HTTPS)
+#     /          -> web:3100
+#     /api/*     -> backend:8080   (internal only, tanpa URL publik)
+#     /storage/* -> minio:9000     (strip /storage, publik read)
+#
+# Catatan multi-tenant: TIDAK ada port host yang dipublish kecuali 80/443,
+# jadi tidak akan tabrakan dengan aplikasi lain (dulu SIPODI makan :3001).
 #
 # Usage: docker compose -f docker-compose.deploy.yml up -d
 
 services:
-  # PostgreSQL Database
+  # Reverse proxy — SATU-SATUNYA service dengan port host.
+  # Dedicated server: 80/443 langsung (default).
+  # Shared host (port 80/443 dipakai Nginx host untuk app lain):
+  #   CADDYFILE=./Caddyfile.http-only, PROXY_HTTP_PORT=8081, PROXY_HTTPS_PORT=8443
+  #   + vhost Nginx host proxy ke 127.0.0.1:8081 (lihat docs/deploy).
+  proxy:
+    image: caddy:2-alpine
+    container_name: grafikarsa-proxy
+    restart: unless-stopped
+    ports:
+      - "${PROXY_HTTP_PORT:-80}:80"
+      - "${PROXY_HTTPS_PORT:-443}:443"
+      - "${PROXY_HTTPS_PORT:-443}:443/udp" # HTTP/3 (opsional, diabaikan jika diblokir firewall)
+    volumes:
+      - ${CADDYFILE:-./Caddyfile}:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - DOMAIN=${DOMAIN}
+    depends_on:
+      - web
+      - backend
+      - minio
+    networks:
+      - grafikarsa-network
+
+  # PostgreSQL Database (internal only)
   db:
     image: postgres:15-alpine
     container_name: grafikarsa-db
@@ -27,14 +67,11 @@ services:
     networks:
       - grafikarsa-network
 
-  # MinIO Object Storage
+  # MinIO Object Storage (internal only, publik via /storage/*)
   minio:
     image: minio/minio:latest
     container_name: grafikarsa-minio
     restart: unless-stopped
-    ports:
-      - "9000:9000"
-      - "9001:9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
@@ -49,14 +86,14 @@ services:
     networks:
       - grafikarsa-network
 
-  # Redis Cache
+  # Redis Cache (internal only)
+  # NOTE: redis_data hanya cache (feed, captcha, rate-limit). Aman dihapus
+  # (`docker volume rm grafikarsa_redis_data`) jika crash-loop / corrupt AOF.
   redis:
     image: redis:7-alpine
     container_name: grafikarsa-redis
     restart: unless-stopped
-    ports:
-      - "6379:6379"
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
     healthcheck:
@@ -67,13 +104,11 @@ services:
     networks:
       - grafikarsa-network
 
-  # Go Backend API (from Docker Hub)
+  # Go Backend API (internal only — TANPA url publik / subdomain)
   backend:
     image: ${DOCKERHUB_USERNAME}/grafikarsa-backend:${IMAGE_TAG:-latest}
     container_name: grafikarsa-backend
     restart: unless-stopped
-    ports:
-      - "8080:8080"
     env_file: .env
     environment:
       - APP_ENV=production
@@ -82,6 +117,9 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - GOOGLE_GEMINI_API_KEY=${GOOGLE_GEMINI_API_KEY}
+      # Upload presigned harus lewat path /storage (lihat Caddyfile).
+      # Default /storage agar tetap benar walau .env lama tidak punya var ini.
+      - MINIO_PRESIGN_PATH_PREFIX=${MINIO_PRESIGN_PATH_PREFIX:-/storage}
     depends_on:
       db:
         condition: service_healthy
@@ -92,18 +130,19 @@ services:
     networks:
       - grafikarsa-network
 
-  # Next.js Frontend (from Docker Hub)
+  # Next.js Frontend (internal only, diserve proxy di /)
   web:
     image: ${DOCKERHUB_USERNAME}/grafikarsa-web:${IMAGE_TAG:-latest}
     container_name: grafikarsa-web
     restart: unless-stopped
-    ports:
-      - "3001:3001"
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
       - NEXT_PUBLIC_AI_FEATURES_ENABLED=${NEXT_PUBLIC_AI_FEATURES_ENABLED}
+      # SSR di dalam Docker harus pakai hostname internal, bukan hostname publik
+      # (mencegah EAI_AGAIN). Default aman jika kosong.
+      - INTERNAL_API_URL=${INTERNAL_API_URL:-http://backend:8080/api/v1}
     depends_on:
       - backend
     networks:
@@ -113,6 +152,8 @@ volumes:
   postgres_data:
   minio_data:
   redis_data:
+  caddy_data:
+  caddy_config:
 
 networks:
   grafikarsa-network:

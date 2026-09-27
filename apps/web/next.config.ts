@@ -30,6 +30,17 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "storage.grafikarsa.com",
       },
+      // Single-domain setup: storage nunut https://DOMAIN/storage/...
+      // (NEXT_PUBLIC_APP_URL — hostname dinamis tidak bisa di sini,
+      // jadi daftarkan apex domain production secara eksplisit)
+      {
+        protocol: "https",
+        hostname: "grafikarsa.com",
+      },
+      {
+        protocol: "https",
+        hostname: "www.grafikarsa.com",
+      },
       // Jelastic deployment
       {
         protocol: "https",

@@ -39,12 +39,17 @@ type DatabaseConfig struct {
 type MinIOConfig struct {
 	Endpoint      string
 	PresignHost   string // Host to use in presigned URLs (for browser access)
-	PresignUseSSL bool   // Whether presigned URLs should use HTTPS (for Cloudflare proxy)
-	AccessKey     string
-	SecretKey     string
-	Bucket        string
-	UseSSL        bool
-	PublicURL     string
+	PresignUseSSL bool   // Whether presigned URLs should use HTTPS
+	// Path prefix inserted in front of presigned URLs when MinIO is served
+	// behind a path-based reverse proxy (single-domain setup: /storage).
+	// Example: "/storage" turns https://domain/bucket/key into
+	// https://domain/storage/bucket/key. Empty = no rewrite (subdomain setup).
+	PresignPathPrefix string
+	AccessKey         string
+	SecretKey         string
+	Bucket            string
+	UseSSL            bool
+	PublicURL         string
 }
 
 type JWTConfig struct {
@@ -91,14 +96,15 @@ func Load() (*Config, error) {
 			SSLMode:  getEnv("DB_SSLMODE", "disable"),
 		},
 		MinIO: MinIOConfig{
-			Endpoint:      getEnv("MINIO_ENDPOINT", "localhost:9000"),
-			PresignHost:   getEnv("MINIO_PRESIGN_HOST", "localhost:9000"),
-			PresignUseSSL: getEnvBool("MINIO_PRESIGN_USE_SSL", false),
-			AccessKey:     getEnv("MINIO_ACCESS_KEY", "minioadmin"),
-			SecretKey:     getEnv("MINIO_SECRET_KEY", ""),
-			Bucket:        getEnv("MINIO_BUCKET", "grafikarsa"),
-			UseSSL:        getEnvBool("MINIO_USE_SSL", false),
-			PublicURL:     getEnv("STORAGE_PUBLIC_URL", "http://localhost:9000/grafikarsa"),
+			Endpoint:          getEnv("MINIO_ENDPOINT", "localhost:9000"),
+			PresignHost:       getEnv("MINIO_PRESIGN_HOST", "localhost:9000"),
+			PresignUseSSL:     getEnvBool("MINIO_PRESIGN_USE_SSL", false),
+			PresignPathPrefix: getEnv("MINIO_PRESIGN_PATH_PREFIX", ""),
+			AccessKey:         getEnv("MINIO_ACCESS_KEY", "minioadmin"),
+			SecretKey:         getEnv("MINIO_SECRET_KEY", ""),
+			Bucket:            getEnv("MINIO_BUCKET", "grafikarsa"),
+			UseSSL:            getEnvBool("MINIO_USE_SSL", false),
+			PublicURL:         getEnv("STORAGE_PUBLIC_URL", "http://localhost:9000/grafikarsa"),
 		},
 		JWT: JWTConfig{
 			AccessSecret:  getEnv("JWT_ACCESS_SECRET", ""),

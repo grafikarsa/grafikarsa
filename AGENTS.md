@@ -44,12 +44,12 @@ Grafikarsa adalah platform showcase portfolio dan social networking yang diranca
 - Google Generative AI (Gemini for AI features)
 - Excelize (Excel import/export)
 
-**Deployment:**
+**Deployment (single-domain):**
 - Docker + Docker Compose
 - VPS (Ubuntu 24) or LXC (Proxmox)
-- Nginx reverse proxy
-- Cloudflare CDN + SSL
-- GitHub Actions CI/CD
+- Caddy reverse proxy **di dalam compose** (auto HTTPS, tanpa Nginx host/certbot)
+- 1 domain saja: `/` web, `/api/*` backend (internal), `/storage/*` MinIO
+- GitHub Actions CI/CD (URL diturunkan dari secret `DOMAIN`)
 
 ### Design System
 

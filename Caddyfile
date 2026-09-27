@@ -1,0 +1,41 @@
+# ==============================================
+# GRAFIKARSA — Single-domain gateway (Caddy)
+# ==============================================
+# Satu-satunya pintu publik. Backend & MinIO TIDAK diexpose,
+# hanya proxy ini yang buka port 80/443 di host.
+#
+#   DOMAIN=grafikarsa.com  -> HTTPS otomatis (Let's Encrypt)
+#   DOMAIN=103.134.78.58   -> HTTP otomatis (IP belum ada domain)
+#
+# Routing:
+#   /        -> web:3100    (frontend)
+#   /api/*   -> backend:8080 (tanpa strip, backend native /api/v1)
+#   /storage/* -> minio:9000 (strip /storage, MinIO lihat /bucket/key)
+#
+# Tidak perlu Nginx host / certbot / subdomain api.* & storage.*.
+# Cukup 1 DNS record:  A  @  <IP server>
+
+{$DOMAIN} {
+	encode gzip
+
+	request_body {
+		max_size 50MB
+	}
+
+	# Backend API — internal only, tanpa URL publik terpisah
+	handle /api/* {
+		reverse_proxy backend:8080
+	}
+
+	# Object storage publik via path.
+	# Presigned PUT browser -> /storage/bucket/key -> strip -> MinIO /bucket/key
+	# (tanda tangan tetap valid: host sama, path+query sama setelah strip).
+	handle_path /storage/* {
+		reverse_proxy minio:9000
+	}
+
+	# Frontend
+	handle {
+		reverse_proxy web:3100
+	}
+}

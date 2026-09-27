@@ -73,6 +73,7 @@ docker build \
     --target production \
     --build-arg NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} \
     --build-arg NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL} \
+    --build-arg INTERNAL_API_URL=${INTERNAL_API_URL:-http://backend:8080/api/v1} \
     ./apps/web
 
 echo "      ✅ Web build successful!"

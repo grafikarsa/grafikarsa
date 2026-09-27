@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/grafikarsa/backend/internal/config"
@@ -17,6 +18,9 @@ type MinIOClient struct {
 	presignClient *minio.Client // Separate client for presigning with browser-accessible endpoint
 	bucket        string
 	publicURL     string
+	// Path prefix for presigned URLs when MinIO sits behind a path-based
+	// reverse proxy (e.g. Caddy `/storage/*` -> MinIO). See config.
+	presignPathPrefix string
 }
 
 func NewMinIOClient(cfg *config.Config) (*MinIOClient, error) {
@@ -87,11 +91,35 @@ func NewMinIOClient(cfg *config.Config) (*MinIOClient, error) {
 	}
 
 	return &MinIOClient{
-		client:        client,
-		presignClient: presignClient,
-		bucket:        minioCfg.Bucket,
-		publicURL:     minioCfg.PublicURL,
+		client:            client,
+		presignClient:     presignClient,
+		bucket:            minioCfg.Bucket,
+		publicURL:         minioCfg.PublicURL,
+		presignPathPrefix: minioCfg.PresignPathPrefix,
 	}, nil
+}
+
+// withPathPrefix inserts the reverse-proxy path prefix (e.g. "/storage") in
+// front of a presigned URL path. The signature stays valid because the proxy
+// strips the prefix before forwarding, so MinIO sees the exact path + query
+// that was signed, with the same host.
+func (m *MinIOClient) withPathPrefix(raw string) string {
+	if m.presignPathPrefix == "" {
+		return raw
+	}
+	u, err := url.Parse(raw)
+	if err != nil {
+		return raw
+	}
+	prefix := m.presignPathPrefix
+	if !strings.HasPrefix(prefix, "/") {
+		prefix = "/" + prefix
+	}
+	prefix = strings.TrimSuffix(prefix, "/")
+	if !strings.HasPrefix(u.Path, prefix+"/") {
+		u.Path = prefix + u.Path
+	}
+	return u.String()
 }
 
 func (m *MinIOClient) GetPresignedPutURL(objectKey, contentType string, expiry time.Duration) (string, error) {
@@ -106,12 +134,14 @@ func (m *MinIOClient) GetPresignedPutURL(objectKey, contentType string, expiry t
 		return "", fmt.Errorf("failed to generate presigned URL: %w", err)
 	}
 
-	return presignedURL.String(), nil
+	return m.withPathPrefix(presignedURL.String()), nil
 }
 
 func (m *MinIOClient) GetPresignedGetURL(objectKey string, expiry time.Duration) (string, error) {
 	reqParams := make(url.Values)
-	presignedURL, err := m.client.PresignedGetObject(
+	// NOTE: presignClient (public host), not internal client — the old code
+	// returned internal-endpoint URLs unreachable from browsers.
+	presignedURL, err := m.presignClient.PresignedGetObject(
 		context.Background(),
 		m.bucket,
 		objectKey,
@@ -121,7 +151,7 @@ func (m *MinIOClient) GetPresignedGetURL(objectKey string, expiry time.Duration)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate presigned URL: %w", err)
 	}
-	return presignedURL.String(), nil
+	return m.withPathPrefix(presignedURL.String()), nil
 }
 
 func (m *MinIOClient) ObjectExists(objectKey string) (bool, error) {

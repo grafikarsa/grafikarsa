@@ -1,6 +1,10 @@
 import { ApiResponse, User } from '@/lib/types';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+// SSR: prefer internal Docker hostname (http://backend:8080) to avoid
+// EAI_AGAIN when resolving the public API hostname from inside the container.
+// Client components tetap pakai NEXT_PUBLIC_API_URL via lib/api/client.ts.
+const API_BASE_URL =
+    process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
 export async function getUserProfile(username: string): Promise<User | null> {
     try {

@@ -14,7 +14,10 @@ export const contentType = 'image/png';
 function getAbsoluteUrl(url: string | null | undefined): string | undefined {
     if (!url) return undefined;
     if (url.startsWith('http')) return url;
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || 'http://localhost:8080';
+    const baseUrl =
+        process.env.INTERNAL_API_URL?.replace('/api/v1', '') ||
+        process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') ||
+        'http://localhost:8080';
     return `${baseUrl.replace(/\/$/, '')}/${url.replace(/^\//, '')}`;
 }
 

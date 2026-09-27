@@ -80,6 +80,7 @@ docker build `
     --target production `
     --build-arg NEXT_PUBLIC_API_URL="$($env:NEXT_PUBLIC_API_URL)" `
     --build-arg NEXT_PUBLIC_APP_URL="$($env:NEXT_PUBLIC_APP_URL)" `
+    --build-arg INTERNAL_API_URL="$($env:INTERNAL_API_URL)" `
     ./apps/web
 
 if ($LASTEXITCODE -ne 0) {

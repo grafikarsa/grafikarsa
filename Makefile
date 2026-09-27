@@ -5,7 +5,7 @@
 
 .PHONY: help dev dev-down dev-web dev-logs prod prod-down prod-logs \
         db-import db-backup db-shell db-reset \
-        build push deploy \
+        build push deploy deploy-config \
         test-backend test-web \
         clean restart status
 
@@ -129,6 +129,7 @@ build: ## Build production Docker images
 	docker build -t $(DOCKERHUB_USERNAME)/grafikarsa-web:latest --target production \
 		--build-arg NEXT_PUBLIC_API_URL=$(NEXT_PUBLIC_API_URL) \
 		--build-arg NEXT_PUBLIC_APP_URL=$(NEXT_PUBLIC_APP_URL) \
+		--build-arg INTERNAL_API_URL=$(INTERNAL_API_URL) \
 		./apps/web
 	@echo "✅ Images built!"
 
@@ -137,6 +138,12 @@ push: ## Push images to Docker Hub
 	docker push $(DOCKERHUB_USERNAME)/grafikarsa-backend:latest
 	docker push $(DOCKERHUB_USERNAME)/grafikarsa-web:latest
 	@echo "✅ Images pushed!"
+
+deploy-config: ## Validate deploy compose (single-domain, needs DOMAIN)
+	@if [ -z "$(DOMAIN)" ]; then echo "❌ Set DOMAIN dulu: DOMAIN=grafikarsa.com make deploy-config"; exit 1; fi
+	@echo "🔍 Validating single-domain deploy config for DOMAIN=$(DOMAIN)..."
+	docker compose -f docker-compose.deploy.yml config > /dev/null
+	@echo "✅ Compose valid. Proxy: https://$(DOMAIN)/ + /api/* + /storage/*"
 
 # ========================================
 # Testing

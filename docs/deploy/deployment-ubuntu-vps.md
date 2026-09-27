@@ -1,6 +1,6 @@
-# 🚀 Deployment — Ubuntu 24 VPS (Cloudflare + Nginx)
+# 🚀 Deployment — Ubuntu 24 VPS (Single-Domain + Caddy)
 
-Panduan **lengkap step-by-step** untuk deploy Grafikarsa ke VPS Ubuntu 24.04 dengan Nginx reverse proxy dan Cloudflare DNS/SSL.
+Deploy Grafikarsa ke VPS Ubuntu 24.04 dengan **1 domain saja, tanpa Nginx host, tanpa certbot manual**.
 
 ---
 
@@ -9,266 +9,227 @@ Panduan **lengkap step-by-step** untuk deploy Grafikarsa ke VPS Ubuntu 24.04 den
 | Item | Keterangan |
 |------|-----------|
 | VPS Ubuntu 24.04 | Minimal 2GB RAM, 20GB disk |
-| Domain | Contoh: `grafikarsa.com` |
-| Cloudflare account | Gratis |
+| Domain (opsional) | Contoh: `grafikarsa.com`. Belum punya? Pakai IP dulu (HTTP) |
 | Docker Hub account | Untuk push/pull images |
 | GitHub repo | Sudah ada CI/CD workflow |
 
-**Domain yang akan digunakan:**
-- `grafikarsa.com` — Frontend
-- `api.grafikarsa.com` — Backend API
-- `storage.grafikarsa.com` — MinIO (file storage)
+**Hanya 1 domain, 1 DNS record:**
 
-> Ganti `grafikarsa.com` dengan domain kamu sendiri di seluruh panduan ini.
+| Type | Name | Content |
+|------|------|---------|
+| A | `@` | `IP_VPS` |
 
----
+Tidak ada `api.*` / `storage.*`. Semuanya nunut domain utama:
 
-## 📋 Arsitektur Deployment
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        CLOUDFLARE                                │
-│   grafikarsa.com ──► api.grafikarsa.com ──► storage.grafikarsa.com│
-└───────────────────────────┬─────────────────────────────────────┘
-                            │ (HTTPS - Proxied)
-                            ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                        UBUNTU VPS                                │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │              NGINX (Reverse Proxy Port 80)                │  │
-│  │   /           → grafikarsa-web:3000                       │  │
-│  │   api.        → grafikarsa-backend:8080                   │  │
-│  │   storage.    → grafikarsa-minio:9000                     │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                          │                                       │
-│  ┌───────────────────────┴───────────────────────────┐          │
-│  │               DOCKER CONTAINERS                    │          │
-│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────┐  │          │
-│  │  │  Web     │ │ Backend  │ │ Postgres │ │MinIO │  │          │
-│  │  │  :3000   │ │  :8080   │ │  :5432   │ │:9000 │  │          │
-│  │  └──────────┘ └──────────┘ └──────────┘ └──────┘  │          │
-│  └───────────────────────────────────────────────────┘          │
-└─────────────────────────────────────────────────────────────────┘
-```
+- `https://grafikarsa.com/` → frontend
+- `https://grafikarsa.com/api/*` → backend (internal only)
+- `https://grafikarsa.com/storage/*` → MinIO (publik read)
 
 ---
 
-## Step 1: Persiapan VPS Baru
+## 📋 Arsitektur
 
-### 1.1 SSH ke server
-
-```bash
-ssh root@YOUR_SERVER_IP
+```
+                  1 DNS record (A @)
+                          │
+                          ▼
+┌──────────────────────────────────────────────────────┐
+│                      UBUNTU VPS                       │
+│  ┌────────────────────────────────────────────────┐  │
+│  │  DOCKER (docker-compose.deploy.yml)             │  │
+│  │                                                 │  │
+│  │  internet --80/443--> proxy (Caddy, auto HTTPS) │  │
+│  │    /          -> web:3100                       │  │
+│  │    /api/*     -> backend:8080 (internal only)   │  │
+│  │    /storage/* -> minio:9000  (strip /storage)   │  │
+│  │                                                 │  │
+│  │  + db (postgres, internal) + redis (internal)   │  │
+│  └────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────┘
 ```
 
-### 1.2 Update system
+Tidak ada port host selain `80/443` — tidak akan tabrakan dengan aplikasi lain.
+
+---
+
+## Step 1: Persiapan VPS
 
 ```bash
+ssh root@IP_VPS
 apt update && apt upgrade -y
-```
 
-### 1.3 Buat user deploy (jangan pakai root untuk production)
-
-```bash
-# Buat user
+# User deploy (jangan pakai root untuk harian)
 adduser deploy
 usermod -aG sudo deploy
-
-# Setup SSH key untuk user deploy
 mkdir -p /home/deploy/.ssh
 cp ~/.ssh/authorized_keys /home/deploy/.ssh/
 chown -R deploy:deploy /home/deploy/.ssh
-chmod 700 /home/deploy/.ssh
-chmod 600 /home/deploy/.ssh/authorized_keys
+chmod 700 /home/deploy/.ssh && chmod 600 /home/deploy/.ssh/authorized_keys
 
-# Test login di terminal baru
-# ssh deploy@YOUR_SERVER_IP
-```
-
-### 1.4 Setup Firewall (UFW)
-
-```bash
+# Firewall: cukup SSH + HTTP + HTTPS
 ufw allow OpenSSH
 ufw allow 80/tcp
 ufw allow 443/tcp
-ufw enable
-ufw status
+ufw enable && ufw status
 ```
 
-> **Jangan** expose port 8080, 9000, 9001 ke publik. Nginx akan proxy traffic ke sana.
+> Jangan expose 8080/9000/6379 — semua internal via Caddy.
 
 ---
 
 ## Step 2: Install Docker
 
 ```bash
-# Login sebagai deploy
-ssh deploy@YOUR_SERVER_IP
-
-# Install Docker
+ssh deploy@IP_VPS
 curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
-
-# Tambah user ke docker group (supaya tidak perlu sudo)
 sudo usermod -aG docker $USER
-
-# Logout dan login lagi supaya group berlaku
 exit
-ssh deploy@YOUR_SERVER_IP
-
-# Verify
-docker --version
-docker compose version
+ssh deploy@IP_VPS
+docker --version && docker compose version
 ```
 
 ---
 
-## Step 3: Install Nginx
+## Step 3: Setup Project (sekali jalan)
+
+**Opsi A — script otomatis (disarankan):**
 
 ```bash
-sudo apt install -y nginx
+# Dari repo lokal, copy 4 file ke server:
+scp docker-compose.deploy.yml Caddyfile .env.example deploy@IP_VPS:~/
+scp -r db/ deploy@IP_VPS:~/
+scp scripts/server-init.sh deploy@IP_VPS:~/
 
-# Pastikan running
-sudo systemctl enable nginx
-sudo systemctl start nginx
-sudo systemctl status nginx
+# Di server:
+chmod +x server-init.sh
+DOMAIN=grafikarsa.com ./server-init.sh
+# Belum ada domain?  DOMAIN=IP_VPS ./server-init.sh   (jalan via HTTP)
 ```
 
----
+Script ini: siapkan `/opt/grafikarsa`, generate password + JWT secret random,
+turunkan semua URL dari `DOMAIN`, `up -d`, import DB jika kosong, buat bucket public-read.
 
-## Step 4: Setup Project di Server
-
-### 4.1 Buat directory
+**Opsi B — manual:**
 
 ```bash
-sudo mkdir -p /opt/grafikarsa
-sudo chown -R deploy:deploy /opt/grafikarsa
+sudo mkdir -p /opt/grafikarsa && sudo chown -R deploy:deploy /opt/grafikarsa
 cd /opt/grafikarsa
+# copy: docker-compose.deploy.yml, Caddyfile, db/, .env.example -> .env
+cp .env.example .env && nano .env
 ```
 
-### 4.2 Clone repo (atau copy file yang perlu saja)
-
-**Opsi 1: Clone repo**
-```bash
-git clone https://github.com/grafikarsa/grafikarsa.git .
-```
-
-**Opsi 2: Copy file minimal** (lebih aman, tidak expose kode)
-```bash
-# Dari mesin lokal:
-scp docker-compose.deploy.yml deploy@YOUR_SERVER_IP:/opt/grafikarsa/
-scp .env.example deploy@YOUR_SERVER_IP:/opt/grafikarsa/
-scp -r db/ deploy@YOUR_SERVER_IP:/opt/grafikarsa/
-```
-
-### 4.3 Konfigurasi environment production
-
-```bash
-cd /opt/grafikarsa
-
-# Copy template
-cp .env.example .env
-nano .env
-```
-
-**Edit `.env` untuk production:**
+Isi penting di `.env` (ganti `grafikarsa.com` dengan domain/IP kamu):
 
 ```env
-# APP
-APP_ENV=production
-NODE_ENV=production
+DOMAIN=grafikarsa.com
 
-# DATABASE — password HARUS strong!
-DB_HOST=localhost
-DB_PORT=5432
 DB_USER=grafikarsa
-DB_PASSWORD=BUAT_PASSWORD_YANG_KUAT_DISINI
+DB_PASSWORD=<random: openssl rand -base64 32>
 DB_NAME=grafikarsa
-DB_SSLMODE=disable
 
-# MINIO — password HARUS strong!
-MINIO_ENDPOINT=minio:9000
 MINIO_ACCESS_KEY=grafikarsa_admin
-MINIO_SECRET_KEY=BUAT_PASSWORD_YANG_KUAT_DISINI
-MINIO_BUCKET=grafikarsa
-MINIO_USE_SSL=false
-MINIO_PRESIGN_HOST=storage.grafikarsa.com
+MINIO_SECRET_KEY=<random>
+MINIO_ENDPOINT=minio:9000
+MINIO_PRESIGN_HOST=grafikarsa.com
 MINIO_PRESIGN_USE_SSL=true
-STORAGE_PUBLIC_URL=https://storage.grafikarsa.com/grafikarsa
+MINIO_PRESIGN_PATH_PREFIX=/storage
+STORAGE_PUBLIC_URL=https://grafikarsa.com/storage/grafikarsa
 
-# JWT — HARUS random dan kuat!
-# Generate: openssl rand -base64 32
-JWT_ACCESS_SECRET=GENERATE_RANDOM_STRING_DISINI
-JWT_REFRESH_SECRET=GENERATE_RANDOM_STRING_LAIN_DISINI
-JWT_ACCESS_EXPIRY=15m
-JWT_REFRESH_EXPIRY=168h
+JWT_ACCESS_SECRET=<random>
+JWT_REFRESH_SECRET=<random>
 
-# CORS
-CORS_ORIGINS=https://grafikarsa.com,https://www.grafikarsa.com
-
-# NEXT.JS URLs
-NEXT_PUBLIC_API_URL=https://api.grafikarsa.com/api/v1
+CORS_ORIGINS=https://grafikarsa.com
+NEXT_PUBLIC_API_URL=https://grafikarsa.com/api/v1
 NEXT_PUBLIC_APP_URL=https://grafikarsa.com
-NEXT_PUBLIC_STORAGE_URL=https://storage.grafikarsa.com/grafikarsa
+NEXT_PUBLIC_STORAGE_URL=https://grafikarsa.com/storage/grafikarsa
 
-# ADMIN
-ADMIN_LOGIN_PATH=loginadmin
-
-# DOCKER HUB
-DOCKERHUB_USERNAME=your_dockerhub_username
+DOCKERHUB_USERNAME=username_kamu
 IMAGE_TAG=latest
 ```
 
-> **Generate password kuat:**
-> ```bash
-> openssl rand -base64 32
-> ```
+Tanpa domain (`DOMAIN=1.2.3.4`): semua URL pakai `http://`, `MINIO_PRESIGN_USE_SSL=false`.
 
 ---
 
-## Step 5: Start Services
+## Step 4: Start
 
 ```bash
 cd /opt/grafikarsa
-
-# Pull images dari Docker Hub (jika CI/CD sudah push)
 docker compose -f docker-compose.deploy.yml pull
-
-# Start semua services
 docker compose -f docker-compose.deploy.yml up -d
+docker compose -f docker-compose.deploy.yml ps
 
-# Cek status
-docker ps
-
-# Cek logs
-docker compose -f docker-compose.deploy.yml logs -f
+# Cek via proxy (backend/minio TIDAK expose port host, jadi cek lewat proxy):
+docker exec grafikarsa-proxy wget -q -O /dev/null http://backend:8080/api/v1/health && echo "API OK"
+curl -s http://localhost/api/v1/health -H "Host: grafikarsa.com"
 ```
 
-### 5.1 Import database schema (pertama kali saja)
+Buka di browser: `https://grafikarsa.com/` (atau `http://IP/` jika tanpa domain).
+HTTPS terbit otomatis via Let's Encrypt (butuh port 80/443 terbuka + DNS sudah mengarah).
+
+---
+
+## Step 5: DNS (cukup 1 record)
+
+| Type | Name | Content | Proxy |
+|------|------|---------|-------|
+| A | `@` | `IP_VPS` | DNS-only **atau** Proxied |
+
+- Tanpa Cloudflare: langsung bisa, Caddy urus sertifikat.
+- Dengan Cloudflare: boleh proxied, tapi SSL mode harus **Full (Strict)** — JANGAN Flexible (Caddy sudah TLS sendiri).
+
+---
+
+## Step 6: CI/CD (GitHub Actions)
+
+Secrets yang dibutuhkan (URL diturunkan otomatis dari `DOMAIN`):
+
+| Secret | Value |
+|--------|-------|
+| `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` | Docker Hub |
+| `DOMAIN` | `grafikarsa.com` (atau IP) |
+| `SSH_HOST` / `SSH_PORT` / `SSH_USERNAME` / `SSH_PRIVATE_KEY` | Akses deploy |
+
+Push ke `main` → build 2 image → copy `docker-compose.deploy.yml,Caddyfile,db/` → `pull + up -d` → health check via proxy.
+
+---
+
+## Migrasi dari setup lama (subdomain)
+
+Jika DB masih berisi `https://storage.grafikarsa.com/grafikarsa/...`:
 
 ```bash
-docker exec -i grafikarsa-db psql -U grafikarsa -d grafikarsa < db/db.sql
+# Backup dulu! Lalu:
+docker exec -i grafikarsa-db psql -U grafikarsa -d grafikarsa \
+  -v old_host='https://storage.grafikarsa.com/grafikarsa' \
+  -v new_base='https://grafikarsa.com/storage/grafikarsa' \
+  -f db/migrate-to-single-domain.sql
 ```
 
-### 5.2 Setup MinIO bucket (pertama kali saja)
+Hapus Nginx host lama jika ada:
 
 ```bash
-docker exec -it grafikarsa-minio sh
-mc alias set local http://localhost:9000 grafikarsa_admin PASSWORD_MINIO_KAMU
-mc mb local/grafikarsa
-mc anonymous set download local/grafikarsa
-exit
+sudo rm -f /etc/nginx/sites-enabled/grafikarsa*
+sudo systemctl reload nginx   # atau uninstall nginx sekalian
 ```
 
 ---
 
-## Step 6: Konfigurasi Nginx
+## Lampiran: shared host (port 80/443 dipakai app lain)
 
-### 6.1 Frontend (grafikarsa.com)
+Jika satu VPS menampung banyak aplikasi (Nginx host milik app lain, mis. SIPODI),
+jangan rebut port 80/443. Caddy jalan HTTP-only di belakang Nginx host:
 
-```bash
-sudo nano /etc/nginx/sites-available/grafikarsa
+`.env` (hanya 3 baris tambahan):
+
+```env
+CADDYFILE=./Caddyfile.http-only
+PROXY_HTTP_PORT=8081
+PROXY_HTTPS_PORT=8443
 ```
+
+Vhost Nginx host (`/etc/nginx/sites-available/grafikarsa`, lalu `certbot --nginx`):
 
 ```nginx
 server {
@@ -276,7 +237,7 @@ server {
     server_name grafikarsa.com www.grafikarsa.com;
 
     location / {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://127.0.0.1:8081;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -289,242 +250,42 @@ server {
 }
 ```
 
-### 6.2 Backend API (api.grafikarsa.com)
-
-```bash
-sudo nano /etc/nginx/sites-available/grafikarsa-api
-```
-
-```nginx
-server {
-    listen 80;
-    server_name api.grafikarsa.com;
-
-    client_max_body_size 50M;
-
-    location / {
-        proxy_pass http://localhost:8080;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-```
-
-### 6.3 MinIO Storage (storage.grafikarsa.com)
-
-```bash
-sudo nano /etc/nginx/sites-available/grafikarsa-storage
-```
-
-```nginx
-server {
-    listen 80;
-    server_name storage.grafikarsa.com;
-
-    client_max_body_size 100M;
-
-    # Public read access to bucket
-    location / {
-        proxy_pass http://localhost:9000;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
-
-### 6.4 Enable semua sites
-
-```bash
-# Enable configs
-sudo ln -s /etc/nginx/sites-available/grafikarsa /etc/nginx/sites-enabled/
-sudo ln -s /etc/nginx/sites-available/grafikarsa-api /etc/nginx/sites-enabled/
-sudo ln -s /etc/nginx/sites-available/grafikarsa-storage /etc/nginx/sites-enabled/
-
-# Hapus default site
-sudo rm -f /etc/nginx/sites-enabled/default
-
-# Test config
-sudo nginx -t
-
-# Reload
-sudo systemctl reload nginx
-```
-
----
-
-## Step 7: Konfigurasi Cloudflare
-
-### 7.1 Tambahkan domain ke Cloudflare
-
-1. Login ke [Cloudflare Dashboard](https://dash.cloudflare.com)
-2. Klik **Add a Site** → masukkan `grafikarsa.com`
-3. Pilih plan **Free**
-4. Cloudflare akan scan DNS records yang ada
-5. Update nameservers di domain registrar kamu ke nameservers yang diberikan Cloudflare
-
-### 7.2 Setup DNS Records
-
-Tambahkan A records berikut:
-
-| Type | Name | Content | Proxy |
-|------|------|---------|-------|
-| A | `@` | `YOUR_SERVER_IP` | ☁️ Proxied |
-| A | `www` | `YOUR_SERVER_IP` | ☁️ Proxied |
-| A | `api` | `YOUR_SERVER_IP` | ☁️ Proxied |
-| A | `storage` | `YOUR_SERVER_IP` | ☁️ Proxied |
-
-### 7.3 SSL Settings
-
-1. **SSL/TLS** → **Overview** → Mode: **Flexible**
-
-   > Flexible = Cloudflare ↔ server pakai HTTP (port 80), browser ↔ Cloudflare pakai HTTPS. Ini yang paling mudah karena tidak perlu SSL cert di server.
-
-2. **SSL/TLS** → **Edge Certificates**:
-   - Always Use HTTPS: ✅ **ON**
-   - Automatic HTTPS Rewrites: ✅ **ON**
-   - Minimum TLS Version: **1.2**
-
-### 7.4 Cache Settings (untuk storage subdomain)
-
-1. **Rules** → **Page Rules** → Create Page Rule:
-   - URL: `storage.grafikarsa.com/*`
-   - Setting: Cache Level = **Cache Everything**
-   - Edge Cache TTL: **1 month**
-
----
-
-## Step 8: Setup CI/CD (GitHub Actions)
-
-### 8.1 Tambahkan GitHub Secrets
-
-Di GitHub repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**:
-
-| Secret | Value |
-|--------|-------|
-| `DOCKERHUB_USERNAME` | Username Docker Hub kamu |
-| `DOCKERHUB_TOKEN` | Docker Hub access token ([buat di sini](https://hub.docker.com/settings/security)) |
-| `SSH_HOST` | IP server VPS |
-| `SSH_PORT` | Port SSH (default: `22`) |
-| `SSH_USERNAME` | `deploy` |
-| `SSH_PRIVATE_KEY` | Isi dari `~/.ssh/id_ed25519` (private key) |
-| `NEXT_PUBLIC_API_URL` | `https://api.grafikarsa.com/api/v1` |
-| `NEXT_PUBLIC_APP_URL` | `https://grafikarsa.com` |
-| `NEXT_PUBLIC_STORAGE_URL` | `https://storage.grafikarsa.com/grafikarsa` |
-
-### 8.2 Generate SSH Key untuk deploy
-
-```bash
-# Di mesin lokal
-ssh-keygen -t ed25519 -C "github-deploy" -f ~/.ssh/github_deploy
-
-# Copy public key ke server
-ssh-copy-id -i ~/.ssh/github_deploy.pub deploy@YOUR_SERVER_IP
-
-# Isi dari private key ini yang ditaruh di GitHub Secret SSH_PRIVATE_KEY:
-cat ~/.ssh/github_deploy
-```
-
-### 8.3 Test deploy
-
-```bash
-git add .
-git commit -m "chore: setup deployment"
-git push origin main
-```
-
-GitHub Actions akan otomatis:
-1. Build Docker images (backend + web)
-2. Push ke Docker Hub
-3. SSH ke server
-4. Pull images terbaru
-5. Restart containers
-
----
-
-## Step 9: Verifikasi
-
-```bash
-# Di server, cek semua running
-docker ps
-
-# Cek dari browser
-# https://grafikarsa.com        → Frontend
-# https://api.grafikarsa.com    → Backend API
-# https://storage.grafikarsa.com → File storage
-
-# Cek health endpoint
-curl https://api.grafikarsa.com/health
-```
+ Alurnya: browser `https://` (Nginx host) → Caddy `:8081` (HTTP) → web/backend/minio.
+ `MINIO_PRESIGN_USE_SSL` tetap `true` karena browser melihat HTTPS.
 
 ---
 
 ## 🔧 Maintenance
 
-### Update aplikasi
-
-Push ke branch `main` → CI/CD otomatis deploy.
-
-Manual update:
 ```bash
 cd /opt/grafikarsa
-docker compose -f docker-compose.deploy.yml pull
-docker compose -f docker-compose.deploy.yml up -d
-docker image prune -f
-```
-
-### Backup database
-
-```bash
+docker compose -f docker-compose.deploy.yml logs -f            # semua
+docker logs grafikarsa-proxy -f --tail=100                     # Caddy (TLS?)
+docker logs grafikarsa-backend -f --tail=100
+docker compose -f docker-compose.deploy.yml pull && \
+docker compose -f docker-compose.deploy.yml up -d && \
+docker image prune -f                                          # update manual
 docker exec grafikarsa-db pg_dump -U grafikarsa grafikarsa > backup_$(date +%Y%m%d).sql
 ```
 
-### Lihat logs
+## 🐛 Troubleshooting
 
-```bash
-cd /opt/grafikarsa
-docker compose -f docker-compose.deploy.yml logs -f
-
-# Service tertentu
-docker logs grafikarsa-backend -f --tail=100
-docker logs grafikarsa-web -f --tail=100
-```
-
-### Rollback
-
-```bash
-# Gunakan commit hash tertentu
-cd /opt/grafikarsa
-export IMAGE_TAG=abc1234
-docker compose -f docker-compose.deploy.yml pull
-docker compose -f docker-compose.deploy.yml up -d
-```
+| Gejala | Penyebab umum | Fix |
+|---|---|---|
+| `grafikarsa-web` exit `address already in use` | Port host dipakai app lain | Sudah tidak mungkin: web tidak publish port host lagi. Jika masih terjadi, compose lama — `pull` ulang |
+| `EAI_AGAIN api...` di log web | SSR pakai hostname publik | Sudah di-fix via `INTERNAL_API_URL=http://backend:8080/api/v1` — pastikan var ini ada |
+| Redis `Restarting (139)` loop | AOF corrupt / OOM | `docker volume rm grafikarsa_redis_data` (isinya cuma cache), compose auto-buat baru |
+| HTTPS tidak terbit | Port 80 tertutup / DNS belum mengarah | `ufw allow 80/tcp`, cek `dig +short grafikarsa.com`, `docker logs grafikarsa-proxy` |
+| Upload gagal | Caddy `/storage` tidak proxy | `curl -I https://domain/storage/grafikarsa/` harus `Server: MinIO` |
 
 ---
 
-## ✅ Checklist Deployment
+## ✅ Checklist
 
-- [ ] VPS Ubuntu 24.04 siap
-- [ ] User `deploy` dibuat, SSH key terpasang
-- [ ] Firewall (UFW) dikonfigurasi
+- [ ] UFW: 22, 80, 443
 - [ ] Docker terinstall
-- [ ] Nginx terinstall
-- [ ] Project files ada di `/opt/grafikarsa/`
-- [ ] `.env` dikonfigurasi untuk production
-- [ ] Docker services berjalan (`docker ps`)
-- [ ] Database schema imported
-- [ ] MinIO bucket dibuat
-- [ ] Nginx configs aktif (3 sites)
-- [ ] Domain di Cloudflare (4 DNS records)
-- [ ] SSL mode = Flexible
-- [ ] GitHub Secrets configured
-- [ ] CI/CD test deploy berhasil
-- [ ] Frontend, API, dan Storage accessible via HTTPS
+- [ ] `/opt/grafikarsa` berisi compose + Caddyfile + `.env` + `db/`
+- [ ] `docker compose ps` semua Up (proxy, web, backend, db, minio, redis)
+- [ ] 1 DNS A record mengarah ke IP
+- [ ] `https://DOMAIN/` buka frontend, `/api/v1/health` OK
+- [ ] GitHub Secrets (`DOMAIN` dkk) terisi, push `main` hijau
