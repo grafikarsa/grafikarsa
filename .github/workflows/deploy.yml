@@ -125,35 +125,55 @@ jobs:
             cd /opt/grafikarsa
             echo "Starting deployment of version ${{ github.sha }}..."
 
-            # Export variables for docker-compose (.env tetap sumber utama;
-            # ini hanya fallback agar deploy tidak gagal jika .env belum lengkap)
-            export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
+            # .env di server adalah sumber utama. Export di sini hanya
+            # menimpa jika secret terisi (export kosong akan MERUSAK
+            # interpolasi compose karena mengalahkan nilai .env).
+            [ -n "${{ secrets.DOCKERHUB_USERNAME }}" ] && export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
             export IMAGE_TAG=${{ github.sha }}
-            export DOMAIN=${{ secrets.DOMAIN }}
+            [ -n "${{ secrets.DOMAIN }}" ] && export DOMAIN=${{ secrets.DOMAIN }}
+            # Host untuk healthcheck: secret > .env > default
+            HEALTH_HOST="${{ secrets.DOMAIN }}"
+            [ -z "$HEALTH_HOST" ] && HEALTH_HOST=$(grep -E '^DOMAIN=' .env 2>/dev/null | cut -d= -f2- | tr -d '\r\n ')
+            [ -z "$HEALTH_HOST" ] && HEALTH_HOST="grafikarsa.com"
 
             # Pull specific version and update
             docker compose -f docker-compose.deploy.yml pull
             docker compose -f docker-compose.deploy.yml up -d
 
-            # Cleanup old images
-            docker image prune -f
-
             # Health checks — via proxy container (internal network),
             # karena backend/minio TIDAK expose port ke host lagi.
-            echo "Checking health..."
-            sleep 15
-            if docker exec grafikarsa-proxy wget -q -O /dev/null http://backend:8080/api/v1/health; then
-              echo "✅ Backend is UP"
-            else
-              echo "❌ Backend HEALTH CHECK FAILED!"
+            # Retry hingga 5 menit agar cold start (first pull) tidak flaky.
+            echo "Checking health (Host: $HEALTH_HOST)..."
+            fail=0
+            for i in $(seq 1 30); do
+              if docker exec grafikarsa-proxy wget -q -O /dev/null http://backend:8080/api/v1/health 2>/dev/null; then
+                echo "✅ Backend is UP"
+                break
+              fi
+              if [ "$i" = "30" ]; then fail=1; fi
+              sleep 10
+            done
+            for i in $(seq 1 30); do
+              if docker exec grafikarsa-proxy wget -q -O /dev/null --header "Host: $HEALTH_HOST" http://127.0.0.1/ 2>/dev/null; then
+                echo "✅ Frontend is UP"
+                break
+              fi
+              if [ "$i" = "30" ]; then fail=1; fi
+              sleep 10
+            done
+
+            if [ "$fail" = "1" ]; then
+              echo "❌ HEALTH CHECK FAILED — diagnostics:"
+              docker compose -f docker-compose.deploy.yml ps
+              docker logs grafikarsa-proxy --tail=30
+              docker logs grafikarsa-backend --tail=30
+              docker logs grafikarsa-web --tail=30
               exit 1
             fi
-            if docker exec grafikarsa-proxy wget -q -O /dev/null --header "Host: ${{ secrets.DOMAIN }}" http://127.0.0.1/; then
-              echo "✅ Frontend is UP"
-            else
-              echo "❌ Frontend HEALTH CHECK FAILED!"
-              exit 1
-            fi
+
+            # Cleanup old images — HANYA setelah healthcheck hijau
+            # agar image lama tetap ada untuk rollback jika deploy rusak.
+            docker image prune -f
 
             echo "✅ Deployment version ${{ github.sha }} complete!"
 
