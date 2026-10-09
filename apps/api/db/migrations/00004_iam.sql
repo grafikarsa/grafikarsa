@@ -32,7 +32,7 @@ CREATE TABLE user_roles (
   assigned_by UUID REFERENCES users (id) ON DELETE SET NULL,
   expires_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  PRIMARY KEY (user_id, role_id, scope_major_id)
+  PRIMARY KEY (user_id, role_id)
 );
 
 -- 4 role sistem

@@ -26,14 +26,14 @@ help: ## Tampilkan bantuan
 dev: ## Up db + dragonfly + storage + api (web native terpisah)
 	$(COMPOSE_DEV) up -d --build
 	@echo ""
-	@echo "  API      http://localhost:8080/health"
-	@echo "  DB       localhost:$(DB_PORT)"
-	@echo "  Cache    localhost:6379"
-	@echo "  Storage  http://localhost:9000 (S3)  http://localhost:9001 (console)"
-	@echo "  Web      jalankan: make dev-web  ->  http://localhost:3000"
+	@echo "  API      http://localhost:$${API_PORT:-8091}/health"
+	@echo "  DB       localhost:$${DB_PORT:-5439}"
+	@echo "  Cache    localhost:$${DRAGONFLY_PORT:-6390}"
+	@echo "  Storage  http://localhost:$${S3_PORT:-9020} (S3)  http://localhost:$${S3_CONSOLE_PORT:-9021} (console)"
+	@echo "  Web      jalankan: make dev-web  ->  http://localhost:$${WEB_PORT:-3020}"
 
 dev-web: ## Jalankan Next.js native (HMR)
-	pnpm --dir $(WEB_DIR) dev
+	WEB_PORT=$${WEB_PORT:-3020} pnpm --dir $(WEB_DIR) dev --port $${WEB_PORT:-3020}
 
 dev-down: ## Matikan stack dev (volume dipertahankan)
 	$(COMPOSE_DEV) down
@@ -103,7 +103,7 @@ lint-web:
 # ── PROD SIM ──────────────────────────────────
 prod: ## Simulasi prod lokal (api + web built)
 	docker compose -f docker-compose.prod.yml up -d --build
-	@echo "  Web  http://localhost:3000"
+	@echo "  Web  http://localhost:$${WEB_PORT:-3020}"
 
 prod-down:
 	docker compose -f docker-compose.prod.yml down

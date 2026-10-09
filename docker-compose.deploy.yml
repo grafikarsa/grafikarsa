@@ -57,15 +57,14 @@ services:
       - grafikarsa-network
 
   dragonfly:
-    image: docker.dragonflydb.com/dragonflydb/dragonfly:latest
+    image: ghcr.io/dragonflydb/dragonfly:latest
     container_name: grafikarsa-dragonfly
     restart: unless-stopped
     command: >-
-      --maxmemory 512mb
-      --cache-mode
-      --eviction allkeys-lru
-      --appendonly yes
-      --requirepass ${DRAGONFLY_PASSWORD:-}
+      --maxmemory=256mb --proactor_threads=1
+      --cache_mode
+      --dir=/data
+      --dbfilename=dump
     volumes:
       - dragonfly_data:/data
     healthcheck:

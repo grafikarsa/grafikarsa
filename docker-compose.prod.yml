@@ -26,15 +26,14 @@ services:
       - grafikarsa-network
 
   dragonfly:
-    image: docker.dragonflydb.com/dragonflydb/dragonfly:latest
+    image: ghcr.io/dragonflydb/dragonfly:latest
     container_name: grafikarsa-dragonfly-prod
     restart: unless-stopped
     command: >-
-      --maxmemory 512mb
-      --cache-mode
-      --eviction allkeys-lru
-      --appendonly yes
-      --requirepass ${DRAGONFLY_PASSWORD:-}
+      --maxmemory=256mb --proactor_threads=1
+      --cache_mode
+      --dir=/data
+      --dbfilename=dump
     volumes:
       - dragonfly_data_prod:/data
     healthcheck:
@@ -97,7 +96,7 @@ services:
       - NODE_ENV=production
       - INTERNAL_API_URL=http://api:8080/v1
     ports:
-      - "3000:3000"
+      - "${WEB_PORT:-3020}:3000"
     depends_on:
       - api
     networks:

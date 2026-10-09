@@ -1,5 +1,5 @@
 # ---------- development (Air hot-reload) ----------
-FROM golang:1.24-alpine AS development
+FROM golang:1.26-alpine AS development
 RUN apk add --no-cache git curl wget && go install github.com/air-verse/air@latest
 WORKDIR /app
 COPY go.mod go.sum ./
@@ -9,7 +9,7 @@ EXPOSE 8080
 CMD ["air", "-c", ".air.toml"]
 
 # ---------- production ----------
-FROM golang:1.24-alpine AS builder
+FROM golang:1.26-alpine AS builder
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download

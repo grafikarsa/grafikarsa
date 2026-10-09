@@ -1,0 +1,39 @@
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint-test-build-api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+      - run: gofmt -l ./apps/api
+      - run: go vet ./apps/api/...
+        working-directory: apps/api
+      - run: go test ./...
+        working-directory: apps/api
+      - run: go build ./...
+        working-directory: apps/api
+
+  lint-typecheck-build-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        working-directory: apps/web
+      - run: pnpm exec tsc --noEmit
+        working-directory: apps/web
+      - run: pnpm exec next lint
+        working-directory: apps/web
+      - run: pnpm build
+        working-directory: apps/web
