@@ -1,0 +1,113 @@
+# ==============================================
+# GRAFIKARSA v2 — PROD SIMULATION (lokal)
+# ==============================================
+# Usage: make prod
+# Simulasi prod di laptop: api + web built, tanpa proxy.
+# Deploy server asli pakai docker-compose.deploy.yml.
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: grafikarsa-db-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - grafikarsa-network
+
+  dragonfly:
+    image: docker.dragonflydb.com/dragonflydb/dragonfly:latest
+    container_name: grafikarsa-dragonfly-prod
+    restart: unless-stopped
+    command: >-
+      --maxmemory 512mb
+      --cache-mode
+      --eviction allkeys-lru
+      --appendonly yes
+      --requirepass ${DRAGONFLY_PASSWORD:-}
+    volumes:
+      - dragonfly_data_prod:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - grafikarsa-network
+
+  storage:
+    image: rustfs/rustfs:latest
+    container_name: grafikarsa-storage-prod
+    restart: unless-stopped
+    environment:
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY}
+    volumes:
+      - storage_data_prod:/data
+    command: ["/data"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - grafikarsa-network
+
+  api:
+    build:
+      context: ./apps/api
+      target: production
+    container_name: grafikarsa-api-prod
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - APP_ENV=production
+      - DB_HOST=db
+      - DRAGONFLY_HOST=dragonfly
+      - S3_ENDPOINT=http://storage:9000
+    depends_on:
+      db:
+        condition: service_healthy
+      dragonfly:
+        condition: service_healthy
+      storage:
+        condition: service_healthy
+    networks:
+      - grafikarsa-network
+
+  web:
+    build:
+      context: ./apps/web
+      args:
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+        NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+    container_name: grafikarsa-web-prod
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - INTERNAL_API_URL=http://api:8080/v1
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    networks:
+      - grafikarsa-network
+
+volumes:
+  postgres_data_prod:
+  dragonfly_data_prod:
+  storage_data_prod:
+
+networks:
+  grafikarsa-network:
+    driver: bridge

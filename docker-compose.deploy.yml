@@ -1,0 +1,140 @@
+# ==============================================
+# GRAFIKARSA v2 — SERVER DEPLOYMENT (single-domain)
+# ==============================================
+# Setup awal server baru:
+#   1. Copy file ini + Caddyfile + tools/server-init.sh ke /opt/grafikarsa
+#   2. ./tools/server-init.sh  (generate secret + validasi DOMAIN)
+#   3. docker compose -f docker-compose.deploy.yml up -d
+#
+# Arsitektur:
+#   internet --80/443--> proxy (Caddy, auto HTTPS)
+#     / -> web:3000 (Next SSR + BFF /api/*, satu-satunya upstream publik)
+#
+# HANYA proxy yang punya port host. api/db/dragonfly/storage
+# komunikasi via network internal. Browser tidak pernah kontak
+# backend/storage langsung.
+#
+# Usage: docker compose -f docker-compose.deploy.yml up -d
+
+services:
+  # Reverse proxy — SATU-SATUNYA service dengan port host.
+  proxy:
+    image: caddy:2-alpine
+    container_name: grafikarsa-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3 (opsional, diabaikan jika diblokir firewall)
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - DOMAIN=${DOMAIN}
+    depends_on:
+      - web
+    networks:
+      - grafikarsa-network
+
+  db:
+    image: postgres:16-alpine
+    container_name: grafikarsa-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - grafikarsa-network
+
+  dragonfly:
+    image: docker.dragonflydb.com/dragonflydb/dragonfly:latest
+    container_name: grafikarsa-dragonfly
+    restart: unless-stopped
+    command: >-
+      --maxmemory 512mb
+      --cache-mode
+      --eviction allkeys-lru
+      --appendonly yes
+      --requirepass ${DRAGONFLY_PASSWORD:-}
+    volumes:
+      - dragonfly_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - grafikarsa-network
+
+  # Default: RustFS self-host. Ganti vendor = ganti image + S3_* env.
+  storage:
+    image: rustfs/rustfs:latest
+    container_name: grafikarsa-storage
+    restart: unless-stopped
+    environment:
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY}
+    volumes:
+      - storage_data:/data
+    command: ["/data"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - grafikarsa-network
+
+  api:
+    image: ${DOCKERHUB_USERNAME}/grafikarsa-api:${IMAGE_TAG:-latest}
+    container_name: grafikarsa-api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - APP_ENV=production
+      - DB_HOST=db
+      - DRAGONFLY_HOST=dragonfly
+      - S3_ENDPOINT=http://storage:9000
+    depends_on:
+      db:
+        condition: service_healthy
+      dragonfly:
+        condition: service_healthy
+      storage:
+        condition: service_healthy
+    networks:
+      - grafikarsa-network
+
+  web:
+    image: ${DOCKERHUB_USERNAME}/grafikarsa-web:${IMAGE_TAG:-latest}
+    container_name: grafikarsa-web
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      # SSR di dalam Docker harus pakai hostname internal (mencegah EAI_AGAIN).
+      - INTERNAL_API_URL=http://api:8080/v1
+    depends_on:
+      - api
+    networks:
+      - grafikarsa-network
+
+volumes:
+  postgres_data:
+  dragonfly_data:
+  storage_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  grafikarsa-network:
+    driver: bridge

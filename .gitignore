@@ -1,2 +1,15 @@
 .commandcode/
 .env
+node_modules/
+.next/
+out/
+bin/
+volumes/
+backup/
+*.local
+apps/web/.env*
+!apps/web/.env.example
+dist/
+coverage/
+.sqlc/
+tmp/
