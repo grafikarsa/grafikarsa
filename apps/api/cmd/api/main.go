@@ -14,6 +14,7 @@ import (
 	"grafikarsa/api/internal/config"
 	"grafikarsa/api/internal/db"
 	apiphttp "grafikarsa/api/internal/http"
+	"grafikarsa/api/internal/repo"
 	"grafikarsa/api/internal/storage"
 )
 
@@ -36,6 +37,8 @@ func main() {
 	defer c.Close()
 
 	st := storage.New(cfg)
+	app := apiphttp.NewApp(cfg, repo.New(pool), c, st)
+	app.Tx = apiphttp.NewTxRunner(pool)
 
 	srv := &http.Server{
 		Addr:         ":8080",
@@ -43,6 +46,7 @@ func main() {
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 30 * time.Second,
 	}
+	_ = app
 
 	go func() {
 		slog.Info("api listen", "addr", ":8080", "env", cfg.AppEnv)

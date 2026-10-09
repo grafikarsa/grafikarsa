@@ -55,6 +55,22 @@ type Majors struct {
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
+// File upload; DB simpan object_key, bukan URL absolut
+type MediaAssets struct {
+	ID             pgtype.UUID        `json:"id"`
+	OwnerID        pgtype.UUID        `json:"owner_id"`
+	Purpose        string             `json:"purpose"`
+	ObjectKey      string             `json:"object_key"`
+	Mime           string             `json:"mime"`
+	SizeBytes      int64              `json:"size_bytes"`
+	Width          pgtype.Int4        `json:"width"`
+	Height         pgtype.Int4        `json:"height"`
+	ChecksumSha256 string             `json:"checksum_sha256"`
+	Status         string             `json:"status"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	ConfirmedAt    pgtype.Timestamptz `json:"confirmed_at"`
+}
+
 type Permissions struct {
 	ID              pgtype.UUID `json:"id"`
 	Key             string      `json:"key"`
@@ -119,4 +135,6 @@ type Users struct {
 	CreatedAt          pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt          pgtype.Timestamptz `json:"deleted_at"`
+	AvatarMediaID      pgtype.UUID        `json:"avatar_media_id"`
+	BannerMediaID      pgtype.UUID        `json:"banner_media_id"`
 }

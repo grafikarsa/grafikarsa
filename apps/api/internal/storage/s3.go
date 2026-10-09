@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"io"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -33,3 +34,34 @@ func (s *Storage) Health(ctx context.Context) error {
 	_, err := s.client.HeadBucket(ctx, &s3.HeadBucketInput{Bucket: aws.String(s.bucket)})
 	return err
 }
+
+func (s *Storage) Put(ctx context.Context, key, contentType string, body io.Reader) error {
+	_, err := s.client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket:      aws.String(s.bucket),
+		Key:         aws.String(key),
+		Body:        body,
+		ContentType: aws.String(contentType),
+	})
+	return err
+}
+
+func (s *Storage) Get(ctx context.Context, key string) (io.ReadCloser, error) {
+	out, err := s.client.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out.Body, nil
+}
+
+func (s *Storage) Delete(ctx context.Context, key string) error {
+	_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(key),
+	})
+	return err
+}
+
+func Noop() error { return nil }

@@ -27,6 +27,7 @@ type DragonflyConfig struct {
 
 type JWTConfig struct {
 	AccessSecret, RefreshSecret, AccessTTL string
+	CSRFSalt                               string
 }
 
 type AdminSeed struct {
@@ -94,6 +95,7 @@ func Load() (*Config, error) {
 			AccessSecret:  getEnv("JWT_ACCESS_SECRET", ""),
 			RefreshSecret: getEnv("JWT_REFRESH_SECRET", ""),
 			AccessTTL:     getEnv("JWT_ACCESS_TTL", "15m"),
+			CSRFSalt:      getEnv("CSRF_SECRET", ""),
 		},
 		Admin: AdminSeed{
 			Email:    getEnv("ADMIN_SEED_EMAIL", "admin@grafikarsa.com"),
@@ -125,3 +127,5 @@ func (c *Config) DatabaseURL() string {
 func (c *Config) CacheAddr() string {
 	return fmt.Sprintf("%s:%d", c.Cache.Host, c.Cache.Port)
 }
+
+func (c *JWTConfig) CSRFSecret() string { return c.CSRFSalt }
