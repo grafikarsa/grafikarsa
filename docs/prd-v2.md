@@ -64,7 +64,7 @@ Status `alumni` di v1 **bukan role** di v2 — melainkan `status` di profil (`si
 
 ### 1.2 Permission catalog (final, dikunci di kode + seed)
 
-Format `domain.action`. 41 keys:
+Format `domain.action`. 53 keys:
 
 ```
 # Overview & analitik

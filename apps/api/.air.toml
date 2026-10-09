@@ -1,0 +1,17 @@
+root = "."
+tmp_dir = "tmp"
+testdata_dir = "testdata"
+
+[build]
+  cmd = "go build -o ./tmp/api ./cmd/api"
+  bin = "tmp/api"
+  full_bin = "APP_ENV=development ./tmp/api"
+  include_ext = ["go", "sql"]
+  exclude_dir = ["tmp", "testdata", "internal/repo"]
+  delay = 1000
+
+[log]
+  time = true
+
+[misc]
+  clean_on_exit = true

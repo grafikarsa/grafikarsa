@@ -13,3 +13,5 @@ dist/
 coverage/
 .sqlc/
 tmp/
+# Generated / vendored (sumber kebenaran: apps/api/db/migrations)
+apps/api/internal/db/migrations/
