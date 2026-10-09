@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Grafikarsa v2 API
-  version: 0.1.0
+  version: 0.2.0
   description: Kontrak FE <-> BE. Semua response memakai envelope {success, data, meta, error}.
 servers:
   - url: /api/v1
@@ -50,6 +50,196 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /auth/login:
+    post:
+      operationId: login
+      summary: Login (set __Host-rt + __Host-csrf, return access di body)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: OK + cookies
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Kredensial salah
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /auth/refresh:
+    post:
+      operationId: refresh
+      summary: Rotasi refresh (cookie) -> pasangan baru
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Reuse terdeteksi / sesi habis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /auth/logout:
+    post:
+      operationId: logout
+      summary: Revoke sesi ini + blacklist access
+      security:
+        - bearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+  /auth/logout-all:
+    post:
+      operationId: logoutAll
+      summary: Revoke semua sesi user
+      security:
+        - bearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+  /auth/sessions:
+    get:
+      operationId: listSessions
+      summary: Daftar sesi aktif
+      security:
+        - bearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+  /me:
+    get:
+      operationId: me
+      summary: Profil sendiri
+      security:
+        - bearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+  /me/permissions:
+    get:
+      operationId: myPermissions
+      summary: Union permission efektif
+      security:
+        - bearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+  /me/password:
+    patch:
+      operationId: updatePassword
+      summary: Ganti password (revoke semua sesi)
+      security:
+        - bearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+  /admin/users:
+    get:
+      operationId: adminListUsers
+      summary: List user paginasi (users.view)
+      security:
+        - bearer: []
+      responses:
+        '200':
+          description: OK + meta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+  /admin/roles:
+    get:
+      operationId: listRoles
+      summary: List roles (roles.view)
+      security:
+        - bearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+  /media/upload:
+    post:
+      operationId: uploadMedia
+      summary: Upload multipart (media.upload + CSRF)
+      security:
+        - bearer: []
+      responses:
+        '201':
+          description: '{media_id, object_key}'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+  /media/{id}:
+    get:
+      operationId: serveMedia
+      summary: Stream file (ETag + Range, visibility-aware)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Bytes file
+        '206':
+          description: Partial content (Range)
+        '404':
+          description: Tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
 components:
   schemas:
     SuccessResponse:
