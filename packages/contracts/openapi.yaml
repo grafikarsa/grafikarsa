@@ -1,0 +1,105 @@
+openapi: 3.1.0
+info:
+  title: Grafikarsa v2 API
+  version: 0.1.0
+  description: Kontrak FE <-> BE. Semua response memakai envelope {success, data, meta, error}.
+servers:
+  - url: /api/v1
+    description: Via Next.js BFF (browser tidak kontak backend langsung)
+paths:
+  /health:
+    get:
+      operationId: health
+      summary: Liveness (tanpa auth, tanpa dependensi)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+  /ready:
+    get:
+      operationId: ready
+      summary: Readiness (cek db + dragonfly + storage)
+      responses:
+        '200':
+          description: Semua dependensi sehat
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          db:
+                            type: string
+                            example: ok
+                          dragonfly:
+                            type: string
+                            example: ok
+                          storage:
+                            type: string
+                            example: ok
+        '503':
+          description: Salah satu dependensi sakit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    SuccessResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          description: Payload (object/array/null)
+        meta:
+          type: object
+          nullable: true
+          properties:
+            page:
+              type: integer
+            per_page:
+              type: integer
+            total_pages:
+              type: integer
+            total:
+              type: integer
+        request_id:
+          type: string
+    ErrorResponse:
+      type: object
+      required: [success, error]
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              example: SERVICE_UNAVAILABLE
+            message:
+              type: string
+              example: Basis data belum siap.
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  message:
+                    type: string
+        request_id:
+          type: string
