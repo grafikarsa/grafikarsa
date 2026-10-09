@@ -68,6 +68,11 @@ func (a *App) handleUpload(w http.ResponseWriter, r *http.Request) {
 	if kind != filetype.Unknown {
 		mime = kind.MIME.Value
 	}
+	// filetype tidak kenal SVG teks — deteksi manual via magic bytes.
+	lower := strings.ToLower(string(head))
+	if strings.Contains(lower, "<svg") || strings.Contains(lower, "<html") || strings.Contains(lower, "<!doctype html") {
+		mime = "image/svg+xml"
+	}
 	allowed := false
 	for _, m := range purposeMimes[purpose] {
 		if mime == m {
@@ -179,6 +184,16 @@ func (a *App) handleServeMedia(w http.ResponseWriter, r *http.Request) {
 	if err != nil || m.Status != "confirmed" {
 		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Media tidak ditemukan.", r))
 		return
+	}
+	if m.Purpose != "avatar" && m.Purpose != "banner" {
+		if UserID(r) == "" {
+			writeJSON(w, http.StatusUnauthorized, fail("UNAUTHORIZED", "Sesi berakhir.", r))
+			return
+		}
+		if uuidStr(m.OwnerID) != UserID(r) && UserRole(r) != "admin" {
+			writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Bukan milikmu.", r))
+			return
+		}
 	}
 	body, err := a.Storage.Get(r.Context(), m.ObjectKey)
 	if err != nil {

@@ -78,6 +78,9 @@ func (a *App) routes() http.Handler {
 			r.Post("/media/upload", a.csrf(a.handleUpload))
 			r.Post("/media/{id}/confirm", a.csrf(a.handleConfirmMedia))
 			r.Delete("/media/{id}", a.csrf(a.handleDeleteMedia))
+		})
+		r.Group(func(r chi.Router) {
+			r.Use(a.authOptional)
 			r.Get("/media/{id}", a.handleServeMedia)
 		})
 	})

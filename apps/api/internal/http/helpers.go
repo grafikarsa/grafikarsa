@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/netip"
 	"strings"
@@ -99,16 +100,14 @@ func failDetails(code, message string, details []map[string]string, r *http.Requ
 }
 
 func setCookie(w http.ResponseWriter, name, value string, maxAge int, httpOnly bool, secure bool) {
-	c := &http.Cookie{
-		Name:     name,
-		Value:    value,
-		Path:     "/",
-		MaxAge:   maxAge,
-		HttpOnly: httpOnly,
-		Secure:   secure,
-		SameSite: http.SameSiteLaxMode,
+	parts := []string{name + "=" + value, "Path=/", fmt.Sprintf("Max-Age=%d", maxAge), "SameSite=Lax"}
+	if httpOnly {
+		parts = append(parts, "HttpOnly")
 	}
-	http.SetCookie(w, c)
+	if secure {
+		parts = append(parts, "Secure")
+	}
+	w.Header().Add("Set-Cookie", strings.Join(parts, "; "))
 }
 
 func clearCookie(w http.ResponseWriter, name string, secure bool) {

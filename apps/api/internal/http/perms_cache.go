@@ -28,7 +28,7 @@ func blacklistJTI(ctx context.Context, c *cache.Cache, jti string, ttl time.Dura
 func permsKey(userID string) string { return "perms:" + userID }
 
 func loadPerms(ctx context.Context, c *cache.Cache, q *repo.Queries, userID string) map[string]bool {
-	if cached, err := c.GetStrings(ctx, permsKey(userID)); err == nil && cached != nil {
+	if cached, err := c.GetStrings(ctx, permsKey(userID)); err == nil && len(cached) > 0 {
 		out := map[string]bool{}
 		for _, p := range cached {
 			out[p] = true
