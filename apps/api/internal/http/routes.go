@@ -130,6 +130,26 @@ func (a *App) routes() http.Handler {
 				r.With(a.requirePerm("academic.promote_execute")).Post("/jobs/{id}/approve", a.csrf(a.handlePromotionApprove))
 				r.With(a.requirePerm("academic.promote_execute")).Post("/jobs/{id}/execute", a.csrf(a.handlePromotionExecute))
 			})
+			r.Route("/assessments", func(r chi.Router) {
+				r.Use(a.requirePerm("assessments.view"))
+				r.Get("/metrics", a.handleListMetrics)
+				r.With(a.requirePerm("assessments.manage_metrics")).Post("/metrics", a.csrf(a.handleCreateMetric))
+				r.With(a.requirePerm("assessments.score")).Get("/portfolio/{id}", a.handleGetAssessment)
+				r.With(a.requirePerm("assessments.score")).Post("/portfolio/{id}", a.csrf(a.handleScoreAssessment))
+			})
+			r.With(a.requirePerm("academic.import_students")).Post("/import/students", a.csrf(a.handleImportStudents))
+			r.Route("/feedback", func(r chi.Router) {
+				r.Use(a.requirePerm("feedback.triage"))
+				r.Get("/", a.handleListFeedback)
+				r.Get("/{id}", a.handleGetFeedback)
+				r.Post("/{id}/reply", a.csrf(a.handleReplyFeedback))
+			})
+			r.Route("/changelogs", func(r chi.Router) {
+				r.Use(a.requirePerm("changelog.manage"))
+				r.Get("/", a.handleListChangelogs)
+				r.Post("/", a.csrf(a.handleCreateChangelog))
+				r.With(a.requirePerm("changelog.publish")).Post("/{id}/publish", a.csrf(a.handlePublishChangelog))
+			})
 		})
 		r.Group(func(r chi.Router) {
 			r.Use(a.authRequired)
@@ -196,6 +216,19 @@ func (a *App) routes() http.Handler {
 			r.Use(a.authOptional)
 			r.Get("/leaderboards", a.handleLeaderboards)
 			r.Get("/search", a.handleSearch)
+			r.Get("/changelogs", a.handlePublishedChangelogs)
+		})
+		r.Group(func(r chi.Router) {
+			r.Use(a.authOptional)
+			r.Post("/feedback", a.handleCreateFeedback)
+		})
+		r.Group(func(r chi.Router) {
+			r.Use(a.authRequired)
+			r.Get("/feedback", a.handleListFeedback)
+			r.Get("/feedback/{id}", a.handleGetFeedback)
+			r.Post("/feedback/{id}/reply", a.csrf(a.handleReplyFeedback))
+			r.Post("/feedback/{id}/vote", a.csrf(a.handleVoteFeedback))
+			r.Post("/changelogs/{id}/read", a.handleReadChangelog)
 		})
 		r.Group(func(r chi.Router) {
 			r.Use(a.authRequired)

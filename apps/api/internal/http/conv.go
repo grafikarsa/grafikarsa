@@ -101,3 +101,31 @@ func toInt64(v any) int64 {
 func isHTTPS(s string) bool {
 	return len(s) > 8 && s[:8] == "https://"
 }
+
+func floatToNumeric(f float64) pgtype.Numeric {
+	var n pgtype.Numeric
+	_ = n.Scan(floatToString(f))
+	return n
+}
+
+func floatToString(f float64) string {
+	s := ""
+	neg := f < 0
+	if neg {
+		f = -f
+	}
+	i := int(f)
+	frac := int((f - float64(i)) * 100)
+	s = itoa(i) + "." + twoDigits(frac)
+	if neg {
+		s = "-" + s
+	}
+	return s
+}
+
+func twoDigits(n int) string {
+	if n < 10 {
+		return "0" + itoa(n)
+	}
+	return itoa(n)
+}
