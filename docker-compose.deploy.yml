@@ -114,6 +114,28 @@ services:
     networks:
       - grafikarsa-network
 
+  worker:
+    image: ${DOCKERHUB_USERNAME}/grafikarsa-api:${IMAGE_TAG:-latest}
+    container_name: grafikarsa-worker
+    restart: unless-stopped
+    entrypoint: ["/worker"]
+    command: ["serve"]
+    env_file: .env
+    environment:
+      - APP_ENV=production
+      - DB_HOST=db
+      - DRAGONFLY_HOST=dragonfly
+      - S3_ENDPOINT=http://storage:9000
+    depends_on:
+      db:
+        condition: service_healthy
+      dragonfly:
+        condition: service_healthy
+      storage:
+        condition: service_healthy
+    networks:
+      - grafikarsa-network
+
   web:
     image: ${DOCKERHUB_USERNAME}/grafikarsa-web:${IMAGE_TAG:-latest}
     container_name: grafikarsa-web

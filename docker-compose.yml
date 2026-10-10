@@ -110,6 +110,36 @@ services:
     networks:
       - grafikarsa-network
 
+  # Worker: scheduler job berkala (outbox 30 dtk, stats 5 mnt, leaderboard
+  # harian 02:05 WIB, promotion draft harian, cleanup, retention).
+  # Fase 3: satu proses scheduler, tanpa port host.
+  worker:
+    build:
+      context: ./apps/api
+      target: development
+    container_name: grafikarsa-worker-dev
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - APP_ENV=development
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DRAGONFLY_HOST=dragonfly
+      - DRAGONFLY_PORT=6379
+      - S3_ENDPOINT=http://storage:9000
+    command: ["go", "run", "./cmd/worker", "serve"]
+    volumes:
+      - ./apps/api:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      dragonfly:
+        condition: service_healthy
+      storage:
+        condition: service_healthy
+    networks:
+      - grafikarsa-network
+
 volumes:
   postgres_data:
   dragonfly_data:

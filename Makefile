@@ -23,14 +23,15 @@ help: ## Tampilkan bantuan
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
 
 # ── DEV ───────────────────────────────────────
-dev: ## Up db + dragonfly + storage + api (web native terpisah)
-	$(COMPOSE_DEV) up -d --build
+dev: ## Up db + dragonfly + storage + api + worker (web native terpisah)
+	$(COMPOSE_DEV) up -d --build db dragonfly storage api worker
 	@echo ""
 	@echo "  API      http://localhost:$${API_PORT:-8091}/health"
 	@echo "  DB       localhost:$${DB_PORT:-5439}"
 	@echo "  Cache    localhost:$${DRAGONFLY_PORT:-6390}"
 	@echo "  Storage  http://localhost:$${S3_PORT:-9020} (S3)  http://localhost:$${S3_CONSOLE_PORT:-9021} (console)"
 	@echo "  Web      jalankan: make dev-web  ->  http://localhost:$${WEB_PORT:-3020}"
+	@echo "  Worker   scheduler aktif (outbox 30s, stats 5m, leaderboard 02:05 WIB)"
 
 dev-web: ## Jalankan Next.js native (HMR)
 	WEB_PORT=$${WEB_PORT:-3020} pnpm --dir $(WEB_DIR) dev --port $${WEB_PORT:-3020}

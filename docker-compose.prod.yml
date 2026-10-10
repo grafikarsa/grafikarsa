@@ -84,6 +84,30 @@ services:
     networks:
       - grafikarsa-network
 
+  worker:
+    build:
+      context: ./apps/api
+      target: production
+    container_name: grafikarsa-worker-prod
+    restart: unless-stopped
+    entrypoint: ["/worker"]
+    command: ["serve"]
+    env_file: .env
+    environment:
+      - APP_ENV=production
+      - DB_HOST=db
+      - DRAGONFLY_HOST=dragonfly
+      - S3_ENDPOINT=http://storage:9000
+    depends_on:
+      db:
+        condition: service_healthy
+      dragonfly:
+        condition: service_healthy
+      storage:
+        condition: service_healthy
+    networks:
+      - grafikarsa-network
+
   web:
     build:
       context: ./apps/web
