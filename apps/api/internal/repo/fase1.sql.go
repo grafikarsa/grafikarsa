@@ -12,6 +12,45 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const addRolePermission = `-- name: AddRolePermission :exec
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT $1, id FROM permissions WHERE key = $2 ON CONFLICT DO NOTHING
+`
+
+type AddRolePermissionParams struct {
+	RoleID pgtype.UUID `json:"role_id"`
+	Key    string      `json:"key"`
+}
+
+func (q *Queries) AddRolePermission(ctx context.Context, arg AddRolePermissionParams) error {
+	_, err := q.db.Exec(ctx, addRolePermission, arg.RoleID, arg.Key)
+	return err
+}
+
+const assignUserRole = `-- name: AssignUserRole :exec
+INSERT INTO user_roles (user_id, role_id, scope_major_id, assigned_by, expires_at)
+VALUES ($1, $2, $3, $4, $5) ON CONFLICT (user_id, role_id) DO UPDATE SET scope_major_id = EXCLUDED.scope_major_id, expires_at = EXCLUDED.expires_at
+`
+
+type AssignUserRoleParams struct {
+	UserID       pgtype.UUID        `json:"user_id"`
+	RoleID       pgtype.UUID        `json:"role_id"`
+	ScopeMajorID pgtype.UUID        `json:"scope_major_id"`
+	AssignedBy   pgtype.UUID        `json:"assigned_by"`
+	ExpiresAt    pgtype.Timestamptz `json:"expires_at"`
+}
+
+func (q *Queries) AssignUserRole(ctx context.Context, arg AssignUserRoleParams) error {
+	_, err := q.db.Exec(ctx, assignUserRole,
+		arg.UserID,
+		arg.RoleID,
+		arg.ScopeMajorID,
+		arg.AssignedBy,
+		arg.ExpiresAt,
+	)
+	return err
+}
+
 const confirmMedia = `-- name: ConfirmMedia :exec
 UPDATE media_assets SET status = 'confirmed', confirmed_at = NOW() WHERE id = $1
 `
@@ -19,6 +58,22 @@ UPDATE media_assets SET status = 'confirmed', confirmed_at = NOW() WHERE id = $1
 func (q *Queries) ConfirmMedia(ctx context.Context, id pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, confirmMedia, id)
 	return err
+}
+
+const countUploadsSince = `-- name: CountUploadsSince :one
+SELECT COUNT(*) FROM media_assets WHERE owner_id = $1 AND created_at > NOW() - ($2 || ' hours')::interval
+`
+
+type CountUploadsSinceParams struct {
+	OwnerID pgtype.UUID `json:"owner_id"`
+	Column2 pgtype.Text `json:"column_2"`
+}
+
+func (q *Queries) CountUploadsSince(ctx context.Context, arg CountUploadsSinceParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countUploadsSince, arg.OwnerID, arg.Column2)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const countUsersAll = `-- name: CountUsersAll :one
@@ -66,6 +121,23 @@ func (q *Queries) CreateMedia(ctx context.Context, arg CreateMediaParams) (pgtyp
 	return id, err
 }
 
+const createRole = `-- name: CreateRole :one
+INSERT INTO roles (slug, name, scope_type) VALUES ($1, $2, $3) RETURNING id
+`
+
+type CreateRoleParams struct {
+	Slug      string `json:"slug"`
+	Name      string `json:"name"`
+	ScopeType string `json:"scope_type"`
+}
+
+func (q *Queries) CreateRole(ctx context.Context, arg CreateRoleParams) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, createRole, arg.Slug, arg.Name, arg.ScopeType)
+	var id pgtype.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const createSession = `-- name: CreateSession :one
 INSERT INTO sessions (user_id, refresh_hash, family_id, device_label, ip, user_agent, expires_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id
@@ -96,6 +168,49 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (p
 	return id, err
 }
 
+const createUser = `-- name: CreateUser :one
+INSERT INTO users (username, email, password_hash, name, role_primary, status, major_id, class_id, must_change_password)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id
+`
+
+type CreateUserParams struct {
+	Username           string      `json:"username"`
+	Email              string      `json:"email"`
+	PasswordHash       string      `json:"password_hash"`
+	Name               string      `json:"name"`
+	RolePrimary        string      `json:"role_primary"`
+	Status             string      `json:"status"`
+	MajorID            pgtype.UUID `json:"major_id"`
+	ClassID            pgtype.UUID `json:"class_id"`
+	MustChangePassword bool        `json:"must_change_password"`
+}
+
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, createUser,
+		arg.Username,
+		arg.Email,
+		arg.PasswordHash,
+		arg.Name,
+		arg.RolePrimary,
+		arg.Status,
+		arg.MajorID,
+		arg.ClassID,
+		arg.MustChangePassword,
+	)
+	var id pgtype.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const deleteRole = `-- name: DeleteRole :exec
+DELETE FROM roles WHERE id = $1 AND is_system = FALSE
+`
+
+func (q *Queries) DeleteRole(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteRole, id)
+	return err
+}
+
 const getMediaByID = `-- name: GetMediaByID :one
 SELECT id, owner_id, purpose, object_key, mime, size_bytes, width, height, checksum_sha256, status, created_at, confirmed_at
 FROM media_assets WHERE id = $1 LIMIT 1
@@ -117,6 +232,31 @@ func (q *Queries) GetMediaByID(ctx context.Context, id pgtype.UUID) (MediaAssets
 		&i.Status,
 		&i.CreatedAt,
 		&i.ConfirmedAt,
+	)
+	return i, err
+}
+
+const getRoleBySlug = `-- name: GetRoleBySlug :one
+SELECT id, slug, name, scope_type, is_system FROM roles WHERE slug = $1 LIMIT 1
+`
+
+type GetRoleBySlugRow struct {
+	ID        pgtype.UUID `json:"id"`
+	Slug      string      `json:"slug"`
+	Name      string      `json:"name"`
+	ScopeType string      `json:"scope_type"`
+	IsSystem  bool        `json:"is_system"`
+}
+
+func (q *Queries) GetRoleBySlug(ctx context.Context, slug string) (GetRoleBySlugRow, error) {
+	row := q.db.QueryRow(ctx, getRoleBySlug, slug)
+	var i GetRoleBySlugRow
+	err := row.Scan(
+		&i.ID,
+		&i.Slug,
+		&i.Name,
+		&i.ScopeType,
+		&i.IsSystem,
 	)
 	return i, err
 }
@@ -457,12 +597,74 @@ func (q *Queries) RevokeSession(ctx context.Context, id pgtype.UUID) error {
 	return err
 }
 
+const setMustChangePassword = `-- name: SetMustChangePassword :exec
+UPDATE users SET must_change_password = $2 WHERE id = $1
+`
+
+type SetMustChangePasswordParams struct {
+	ID                 pgtype.UUID `json:"id"`
+	MustChangePassword bool        `json:"must_change_password"`
+}
+
+func (q *Queries) SetMustChangePassword(ctx context.Context, arg SetMustChangePasswordParams) error {
+	_, err := q.db.Exec(ctx, setMustChangePassword, arg.ID, arg.MustChangePassword)
+	return err
+}
+
+const setUserActive = `-- name: SetUserActive :exec
+UPDATE users SET is_active = $2, updated_at = NOW() WHERE id = $1
+`
+
+type SetUserActiveParams struct {
+	ID       pgtype.UUID `json:"id"`
+	IsActive bool        `json:"is_active"`
+}
+
+func (q *Queries) SetUserActive(ctx context.Context, arg SetUserActiveParams) error {
+	_, err := q.db.Exec(ctx, setUserActive, arg.ID, arg.IsActive)
+	return err
+}
+
+const softDeleteUser = `-- name: SoftDeleteUser :exec
+UPDATE users SET deleted_at = NOW() WHERE id = $1
+`
+
+func (q *Queries) SoftDeleteUser(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, softDeleteUser, id)
+	return err
+}
+
+const sumUserMedia = `-- name: SumUserMedia :one
+SELECT COALESCE(SUM(size_bytes), 0) FROM media_assets WHERE owner_id = $1 AND status = 'confirmed'
+`
+
+func (q *Queries) SumUserMedia(ctx context.Context, ownerID pgtype.UUID) (interface{}, error) {
+	row := q.db.QueryRow(ctx, sumUserMedia, ownerID)
+	var coalesce interface{}
+	err := row.Scan(&coalesce)
+	return coalesce, err
+}
+
 const touchLastLogin = `-- name: TouchLastLogin :exec
 UPDATE users SET last_login_at = NOW() WHERE id = $1
 `
 
 func (q *Queries) TouchLastLogin(ctx context.Context, id pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, touchLastLogin, id)
+	return err
+}
+
+const unassignUserRole = `-- name: UnassignUserRole :exec
+DELETE FROM user_roles WHERE user_id = $1 AND role_id = $2
+`
+
+type UnassignUserRoleParams struct {
+	UserID pgtype.UUID `json:"user_id"`
+	RoleID pgtype.UUID `json:"role_id"`
+}
+
+func (q *Queries) UnassignUserRole(ctx context.Context, arg UnassignUserRoleParams) error {
+	_, err := q.db.Exec(ctx, unassignUserRole, arg.UserID, arg.RoleID)
 	return err
 }
 
@@ -477,6 +679,29 @@ type UpdatePasswordHashParams struct {
 
 func (q *Queries) UpdatePasswordHash(ctx context.Context, arg UpdatePasswordHashParams) error {
 	_, err := q.db.Exec(ctx, updatePasswordHash, arg.ID, arg.PasswordHash)
+	return err
+}
+
+const updateUser = `-- name: UpdateUser :exec
+UPDATE users SET name = $2, email = $3, major_id = $4, class_id = $5, updated_at = NOW() WHERE id = $1
+`
+
+type UpdateUserParams struct {
+	ID      pgtype.UUID `json:"id"`
+	Name    string      `json:"name"`
+	Email   string      `json:"email"`
+	MajorID pgtype.UUID `json:"major_id"`
+	ClassID pgtype.UUID `json:"class_id"`
+}
+
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
+	_, err := q.db.Exec(ctx, updateUser,
+		arg.ID,
+		arg.Name,
+		arg.Email,
+		arg.MajorID,
+		arg.ClassID,
+	)
 	return err
 }
 
@@ -505,5 +730,28 @@ type UpdateUserBannerParams struct {
 
 func (q *Queries) UpdateUserBanner(ctx context.Context, arg UpdateUserBannerParams) error {
 	_, err := q.db.Exec(ctx, updateUserBanner, arg.ID, arg.BannerMediaID)
+	return err
+}
+
+const upsertUserInterest = `-- name: UpsertUserInterest :exec
+INSERT INTO user_interests (user_id, tag_weights, major_weights, total_likes)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (user_id) DO UPDATE SET tag_weights = EXCLUDED.tag_weights, major_weights = EXCLUDED.major_weights, total_likes = EXCLUDED.total_likes, updated_at = NOW()
+`
+
+type UpsertUserInterestParams struct {
+	UserID       pgtype.UUID `json:"user_id"`
+	TagWeights   []byte      `json:"tag_weights"`
+	MajorWeights []byte      `json:"major_weights"`
+	TotalLikes   int32       `json:"total_likes"`
+}
+
+func (q *Queries) UpsertUserInterest(ctx context.Context, arg UpsertUserInterestParams) error {
+	_, err := q.db.Exec(ctx, upsertUserInterest,
+		arg.UserID,
+		arg.TagWeights,
+		arg.MajorWeights,
+		arg.TotalLikes,
+	)
 	return err
 }

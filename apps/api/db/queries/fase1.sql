@@ -74,3 +74,50 @@ SELECT id, slug, name, scope_type, is_system FROM roles ORDER BY name ASC;
 
 -- name: MarkMediaDeleted :exec
 UPDATE media_assets SET status = 'deleted' WHERE id = $1;
+
+-- name: CreateUser :one
+INSERT INTO users (username, email, password_hash, name, role_primary, status, major_id, class_id, must_change_password)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id;
+
+-- name: UpdateUser :exec
+UPDATE users SET name = $2, email = $3, major_id = $4, class_id = $5, updated_at = NOW() WHERE id = $1;
+
+-- name: SoftDeleteUser :exec
+UPDATE users SET deleted_at = NOW() WHERE id = $1;
+
+-- name: SetUserActive :exec
+UPDATE users SET is_active = $2, updated_at = NOW() WHERE id = $1;
+
+-- name: SetMustChangePassword :exec
+UPDATE users SET must_change_password = $2 WHERE id = $1;
+
+-- name: CreateRole :one
+INSERT INTO roles (slug, name, scope_type) VALUES ($1, $2, $3) RETURNING id;
+
+-- name: DeleteRole :exec
+DELETE FROM roles WHERE id = $1 AND is_system = FALSE;
+
+-- name: AddRolePermission :exec
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT $1, id FROM permissions WHERE key = $2 ON CONFLICT DO NOTHING;
+
+-- name: AssignUserRole :exec
+INSERT INTO user_roles (user_id, role_id, scope_major_id, assigned_by, expires_at)
+VALUES ($1, $2, $3, $4, $5) ON CONFLICT (user_id, role_id) DO UPDATE SET scope_major_id = EXCLUDED.scope_major_id, expires_at = EXCLUDED.expires_at;
+
+-- name: UnassignUserRole :exec
+DELETE FROM user_roles WHERE user_id = $1 AND role_id = $2;
+
+-- name: GetRoleBySlug :one
+SELECT id, slug, name, scope_type, is_system FROM roles WHERE slug = $1 LIMIT 1;
+
+-- name: UpsertUserInterest :exec
+INSERT INTO user_interests (user_id, tag_weights, major_weights, total_likes)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (user_id) DO UPDATE SET tag_weights = EXCLUDED.tag_weights, major_weights = EXCLUDED.major_weights, total_likes = EXCLUDED.total_likes, updated_at = NOW();
+
+-- name: SumUserMedia :one
+SELECT COALESCE(SUM(size_bytes), 0) FROM media_assets WHERE owner_id = $1 AND status = 'confirmed';
+
+-- name: CountUploadsSince :one
+SELECT COUNT(*) FROM media_assets WHERE owner_id = $1 AND created_at > NOW() - ($2 || ' hours')::interval;

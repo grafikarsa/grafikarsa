@@ -73,7 +73,28 @@ func (a *App) handleAdminCreateUser(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Admin jurusan hanya boleh buat siswa/guru.", r))
 		return
 	}
-	writeJSON(w, http.StatusCreated, ok(map[string]string{"status": "created"}, r))
+	var majorID = nilUUID()
+	if UserRole(r) == "admin_jurusan" && UserScope(r) != "" {
+		majorID = mustUUID(UserScope(r))
+	}
+	id, err := a.Q.CreateUser(r.Context(), repo.CreateUserParams{
+		Username: req.Username, Email: req.Email, PasswordHash: auth.HashPassword(req.Password),
+		Name: req.Name, RolePrimary: req.Role, Status: "aktif", MajorID: majorID,
+		MustChangePassword: true,
+	})
+	if err != nil {
+		writeJSON(w, http.StatusConflict, fail("DUPLICATE_USER", "Username/email sudah dipakai.", r))
+		return
+	}
+	role, _ := a.Q.GetRoleBySlug(r.Context(), req.Role)
+	if role.Slug != "" {
+		_ = a.Q.AssignUserRole(r.Context(), repo.AssignUserRoleParams{
+			UserID: id, RoleID: role.ID, ScopeMajorID: majorID, AssignedBy: mustUUID(UserID(r)),
+		})
+	}
+	invalidatePerms(r.Context(), a.Cache, uuidStr(id))
+	auditLog(r, a, "users.create", "users", uuidStr(id), req.Role)
+	writeJSON(w, http.StatusCreated, ok(map[string]string{"id": uuidStr(id)}, r))
 }
 
 func (a *App) handleAdminGetUser(w http.ResponseWriter, r *http.Request) {
@@ -91,14 +112,69 @@ func (a *App) handleAdminGetUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) handleAdminUpdateUser(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	u, err := a.Q.GetUserByID(r.Context(), mustUUID(id))
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "User tidak ditemukan.", r))
+		return
+	}
+	if UserRole(r) == "admin_jurusan" && uuidStr(u.MajorID) != UserScope(r) && UserScope(r) != "" {
+		writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Di luar jurusanmu.", r))
+		return
+	}
+	var req struct {
+		Name  *string `json:"name"`
+		Email *string `json:"email"`
+	}
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	name := u.Name
+	if req.Name != nil && *req.Name != "" {
+		name = *req.Name
+	}
+	email := u.Email
+	if req.Email != nil && *req.Email != "" {
+		email = *req.Email
+	}
+	_ = a.Q.UpdateUser(r.Context(), repo.UpdateUserParams{ID: u.ID, Name: name, Email: email, MajorID: u.MajorID, ClassID: u.ClassID})
+	auditLog(r, a, "users.update", "users", id, "")
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "ok"}, r))
 }
 
 func (a *App) handleAdminDeleteUser(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	u, err := a.Q.GetUserByID(r.Context(), mustUUID(id))
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "User tidak ditemukan.", r))
+		return
+	}
+	if uuidStr(u.ID) == UserID(r) {
+		writeJSON(w, http.StatusUnprocessableEntity, fail("VALIDATION_ERROR", "Tidak bisa hapus diri sendiri.", r))
+		return
+	}
+	_ = a.Q.SoftDeleteUser(r.Context(), u.ID)
+	_ = a.Q.RevokeAllUserSessions(r.Context(), u.ID)
+	invalidatePerms(r.Context(), a.Cache, id)
+	auditLog(r, a, "users.delete", "users", id, "")
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "deleted"}, r))
 }
 
 func (a *App) handleAdminActivateUser(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	var req struct {
+		Active bool `json:"active"`
+	}
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	u, err := a.Q.GetUserByID(r.Context(), mustUUID(id))
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "User tidak ditemukan.", r))
+		return
+	}
+	_ = a.Q.SetUserActive(r.Context(), repo.SetUserActiveParams{ID: u.ID, IsActive: req.Active})
+	auditLog(r, a, "users.activate", "users", id, "")
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "ok"}, r))
 }
 
@@ -147,13 +223,75 @@ func (a *App) handleCreateRole(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	writeJSON(w, http.StatusCreated, ok(map[string]string{"status": "created"}, r))
+	scope := "global"
+	if UserRole(r) == "admin_jurusan" {
+		scope = "jurusan"
+	}
+	rid, err := a.Q.CreateRole(r.Context(), repo.CreateRoleParams{Slug: req.Slug, Name: req.Name, ScopeType: scope})
+	if err != nil {
+		writeJSON(w, http.StatusConflict, fail("DUPLICATE_ROLE", "Slug role sudah dipakai.", r))
+		return
+	}
+	for _, p := range req.Perms {
+		_ = a.Q.AddRolePermission(r.Context(), repo.AddRolePermissionParams{RoleID: rid, Key: p})
+	}
+	auditLog(r, a, "roles.create", "roles", uuidStr(rid), req.Slug)
+	writeJSON(w, http.StatusCreated, ok(map[string]string{"id": uuidStr(rid)}, r))
 }
 
 func (a *App) handleAssignRole(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		UserID       string  `json:"user_id"`
+		RoleSlug     string  `json:"role_slug"`
+		ScopeMajorID *string `json:"scope_major_id"`
+	}
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	role, err := a.Q.GetRoleBySlug(r.Context(), req.RoleSlug)
+	if err != nil || role.Slug == "" {
+		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Role tidak ditemukan.", r))
+		return
+	}
+	scope := nilUUID()
+	if req.ScopeMajorID != nil && *req.ScopeMajorID != "" {
+		scope = mustUUID(*req.ScopeMajorID)
+	}
+	if UserRole(r) == "admin_jurusan" {
+		if UserScope(r) == "" || (scope.Valid && uuidStr(scope) != UserScope(r)) {
+			writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Hanya dalam jurusanmu.", r))
+			return
+		}
+		scope = mustUUID(UserScope(r))
+	}
+	u, err := a.Q.GetUserByID(r.Context(), mustUUID(req.UserID))
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "User tidak ditemukan.", r))
+		return
+	}
+	_ = a.Q.AssignUserRole(r.Context(), repo.AssignUserRoleParams{
+		UserID: u.ID, RoleID: role.ID, ScopeMajorID: scope, AssignedBy: mustUUID(UserID(r)),
+	})
+	invalidatePerms(r.Context(), a.Cache, req.UserID)
+	auditLog(r, a, "roles.assign", "user_roles", req.UserID, req.RoleSlug)
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "ok"}, r))
 }
 
 func (a *App) handleUnassignRole(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		UserID   string `json:"user_id"`
+		RoleSlug string `json:"role_slug"`
+	}
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	role, err := a.Q.GetRoleBySlug(r.Context(), req.RoleSlug)
+	if err != nil || role.Slug == "" || role.IsSystem {
+		writeJSON(w, http.StatusUnprocessableEntity, fail("VALIDATION_ERROR", "Role sistem tidak bisa dilepas via ini.", r))
+		return
+	}
+	_ = a.Q.UnassignUserRole(r.Context(), repo.UnassignUserRoleParams{UserID: mustUUID(req.UserID), RoleID: role.ID})
+	invalidatePerms(r.Context(), a.Cache, req.UserID)
+	auditLog(r, a, "roles.unassign", "user_roles", req.UserID, req.RoleSlug)
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "ok"}, r))
 }
