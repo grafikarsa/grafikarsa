@@ -16,11 +16,13 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /api ./cmd/api \
   && CGO_ENABLED=0 go build -ldflags="-s -w" -o /migrate ./cmd/tools/migrate \
-  && CGO_ENABLED=0 go build -ldflags="-s -w" -o /worker ./cmd/worker
+  && CGO_ENABLED=0 go build -ldflags="-s -w" -o /worker ./cmd/worker \
+  && CGO_ENABLED=0 go build -ldflags="-s -w" -o /seed ./cmd/tools/seed
 
 FROM gcr.io/distroless/static AS production
 COPY --from=builder /api /api
 COPY --from=builder /migrate /migrate
 COPY --from=builder /worker /worker
+COPY --from=builder /seed /seed
 EXPOSE 8080
 ENTRYPOINT ["/api"]

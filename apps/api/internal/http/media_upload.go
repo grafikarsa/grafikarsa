@@ -2,6 +2,7 @@ package http
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -51,6 +52,27 @@ var purposeImages = map[string]imagePolicy{
 	"banner":      {maxWidth: 1500, variants: []int{800}},
 	"thumbnail":   {maxWidth: 1200, variants: []int{320, 800}},
 	"block_image": {maxWidth: 1600, variants: []int{320, 800}},
+}
+
+// ownsMedia: true bila media milik user (atau user admin). Dipakai setiap kali
+// media dikaitkan ke entitas agar tidak bisa memakai media orang lain.
+func (a *App) ownsMedia(ctx context.Context, mediaID pgtype.UUID, userID string) bool {
+	m, err := a.Q.GetMediaByID(ctx, mediaID)
+	if err != nil {
+		return false
+	}
+	if uuidStr(m.OwnerID) == userID {
+		return true
+	}
+	return userDBRole(ctx, a, userID) == "admin"
+}
+
+func userDBRole(ctx context.Context, a *App, userID string) string {
+	u, err := a.Q.GetUserByID(ctx, mustUUID(userID))
+	if err != nil {
+		return ""
+	}
+	return u.RolePrimary
 }
 
 func (a *App) handleUpload(w http.ResponseWriter, r *http.Request) {

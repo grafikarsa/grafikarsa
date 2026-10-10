@@ -113,8 +113,12 @@ UPDATE changelogs SET status = 'published' WHERE id IN (
 ) RETURNING id, version, title, audience;
 
 -- name: DeleteOldReadNotifications :exec
-DELETE FROM notifications WHERE is_read = TRUE AND created_at < NOW() - INTERVAL '90 days'
-  AND type NOT IN ('feedback_updated');
+-- Retensi: 90 hari untuk notif umum; feedback & pengumuman 1 tahun.
+DELETE FROM notifications WHERE is_read = TRUE
+  AND (
+    (type IN ('feedback_updated', 'announcement') AND created_at < NOW() - INTERVAL '365 days')
+    OR (type NOT IN ('feedback_updated', 'announcement') AND created_at < NOW() - INTERVAL '90 days')
+  );
 
 -- name: ListDigestUsers :many
 SELECT user_id FROM notification_preferences WHERE digest_daily = TRUE LIMIT 100;

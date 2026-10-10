@@ -8,7 +8,6 @@ import (
 	"grafikarsa/api/internal/cache"
 	"grafikarsa/api/internal/config"
 	"grafikarsa/api/internal/db"
-	"grafikarsa/api/internal/observability"
 	"grafikarsa/api/internal/repo"
 	"grafikarsa/api/internal/storage"
 )
@@ -25,7 +24,7 @@ func (a *App) routes() http.Handler {
 		writeJSON(w, http.StatusOK, ok(map[string]string{"status": "ok"}, r))
 	})
 	r.Get("/ready", a.handleReady)
-	r.Get("/metrics", observability.MetricsHandler())
+	r.Get("/metrics", a.handleMetrics)
 	r.Route("/v1", func(r chi.Router) {
 		// Rate limit per IP (gate ganti-password ada di authRequired).
 		r.Use(a.rateLimit)

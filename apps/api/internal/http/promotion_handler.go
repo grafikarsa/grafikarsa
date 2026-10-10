@@ -126,7 +126,7 @@ func (a *App) handlePromotionExecute(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := a.executePromotion(r, job, req.Confirm); err != nil {
 		_ = a.Q.MarkPromotionFailed(r.Context(), job.ID)
-		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Eksekusi gagal: "+err.Error(), r))
+		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Eksekusi kenaikan kelas gagal. Cek log server.", r))
 		return
 	}
 	_ = a.Q.MarkPromotionDone(r.Context(), repo.MarkPromotionDoneParams{ID: job.ID, ExecutedBy: mustUUID(UserID(r))})

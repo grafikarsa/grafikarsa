@@ -20,9 +20,9 @@ import (
 var usernameRe = regexp.MustCompile(`^[a-z0-9._-]{3,30}$`)
 
 type loginRequest struct {
-	Username  string `json:"username"`
-	Password  string `json:"password"`
-	CsrfToken string `json:"csrf_token"`
+	Username     string `json:"username"`
+	Password     string `json:"password"`
+	CaptchaToken string `json:"captcha_token"`
 }
 
 func mustUUID(s string) pgtype.UUID {
@@ -43,26 +43,35 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	ip := clientIP(r)
 
+	// Limit per IP: cegah brute-force lintas username dari satu sumber.
+	if n, _ := a.Cache.IncrWithExpire(ctx, "login:ip:"+ip, 10*time.Minute); n > 50 {
+		audit(ctx, a.Q, "", "login_ip_limited", ip, r.UserAgent())
+		writeJSON(w, http.StatusTooManyRequests, fail("TOO_MANY_REQUESTS", "Terlalu banyak percobaan dari jaringan ini.", r))
+		return
+	}
 	failKey := "login:fail:" + req.Username + ":" + ip
 	lockKey := "login:lock:" + req.Username + ":" + ip
 	if locked, _ := a.Cache.Exists(ctx, lockKey); locked {
 		writeJSON(w, http.StatusTooManyRequests, fail("ACCOUNT_LOCKED", "Terkunci 30 menit karena terlalu banyak percobaan.", r))
 		return
 	}
-	n, _ := a.Cache.IncrWithExpire(ctx, failKey, 10*time.Minute)
-	if n > 10 {
-		_ = a.Cache.Set(ctx, lockKey, "1", 30*time.Minute)
+	// Hitung percobaan yang ada (jangan menambah dulu: penambahan hanya saat
+	// password salah, agar tidak bisa mengunci akun orang lain tanpa login gagal).
+	n, _ := a.Cache.GetInt(ctx, failKey)
+	if n >= 10 {
+		_ = a.Cache.Set(ctx, lockKey, "1", 15*time.Minute)
 		audit(ctx, a.Q, "", "login_locked", ip, r.UserAgent())
-		writeJSON(w, http.StatusTooManyRequests, fail("ACCOUNT_LOCKED", "Terlalu banyak percobaan. Coba lagi 30 menit.", r))
+		writeJSON(w, http.StatusTooManyRequests, fail("ACCOUNT_LOCKED", "Terlalu banyak percobaan. Coba lagi 15 menit.", r))
 		return
 	}
-	if n > 5 && !verifyTurnstile(r.Context(), a.Cfg, req.CsrfToken) {
+	if n >= 5 && !verifyTurnstile(r.Context(), a.Cfg, req.CaptchaToken) {
 		writeJSON(w, http.StatusTooManyRequests, fail("CAPTCHA_REQUIRED", "Verifikasi keamanan diperlukan.", r))
 		return
 	}
 
 	u, err := a.Q.GetUserByUsername(ctx, req.Username)
 	if err != nil || !u.IsActive {
+		_, _ = a.Cache.IncrWithExpire(ctx, failKey, 10*time.Minute)
 		audit(ctx, a.Q, "", "login_fail", ip, r.UserAgent())
 		writeJSON(w, http.StatusUnauthorized, fail("INVALID_CREDENTIALS", "Username atau password salah.", r))
 		return
@@ -75,12 +84,14 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if !pwOK {
+		_, _ = a.Cache.IncrWithExpire(ctx, failKey, 10*time.Minute)
 		audit(ctx, a.Q, uuidStr(u.ID), "login_fail", ip, r.UserAgent())
 		writeJSON(w, http.StatusUnauthorized, fail("INVALID_CREDENTIALS", "Username atau password salah.", r))
 		return
 	}
 
 	_ = a.Cache.Del(ctx, failKey)
+	_ = a.Cache.Del(ctx, lockKey)
 	scope := a.effectiveScope(ctx, u.ID, u.RolePrimary)
 	access, jti, err := auth.NewAccessTokenWithFlags(uuidStr(u.ID), u.RolePrimary, scope, a.Cfg.JWT.KeyID(), a.Cfg.JWT.AccessSecret, a.Cfg.JWT.AccessTTL, u.MustChangePassword)
 	if err != nil {
@@ -296,7 +307,9 @@ func (a *App) handleDeleteSession(w http.ResponseWriter, r *http.Request) {
 func verifyTurnstile(ctx context.Context, cfg *config.Config, token string) bool {
 	secret := cfg.TurnstileSecret()
 	if secret == "" {
-		return token != ""
+		// Turnstile tidak dikonfigurasi: proteksi brute-force tetap dari
+		// counter gagal + lock, jadi jangan fail-closed (bikin user terkunci).
+		return true
 	}
 	if token == "" {
 		return false

@@ -25,6 +25,28 @@ func (q *Queries) AddPortfolioTag(ctx context.Context, arg AddPortfolioTagParams
 	return err
 }
 
+const addSeriesBlock = `-- name: AddSeriesBlock :exec
+INSERT INTO series_blocks (series_id, block_type, instruction, position)
+VALUES ($1, $2, $3, $4) ON CONFLICT (series_id, position) DO UPDATE SET instruction = EXCLUDED.instruction
+`
+
+type AddSeriesBlockParams struct {
+	SeriesID    pgtype.UUID `json:"series_id"`
+	BlockType   string      `json:"block_type"`
+	Instruction string      `json:"instruction"`
+	Position    int32       `json:"position"`
+}
+
+func (q *Queries) AddSeriesBlock(ctx context.Context, arg AddSeriesBlockParams) error {
+	_, err := q.db.Exec(ctx, addSeriesBlock,
+		arg.SeriesID,
+		arg.BlockType,
+		arg.Instruction,
+		arg.Position,
+	)
+	return err
+}
+
 const archivePortfolio = `-- name: ArchivePortfolio :exec
 UPDATE portfolios SET status = 'archived', updated_at = NOW() WHERE id = $1
 `
@@ -74,6 +96,25 @@ SELECT COUNT(*) FROM portfolio_tags WHERE portfolio_id = $1
 
 func (q *Queries) CountPortfolioTags(ctx context.Context, portfolioID pgtype.UUID) (int64, error) {
 	row := q.db.QueryRow(ctx, countPortfolioTags, portfolioID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countPortfoliosForAdmin = `-- name: CountPortfoliosForAdmin :one
+SELECT COUNT(*) FROM portfolios p JOIN users u ON u.id = p.owner_id
+WHERE p.deleted_at IS NULL
+  AND ($1::text = '' OR p.status = $1)
+  AND ($2::text = '' OR u.major_id::text = $2)
+`
+
+type CountPortfoliosForAdminParams struct {
+	Column1 string `json:"column_1"`
+	Column2 string `json:"column_2"`
+}
+
+func (q *Queries) CountPortfoliosForAdmin(ctx context.Context, arg CountPortfoliosForAdminParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countPortfoliosForAdmin, arg.Column1, arg.Column2)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -729,6 +770,72 @@ func (q *Queries) ListPortfolioTags(ctx context.Context, portfolioID pgtype.UUID
 	for rows.Next() {
 		var i ListPortfolioTagsRow
 		if err := rows.Scan(&i.ID, &i.Slug, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPortfoliosForAdmin = `-- name: ListPortfoliosForAdmin :many
+SELECT p.id, p.title, p.slug, p.status, p.owner_id, p.submitted_at, p.published_at,
+  u.username, u.name AS owner_name, u.major_id
+FROM portfolios p JOIN users u ON u.id = p.owner_id
+WHERE p.deleted_at IS NULL
+  AND ($1::text = '' OR p.status = $1)
+  AND ($2::text = '' OR u.major_id::text = $2)
+ORDER BY COALESCE(p.submitted_at, p.created_at) DESC LIMIT $3 OFFSET $4
+`
+
+type ListPortfoliosForAdminParams struct {
+	Column1 string `json:"column_1"`
+	Column2 string `json:"column_2"`
+	Limit   int32  `json:"limit"`
+	Offset  int32  `json:"offset"`
+}
+
+type ListPortfoliosForAdminRow struct {
+	ID          pgtype.UUID        `json:"id"`
+	Title       string             `json:"title"`
+	Slug        string             `json:"slug"`
+	Status      string             `json:"status"`
+	OwnerID     pgtype.UUID        `json:"owner_id"`
+	SubmittedAt pgtype.Timestamptz `json:"submitted_at"`
+	PublishedAt pgtype.Timestamptz `json:"published_at"`
+	Username    string             `json:"username"`
+	OwnerName   string             `json:"owner_name"`
+	MajorID     pgtype.UUID        `json:"major_id"`
+}
+
+func (q *Queries) ListPortfoliosForAdmin(ctx context.Context, arg ListPortfoliosForAdminParams) ([]ListPortfoliosForAdminRow, error) {
+	rows, err := q.db.Query(ctx, listPortfoliosForAdmin,
+		arg.Column1,
+		arg.Column2,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPortfoliosForAdminRow{}
+	for rows.Next() {
+		var i ListPortfoliosForAdminRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Slug,
+			&i.Status,
+			&i.OwnerID,
+			&i.SubmittedAt,
+			&i.PublishedAt,
+			&i.Username,
+			&i.OwnerName,
+			&i.MajorID,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

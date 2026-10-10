@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"grafikarsa/api/internal/observability"
+
 	"github.com/go-chi/chi/v5/middleware"
 	"grafikarsa/api/internal/auth"
 	"grafikarsa/api/internal/cache"
@@ -173,7 +175,13 @@ func (a *App) rateLimit(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		key := "rl:" + clientIP(r) + ":" + time.Now().UTC().Format("2006-01-02T15:04")
+		// Kunci per user bila login (satu sekolah bisa berbagi satu IP publik),
+		// selain itu per IP nyata dari BFF.
+		id := UserID(r)
+		if id == "" {
+			id = clientIP(r)
+		}
+		key := "rl:" + id + ":" + time.Now().UTC().Format("2006-01-02T15:04")
 		if n, err := a.Cache.IncrWithExpire(r.Context(), key, time.Minute); err == nil && n > int64(limit) {
 			writeJSON(w, http.StatusTooManyRequests, fail("TOO_MANY_REQUESTS", "Terlalu banyak permintaan. Coba lagi sebentar.", r))
 			return
@@ -199,6 +207,22 @@ func (a *App) mustChangePassword(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// handleMetrics: hanya untuk pemegang permission system.jobs (Prometheus
+// internal). Endpoint ini tidak boleh terbuka: memuat pola trafik internal.
+func (a *App) handleMetrics(w http.ResponseWriter, r *http.Request) {
+	claims := parseAccess(r, a.Cfg.JWT.VerificationKeys())
+	if claims == nil {
+		writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Tidak diizinkan.", r))
+		return
+	}
+	perms := loadPerms(r.Context(), a.Cache, a.Q, claims.Subject)
+	if claims.RolePrimary != "admin" && !perms["system.jobs"] {
+		writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Tidak diizinkan.", r))
+		return
+	}
+	observability.MetricsHandler()(w, r)
 }
 
 func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) bool {

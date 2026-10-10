@@ -223,3 +223,20 @@ UPDATE feedback_threads SET is_public = $2 WHERE id = $1;
 
 -- name: SetFeedbackSpam :exec
 UPDATE feedback_threads SET is_spam = $2, status = CASE WHEN $2 THEN 'closed' ELSE status END WHERE id = $1;
+
+-- name: UpdateTag :exec
+UPDATE tags SET name = $2, slug = COALESCE(NULLIF($3, ''), slug) WHERE id = $1;
+
+-- name: DeleteTagIfUnused :one
+DELETE FROM tags t WHERE t.id = $1 AND NOT EXISTS (SELECT 1 FROM portfolio_tags pt WHERE pt.tag_id = t.id)
+RETURNING t.id;
+
+-- name: GetUserMajorAndActive :one
+SELECT major_id, is_active, deleted_at FROM users WHERE id = $1 LIMIT 1;
+
+-- name: ReapStuckOutbox :exec
+UPDATE outbox SET status = 'pending', next_retry_at = NOW()
+WHERE status = 'processing' AND next_retry_at <= NOW();
+
+-- name: GetRolePermissions :many
+SELECT p.key FROM role_permissions rp JOIN permissions p ON p.id = rp.permission_id WHERE rp.role_id = $1;

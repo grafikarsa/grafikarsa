@@ -202,10 +202,14 @@ func (q *Queries) DeleteMetric(ctx context.Context, id pgtype.UUID) error {
 }
 
 const deleteOldReadNotifications = `-- name: DeleteOldReadNotifications :exec
-DELETE FROM notifications WHERE is_read = TRUE AND created_at < NOW() - INTERVAL '90 days'
-  AND type NOT IN ('feedback_updated')
+DELETE FROM notifications WHERE is_read = TRUE
+  AND (
+    (type IN ('feedback_updated', 'announcement') AND created_at < NOW() - INTERVAL '365 days')
+    OR (type NOT IN ('feedback_updated', 'announcement') AND created_at < NOW() - INTERVAL '90 days')
+  )
 `
 
+// Retensi: 90 hari untuk notif umum; feedback & pengumuman 1 tahun.
 func (q *Queries) DeleteOldReadNotifications(ctx context.Context) error {
 	_, err := q.db.Exec(ctx, deleteOldReadNotifications)
 	return err

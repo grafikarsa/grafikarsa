@@ -103,6 +103,13 @@ func (a *App) handleGetFeedback(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Thread tidak ditemukan.", r))
 		return
 	}
+	// Thread privat hanya untuk pelapor dan moderator.
+	canTriage := UserRole(r) == "admin" || UserPerms(r)["feedback.triage"]
+	isReporter := t.ReporterID.Valid && uuidStr(t.ReporterID) == UserID(r)
+	if !t.IsPublic && !canTriage && !isReporter {
+		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Thread tidak ditemukan.", r))
+		return
+	}
 	showInternal := UserRole(r) == "admin" || UserPerms(r)["feedback.triage"]
 	msgs, _ := a.Q.ListFeedbackMessages(r.Context(), repo.ListFeedbackMessagesParams{ThreadID: t.ID, Column2: !showInternal})
 	mout := []map[string]any{}
@@ -141,6 +148,13 @@ func (a *App) handleReplyFeedback(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Thread tidak ditemukan.", r))
 		return
 	}
+	// Thread privat hanya untuk pelapor dan moderator.
+	canTriage := UserRole(r) == "admin" || UserPerms(r)["feedback.triage"]
+	isReporter := t.ReporterID.Valid && uuidStr(t.ReporterID) == UserID(r)
+	if !t.IsPublic && !canTriage && !isReporter {
+		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Thread tidak ditemukan.", r))
+		return
+	}
 	var req struct {
 		Body       string `json:"body"`
 		IsInternal bool   `json:"is_internal"`
@@ -156,14 +170,12 @@ func (a *App) handleReplyFeedback(w http.ResponseWriter, r *http.Request) {
 	}
 	// Otorisasi: pelapor boleh membalas thread-nya; perubahan status dan
 	// catatan internal hanya untuk pemegang permission triage/admin.
-	isTriage := UserRole(r) == "admin" || UserPerms(r)["feedback.triage"]
-	isReporter := t.ReporterID.Valid && uuidStr(t.ReporterID) == UserID(r)
-	if !isTriage && !isReporter {
+	if !canTriage && !isReporter {
 		writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Bukan thread milikmu.", r))
 		return
 	}
 	if req.Status != "" {
-		if !isTriage {
+		if !canTriage {
 			writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Hanya moderator yang bisa mengubah status.", r))
 			return
 		}
@@ -172,7 +184,7 @@ func (a *App) handleReplyFeedback(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if req.Priority != "" && !isTriage {
+	if req.Priority != "" && !canTriage {
 		writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Hanya moderator yang bisa mengubah prioritas.", r))
 		return
 	}
@@ -182,14 +194,14 @@ func (a *App) handleReplyFeedback(w http.ResponseWriter, r *http.Request) {
 		authorID = mustUUID(uid)
 	}
 	_, _ = a.Q.AddFeedbackMessage(r.Context(), repo.AddFeedbackMessageParams{
-		ThreadID: t.ID, AuthorID: authorID, BodyMd: req.Body, IsInternal: req.IsInternal && isTriage,
+		ThreadID: t.ID, AuthorID: authorID, BodyMd: req.Body, IsInternal: req.IsInternal && canTriage,
 	})
 	priority := coalesce(req.Priority, t.Priority)
 	_ = a.Q.UpdateFeedbackThread(r.Context(), repo.UpdateFeedbackThreadParams{
 		ID: t.ID, Status: coalesce(req.Status, t.Status), Priority: priority,
 		AssigneeID: t.AssigneeID, IsPublic: t.IsPublic,
 	})
-	if t.ReporterID.Valid && isTriage {
+	if t.ReporterID.Valid && canTriage {
 		_, _ = a.Q.EnqueueOutbox(r.Context(), repo.EnqueueOutboxParams{
 			Topic:   "notify.feedback_updated",
 			Payload: notifPayload(map[string]string{"user_id": uuidStr(t.ReporterID), "thread_id": id, "status": coalesce(req.Status, t.Status)}),

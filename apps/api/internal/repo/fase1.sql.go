@@ -285,6 +285,18 @@ func (q *Queries) DeleteSocialLinks(ctx context.Context, userID pgtype.UUID) err
 	return err
 }
 
+const deleteTagIfUnused = `-- name: DeleteTagIfUnused :one
+DELETE FROM tags t WHERE t.id = $1 AND NOT EXISTS (SELECT 1 FROM portfolio_tags pt WHERE pt.tag_id = t.id)
+RETURNING t.id
+`
+
+func (q *Queries) DeleteTagIfUnused(ctx context.Context, id pgtype.UUID) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, deleteTagIfUnused, id)
+	var id_2 pgtype.UUID
+	err := row.Scan(&id_2)
+	return id_2, err
+}
+
 const findMediaByChecksum = `-- name: FindMediaByChecksum :one
 SELECT id, object_key, mime, width, height, variants FROM media_assets
 WHERE owner_id = $1 AND purpose = $2 AND checksum_sha256 = $3 AND status IN ('pending', 'confirmed')
@@ -460,6 +472,30 @@ func (q *Queries) GetRoleBySlug(ctx context.Context, slug string) (GetRoleBySlug
 	return i, err
 }
 
+const getRolePermissions = `-- name: GetRolePermissions :many
+SELECT p.key FROM role_permissions rp JOIN permissions p ON p.id = rp.permission_id WHERE rp.role_id = $1
+`
+
+func (q *Queries) GetRolePermissions(ctx context.Context, roleID pgtype.UUID) ([]string, error) {
+	rows, err := q.db.Query(ctx, getRolePermissions, roleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []string{}
+	for rows.Next() {
+		var key string
+		if err := rows.Scan(&key); err != nil {
+			return nil, err
+		}
+		items = append(items, key)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getSessionByHash = `-- name: GetSessionByHash :one
 SELECT id, user_id, refresh_hash, family_id, device_label, ip, user_agent, expires_at, absolute_expires_at, revoked_at, rotated_to
 FROM sessions WHERE refresh_hash = $1 LIMIT 1
@@ -601,6 +637,23 @@ func (q *Queries) GetUserMajor(ctx context.Context, id pgtype.UUID) (pgtype.UUID
 	var major_id pgtype.UUID
 	err := row.Scan(&major_id)
 	return major_id, err
+}
+
+const getUserMajorAndActive = `-- name: GetUserMajorAndActive :one
+SELECT major_id, is_active, deleted_at FROM users WHERE id = $1 LIMIT 1
+`
+
+type GetUserMajorAndActiveRow struct {
+	MajorID   pgtype.UUID        `json:"major_id"`
+	IsActive  bool               `json:"is_active"`
+	DeletedAt pgtype.Timestamptz `json:"deleted_at"`
+}
+
+func (q *Queries) GetUserMajorAndActive(ctx context.Context, id pgtype.UUID) (GetUserMajorAndActiveRow, error) {
+	row := q.db.QueryRow(ctx, getUserMajorAndActive, id)
+	var i GetUserMajorAndActiveRow
+	err := row.Scan(&i.MajorID, &i.IsActive, &i.DeletedAt)
+	return i, err
 }
 
 const getUserPermissions = `-- name: GetUserPermissions :many
@@ -963,6 +1016,16 @@ func (q *Queries) MediaUsedInPublishedPortfolio(ctx context.Context, thumbnailMe
 	return used, err
 }
 
+const reapStuckOutbox = `-- name: ReapStuckOutbox :exec
+UPDATE outbox SET status = 'pending', next_retry_at = NOW()
+WHERE status = 'processing' AND next_retry_at <= NOW()
+`
+
+func (q *Queries) ReapStuckOutbox(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, reapStuckOutbox)
+	return err
+}
+
 const refreshFeedbackUpvotes = `-- name: RefreshFeedbackUpvotes :exec
 UPDATE feedback_threads SET upvotes_cached = (SELECT COUNT(*) FROM feedback_votes v WHERE v.thread_id = $1) WHERE id = $1
 `
@@ -1200,6 +1263,21 @@ type UpdatePasswordHashParams struct {
 
 func (q *Queries) UpdatePasswordHash(ctx context.Context, arg UpdatePasswordHashParams) error {
 	_, err := q.db.Exec(ctx, updatePasswordHash, arg.ID, arg.PasswordHash)
+	return err
+}
+
+const updateTag = `-- name: UpdateTag :exec
+UPDATE tags SET name = $2, slug = COALESCE(NULLIF($3, ''), slug) WHERE id = $1
+`
+
+type UpdateTagParams struct {
+	ID      pgtype.UUID `json:"id"`
+	Name    string      `json:"name"`
+	Column3 interface{} `json:"column_3"`
+}
+
+func (q *Queries) UpdateTag(ctx context.Context, arg UpdateTagParams) error {
+	_, err := q.db.Exec(ctx, updateTag, arg.ID, arg.Name, arg.Column3)
 	return err
 }
 

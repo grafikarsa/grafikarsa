@@ -226,6 +226,12 @@ func (a *App) handleUpdatePortfolio(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.Thumbnail != nil && *req.Thumbnail != "" {
 		thumbID := mustUUID(*req.Thumbnail)
+		// Wajib media milik sendiri: mencegah menempel media orang lain lalu
+		// mempublikasikannya lewat portfolio sendiri (IDOR).
+		if !a.ownsMedia(r.Context(), thumbID, UserID(r)) {
+			writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Media bukan milikmu.", r))
+			return
+		}
 		_ = a.Q.UpdatePortfolioThumbnail(r.Context(), repo.UpdatePortfolioThumbnailParams{ID: p.ID, ThumbnailMediaID: thumbID})
 		// Media dipakai -> tandai confirmed agar tidak dibersihkan job pending.
 		_ = a.Q.ConfirmMedia(r.Context(), thumbID)

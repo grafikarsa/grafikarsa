@@ -30,6 +30,19 @@ func runScheduler(ctx context.Context, q *repo.Queries, c *cache.Cache, cfg *con
 	slog.Info("scheduler stop")
 }
 
+func safeRun(name string, fn func() error) {
+	defer func() {
+		if rec := recover(); rec != nil {
+			slog.Error("job panic", "job", name, "panic", rec)
+		}
+	}()
+	if err := fn(); err != nil {
+		slog.Error("job failed", "job", name, "err", err)
+	} else {
+		slog.Info("job ok", "job", name)
+	}
+}
+
 func every(ctx context.Context, d time.Duration, name string, fn func() error) {
 	run := func() {
 		if err := fn(); err != nil {

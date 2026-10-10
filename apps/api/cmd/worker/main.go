@@ -35,6 +35,13 @@ func main() {
 		slog.Error("db", "err", err)
 		os.Exit(1)
 	}
+	// Mode healthcheck untuk distroless: pastikan DB bisa dijangkau.
+	if job == "-healthcheck" {
+		if err := pool.Ping(ctx); err != nil {
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
 	defer pool.Close()
 	q := repo.New(pool)
 	c := cache.New(cfg)
@@ -85,6 +92,9 @@ func main() {
 }
 
 func dispatchOutbox(ctx context.Context, q *repo.Queries, c *cache.Cache) error {
+	// Kembalikan event yang nyangkut 'processing' (worker mati di tengah batch)
+	// supaya tidak hilang permanen.
+	_ = q.ReapStuckOutbox(ctx)
 	items, err := q.ClaimOutbox(ctx)
 	if err != nil {
 		return err
@@ -165,6 +175,11 @@ func dispatchOutbox(ctx context.Context, q *repo.Queries, c *cache.Cache) error 
 			notifyModerators(ctx, q, p["portfolio_id"])
 		case "notify.changelog_published":
 			fanoutChangelog(ctx, q, p)
+		default:
+			// Topic tak dikenal: tandai gagal (jangan hilang diam-diam).
+			slog.Error("outbox topic tidak dikenal", "id", it.ID, "topic", it.Topic)
+			_ = q.MarkOutboxFailed(ctx, it.ID)
+			continue
 		}
 		_ = q.MarkOutboxSent(ctx, it.ID)
 		slog.Info("outbox sent", "id", it.ID, "topic", it.Topic)

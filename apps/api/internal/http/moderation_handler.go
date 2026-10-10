@@ -2,6 +2,7 @@ package http
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"grafikarsa/api/internal/repo"
@@ -9,19 +10,28 @@ import (
 
 func (a *App) handleAdminListPortfolios(w http.ResponseWriter, r *http.Request) {
 	limit, offset, page := pageParams(r)
-	rows, err := a.Q.ListPublishedPortfolios(r.Context(), repo.ListPublishedPortfoliosParams{Limit: limit, Offset: offset})
+	status := r.URL.Query().Get("status")
+	// Row-level scope: admin_jurusan hanya melihat portfolio jurusannya.
+	scope := scopeFilter(r, "portfolios.view_all", "portfolios.moderate_jurusan")
+	rows, err := a.Q.ListPortfoliosForAdmin(r.Context(), repo.ListPortfoliosForAdminParams{
+		Column1: status, Column2: scope, Limit: limit, Offset: offset,
+	})
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal memuat.", r))
 		return
 	}
 	out := []map[string]any{}
 	for _, p := range rows {
-		out = append(out, map[string]any{"id": uuidStr(p.ID), "title": p.Title, "slug": p.Slug, "status": "published"})
+		out = append(out, map[string]any{
+			"id": uuidStr(p.ID), "title": p.Title, "slug": p.Slug, "status": p.Status,
+			"username": p.Username, "owner_name": p.OwnerName,
+		})
 	}
 	if out == nil {
 		out = []map[string]any{}
 	}
-	writeJSON(w, http.StatusOK, okMeta(out, meta(page, limit, int64(len(out))), r))
+	total, _ := a.Q.CountPortfoliosForAdmin(r.Context(), repo.CountPortfoliosForAdminParams{Column1: status, Column2: scope})
+	writeJSON(w, http.StatusOK, okMeta(out, meta(page, limit, total), r))
 }
 
 func (a *App) handleAdminPendingPortfolios(w http.ResponseWriter, r *http.Request) {
@@ -53,6 +63,15 @@ func (a *App) handleAdminGetPortfolio(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Portfolio tidak ditemukan.", r))
 		return
+	}
+	// Row-level scope: draft/pending jurusan lain tidak boleh dibaca
+	// (balas 404 agar keberadaannya tidak bocor).
+	if UserRole(r) != "admin" {
+		owner, oerr := a.Q.GetUserByID(r.Context(), p.OwnerID)
+		if oerr != nil || !owner.MajorID.Valid || UserScope(r) == "" || uuidStr(owner.MajorID) != UserScope(r) {
+			writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Portfolio tidak ditemukan.", r))
+			return
+		}
 	}
 	writeJSON(w, http.StatusOK, ok(portfolioDetail(r, a, p), r))
 }
@@ -87,7 +106,7 @@ func (a *App) moderate(w http.ResponseWriter, r *http.Request, status string, ne
 		if owner.MajorID.Valid {
 			scope = uuidStr(owner.MajorID)
 		}
-		if UserScope(r) != "" && scope != UserScope(r) {
+		if UserScope(r) == "" || scope == "" || scope != UserScope(r) {
 			writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Di luar jurusanmu.", r))
 			return
 		}
@@ -105,7 +124,7 @@ func (a *App) moderate(w http.ResponseWriter, r *http.Request, status string, ne
 		Topic:   "notify." + notifType,
 		Payload: notifPayload(map[string]string{"user_id": uuidStr(p.OwnerID), "portfolio_id": id, "note": req.Note}),
 	})
-	_ = a.Q.UpsertPortfolioStats(r.Context(), repo.UpsertPortfolioStatsParams{PortfolioID: p.ID})
+	_ = a.Q.EnsurePortfolioStats(r.Context(), p.ID)
 	auditLog(r, a, "portfolio.moderate."+status, "portfolios", id, req.Note)
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": status}, r))
 }
@@ -167,7 +186,7 @@ func canModerate(r *http.Request, a *App, p repo.GetPortfolioByIDRow) bool {
 	if owner.MajorID.Valid {
 		scope = uuidStr(owner.MajorID)
 	}
-	return UserScope(r) == "" || scope == UserScope(r)
+	return UserScope(r) != "" && scope != "" && scope == UserScope(r)
 }
 
 func (a *App) handleRequestChanges(w http.ResponseWriter, r *http.Request) {
@@ -198,11 +217,48 @@ func (a *App) handleCreateTag(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, ok(map[string]string{"id": uuidStr(id)}, r))
 }
 
+func nullIfEmpty(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
+}
+
+func blockTypeAllowed(t string) string {
+	switch t {
+	case "text", "image", "table", "youtube", "button", "embed", "figma", "canva", "ppt", "pdf", "doc", "heading", "gallery", "code":
+		return t
+	}
+	return ""
+}
+
 func (a *App) handleUpdateTag(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	var req struct {
+		Name string `json:"name"`
+		Slug string `json:"slug"`
+	}
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if len(strings.TrimSpace(req.Name)) < 2 {
+		writeJSON(w, http.StatusUnprocessableEntity, fail("VALIDATION_ERROR", "Nama tag minimal 2 karakter.", r))
+		return
+	}
+	_ = a.Q.UpdateTag(r.Context(), repo.UpdateTagParams{ID: mustUUID(id), Name: req.Name, Column3: nullIfEmpty(req.Slug)})
+	auditLog(r, a, "tags.update", "tags", id, req.Name)
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "ok"}, r))
 }
 
 func (a *App) handleDeleteTag(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	// Tag yang masih dipakai portfolio tidak dihapus (integritas katalog).
+	deleted, err := a.Q.DeleteTagIfUnused(r.Context(), mustUUID(id))
+	if err != nil || !deleted.Valid {
+		writeJSON(w, http.StatusConflict, fail("TAG_IN_USE", "Tag masih dipakai portfolio.", r))
+		return
+	}
+	auditLog(r, a, "tags.delete", "tags", id, "")
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "deleted"}, r))
 }
 
@@ -211,6 +267,10 @@ func (a *App) handleCreateSeries(w http.ResponseWriter, r *http.Request) {
 		Name        string `json:"name"`
 		Slug        string `json:"slug"`
 		Description string `json:"description"`
+		Blocks      []struct {
+			BlockType   string `json:"block_type"`
+			Instruction string `json:"instruction"`
+		} `json:"blocks"`
 	}
 	if !decodeJSON(w, r, &req) {
 		return
@@ -224,5 +284,16 @@ func (a *App) handleCreateSeries(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal membuat series.", r))
 		return
 	}
+	// Template block wajib tersimpan, kalau tidak series tidak berguna.
+	for i, b := range req.Blocks {
+		bt := blockTypeAllowed(b.BlockType)
+		if bt == "" {
+			continue
+		}
+		_ = a.Q.AddSeriesBlock(r.Context(), repo.AddSeriesBlockParams{
+			SeriesID: id, BlockType: bt, Instruction: b.Instruction, Position: int32(i),
+		})
+	}
+	auditLog(r, a, "series.create", "series", uuidStr(id), req.Slug)
 	writeJSON(w, http.StatusCreated, ok(map[string]string{"id": uuidStr(id)}, r))
 }

@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -119,7 +120,7 @@ func Load() (*Config, error) {
 			Password: getEnv("ADMIN_SEED_PASSWORD", ""),
 		},
 		RateLimit: RateLimitConfig{
-			Requests: getEnvInt("RATE_LIMIT_REQUESTS", 100),
+			Requests: getEnvInt("RATE_LIMIT_REQUESTS", 300),
 		},
 		Turn: TurnstileConfig{
 			SiteKey:   getEnv("TURNSTILE_SITE_KEY", ""),
@@ -144,8 +145,16 @@ func Load() (*Config, error) {
 }
 
 func (c *Config) DatabaseURL() string {
-	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
-		c.DB.User, c.DB.Password, c.DB.Host, c.DB.Port, c.DB.Name)
+	// url.UserPassword meng-escape user/password sehingga karakter seperti
+	// '/', '@', ':' (umum pada hasil `openssl rand -base64`) tidak merusak DSN.
+	u := &url.URL{
+		Scheme:   "postgres",
+		User:     url.UserPassword(c.DB.User, c.DB.Password),
+		Host:     fmt.Sprintf("%s:%d", c.DB.Host, c.DB.Port),
+		Path:     "/" + c.DB.Name,
+		RawQuery: "sslmode=disable",
+	}
+	return u.String()
 }
 
 func (c *Config) CacheAddr() string {

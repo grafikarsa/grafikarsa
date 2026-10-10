@@ -45,14 +45,11 @@ dev-logs: ## Tail log semua service dev
 # ── DB ────────────────────────────────────────
 # Migrasi goose di-embed ke biner via internal/db/migrations (copy dari
 # db/migrations — Go embed tidak bisa baca di luar package).
-sync-migrations:
 	@mkdir -p $(API_DIR)/internal/db/migrations
 	@cp $(API_DIR)/db/migrations/*.sql $(API_DIR)/internal/db/migrations/
 
-migrate-up: sync-migrations ## goose up (via container api one-off)
 	$(COMPOSE_DEV) run --rm api go run ./cmd/tools/migrate up
 
-migrate-down: sync-migrations ## goose down 1 level (HATI-HATI di prod)
 	$(COMPOSE_DEV) run --rm api go run ./cmd/tools/migrate down
 
 migrate-new: ## Buat file migrasi baru: make migrate-new NAME=add_x

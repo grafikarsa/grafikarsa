@@ -164,3 +164,22 @@ FROM portfolios p JOIN users u ON u.id = p.owner_id
 WHERE p.status = 'published' AND p.deleted_at IS NULL
   AND (p.title ILIKE '%' || $1 || '%' OR p.slug ILIKE '%' || $1 || '%')
 ORDER BY p.published_at DESC LIMIT $2 OFFSET $3;
+
+-- name: AddSeriesBlock :exec
+INSERT INTO series_blocks (series_id, block_type, instruction, position)
+VALUES ($1, $2, $3, $4) ON CONFLICT (series_id, position) DO UPDATE SET instruction = EXCLUDED.instruction;
+
+-- name: ListPortfoliosForAdmin :many
+SELECT p.id, p.title, p.slug, p.status, p.owner_id, p.submitted_at, p.published_at,
+  u.username, u.name AS owner_name, u.major_id
+FROM portfolios p JOIN users u ON u.id = p.owner_id
+WHERE p.deleted_at IS NULL
+  AND ($1::text = '' OR p.status = $1)
+  AND ($2::text = '' OR u.major_id::text = $2)
+ORDER BY COALESCE(p.submitted_at, p.created_at) DESC LIMIT $3 OFFSET $4;
+
+-- name: CountPortfoliosForAdmin :one
+SELECT COUNT(*) FROM portfolios p JOIN users u ON u.id = p.owner_id
+WHERE p.deleted_at IS NULL
+  AND ($1::text = '' OR p.status = $1)
+  AND ($2::text = '' OR u.major_id::text = $2);

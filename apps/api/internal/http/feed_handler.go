@@ -3,6 +3,7 @@ package http
 import (
 	"encoding/json"
 	"math"
+	"regexp"
 
 	"net/http"
 	"time"
@@ -26,10 +27,20 @@ func followingScore(isMutual, isOneWay bool) float64 {
 func (a *App) handleFeed(w http.ResponseWriter, r *http.Request) {
 	algo := r.URL.Query().Get("algorithm")
 	if algo == "" {
+		// Tanpa parameter: pakai preferensi tersimpan user (lintas device),
+		// fallback ke smart untuk user login dan recent untuk tamu.
 		algo = "recent"
-		if UserID(r) != "" {
+		if uid := UserID(r); uid != "" {
 			algo = "smart"
+			if pref, err := a.Q.GetFeedPreference(r.Context(), mustUUID(uid)); err == nil && pref.Algorithm != "" {
+				algo = pref.Algorithm
+			}
 		}
+	}
+	switch algo {
+	case "smart", "recent", "following":
+	default:
+		algo = "recent"
 	}
 	limit, offset, page := pageParams(r)
 	if limit > 15 {
@@ -257,6 +268,8 @@ func (a *App) handleUpdateFeedPrefs(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, ok(map[string]string{"algorithm": req.Algorithm}, r))
 }
 
+var leaderboardScopeRe = regexp.MustCompile(`^[a-z:]{1,40}$`)
+
 func (a *App) handleLeaderboards(w http.ResponseWriter, r *http.Request) {
 	period := r.URL.Query().Get("period")
 	if period == "" {
@@ -269,6 +282,16 @@ func (a *App) handleLeaderboards(w http.ResponseWriter, r *http.Request) {
 	kind := r.URL.Query().Get("kind")
 	if kind == "" {
 		kind = "best_projects"
+	}
+	// Validasi ketat agar cache key tidak bisa dikendalikan sembarang input.
+	if period != "weekly" && period != "monthly" {
+		period = "weekly"
+	}
+	if kind != "best_students" && kind != "best_projects" {
+		kind = "best_projects"
+	}
+	if len(scope) > 40 || !leaderboardScopeRe.MatchString(scope) {
+		scope = "global"
 	}
 	// Snapshot peringkat di-cache 1 jam (mahal & berubah harian).
 	cacheKey := "lb:" + period + ":" + scope + ":" + kind

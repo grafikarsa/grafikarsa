@@ -71,6 +71,7 @@ func publicUser(u repo.GetUserByUsernameRow) map[string]any {
 		"name": u.Name, "email": u.Email,
 		"role_primary": u.RolePrimary, "status": u.Status,
 		"must_change_password": u.MustChangePassword,
+		"avatar_media_id":      nullableUUID(u.AvatarMediaID),
 	}
 }
 

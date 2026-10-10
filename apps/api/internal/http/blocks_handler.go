@@ -24,6 +24,12 @@ var allowedEmbedDomains = []string{
 
 var youtubeRe = regexp.MustCompile(`^[A-Za-z0-9_-]{11}$`)
 
+// payloadMediaID mengambil media_id dari payload block (bila ada).
+func payloadMediaID(payload map[string]any) string {
+	v, _ := payload["media_id"].(string)
+	return v
+}
+
 func validateBlockPayload(blockType string, payload map[string]any) (string, bool) {
 	switch blockType {
 	case "text":
@@ -131,10 +137,19 @@ func (a *App) handleCreateBlock(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusUnprocessableEntity, failDetails("VALIDATION_ERROR", "Payload tidak valid.", []map[string]string{{"field": "payload", "message": msg}}, r))
 		return
 	}
+	// Media di dalam payload (image/gallery) juga harus milik sendiri.
+	if mid := payloadMediaID(req.Payload); mid != "" && !a.ownsMedia(r.Context(), mustUUID(mid), UserID(r)) {
+		writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Media di payload bukan milikmu.", r))
+		return
+	}
 	maxPos, _ := a.Q.MaxBlockPosition(r.Context(), p.ID)
 	var assetID = nilUUID()
 	if req.MediaID != nil && *req.MediaID != "" {
 		assetID = mustUUID(*req.MediaID)
+		if !a.ownsMedia(r.Context(), assetID, UserID(r)) {
+			writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Media bukan milikmu.", r))
+			return
+		}
 		_ = a.Q.ConfirmMedia(r.Context(), assetID)
 	}
 	payloadBytes := toJSONBytes(req.Payload)
@@ -169,6 +184,10 @@ func (a *App) handleUpdateBlock(w http.ResponseWriter, r *http.Request) {
 	}
 	if msg, valid := validateBlockPayload(b.BlockType, req.Payload); !valid {
 		writeJSON(w, http.StatusUnprocessableEntity, failDetails("VALIDATION_ERROR", "Payload tidak valid.", []map[string]string{{"field": "payload", "message": msg}}, r))
+		return
+	}
+	if mid := payloadMediaID(req.Payload); mid != "" && !a.ownsMedia(r.Context(), mustUUID(mid), UserID(r)) {
+		writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Media di payload bukan milikmu.", r))
 		return
 	}
 	_ = a.Q.UpdateBlockPayload(r.Context(), repo.UpdateBlockPayloadParams{ID: b.ID, Payload: toJSONBytes(req.Payload)})

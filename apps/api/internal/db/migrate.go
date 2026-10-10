@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
+	dbmigrations "grafikarsa/api/db/migrations"
 	"grafikarsa/api/internal/config"
 )
 
@@ -17,11 +18,11 @@ func MigrateUp(ctx context.Context, cfg *config.Config) error {
 	}
 	db := stdlib.OpenDB(*pc)
 	defer db.Close()
-	goose.SetBaseFS(MigrationsFS)
+	goose.SetBaseFS(dbmigrations.FS)
 	if err := goose.SetDialect("postgres"); err != nil {
 		return err
 	}
-	return goose.Up(db, "migrations")
+	return goose.Up(db, ".")
 }
 
 func MigrateDown(ctx context.Context, cfg *config.Config) error {
@@ -31,11 +32,11 @@ func MigrateDown(ctx context.Context, cfg *config.Config) error {
 	}
 	db := stdlib.OpenDB(*pc)
 	defer db.Close()
-	goose.SetBaseFS(MigrationsFS)
+	goose.SetBaseFS(dbmigrations.FS)
 	if err := goose.SetDialect("postgres"); err != nil {
 		return err
 	}
-	return goose.Down(db, "migrations")
+	return goose.Down(db, ".")
 }
 
 func parseConfig(url string) (*pgx.ConnConfig, error) {

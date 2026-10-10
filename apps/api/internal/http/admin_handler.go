@@ -112,7 +112,7 @@ func (a *App) handleAdminGetUser(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "User tidak ditemukan.", r))
 		return
 	}
-	if UserRole(r) == "admin_jurusan" && uuidStr(u.MajorID) != UserScope(r) && UserScope(r) != "" {
+	if UserRole(r) == "admin_jurusan" && (UserScope(r) == "" || !u.MajorID.Valid || uuidStr(u.MajorID) != UserScope(r)) {
 		writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Di luar jurusanmu.", r))
 		return
 	}
@@ -126,7 +126,7 @@ func (a *App) handleAdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "User tidak ditemukan.", r))
 		return
 	}
-	if UserRole(r) == "admin_jurusan" && uuidStr(u.MajorID) != UserScope(r) && UserScope(r) != "" {
+	if UserRole(r) == "admin_jurusan" && (UserScope(r) == "" || !u.MajorID.Valid || uuidStr(u.MajorID) != UserScope(r)) {
 		writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Di luar jurusanmu.", r))
 		return
 	}
@@ -261,6 +261,26 @@ func (a *App) handleAssignRole(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Role tidak ditemukan.", r))
 		return
 	}
+	// Anti-eskalasi: hanya admin global yang boleh membagikan role global
+	// (mis. 'admin'); role lain wajib subset permission pemberi.
+	if UserRole(r) != "admin" {
+		if role.ScopeType != "jurusan" {
+			writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Role lintas jurusan hanya untuk admin.", r))
+			return
+		}
+		perms, perr := a.Q.GetRolePermissions(r.Context(), role.ID)
+		if perr != nil {
+			writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal memeriksa role.", r))
+			return
+		}
+		mine := UserPerms(r)
+		for _, p := range perms {
+			if !mine[p] {
+				writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Kamu tidak boleh memberikan permission yang tidak kamu miliki.", r))
+				return
+			}
+		}
+	}
 	scope := nilUUID()
 	if req.ScopeMajorID != nil && *req.ScopeMajorID != "" {
 		scope = mustUUID(*req.ScopeMajorID)
@@ -275,6 +295,11 @@ func (a *App) handleAssignRole(w http.ResponseWriter, r *http.Request) {
 	u, err := a.Q.GetUserByID(r.Context(), mustUUID(req.UserID))
 	if err != nil {
 		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "User tidak ditemukan.", r))
+		return
+	}
+	// Target harus di dalam scope pemberi (fail-closed).
+	if UserRole(r) != "admin" && (!u.MajorID.Valid || uuidStr(u.MajorID) != UserScope(r)) {
+		writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "User di luar jurusanmu.", r))
 		return
 	}
 	_ = a.Q.AssignUserRole(r.Context(), repo.AssignUserRoleParams{
