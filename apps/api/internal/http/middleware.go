@@ -59,6 +59,12 @@ func (a *App) authRequired(next http.Handler) http.Handler {
 			writeJSON(w, http.StatusUnauthorized, fail("TOKEN_REVOKED", "Sesi sudah diakhiri.", r))
 			return
 		}
+		// Status user dicek dari cache pendek (60 detik): user yang dinonaktifkan
+		// atau dihapus langsung kehilangan akses walau access token belum expired.
+		if !a.userActive(r.Context(), claims.Subject) {
+			writeJSON(w, http.StatusUnauthorized, fail("UNAUTHORIZED", "Akun tidak aktif. Hubungi admin.", r))
+			return
+		}
 		perms := loadPerms(r.Context(), a.Cache, a.Q, claims.Subject)
 		ctx := context.WithValue(r.Context(), ctxUserID, claims.Subject)
 		ctx = context.WithValue(ctx, ctxRole, claims.RolePrimary)

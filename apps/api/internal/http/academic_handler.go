@@ -110,11 +110,17 @@ func (a *App) handleListClasses(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal memuat kelas.", r))
 		return
 	}
-	// Scope admin_jurusan: filter di SQL via major miliknya.
-	if UserRole(r) == "admin_jurusan" && UserScope(r) != "" {
+	// Scope admin_jurusan: WAJIB punya scope (fail-closed), lalu filter hanya
+	// kelas di jurusannya. Tanpa filter, admin_jurusan melihat semua kelas.
+	if UserRole(r) == "admin_jurusan" {
+		scope := UserScope(r)
+		if scope == "" {
+			writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Scope jurusan belum diset.", r))
+			return
+		}
 		filtered := []repo.ListClassesRow{}
 		for _, c := range rows {
-			if uuidStr(c.MajorID) == UserScope(r) {
+			if uuidStr(c.MajorID) == scope {
 				filtered = append(filtered, c)
 			}
 		}
@@ -148,9 +154,12 @@ func (a *App) handleCreateClass(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusUnprocessableEntity, fail("VALIDATION_ERROR", "Grade 10-12 + rombel A-Z.", r))
 		return
 	}
-	if UserRole(r) == "admin_jurusan" && UserScope(r) != "" && req.MajorID != UserScope(r) {
-		writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Di luar jurusanmu.", r))
-		return
+	if UserRole(r) == "admin_jurusan" {
+		// Fail-closed: wajib punya scope DAN kelas harus di jurusan itu.
+		if UserScope(r) == "" || req.MajorID != UserScope(r) {
+			writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Di luar jurusanmu.", r))
+			return
+		}
 	}
 	majors, _ := a.Q.ListMajorsFull(r.Context())
 	code := ""

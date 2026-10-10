@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/csv"
 	"math/big"
@@ -8,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"grafikarsa/api/internal/auth"
 	"grafikarsa/api/internal/repo"
 )
@@ -56,6 +58,12 @@ func (a *App) handleGetAssessment(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Portfolio tidak ditemukan.", r))
 		return
 	}
+	// Scope jurusan juga berlaku untuk pembacaan penilaian, bukan hanya
+	// penulisan (konsisten: balas 404 agar keberadaan portfolio tidak bocor).
+	if !a.canAssessPortfolio(r.Context(), r, p.OwnerID) {
+		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Portfolio tidak ditemukan.", r))
+		return
+	}
 	ass, err := a.Q.GetAssessment(r.Context(), p.ID)
 	if err != nil {
 		writeJSON(w, http.StatusOK, ok(map[string]any{"portfolio_id": pid, "assessment": nil}, r))
@@ -72,6 +80,12 @@ func (a *App) handleScoreAssessment(w http.ResponseWriter, r *http.Request) {
 	pid := chi.URLParam(r, "id")
 	p, err := a.Q.GetPortfolioByID(r.Context(), mustUUID(pid))
 	if err != nil || p.Status != "published" {
+		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Portfolio tidak ditemukan.", r))
+		return
+	}
+	// Penilaian dibatasi jurusan: penilai hanya boleh menilai karya dari
+	// jurusannya sendiri (mencegah nilai lintas jurusan mempengaruhi ranking).
+	if !a.canAssessPortfolio(r.Context(), r, p.OwnerID) {
 		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Portfolio tidak ditemukan.", r))
 		return
 	}
@@ -218,4 +232,21 @@ func randomPassword(n int) string {
 		b[i], b[k] = b[k], b[i]
 	}
 	return string(b)
+}
+
+// canAssessPortfolio: admin global bebas; penilai lain harus sejurusan dengan
+// pemilik portfolio (fail-closed bila salah satu sisi tidak punya jurusan).
+func (a *App) canAssessPortfolio(ctx context.Context, r *http.Request, ownerID pgtype.UUID) bool {
+	if UserRole(r) == "admin" {
+		return true
+	}
+	me, err := a.Q.GetUserByID(ctx, mustUUID(UserID(r)))
+	if err != nil || !me.MajorID.Valid {
+		return false
+	}
+	owner, err := a.Q.GetUserByID(ctx, ownerID)
+	if err != nil || !owner.MajorID.Valid {
+		return false
+	}
+	return uuidStr(me.MajorID) == uuidStr(owner.MajorID)
 }

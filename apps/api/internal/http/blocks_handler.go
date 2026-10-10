@@ -3,6 +3,7 @@ package http
 import (
 	"encoding/json"
 	"net/http"
+	neturl "net/url"
 	"regexp"
 	"strings"
 
@@ -72,10 +73,18 @@ func validateBlockPayload(blockType string, payload map[string]any) (string, boo
 		if !strings.HasPrefix(url, "https://") {
 			return "url harus https.", false
 		}
+		// Bandingkan HOSTNAME persis (atau subdomain), bukan substring:
+		// 'https://evil.com/?x=figma.com' tidak boleh lolos.
+		parsed, perr := neturl.Parse(url)
+		if perr != nil || parsed.Host == "" {
+			return "url tidak valid.", false
+		}
+		host := strings.ToLower(parsed.Hostname())
 		allowed := false
 		for _, d := range allowedEmbedDomains {
-			if strings.Contains(url, d) {
+			if host == d || strings.HasSuffix(host, "."+d) {
 				allowed = true
+				break
 			}
 		}
 		if !allowed {

@@ -75,3 +75,26 @@ func (a *App) recordViewHLL(ctx context.Context, portfolioID, viewerKey string) 
 	_ = a.Cache.SAdd(ctx, viewDirtyKey(day), portfolioID)
 	_ = a.Cache.Expire(ctx, viewDirtyKey(day), 48*time.Hour)
 }
+
+func userActiveKey(userID string) string { return "uactive:" + userID }
+
+// userActive memeriksa is_active + deleted_at dengan cache 60 detik agar tidak
+// ada query DB di setiap request. Invalidasi dilakukan saat admin mengubah
+// status user (activate/deactivate/delete).
+func (a *App) userActive(ctx context.Context, userID string) bool {
+	if cached, err := a.Cache.Get(ctx, userActiveKey(userID)); err == nil {
+		return cached == "1"
+	}
+	u, err := a.Q.GetUserByID(ctx, mustUUID(userID))
+	active := err == nil && u.IsActive
+	if active {
+		_ = a.Cache.Set(ctx, userActiveKey(userID), "1", 60*time.Second)
+	} else {
+		_ = a.Cache.Set(ctx, userActiveKey(userID), "0", 60*time.Second)
+	}
+	return active
+}
+
+func invalidateUserActive(ctx context.Context, c *cache.Cache, userID string) {
+	_ = c.Del(ctx, userActiveKey(userID))
+}

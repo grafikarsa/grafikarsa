@@ -156,10 +156,18 @@ func parseAccess(r *http.Request, secrets []string) *auth.AccessClaims {
 	return claims
 }
 
+// clientIP: percaya HANYA x-client-ip yang di-set BFF (Caddy -> web -> BFF
+// sudah memilih IP klien yang benar). X-Forwarded-For mentah dari klien tidak
+// dipercaya supaya rate limit dan audit tidak bisa dipalsukan.
 func clientIP(r *http.Request) string {
+	if ip := strings.TrimSpace(r.Header.Get("X-Client-IP")); ip != "" {
+		return ip
+	}
+	// Fallback tanpa BFF: ambil entri TERAKHIR XFF (proxy menambahkan IP klien
+	// di akhir), bukan yang pertama yang bisa dikirim klien.
 	if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
 		parts := strings.Split(fwd, ",")
-		return strings.TrimSpace(parts[0])
+		return strings.TrimSpace(parts[len(parts)-1])
 	}
 	host := r.RemoteAddr
 	if i := strings.LastIndex(host, ":"); i > 0 {

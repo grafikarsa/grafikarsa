@@ -118,6 +118,17 @@ func (q *Queries) CountAuditLogs(ctx context.Context, arg CountAuditLogsParams) 
 	return count, err
 }
 
+const countGlobalAdmins = `-- name: CountGlobalAdmins :one
+SELECT COUNT(*) FROM users WHERE role_primary = 'admin' AND deleted_at IS NULL
+`
+
+func (q *Queries) CountGlobalAdmins(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countGlobalAdmins)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countUploadsSince = `-- name: CountUploadsSince :one
 SELECT COUNT(*) FROM media_assets WHERE owner_id = $1 AND created_at > NOW() - ($2 || ' hours')::interval
 `

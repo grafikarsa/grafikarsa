@@ -47,13 +47,7 @@ func safeRun(name string, fn func() error) {
 }
 
 func every(ctx context.Context, d time.Duration, name string, fn func() error) {
-	run := func() {
-		if err := fn(); err != nil {
-			slog.Error("job failed", "job", name, "err", err)
-			return
-		}
-		slog.Info("job ok", "job", name)
-	}
+	run := func() { safeRun(name, fn) }
 	run()
 	t := time.NewTicker(d)
 	defer t.Stop()
@@ -82,11 +76,7 @@ func dailyAt(ctx context.Context, hour, minute int, name string, fn func() error
 		case <-ctx.Done():
 			return
 		case <-time.After(next()):
-			if err := fn(); err != nil {
-				slog.Error("job failed", "job", name, "err", err)
-			} else {
-				slog.Info("job ok", "job", name)
-			}
+			safeRun(name, fn)
 		}
 	}
 }

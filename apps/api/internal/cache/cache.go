@@ -35,6 +35,10 @@ func (c *Cache) Set(ctx context.Context, key, val string, ttl time.Duration) err
 	return c.rdb.Set(ctx, key, val, ttl).Err()
 }
 
+func (c *Cache) Get(ctx context.Context, key string) (string, error) {
+	return c.rdb.Get(ctx, key).Result()
+}
+
 func (c *Cache) GetStrings(ctx context.Context, key string) ([]string, error) {
 	return c.rdb.LRange(ctx, key, 0, -1).Result()
 }

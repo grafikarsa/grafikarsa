@@ -266,3 +266,6 @@ ORDER BY id DESC LIMIT $3 OFFSET $4;
 SELECT COUNT(*) FROM audit_logs
 WHERE ($1::text = '' OR action = $1)
   AND ($2::text = '' OR entity = $2);
+
+-- name: CountGlobalAdmins :one
+SELECT COUNT(*) FROM users WHERE role_primary = 'admin' AND deleted_at IS NULL;
