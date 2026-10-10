@@ -3,6 +3,9 @@ package http
 import (
 	"net/http"
 	"strings"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/go-chi/chi/v5"
 	"grafikarsa/api/internal/repo"
@@ -20,10 +23,11 @@ func autoPriority(title, body string) string {
 
 func (a *App) handleCreateFeedback(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Category string `json:"category"`
-		Title    string `json:"title"`
-		Body     string `json:"body"`
-		Email    string `json:"email"`
+		Category       string `json:"category"`
+		Title          string `json:"title"`
+		Body           string `json:"body"`
+		Email          string `json:"email"`
+		TurnstileToken string `json:"captcha_token"`
 	}
 	if !decodeJSON(w, r, &req) {
 		return
@@ -34,6 +38,11 @@ func (a *App) handleCreateFeedback(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(req.Title) < 5 || len(req.Body) < 10 {
 		writeJSON(w, http.StatusUnprocessableEntity, failDetails("VALIDATION_ERROR", "Terlalu pendek.", []map[string]string{{"field": "title", "message": "Judul 5+, isi 10+."}}, r))
+		return
+	}
+	// Guest wajib Turnstile (bila dikonfigurasi) agar tidak spam.
+	if UserID(r) == "" && !verifyTurnstile(r.Context(), a.Cfg, req.TurnstileToken) {
+		writeJSON(w, http.StatusTooManyRequests, fail("CAPTCHA_REQUIRED", "Verifikasi keamanan diperlukan.", r))
 		return
 	}
 	// Rate-limit reporter: 3 thread/hari.
@@ -106,6 +115,9 @@ func (a *App) handleGetFeedback(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, ok(map[string]any{
 		"id": uuidStr(t.ID), "category": t.Category, "title": t.Title, "body": t.BodyMd,
 		"status": t.Status, "priority": t.Priority, "messages": mout,
+		"sla_hours":    slaHours(t.Priority, t.Category),
+		"age_hours":    time.Since(t.CreatedAt.Time).Hours(),
+		"sla_breached": slaBreached(t),
 	}, r))
 }
 
@@ -202,11 +214,17 @@ func (a *App) handleVoteFeedback(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) handleCreateChangelog(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Version  string `json:"version"`
-		Title    string `json:"title"`
-		Summary  string `json:"summary"`
-		Channel  string `json:"channel"`
-		Audience string `json:"audience"`
+		Version   string `json:"version"`
+		Title     string `json:"title"`
+		Summary   string `json:"summary"`
+		Channel   string `json:"channel"`
+		Audience  string `json:"audience"`
+		PublishAt string `json:"publish_at"`
+		Sections  []struct {
+			Kind   string `json:"kind"`
+			Title  string `json:"title"`
+			BodyMd string `json:"body_md"`
+		} `json:"sections"`
 	}
 	if !decodeJSON(w, r, &req) {
 		return
@@ -221,17 +239,113 @@ func (a *App) handleCreateChangelog(w http.ResponseWriter, r *http.Request) {
 	if req.Audience == "" {
 		req.Audience = "all"
 	}
+	status := "draft"
+	var publishAt pgtype.Timestamptz
+	if req.PublishAt != "" {
+		t, perr := time.Parse(time.RFC3339, req.PublishAt)
+		if perr != nil {
+			writeJSON(w, http.StatusUnprocessableEntity, fail("VALIDATION_ERROR", "publish_at harus RFC3339.", r))
+			return
+		}
+		publishAt = pgtype.Timestamptz{Time: t, Valid: true}
+		if t.After(time.Now()) {
+			status = "scheduled"
+		}
+	}
 	id, err := a.Q.CreateChangelog(r.Context(), repo.CreateChangelogParams{
 		Version: req.Version, Title: req.Title, Summary: req.Summary,
-		Channel: req.Channel, Audience: req.Audience, Status: "draft",
-		CreatedBy: mustUUID(UserID(r)),
+		Channel: req.Channel, Audience: req.Audience, Status: status,
+		PublishAt: publishAt, CreatedBy: mustUUID(UserID(r)),
 	})
 	if err != nil {
 		writeJSON(w, http.StatusConflict, fail("DUPLICATE_VERSION", "Version sudah dipakai.", r))
 		return
 	}
+	for i, sec := range req.Sections {
+		kind := sheetKind(sec.Kind)
+		if kind == "" {
+			continue
+		}
+		_ = a.Q.AddChangelogSection(r.Context(), repo.AddChangelogSectionParams{
+			ChangelogID: id, Kind: kind, Title: sec.Title, BodyMd: sec.BodyMd, Sort: int32(i),
+		})
+	}
 	auditLog(r, a, "changelog.create", "changelogs", uuidStr(id), req.Version)
-	writeJSON(w, http.StatusCreated, ok(map[string]string{"id": uuidStr(id)}, r))
+	writeJSON(w, http.StatusCreated, ok(map[string]string{"id": uuidStr(id), "status": status}, r))
+}
+
+func sheetKind(k string) string {
+	switch k {
+	case "added", "improved", "fixed", "removed":
+		return k
+	}
+	return ""
+}
+
+// handleChangelogDetail: detail + sections (publik untuk yang terbit).
+func (a *App) handleChangelogDetail(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	c, err := a.Q.GetChangelog(r.Context(), mustUUID(id))
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Changelog tidak ditemukan.", r))
+		return
+	}
+	isManager := UserRole(r) == "admin" || UserPerms(r)["changelog.manage"]
+	visible := c.Status == "published" && (!c.PublishAt.Valid || !c.PublishAt.Time.After(time.Now()))
+	if !visible && !isManager {
+		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Changelog tidak ditemukan.", r))
+		return
+	}
+	secs, _ := a.Q.ListChangelogSections(r.Context(), c.ID)
+	out := []map[string]any{}
+	for _, sc := range secs {
+		out = append(out, map[string]any{"kind": sc.Kind, "title": sc.Title, "body_md": sc.BodyMd})
+	}
+	if out == nil {
+		out = []map[string]any{}
+	}
+	reads, _ := a.Q.CountChangelogReads(r.Context(), c.ID)
+	writeJSON(w, http.StatusOK, ok(map[string]any{
+		"id": uuidStr(c.ID), "version": c.Version, "title": c.Title, "summary": c.Summary,
+		"channel": c.Channel, "audience": c.Audience, "status": c.Status, "reads": reads,
+		"sections": out,
+	}, r))
+}
+
+// handleUnreadChangelogCount: rilis terbit yang belum dibaca user.
+func (a *App) handleUnreadChangelogCount(w http.ResponseWriter, r *http.Request) {
+	n, err := a.Q.CountUnreadChangelogs(r.Context(), mustUUID(UserID(r)))
+	if err != nil {
+		n = 0
+	}
+	writeJSON(w, http.StatusOK, ok(map[string]int64{"unread": n}, r))
+}
+
+// handleMarkAllChangelogsRead: tandai semua rilis terbit sudah dibaca.
+func (a *App) handleMarkAllChangelogsRead(w http.ResponseWriter, r *http.Request) {
+	_ = a.Q.MarkAllChangelogsRead(r.Context(), mustUUID(UserID(r)))
+	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "ok"}, r))
+}
+
+// handleArchiveChangelog: arsipkan rilis.
+func (a *App) handleArchiveChangelog(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	_ = a.Q.SetChangelogStatus(r.Context(), repo.SetChangelogStatusParams{ID: mustUUID(id), Status: "archived"})
+	auditLog(r, a, "changelog.archive", "changelogs", id, "")
+	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "archived"}, r))
+}
+
+// handleUnpublishChangelog: tarik dari publik; >100 pembaca butuh admin.
+func (a *App) handleUnpublishChangelog(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	n, _ := a.Q.CountChangelogReads(r.Context(), mustUUID(id))
+	if n > 100 && UserRole(r) != "admin" {
+		writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Sudah dibaca 100+ user, perlu admin.", r))
+		return
+	}
+	_ = a.Q.SetChangelogStatus(r.Context(), repo.SetChangelogStatusParams{ID: mustUUID(id), Status: "draft"})
+	auditLog(r, a, "changelog.unpublish", "changelogs", id, "")
+	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "draft"}, r))
 }
 
 func (a *App) handleListChangelogs(w http.ResponseWriter, r *http.Request) {
@@ -300,5 +414,57 @@ func (a *App) handleReadChangelog(w http.ResponseWriter, r *http.Request) {
 	if uid := UserID(r); uid != "" {
 		_ = a.Q.MarkChangelogRead(r.Context(), repo.MarkChangelogReadParams{ChangelogID: mustUUID(id), UserID: mustUUID(uid)})
 	}
+	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "ok"}, r))
+}
+
+// slaHours: target penyelesaian sesuai PRD §11.1.
+func slaHours(priority, category string) int {
+	if priority == "critical" || category == "bug" {
+		return 24
+	}
+	if category == "idea" || category == "question" {
+		return 14 * 24
+	}
+	return 72
+}
+
+func slaBreached(t repo.GetFeedbackThreadRow) bool {
+	if t.Status == "resolved" || t.Status == "closed" {
+		return false
+	}
+	limit := time.Duration(slaHours(t.Priority, t.Category)) * time.Hour
+	return time.Since(t.CreatedAt.Time) > limit
+}
+
+// handleFeedbackTriage: prioritas / publikasi / spam (butuh triage).
+func (a *App) handleFeedbackTriage(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	var req struct {
+		Priority *string `json:"priority"`
+		IsPublic *bool   `json:"is_public"`
+		IsSpam   *bool   `json:"is_spam"`
+	}
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	uid := mustUUID(id)
+	if req.Priority != nil {
+		switch *req.Priority {
+		case "low", "medium", "high", "critical":
+			_ = a.Q.UpdateFeedbackPriority(r.Context(), repo.UpdateFeedbackPriorityParams{
+				ID: uid, Priority: *req.Priority, AssigneeID: mustUUID(UserID(r)),
+			})
+		default:
+			writeJSON(w, http.StatusUnprocessableEntity, fail("VALIDATION_ERROR", "Prioritas tidak valid.", r))
+			return
+		}
+	}
+	if req.IsPublic != nil {
+		_ = a.Q.SetFeedbackPublic(r.Context(), repo.SetFeedbackPublicParams{ID: uid, IsPublic: *req.IsPublic})
+	}
+	if req.IsSpam != nil {
+		_ = a.Q.SetFeedbackSpam(r.Context(), repo.SetFeedbackSpamParams{ID: uid, IsSpam: *req.IsSpam})
+	}
+	auditLog(r, a, "feedback.triage", "feedback_threads", id, "")
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "ok"}, r))
 }

@@ -103,6 +103,19 @@ func (q *Queries) CountFeedbackVotes(ctx context.Context, threadID pgtype.UUID) 
 	return count, err
 }
 
+const countUnreadChangelogs = `-- name: CountUnreadChangelogs :one
+SELECT COUNT(*) FROM changelogs c
+WHERE c.status = 'published' AND (c.publish_at IS NULL OR c.publish_at <= NOW())
+  AND NOT EXISTS (SELECT 1 FROM changelog_reads r WHERE r.changelog_id = c.id AND r.user_id = $1)
+`
+
+func (q *Queries) CountUnreadChangelogs(ctx context.Context, userID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countUnreadChangelogs, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createChangelog = `-- name: CreateChangelog :one
 INSERT INTO changelogs (version, title, summary, channel, audience, status, publish_at, created_by)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id
@@ -688,6 +701,18 @@ func (q *Queries) ListScores(ctx context.Context, assessmentID pgtype.UUID) ([]L
 		return nil, err
 	}
 	return items, nil
+}
+
+const markAllChangelogsRead = `-- name: MarkAllChangelogsRead :exec
+INSERT INTO changelog_reads (changelog_id, user_id)
+SELECT c.id, $1 FROM changelogs c
+WHERE c.status = 'published' AND (c.publish_at IS NULL OR c.publish_at <= NOW())
+ON CONFLICT DO NOTHING
+`
+
+func (q *Queries) MarkAllChangelogsRead(ctx context.Context, userID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, markAllChangelogsRead, userID)
+	return err
 }
 
 const markChangelogPublished = `-- name: MarkChangelogPublished :exec

@@ -121,3 +121,14 @@ SELECT user_id FROM notification_preferences WHERE digest_daily = TRUE LIMIT 100
 
 -- name: MarkChangelogPublished :exec
 UPDATE changelogs SET publish_at = NOW() WHERE id = $1 AND publish_at IS NULL;
+
+-- name: CountUnreadChangelogs :one
+SELECT COUNT(*) FROM changelogs c
+WHERE c.status = 'published' AND (c.publish_at IS NULL OR c.publish_at <= NOW())
+  AND NOT EXISTS (SELECT 1 FROM changelog_reads r WHERE r.changelog_id = c.id AND r.user_id = $1);
+
+-- name: MarkAllChangelogsRead :exec
+INSERT INTO changelog_reads (changelog_id, user_id)
+SELECT c.id, $1 FROM changelogs c
+WHERE c.status = 'published' AND (c.publish_at IS NULL OR c.publish_at <= NOW())
+ON CONFLICT DO NOTHING;

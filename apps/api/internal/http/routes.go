@@ -8,6 +8,7 @@ import (
 	"grafikarsa/api/internal/cache"
 	"grafikarsa/api/internal/config"
 	"grafikarsa/api/internal/db"
+	"grafikarsa/api/internal/observability"
 	"grafikarsa/api/internal/repo"
 	"grafikarsa/api/internal/storage"
 )
@@ -24,6 +25,7 @@ func (a *App) routes() http.Handler {
 		writeJSON(w, http.StatusOK, ok(map[string]string{"status": "ok"}, r))
 	})
 	r.Get("/ready", a.handleReady)
+	r.Get("/metrics", observability.MetricsHandler())
 	r.Route("/v1", func(r chi.Router) {
 		// Rate limit per IP (gate ganti-password ada di authRequired).
 		r.Use(a.rateLimit)
@@ -146,12 +148,15 @@ func (a *App) routes() http.Handler {
 				r.Get("/", a.handleListFeedback)
 				r.Get("/{id}", a.handleGetFeedback)
 				r.Post("/{id}/reply", a.csrf(a.handleReplyFeedback))
+				r.Patch("/{id}/triage", a.csrf(a.handleFeedbackTriage))
 			})
 			r.Route("/changelogs", func(r chi.Router) {
 				r.Use(a.requirePerm("changelog.manage"))
 				r.Get("/", a.handleListChangelogs)
 				r.Post("/", a.csrf(a.handleCreateChangelog))
 				r.With(a.requirePerm("changelog.publish")).Post("/{id}/publish", a.csrf(a.handlePublishChangelog))
+				r.With(a.requirePerm("changelog.publish")).Post("/{id}/unpublish", a.csrf(a.handleUnpublishChangelog))
+				r.With(a.requirePerm("changelog.publish")).Post("/{id}/archive", a.csrf(a.handleArchiveChangelog))
 			})
 			r.With(a.requirePerm("system.jobs")).Post("/leaderboards/recompute", a.csrf(a.handleRecomputeLeaderboard))
 		})
@@ -221,6 +226,7 @@ func (a *App) routes() http.Handler {
 			r.Get("/leaderboards", a.handleLeaderboards)
 			r.Get("/search", a.handleSearch)
 			r.Get("/changelogs", a.handlePublishedChangelogs)
+			r.Get("/changelogs/{id}", a.handleChangelogDetail)
 		})
 		r.Group(func(r chi.Router) {
 			r.Use(a.authOptional)
@@ -233,6 +239,8 @@ func (a *App) routes() http.Handler {
 			r.Post("/feedback/{id}/reply", a.csrf(a.handleReplyFeedback))
 			r.Post("/feedback/{id}/vote", a.csrf(a.handleVoteFeedback))
 			r.Post("/changelogs/{id}/read", a.csrf(a.handleReadChangelog))
+			r.Get("/changelogs/unread-count", a.handleUnreadChangelogCount)
+			r.Post("/changelogs/mark-all-read", a.csrf(a.handleMarkAllChangelogsRead))
 		})
 		r.Group(func(r chi.Router) {
 			r.Use(a.authRequired)
