@@ -36,6 +36,30 @@ func (q *Queries) CountClassStudents(ctx context.Context, classID pgtype.UUID) (
 	return count, err
 }
 
+const countClassStudentsInYear = `-- name: CountClassStudentsInYear :one
+SELECT COUNT(*) FROM enrollments e JOIN classes c ON c.id = e.class_id
+WHERE c.academic_year_id = $1 AND c.major_id = $2 AND c.grade = $3 AND c.class_group = $4 AND e.is_current = TRUE
+`
+
+type CountClassStudentsInYearParams struct {
+	AcademicYearID pgtype.UUID `json:"academic_year_id"`
+	MajorID        pgtype.UUID `json:"major_id"`
+	Grade          int16       `json:"grade"`
+	ClassGroup     string      `json:"class_group"`
+}
+
+func (q *Queries) CountClassStudentsInYear(ctx context.Context, arg CountClassStudentsInYearParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countClassStudentsInYear,
+		arg.AcademicYearID,
+		arg.MajorID,
+		arg.Grade,
+		arg.ClassGroup,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createClass = `-- name: CreateClass :one
 INSERT INTO classes (academic_year_id, major_id, grade, class_group, name)
 VALUES ($1, $2, $3, $4, $5) RETURNING id
@@ -307,6 +331,37 @@ func (q *Queries) GetPromotionJobByYears(ctx context.Context, arg GetPromotionJo
 	return i, err
 }
 
+const getYearByID = `-- name: GetYearByID :one
+SELECT id, start_year FROM academic_years WHERE id = $1 LIMIT 1
+`
+
+type GetYearByIDRow struct {
+	ID        pgtype.UUID `json:"id"`
+	StartYear int32       `json:"start_year"`
+}
+
+func (q *Queries) GetYearByID(ctx context.Context, id pgtype.UUID) (GetYearByIDRow, error) {
+	row := q.db.QueryRow(ctx, getYearByID, id)
+	var i GetYearByIDRow
+	err := row.Scan(&i.ID, &i.StartYear)
+	return i, err
+}
+
+const graduateEnrollment = `-- name: GraduateEnrollment :exec
+UPDATE enrollments SET status = 'graduated', is_current = FALSE
+WHERE user_id = $1 AND academic_year_id = $2
+`
+
+type GraduateEnrollmentParams struct {
+	UserID         pgtype.UUID `json:"user_id"`
+	AcademicYearID pgtype.UUID `json:"academic_year_id"`
+}
+
+func (q *Queries) GraduateEnrollment(ctx context.Context, arg GraduateEnrollmentParams) error {
+	_, err := q.db.Exec(ctx, graduateEnrollment, arg.UserID, arg.AcademicYearID)
+	return err
+}
+
 const listAdminUserIDs = `-- name: ListAdminUserIDs :many
 SELECT id FROM users WHERE role_primary = 'admin' AND is_active = TRUE AND deleted_at IS NULL
 `
@@ -427,7 +482,7 @@ func (q *Queries) ListClasses(ctx context.Context, arg ListClassesParams) ([]Lis
 }
 
 const listEnrollmentsByYear = `-- name: ListEnrollmentsByYear :many
-SELECT e.user_id, e.class_id, c.grade, c.major_id, u.role_primary
+SELECT e.user_id, e.class_id, c.grade, c.class_group, c.name AS class_name, c.major_id, u.role_primary
 FROM enrollments e JOIN classes c ON c.id = e.class_id
 JOIN users u ON u.id = e.user_id
 WHERE e.academic_year_id = $1 AND e.is_current = TRUE AND u.deleted_at IS NULL
@@ -437,6 +492,8 @@ type ListEnrollmentsByYearRow struct {
 	UserID      pgtype.UUID `json:"user_id"`
 	ClassID     pgtype.UUID `json:"class_id"`
 	Grade       int16       `json:"grade"`
+	ClassGroup  string      `json:"class_group"`
+	ClassName   string      `json:"class_name"`
 	MajorID     pgtype.UUID `json:"major_id"`
 	RolePrimary string      `json:"role_primary"`
 }
@@ -454,6 +511,8 @@ func (q *Queries) ListEnrollmentsByYear(ctx context.Context, academicYearID pgty
 			&i.UserID,
 			&i.ClassID,
 			&i.Grade,
+			&i.ClassGroup,
+			&i.ClassName,
 			&i.MajorID,
 			&i.RolePrimary,
 		); err != nil {
@@ -494,6 +553,58 @@ func (q *Queries) ListMajorsFull(ctx context.Context) ([]ListMajorsFullRow, erro
 			&i.Code,
 			&i.Name,
 			&i.RequireSeries,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPendingPortfoliosScoped = `-- name: ListPendingPortfoliosScoped :many
+SELECT p.id, p.owner_id, p.title, p.slug, p.submitted_at, u.username, u.name AS owner_name
+FROM portfolios p JOIN users u ON u.id = p.owner_id
+WHERE p.status = 'pending_review' AND p.deleted_at IS NULL
+  AND ($1 = '' OR u.major_id::text = $1)
+ORDER BY p.submitted_at ASC LIMIT $2 OFFSET $3
+`
+
+type ListPendingPortfoliosScopedParams struct {
+	Column1 interface{} `json:"column_1"`
+	Limit   int32       `json:"limit"`
+	Offset  int32       `json:"offset"`
+}
+
+type ListPendingPortfoliosScopedRow struct {
+	ID          pgtype.UUID        `json:"id"`
+	OwnerID     pgtype.UUID        `json:"owner_id"`
+	Title       string             `json:"title"`
+	Slug        string             `json:"slug"`
+	SubmittedAt pgtype.Timestamptz `json:"submitted_at"`
+	Username    string             `json:"username"`
+	OwnerName   string             `json:"owner_name"`
+}
+
+func (q *Queries) ListPendingPortfoliosScoped(ctx context.Context, arg ListPendingPortfoliosScopedParams) ([]ListPendingPortfoliosScopedRow, error) {
+	rows, err := q.db.Query(ctx, listPendingPortfoliosScoped, arg.Column1, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPendingPortfoliosScopedRow{}
+	for rows.Next() {
+		var i ListPendingPortfoliosScopedRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.OwnerID,
+			&i.Title,
+			&i.Slug,
+			&i.SubmittedAt,
+			&i.Username,
+			&i.OwnerName,
 		); err != nil {
 			return nil, err
 		}
@@ -609,6 +720,15 @@ UPDATE promotion_jobs SET status = 'executing' WHERE id = $1 AND status = 'appro
 
 func (q *Queries) MarkPromotionExecuting(ctx context.Context, id pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, markPromotionExecuting, id)
+	return err
+}
+
+const markPromotionFailed = `-- name: MarkPromotionFailed :exec
+UPDATE promotion_jobs SET status = 'failed' WHERE id = $1
+`
+
+func (q *Queries) MarkPromotionFailed(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, markPromotionFailed, id)
 	return err
 }
 

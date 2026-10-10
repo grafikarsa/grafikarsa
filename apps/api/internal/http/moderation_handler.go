@@ -26,7 +26,10 @@ func (a *App) handleAdminListPortfolios(w http.ResponseWriter, r *http.Request) 
 
 func (a *App) handleAdminPendingPortfolios(w http.ResponseWriter, r *http.Request) {
 	limit, offset, page := pageParams(r)
-	rows, err := a.Q.ListPendingPortfolios(r.Context(), repo.ListPendingPortfoliosParams{Limit: limit, Offset: offset})
+	rows, err := a.Q.ListPendingPortfoliosScoped(r.Context(), repo.ListPendingPortfoliosScopedParams{
+		Column1: scopeFilter(r, "portfolios.moderate", "portfolios.moderate_jurusan"),
+		Limit:   limit, Offset: offset,
+	})
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal memuat.", r))
 		return
@@ -138,7 +141,7 @@ func (a *App) handleBulkApprove(w http.ResponseWriter, r *http.Request) {
 			Topic:   "notify.portfolio_approved",
 			Payload: notifPayload(map[string]string{"user_id": uuidStr(p.OwnerID), "portfolio_id": id}),
 		})
-		_ = a.Q.UpsertPortfolioStats(r.Context(), repo.UpsertPortfolioStatsParams{PortfolioID: p.ID})
+		_ = a.Q.EnsurePortfolioStats(r.Context(), p.ID)
 		auditLog(r, a, "portfolio.moderate.published", "portfolios", id, "bulk")
 		okCount++
 	}

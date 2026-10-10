@@ -2,6 +2,7 @@ package http
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -242,8 +243,35 @@ func (a *App) handleUpdatePassword(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "ok"}, r))
 }
 
+// handleListUsers: direktori publik (tanpa email).
 func (a *App) handleListUsers(w http.ResponseWriter, r *http.Request) {
-	a.handleAdminListUsers(w, r)
+	limit, offset, page := pageParams(r)
+	rows, err := a.Q.ListUsersScoped(r.Context(), repo.ListUsersScopedParams{
+		Column1: "", Limit: limit, Offset: offset,
+	})
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal memuat user.", r))
+		return
+	}
+	search := strings.ToLower(r.URL.Query().Get("search"))
+	out := []map[string]any{}
+	for _, u := range rows {
+		if u.RolePrimary == "admin" {
+			continue
+		}
+		if search != "" && !strings.Contains(strings.ToLower(u.Username), search) && !strings.Contains(strings.ToLower(u.Name), search) {
+			continue
+		}
+		out = append(out, map[string]any{
+			"id": uuidStr(u.ID), "username": u.Username, "name": u.Name,
+			"role_primary": u.RolePrimary, "status": u.Status,
+		})
+	}
+	if out == nil {
+		out = []map[string]any{}
+	}
+	total, _ := a.Q.CountUsersScoped(r.Context(), "")
+	writeJSON(w, http.StatusOK, okMeta(out, meta(page, limit, total), r))
 }
 
 func (a *App) handleGetUser(w http.ResponseWriter, r *http.Request) {
@@ -253,10 +281,10 @@ func (a *App) handleGetUser(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "User tidak ditemukan.", r))
 		return
 	}
-	if UserRole(r) != "admin" && !UserPerms(r)["users.view"] && !UserPerms(r)["users.view_jurusan"] {
-		writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Kamu tidak memiliki akses ini.", r))
-		return
-	}
+	// Profil publik: email hanya untuk diri sendiri, admin, atau bila
+	// user mengaktifkan show_email.
+	isSelf := UserID(r) == uuidStr(u.ID)
+	seeEmail := isSelf || UserRole(r) == "admin" || u.ShowEmail
 	links, _ := a.Q.ListSocialLinks(r.Context(), u.ID)
 	linkOut := []map[string]string{}
 	for _, l := range links {
@@ -274,7 +302,7 @@ func (a *App) handleGetUser(w http.ResponseWriter, r *http.Request) {
 		isFollowing = n > 0
 	}
 	email := ""
-	if UserID(r) == uuidStr(u.ID) {
+	if seeEmail {
 		email = u.Email
 	}
 	writeJSON(w, http.StatusOK, ok(map[string]any{

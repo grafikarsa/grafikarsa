@@ -70,8 +70,10 @@ func (a *App) handleListFeedback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	out := []map[string]any{}
+	isTriageList := UserRole(r) == "admin" || UserPerms(r)["feedback.triage"]
 	for _, t := range rows {
-		if !t.IsPublic && UserID(r) == "" {
+		// Guest & non-triage hanya melihat thread publik.
+		if !isTriageList && !t.IsPublic {
 			continue
 		}
 		out = append(out, map[string]any{
@@ -107,6 +109,19 @@ func (a *App) handleGetFeedback(w http.ResponseWriter, r *http.Request) {
 	}, r))
 }
 
+// allowedFeedbackStatus: state machine sederhana sesuai PRD §11.1.
+var allowedFeedbackStatus = map[string]bool{
+	"open": true, "triaged": true, "in_progress": true,
+	"resolved": true, "closed": true, "duplicate": true,
+}
+
+func coalesce(a, b string) string {
+	if a != "" {
+		return a
+	}
+	return b
+}
+
 func (a *App) handleReplyFeedback(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	t, err := a.Q.GetFeedbackThread(r.Context(), mustUUID(id))
@@ -118,6 +133,7 @@ func (a *App) handleReplyFeedback(w http.ResponseWriter, r *http.Request) {
 		Body       string `json:"body"`
 		IsInternal bool   `json:"is_internal"`
 		Status     string `json:"status"`
+		Priority   string `json:"priority"`
 	}
 	if !decodeJSON(w, r, &req) {
 		return
@@ -126,26 +142,48 @@ func (a *App) handleReplyFeedback(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusUnprocessableEntity, fail("VALIDATION_ERROR", "Isi balasan minimal 2 karakter.", r))
 		return
 	}
+	// Otorisasi: pelapor boleh membalas thread-nya; perubahan status dan
+	// catatan internal hanya untuk pemegang permission triage/admin.
+	isTriage := UserRole(r) == "admin" || UserPerms(r)["feedback.triage"]
+	isReporter := t.ReporterID.Valid && uuidStr(t.ReporterID) == UserID(r)
+	if !isTriage && !isReporter {
+		writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Bukan thread milikmu.", r))
+		return
+	}
+	if req.Status != "" {
+		if !isTriage {
+			writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Hanya moderator yang bisa mengubah status.", r))
+			return
+		}
+		if !allowedFeedbackStatus[req.Status] {
+			writeJSON(w, http.StatusUnprocessableEntity, failDetails("VALIDATION_ERROR", "Status tidak valid.", []map[string]string{{"field": "status", "message": "open/triaged/in_progress/resolved/closed/duplicate."}}, r))
+			return
+		}
+	}
+	if req.Priority != "" && !isTriage {
+		writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Hanya moderator yang bisa mengubah prioritas.", r))
+		return
+	}
+
 	var authorID = nilUUID()
 	if uid := UserID(r); uid != "" {
 		authorID = mustUUID(uid)
 	}
 	_, _ = a.Q.AddFeedbackMessage(r.Context(), repo.AddFeedbackMessageParams{
-		ThreadID: t.ID, AuthorID: authorID, BodyMd: req.Body, IsInternal: req.IsInternal && UserPerms(r)["feedback.triage"],
+		ThreadID: t.ID, AuthorID: authorID, BodyMd: req.Body, IsInternal: req.IsInternal && isTriage,
 	})
-	if req.Status != "" {
-		_ = a.Q.UpdateFeedbackThread(r.Context(), repo.UpdateFeedbackThreadParams{
-			ID: t.ID, Status: req.Status, Priority: t.Priority,
-			AssigneeID: t.AssigneeID, IsPublic: t.IsPublic,
+	priority := coalesce(req.Priority, t.Priority)
+	_ = a.Q.UpdateFeedbackThread(r.Context(), repo.UpdateFeedbackThreadParams{
+		ID: t.ID, Status: coalesce(req.Status, t.Status), Priority: priority,
+		AssigneeID: t.AssigneeID, IsPublic: t.IsPublic,
+	})
+	if t.ReporterID.Valid && isTriage {
+		_, _ = a.Q.EnqueueOutbox(r.Context(), repo.EnqueueOutboxParams{
+			Topic:   "notify.feedback_updated",
+			Payload: notifPayload(map[string]string{"user_id": uuidStr(t.ReporterID), "thread_id": id, "status": coalesce(req.Status, t.Status)}),
 		})
-		if t.ReporterID.Valid {
-			_, _ = a.Q.EnqueueOutbox(r.Context(), repo.EnqueueOutboxParams{
-				Topic:   "notify.feedback_updated",
-				Payload: notifPayload(map[string]string{"user_id": uuidStr(t.ReporterID), "thread_id": id, "status": req.Status}),
-			})
-		}
 	}
-	auditLog(r, a, "feedback.reply", "feedback_threads", id, req.Status)
+	auditLog(r, a, "feedback.reply", "feedback_threads", id, coalesce(req.Status, ""))
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "ok"}, r))
 }
 
@@ -157,6 +195,7 @@ func (a *App) handleVoteFeedback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_ = a.Q.VoteFeedback(r.Context(), repo.VoteFeedbackParams{ThreadID: mustUUID(id), UserID: mustUUID(uid)})
+	_ = a.Q.RefreshFeedbackUpvotes(r.Context(), mustUUID(id))
 	n, _ := a.Q.CountFeedbackVotes(r.Context(), mustUUID(id))
 	writeJSON(w, http.StatusOK, ok(map[string]int64{"upvotes": n}, r))
 }

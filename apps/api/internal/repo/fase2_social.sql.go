@@ -303,6 +303,15 @@ func (q *Queries) EnqueueOutbox(ctx context.Context, arg EnqueueOutboxParams) (i
 	return id, err
 }
 
+const ensurePortfolioStats = `-- name: EnsurePortfolioStats :exec
+INSERT INTO portfolio_stats (portfolio_id) VALUES ($1) ON CONFLICT (portfolio_id) DO NOTHING
+`
+
+func (q *Queries) EnsurePortfolioStats(ctx context.Context, portfolioID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, ensurePortfolioStats, portfolioID)
+	return err
+}
+
 const followUser = `-- name: FollowUser :exec
 
 INSERT INTO follows (follower_id, following_id) VALUES ($1, $2) ON CONFLICT DO NOTHING
@@ -1182,6 +1191,21 @@ func (q *Queries) SearchUsers(ctx context.Context, similarity string) ([]SearchU
 		return nil, err
 	}
 	return items, nil
+}
+
+const setPortfolioAssessmentAvg = `-- name: SetPortfolioAssessmentAvg :exec
+INSERT INTO portfolio_stats (portfolio_id, assessment_avg) VALUES ($1, $2)
+ON CONFLICT (portfolio_id) DO UPDATE SET assessment_avg = EXCLUDED.assessment_avg, computed_at = NOW()
+`
+
+type SetPortfolioAssessmentAvgParams struct {
+	PortfolioID   pgtype.UUID    `json:"portfolio_id"`
+	AssessmentAvg pgtype.Numeric `json:"assessment_avg"`
+}
+
+func (q *Queries) SetPortfolioAssessmentAvg(ctx context.Context, arg SetPortfolioAssessmentAvgParams) error {
+	_, err := q.db.Exec(ctx, setPortfolioAssessmentAvg, arg.PortfolioID, arg.AssessmentAvg)
+	return err
 }
 
 const statsPortfolioCandidates = `-- name: StatsPortfolioCandidates :many

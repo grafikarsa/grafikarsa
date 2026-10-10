@@ -88,7 +88,7 @@ ON CONFLICT (academic_year_id, major_id, grade, class_group) DO UPDATE SET name 
 RETURNING id;
 
 -- name: ListEnrollmentsByYear :many
-SELECT e.user_id, e.class_id, c.grade, c.major_id, u.role_primary
+SELECT e.user_id, e.class_id, c.grade, c.class_group, c.name AS class_name, c.major_id, u.role_primary
 FROM enrollments e JOIN classes c ON c.id = e.class_id
 JOIN users u ON u.id = e.user_id
 WHERE e.academic_year_id = $1 AND e.is_current = TRUE AND u.deleted_at IS NULL;
@@ -110,3 +110,24 @@ SELECT id, start_year FROM academic_years WHERE start_year = $1 LIMIT 1;
 
 -- name: GetPromotionJobByYears :one
 SELECT id, status FROM promotion_jobs WHERE from_year_id = $1 AND to_year_id = $2 LIMIT 1;
+
+-- name: ListPendingPortfoliosScoped :many
+SELECT p.id, p.owner_id, p.title, p.slug, p.submitted_at, u.username, u.name AS owner_name
+FROM portfolios p JOIN users u ON u.id = p.owner_id
+WHERE p.status = 'pending_review' AND p.deleted_at IS NULL
+  AND ($1 = '' OR u.major_id::text = $1)
+ORDER BY p.submitted_at ASC LIMIT $2 OFFSET $3;
+
+-- name: GraduateEnrollment :exec
+UPDATE enrollments SET status = 'graduated', is_current = FALSE
+WHERE user_id = $1 AND academic_year_id = $2;
+
+-- name: MarkPromotionFailed :exec
+UPDATE promotion_jobs SET status = 'failed' WHERE id = $1;
+
+-- name: CountClassStudentsInYear :one
+SELECT COUNT(*) FROM enrollments e JOIN classes c ON c.id = e.class_id
+WHERE c.academic_year_id = $1 AND c.major_id = $2 AND c.grade = $3 AND c.class_group = $4 AND e.is_current = TRUE;
+
+-- name: GetYearByID :one
+SELECT id, start_year FROM academic_years WHERE id = $1 LIMIT 1;

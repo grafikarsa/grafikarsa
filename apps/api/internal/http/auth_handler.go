@@ -81,7 +81,8 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_ = a.Cache.Del(ctx, failKey)
-	access, jti, err := auth.NewAccessToken(uuidStr(u.ID), u.RolePrimary, "", "v1", a.Cfg.JWT.AccessSecret, a.Cfg.JWT.AccessTTL)
+	scope := a.effectiveScope(ctx, u.ID, u.RolePrimary)
+	access, jti, err := auth.NewAccessToken(uuidStr(u.ID), u.RolePrimary, scope, a.Cfg.JWT.KeyID(), a.Cfg.JWT.AccessSecret, a.Cfg.JWT.AccessTTL)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal membuat sesi.", r))
 		return
@@ -174,7 +175,8 @@ func (a *App) handleRefresh(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = tx.Commit(ctx)
 
-	access, _, err := auth.NewAccessToken(uuidStr(u.ID), u.RolePrimary, "", "v1", a.Cfg.JWT.AccessSecret, a.Cfg.JWT.AccessTTL)
+	scope := a.effectiveScope(ctx, u.ID, u.RolePrimary)
+	access, _, err := auth.NewAccessToken(uuidStr(u.ID), u.RolePrimary, scope, a.Cfg.JWT.KeyID(), a.Cfg.JWT.AccessSecret, a.Cfg.JWT.AccessTTL)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal membuat sesi.", r))
 		return
@@ -289,3 +291,16 @@ func verifyTurnstile(ctx context.Context, cfg *config.Config, token string) bool
 }
 
 func verifyBcrypt(pw, hash string) bool { return checkBcrypt(pw, hash) }
+
+// effectiveScope: scope jurusan efektif (user_roles berscope, atau major user
+// untuk admin_jurusan) — dipakai untuk row-level filtering, bukan otoritas.
+func (a *App) effectiveScope(ctx context.Context, userID pgtype.UUID, role string) string {
+	if role == "admin" {
+		return ""
+	}
+	sc, err := a.Q.GetUserScope(ctx, userID)
+	if err != nil || !sc.Valid {
+		return ""
+	}
+	return uuidStr(sc)
+}

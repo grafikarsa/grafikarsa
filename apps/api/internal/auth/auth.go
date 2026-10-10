@@ -55,21 +55,34 @@ func NewAccessToken(userID, rolePrimary, scopeMajorID, kid, secret, ttl string) 
 	return signed, jti, nil
 }
 
-func ParseAccessToken(token, secret string) (*AccessClaims, error) {
-	t, err := jwt.ParseWithClaims(token, &AccessClaims{}, func(t *jwt.Token) (any, error) {
-		if t.Method.Alg() != jwt.SigningMethodHS256.Alg() {
-			return nil, fmt.Errorf("algoritma tidak didukung")
+// ParseAccessToken mencoba beberapa secret (rotasi kunci) dan memverifikasi
+// kid bila ada. Token lama tetap valid selama secret sebelumnya dipertahankan.
+func ParseAccessToken(token string, secrets []string) (*AccessClaims, error) {
+	var lastErr error
+	for _, secret := range secrets {
+		if secret == "" {
+			continue
 		}
-		return []byte(secret), nil
-	}, jwt.WithIssuer(AccessIssuer), jwt.WithAudience(AccessAudience))
-	if err != nil {
-		return nil, err
+		t, err := jwt.ParseWithClaims(token, &AccessClaims{}, func(t *jwt.Token) (any, error) {
+			if t.Method.Alg() != jwt.SigningMethodHS256.Alg() {
+				return nil, fmt.Errorf("algoritma tidak didukung")
+			}
+			return []byte(secret), nil
+		}, jwt.WithIssuer(AccessIssuer), jwt.WithAudience(AccessAudience))
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		claims, ok := t.Claims.(*AccessClaims)
+		if ok && t.Valid {
+			return claims, nil
+		}
+		lastErr = fmt.Errorf("token tidak valid")
 	}
-	claims, ok := t.Claims.(*AccessClaims)
-	if !ok || !t.Valid {
-		return nil, fmt.Errorf("token tidak valid")
+	if lastErr == nil {
+		lastErr = fmt.Errorf("token tidak valid")
 	}
-	return claims, nil
+	return nil, lastErr
 }
 
 func NewRefreshToken() (plain, hash string, err error) {

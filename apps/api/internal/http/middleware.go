@@ -28,7 +28,7 @@ func NewApp(cfg *config.Config, q *repo.Queries, c *cache.Cache, st *storage.Sto
 
 func (a *App) authOptional(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		claims := parseAccess(r, a.Cfg.JWT.AccessSecret)
+		claims := parseAccess(r, a.Cfg.JWT.VerificationKeys())
 		if claims == nil {
 			next.ServeHTTP(w, r)
 			return
@@ -47,7 +47,7 @@ func (a *App) authOptional(next http.Handler) http.Handler {
 
 func (a *App) authRequired(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		claims := parseAccess(r, a.Cfg.JWT.AccessSecret)
+		claims := parseAccess(r, a.Cfg.JWT.VerificationKeys())
 		if claims == nil {
 			writeJSON(w, http.StatusUnauthorized, fail("UNAUTHORIZED", "Sesi berakhir. Silakan login ulang.", r))
 			return
@@ -78,6 +78,44 @@ func (a *App) withPerm(perm string, h http.HandlerFunc) http.HandlerFunc {
 		}
 		h(w, r)
 	}
+}
+
+// withAnyPerm: lolos bila user punya SALAH SATU permission.
+// Dipakai agar admin_jurusan (permission *_jurusan) bisa memakai route yang
+// sama dengan admin global, dengan filter scope di query.
+func (a *App) withAnyPerm(perms []string, h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if UserRole(r) == "admin" {
+			h(w, r)
+			return
+		}
+		up := UserPerms(r)
+		for _, p := range perms {
+			if up[p] {
+				h(w, r)
+				return
+			}
+		}
+		writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Kamu tidak memiliki akses ini.", r))
+	}
+}
+
+func (a *App) requireAnyPerm(perms ...string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(a.withAnyPerm(perms, next.ServeHTTP))
+	}
+}
+
+// scopeFilter: "" bila user punya permission global (lihat semua),
+// atau scope jurusan user untuk permission *_jurusan.
+func scopeFilter(r *http.Request, globalPerm, scopedPerm string) string {
+	if UserRole(r) == "admin" || UserPerms(r)[globalPerm] {
+		return ""
+	}
+	if UserPerms(r)[scopedPerm] {
+		return UserScope(r)
+	}
+	return "__none__"
 }
 
 func (a *App) requirePerm(perm string) func(http.Handler) http.Handler {

@@ -118,6 +118,18 @@ func (q *Queries) CountUsersAll(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const countUsersScoped = `-- name: CountUsersScoped :one
+SELECT COUNT(*) FROM users WHERE deleted_at IS NULL
+  AND ($1 = '' OR major_id::text = $1)
+`
+
+func (q *Queries) CountUsersScoped(ctx context.Context, dollar_1 interface{}) (int64, error) {
+	row := q.db.QueryRow(ctx, countUsersScoped, dollar_1)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createMedia = `-- name: CreateMedia :one
 INSERT INTO media_assets (owner_id, purpose, object_key, mime, size_bytes, width, height, checksum_sha256, status)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id
@@ -421,7 +433,7 @@ func (q *Queries) GetSessionByHash(ctx context.Context, refreshHash string) (Get
 
 const getUserByID = `-- name: GetUserByID :one
 SELECT id, username, email, password_hash, name, bio, role_primary, status,
-  class_id, major_id, is_active, must_change_password, avatar_media_id, banner_media_id
+  class_id, major_id, is_active, must_change_password, show_email, avatar_media_id, banner_media_id
 FROM users WHERE id = $1 AND deleted_at IS NULL LIMIT 1
 `
 
@@ -438,6 +450,7 @@ type GetUserByIDRow struct {
 	MajorID            pgtype.UUID `json:"major_id"`
 	IsActive           bool        `json:"is_active"`
 	MustChangePassword bool        `json:"must_change_password"`
+	ShowEmail          bool        `json:"show_email"`
 	AvatarMediaID      pgtype.UUID `json:"avatar_media_id"`
 	BannerMediaID      pgtype.UUID `json:"banner_media_id"`
 }
@@ -458,6 +471,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDR
 		&i.MajorID,
 		&i.IsActive,
 		&i.MustChangePassword,
+		&i.ShowEmail,
 		&i.AvatarMediaID,
 		&i.BannerMediaID,
 	)
@@ -466,7 +480,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDR
 
 const getUserByUsername = `-- name: GetUserByUsername :one
 SELECT id, username, email, password_hash, name, bio, role_primary, status,
-  class_id, major_id, is_active, must_change_password, avatar_media_id, banner_media_id
+  class_id, major_id, is_active, must_change_password, show_email, avatar_media_id, banner_media_id
 FROM users WHERE username = $1 AND deleted_at IS NULL LIMIT 1
 `
 
@@ -483,6 +497,7 @@ type GetUserByUsernameRow struct {
 	MajorID            pgtype.UUID `json:"major_id"`
 	IsActive           bool        `json:"is_active"`
 	MustChangePassword bool        `json:"must_change_password"`
+	ShowEmail          bool        `json:"show_email"`
 	AvatarMediaID      pgtype.UUID `json:"avatar_media_id"`
 	BannerMediaID      pgtype.UUID `json:"banner_media_id"`
 }
@@ -503,6 +518,7 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (GetUs
 		&i.MajorID,
 		&i.IsActive,
 		&i.MustChangePassword,
+		&i.ShowEmail,
 		&i.AvatarMediaID,
 		&i.BannerMediaID,
 	)
@@ -545,6 +561,25 @@ func (q *Queries) GetUserPermissions(ctx context.Context, userID pgtype.UUID) ([
 		return nil, err
 	}
 	return items, nil
+}
+
+const getUserScope = `-- name: GetUserScope :one
+SELECT COALESCE(
+  (SELECT ur.scope_major_id FROM user_roles ur
+   JOIN roles r ON r.id = ur.role_id
+   WHERE ur.user_id = u.id AND ur.scope_major_id IS NOT NULL
+     AND (ur.expires_at IS NULL OR ur.expires_at > NOW())
+   LIMIT 1),
+  CASE WHEN u.role_primary = 'admin_jurusan' THEN u.major_id ELSE NULL END
+)::uuid AS scope_major_id
+FROM users u WHERE u.id = $1
+`
+
+func (q *Queries) GetUserScope(ctx context.Context, id pgtype.UUID) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, getUserScope, id)
+	var scope_major_id pgtype.UUID
+	err := row.Scan(&scope_major_id)
+	return scope_major_id, err
 }
 
 const insertAuthAudit = `-- name: InsertAuthAudit :exec
@@ -758,12 +793,94 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUse
 	return items, nil
 }
 
+const listUsersScoped = `-- name: ListUsersScoped :many
+SELECT id, username, email, name, role_primary, status, class_id, major_id, is_active, created_at
+FROM users WHERE deleted_at IS NULL
+  AND ($1 = '' OR major_id::text = $1)
+ORDER BY created_at DESC LIMIT $2 OFFSET $3
+`
+
+type ListUsersScopedParams struct {
+	Column1 interface{} `json:"column_1"`
+	Limit   int32       `json:"limit"`
+	Offset  int32       `json:"offset"`
+}
+
+type ListUsersScopedRow struct {
+	ID          pgtype.UUID        `json:"id"`
+	Username    string             `json:"username"`
+	Email       string             `json:"email"`
+	Name        string             `json:"name"`
+	RolePrimary string             `json:"role_primary"`
+	Status      string             `json:"status"`
+	ClassID     pgtype.UUID        `json:"class_id"`
+	MajorID     pgtype.UUID        `json:"major_id"`
+	IsActive    bool               `json:"is_active"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+func (q *Queries) ListUsersScoped(ctx context.Context, arg ListUsersScopedParams) ([]ListUsersScopedRow, error) {
+	rows, err := q.db.Query(ctx, listUsersScoped, arg.Column1, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListUsersScopedRow{}
+	for rows.Next() {
+		var i ListUsersScopedRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Username,
+			&i.Email,
+			&i.Name,
+			&i.RolePrimary,
+			&i.Status,
+			&i.ClassID,
+			&i.MajorID,
+			&i.IsActive,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const markMediaDeleted = `-- name: MarkMediaDeleted :exec
 UPDATE media_assets SET status = 'deleted' WHERE id = $1
 `
 
 func (q *Queries) MarkMediaDeleted(ctx context.Context, id pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, markMediaDeleted, id)
+	return err
+}
+
+const mediaUsedInPublishedPortfolio = `-- name: MediaUsedInPublishedPortfolio :one
+SELECT (
+  EXISTS(SELECT 1 FROM portfolios p WHERE p.thumbnail_media_id = $1
+    AND p.status = 'published' AND p.deleted_at IS NULL)
+  OR EXISTS(SELECT 1 FROM portfolio_blocks b JOIN portfolios p ON p.id = b.portfolio_id
+    WHERE b.asset_media_id = $1 AND p.status = 'published' AND p.deleted_at IS NULL)
+)::bool AS used
+`
+
+func (q *Queries) MediaUsedInPublishedPortfolio(ctx context.Context, thumbnailMediaID pgtype.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, mediaUsedInPublishedPortfolio, thumbnailMediaID)
+	var used bool
+	err := row.Scan(&used)
+	return used, err
+}
+
+const refreshFeedbackUpvotes = `-- name: RefreshFeedbackUpvotes :exec
+UPDATE feedback_threads SET upvotes_cached = (SELECT COUNT(*) FROM feedback_votes v WHERE v.thread_id = $1) WHERE id = $1
+`
+
+func (q *Queries) RefreshFeedbackUpvotes(ctx context.Context, threadID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, refreshFeedbackUpvotes, threadID)
 	return err
 }
 
@@ -816,6 +933,34 @@ func (q *Queries) SaveNotifPrefs(ctx context.Context, arg SaveNotifPrefsParams) 
 		arg.NewFollower,
 		arg.DigestDaily,
 	)
+	return err
+}
+
+const setFeedbackPublic = `-- name: SetFeedbackPublic :exec
+UPDATE feedback_threads SET is_public = $2 WHERE id = $1
+`
+
+type SetFeedbackPublicParams struct {
+	ID       pgtype.UUID `json:"id"`
+	IsPublic bool        `json:"is_public"`
+}
+
+func (q *Queries) SetFeedbackPublic(ctx context.Context, arg SetFeedbackPublicParams) error {
+	_, err := q.db.Exec(ctx, setFeedbackPublic, arg.ID, arg.IsPublic)
+	return err
+}
+
+const setFeedbackSpam = `-- name: SetFeedbackSpam :exec
+UPDATE feedback_threads SET is_spam = $2, status = CASE WHEN $2 THEN 'closed' ELSE status END WHERE id = $1
+`
+
+type SetFeedbackSpamParams struct {
+	ID     pgtype.UUID `json:"id"`
+	IsSpam bool        `json:"is_spam"`
+}
+
+func (q *Queries) SetFeedbackSpam(ctx context.Context, arg SetFeedbackSpamParams) error {
+	_, err := q.db.Exec(ctx, setFeedbackSpam, arg.ID, arg.IsSpam)
 	return err
 }
 
@@ -887,6 +1032,21 @@ type UnassignUserRoleParams struct {
 
 func (q *Queries) UnassignUserRole(ctx context.Context, arg UnassignUserRoleParams) error {
 	_, err := q.db.Exec(ctx, unassignUserRole, arg.UserID, arg.RoleID)
+	return err
+}
+
+const updateFeedbackPriority = `-- name: UpdateFeedbackPriority :exec
+UPDATE feedback_threads SET priority = $2, assignee_id = $3 WHERE id = $1
+`
+
+type UpdateFeedbackPriorityParams struct {
+	ID         pgtype.UUID `json:"id"`
+	Priority   string      `json:"priority"`
+	AssigneeID pgtype.UUID `json:"assignee_id"`
+}
+
+func (q *Queries) UpdateFeedbackPriority(ctx context.Context, arg UpdateFeedbackPriorityParams) error {
+	_, err := q.db.Exec(ctx, updateFeedbackPriority, arg.ID, arg.Priority, arg.AssigneeID)
 	return err
 }
 

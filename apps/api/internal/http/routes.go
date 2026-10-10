@@ -51,8 +51,9 @@ func (a *App) routes() http.Handler {
 			r.Put("/me/notification-prefs", a.csrf(a.handleSaveNotifPrefs))
 		})
 		r.Group(func(r chi.Router) {
-			r.Use(a.authRequired)
-			r.Get("/users", a.withPerm("users.view", a.handleListUsers))
+			// Direktori & profil publik; field sensitif digate di handler.
+			r.Use(a.authOptional)
+			r.Get("/users", a.handleListUsers)
 			r.Get("/users/{username}", a.handleGetUser)
 			r.Get("/users/{username}/followers", a.handleListFollowers)
 			r.Get("/users/{username}/following", a.handleListFollowing)
@@ -60,16 +61,16 @@ func (a *App) routes() http.Handler {
 		r.Route("/admin", func(r chi.Router) {
 			r.Use(a.authRequired)
 			r.Route("/portfolios", func(r chi.Router) {
-				r.Use(a.requirePerm("portfolios.view_all"))
+				r.Use(a.requireAnyPerm("portfolios.view_all", "portfolios.moderate_jurusan"))
 				r.Get("/", a.handleAdminListPortfolios)
 				r.Get("/pending", a.handleAdminPendingPortfolios)
-				r.With(a.requirePerm("portfolios.moderate")).Post("/bulk-approve", a.csrf(a.handleBulkApprove))
+				r.With(a.requireAnyPerm("portfolios.moderate")).Post("/bulk-approve", a.csrf(a.handleBulkApprove))
 				r.Route("/{id}", func(r chi.Router) {
 					r.Get("/", a.handleAdminGetPortfolio)
-					r.With(a.requirePerm("portfolios.moderate")).Post("/approve", a.csrf(a.handleApprovePortfolio))
-					r.With(a.requirePerm("portfolios.moderate")).Post("/request-changes", a.csrf(a.handleRequestChanges))
-					r.With(a.requirePerm("portfolios.moderate")).Post("/reject", a.csrf(a.handleRejectPortfolio))
-					r.With(a.requirePerm("portfolios.moderate")).Post("/restore", a.csrf(a.handleRestorePortfolio))
+					r.With(a.requireAnyPerm("portfolios.moderate", "portfolios.moderate_jurusan")).Post("/approve", a.csrf(a.handleApprovePortfolio))
+					r.With(a.requireAnyPerm("portfolios.moderate", "portfolios.moderate_jurusan")).Post("/request-changes", a.csrf(a.handleRequestChanges))
+					r.With(a.requireAnyPerm("portfolios.moderate", "portfolios.moderate_jurusan")).Post("/reject", a.csrf(a.handleRejectPortfolio))
+					r.With(a.requireAnyPerm("portfolios.moderate")).Post("/restore", a.csrf(a.handleRestorePortfolio))
 				})
 			})
 			r.Route("/tags", func(r chi.Router) {
@@ -85,23 +86,23 @@ func (a *App) routes() http.Handler {
 				r.Post("/", a.csrf(a.handleCreateSeries))
 			})
 			r.Route("/users", func(r chi.Router) {
-				r.Use(a.requirePerm("users.view"))
+				r.Use(a.requireAnyPerm("users.view", "users.view_jurusan"))
 				r.Get("/", a.handleAdminListUsers)
-				r.With(a.requirePerm("users.create")).Post("/", a.csrf(a.handleAdminCreateUser))
+				r.With(a.requireAnyPerm("users.create", "users.create_jurusan")).Post("/", a.csrf(a.handleAdminCreateUser))
 				r.Route("/{id}", func(r chi.Router) {
 					r.Get("/", a.handleAdminGetUser)
-					r.With(a.requirePerm("users.edit")).Patch("/", a.csrf(a.handleAdminUpdateUser))
-					r.With(a.requirePerm("users.delete")).Delete("/", a.csrf(a.handleAdminDeleteUser))
-					r.With(a.requirePerm("users.activate")).Post("/activate", a.csrf(a.handleAdminActivateUser))
-					r.With(a.requirePerm("users.reset_password")).Post("/reset-password", a.csrf(a.handleAdminResetPassword))
+					r.With(a.requireAnyPerm("users.edit", "users.edit_jurusan")).Patch("/", a.csrf(a.handleAdminUpdateUser))
+					r.With(a.requireAnyPerm("users.delete")).Delete("/", a.csrf(a.handleAdminDeleteUser))
+					r.With(a.requireAnyPerm("users.activate")).Post("/activate", a.csrf(a.handleAdminActivateUser))
+					r.With(a.requireAnyPerm("users.reset_password")).Post("/reset-password", a.csrf(a.handleAdminResetPassword))
 				})
 			})
 			r.Route("/roles", func(r chi.Router) {
 				r.Use(a.requirePerm("roles.view"))
 				r.Get("/", a.handleListRoles)
 				r.With(a.requirePerm("roles.create")).Post("/", a.csrf(a.handleCreateRole))
-				r.With(a.requirePerm("roles.assign")).Post("/assign", a.csrf(a.handleAssignRole))
-				r.With(a.requirePerm("roles.assign")).Delete("/assign", a.csrf(a.handleUnassignRole))
+				r.With(a.requireAnyPerm("roles.assign", "roles.assign_jurusan")).Post("/assign", a.csrf(a.handleAssignRole))
+				r.With(a.requireAnyPerm("roles.assign", "roles.assign_jurusan")).Delete("/assign", a.csrf(a.handleUnassignRole))
 			})
 			r.With(a.requirePerm("users.view")).Get("/audit-logs", a.handleAuditLogs)
 			r.Route("/majors", func(r chi.Router) {
@@ -154,7 +155,7 @@ func (a *App) routes() http.Handler {
 		})
 		r.Group(func(r chi.Router) {
 			r.Use(a.authRequired)
-			r.Post("/media/upload", a.csrf(a.handleUpload))
+			r.With(a.requirePerm("media.upload")).Post("/media/upload", a.csrf(a.handleUpload))
 			r.Post("/media/{id}/confirm", a.csrf(a.handleConfirmMedia))
 			r.Delete("/media/{id}", a.csrf(a.handleDeleteMedia))
 		})

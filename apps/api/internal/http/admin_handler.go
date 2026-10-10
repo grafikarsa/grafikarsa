@@ -33,12 +33,16 @@ func meta(page int, limit int32, total int64) map[string]any {
 
 func (a *App) handleAdminListUsers(w http.ResponseWriter, r *http.Request) {
 	limit, offset, page := pageParams(r)
-	users, err := a.Q.ListUsers(r.Context(), repo.ListUsersParams{Limit: limit, Offset: offset})
+	// Row-level scope: admin_jurusan hanya melihat user jurusannya.
+	scope := scopeFilter(r, "users.view", "users.view_jurusan")
+	users, err := a.Q.ListUsersScoped(r.Context(), repo.ListUsersScopedParams{
+		Column1: scope, Limit: limit, Offset: offset,
+	})
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal memuat user.", r))
 		return
 	}
-	total, _ := a.Q.CountUsersAll(r.Context())
+	total, _ := a.Q.CountUsersScoped(r.Context(), scope)
 	out := []map[string]any{}
 	for _, u := range users {
 		out = append(out, map[string]any{

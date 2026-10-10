@@ -1,11 +1,11 @@
 -- name: GetUserByUsername :one
 SELECT id, username, email, password_hash, name, bio, role_primary, status,
-  class_id, major_id, is_active, must_change_password, avatar_media_id, banner_media_id
+  class_id, major_id, is_active, must_change_password, show_email, avatar_media_id, banner_media_id
 FROM users WHERE username = $1 AND deleted_at IS NULL LIMIT 1;
 
 -- name: GetUserByID :one
 SELECT id, username, email, password_hash, name, bio, role_primary, status,
-  class_id, major_id, is_active, must_change_password, avatar_media_id, banner_media_id
+  class_id, major_id, is_active, must_change_password, show_email, avatar_media_id, banner_media_id
 FROM users WHERE id = $1 AND deleted_at IS NULL LIMIT 1;
 
 -- name: UpdatePasswordHash :exec
@@ -163,3 +163,44 @@ ON CONFLICT (user_id) DO UPDATE SET portfolio_liked = EXCLUDED.portfolio_liked, 
 -- name: GetAuditLogs :many
 SELECT id, actor_id, action, entity, entity_id, created_at FROM audit_logs ORDER BY id DESC LIMIT $1 OFFSET $2;
 
+
+-- name: GetUserScope :one
+SELECT COALESCE(
+  (SELECT ur.scope_major_id FROM user_roles ur
+   JOIN roles r ON r.id = ur.role_id
+   WHERE ur.user_id = u.id AND ur.scope_major_id IS NOT NULL
+     AND (ur.expires_at IS NULL OR ur.expires_at > NOW())
+   LIMIT 1),
+  CASE WHEN u.role_primary = 'admin_jurusan' THEN u.major_id ELSE NULL END
+)::uuid AS scope_major_id
+FROM users u WHERE u.id = $1;
+
+-- name: ListUsersScoped :many
+SELECT id, username, email, name, role_primary, status, class_id, major_id, is_active, created_at
+FROM users WHERE deleted_at IS NULL
+  AND ($1 = '' OR major_id::text = $1)
+ORDER BY created_at DESC LIMIT $2 OFFSET $3;
+
+-- name: CountUsersScoped :one
+SELECT COUNT(*) FROM users WHERE deleted_at IS NULL
+  AND ($1 = '' OR major_id::text = $1);
+
+-- name: MediaUsedInPublishedPortfolio :one
+SELECT (
+  EXISTS(SELECT 1 FROM portfolios p WHERE p.thumbnail_media_id = $1
+    AND p.status = 'published' AND p.deleted_at IS NULL)
+  OR EXISTS(SELECT 1 FROM portfolio_blocks b JOIN portfolios p ON p.id = b.portfolio_id
+    WHERE b.asset_media_id = $1 AND p.status = 'published' AND p.deleted_at IS NULL)
+)::bool AS used;
+
+-- name: UpdateFeedbackPriority :exec
+UPDATE feedback_threads SET priority = $2, assignee_id = $3 WHERE id = $1;
+
+-- name: RefreshFeedbackUpvotes :exec
+UPDATE feedback_threads SET upvotes_cached = (SELECT COUNT(*) FROM feedback_votes v WHERE v.thread_id = $1) WHERE id = $1;
+
+-- name: SetFeedbackPublic :exec
+UPDATE feedback_threads SET is_public = $2 WHERE id = $1;
+
+-- name: SetFeedbackSpam :exec
+UPDATE feedback_threads SET is_spam = $2, status = CASE WHEN $2 THEN 'closed' ELSE status END WHERE id = $1;

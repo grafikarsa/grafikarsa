@@ -202,12 +202,16 @@ func (a *App) handleServeMedia(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Media tidak ditemukan.", r))
 		return
 	}
-	if m.Purpose != "avatar" && m.Purpose != "banner" {
-		if UserID(r) == "" {
-			writeJSON(w, http.StatusUnauthorized, fail("UNAUTHORIZED", "Sesi berakhir.", r))
-			return
-		}
-		if uuidStr(m.OwnerID) != UserID(r) && UserRole(r) != "admin" {
+	publicPurpose := m.Purpose == "avatar" || m.Purpose == "banner" || m.Purpose == "changelog_cover"
+	if !publicPurpose {
+		// Thumbnail/block/document boleh publik bila dipakai portfolio published.
+		used, _ := a.Q.MediaUsedInPublishedPortfolio(r.Context(), m.ID)
+		ownerView := UserID(r) != "" && (uuidStr(m.OwnerID) == UserID(r) || UserRole(r) == "admin" || UserPerms(r)["portfolios.moderate"])
+		if !used && !ownerView {
+			if UserID(r) == "" {
+				writeJSON(w, http.StatusUnauthorized, fail("UNAUTHORIZED", "Sesi berakhir.", r))
+				return
+			}
 			writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Bukan milikmu.", r))
 			return
 		}

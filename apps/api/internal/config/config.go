@@ -28,6 +28,7 @@ type DragonflyConfig struct {
 type JWTConfig struct {
 	AccessSecret, RefreshSecret, AccessTTL string
 	CSRFSalt                               string
+	KeyIDField, PreviousAccessSecret       string
 }
 
 type TurnstileConfig struct {
@@ -97,10 +98,12 @@ func Load() (*Config, error) {
 			DB:       getEnvInt("DRAGONFLY_DB", 0),
 		},
 		JWT: JWTConfig{
-			AccessSecret:  getEnv("JWT_ACCESS_SECRET", ""),
-			RefreshSecret: getEnv("JWT_REFRESH_SECRET", ""),
-			AccessTTL:     getEnv("JWT_ACCESS_TTL", "15m"),
-			CSRFSalt:      getEnv("CSRF_SECRET", ""),
+			AccessSecret:         getEnv("JWT_ACCESS_SECRET", ""),
+			RefreshSecret:        getEnv("JWT_REFRESH_SECRET", ""),
+			AccessTTL:            getEnv("JWT_ACCESS_TTL", "15m"),
+			CSRFSalt:             getEnv("CSRF_SECRET", ""),
+			KeyIDField:           getEnv("JWT_KEY_ID", "v1"),
+			PreviousAccessSecret: getEnv("JWT_PREVIOUS_ACCESS_SECRET", ""),
 		},
 		Admin: AdminSeed{
 			Email:    getEnv("ADMIN_SEED_EMAIL", "admin@grafikarsa.com"),
@@ -140,3 +143,20 @@ func (c *Config) CacheAddr() string {
 func (c *JWTConfig) CSRFSecret() string { return c.CSRFSalt }
 
 func (c *Config) TurnstileSecret() string { return c.Turn.SecretKey }
+
+// KeyID mengembalikan id kunci JWT aktif (untuk header kid).
+func (c *JWTConfig) KeyID() string {
+	if c.KeyIDField == "" {
+		return "v1"
+	}
+	return c.KeyIDField
+}
+
+// VerificationKeys: kunci aktif + kunci sebelumnya (rotasi tanpa logout massal).
+func (c *JWTConfig) VerificationKeys() []string {
+	keys := []string{c.AccessSecret}
+	if c.PreviousAccessSecret != "" {
+		keys = append(keys, c.PreviousAccessSecret)
+	}
+	return keys
+}

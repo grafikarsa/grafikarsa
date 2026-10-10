@@ -146,12 +146,12 @@ func toPgText(s string) pgtype.Text {
 	return pgtype.Text{String: s, Valid: true}
 }
 
-func parseAccess(r *http.Request, secret string) *auth.AccessClaims {
+func parseAccess(r *http.Request, secrets []string) *auth.AccessClaims {
 	h := r.Header.Get("Authorization")
 	if !strings.HasPrefix(h, "Bearer ") {
 		return nil
 	}
-	claims, err := auth.ParseAccessToken(strings.TrimPrefix(h, "Bearer "), secret)
+	claims, err := auth.ParseAccessToken(strings.TrimPrefix(h, "Bearer "), secrets)
 	if err != nil {
 		return nil
 	}

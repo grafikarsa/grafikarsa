@@ -144,6 +144,13 @@ ON CONFLICT (portfolio_id) DO UPDATE SET
   quality = EXCLUDED.quality, engagement = EXCLUDED.engagement, trending = EXCLUDED.trending,
   computed_at = NOW();
 
+-- name: EnsurePortfolioStats :exec
+INSERT INTO portfolio_stats (portfolio_id) VALUES ($1) ON CONFLICT (portfolio_id) DO NOTHING;
+
+-- name: SetPortfolioAssessmentAvg :exec
+INSERT INTO portfolio_stats (portfolio_id, assessment_avg) VALUES ($1, $2)
+ON CONFLICT (portfolio_id) DO UPDATE SET assessment_avg = EXCLUDED.assessment_avg, computed_at = NOW();
+
 -- name: GetPortfolioStats :one
 SELECT portfolio_id, likes, views_7d, views_30d, comments, assessment_avg, quality, engagement, trending
 FROM portfolio_stats WHERE portfolio_id = $1 LIMIT 1;
