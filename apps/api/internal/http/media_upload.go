@@ -41,6 +41,56 @@ var purposeMimes = map[string][]string{
 	"changelog_cover": {"image/jpeg", "image/png", "image/webp"},
 }
 
+// uploadLimitsKey menyimpan batas upload efektif di cache (di-invalidate saat
+// admin mengubah upload_limits lewat /admin/settings/{key}).
+func uploadLimitsKey() string { return "upload:limits" }
+
+// loadUploadLimits membaca batas ukuran per purpose dari system_settings
+// (dapat diubah tanpa deploy) dan menggabungkannya dengan default hardcode.
+// Nilai di-clamp ke batas keras agar admin tidak bisa menaikkan tak terbatas.
+func (a *App) loadUploadLimits(ctx context.Context) map[string]int64 {
+	out := map[string]int64{}
+	for k, v := range purposeLimits {
+		out[k] = v
+	}
+	if cached, err := a.Cache.GetBytes(ctx, uploadLimitsKey()); err == nil && len(cached) > 0 {
+		var m map[string]float64
+		if json.Unmarshal(cached, &m) == nil {
+			return mergeUploadLimits(out, m)
+		}
+	}
+	row, err := a.Q.GetSystemSetting(ctx, "upload_limits")
+	if err != nil {
+		return out
+	}
+	var m map[string]float64
+	if json.Unmarshal(row.Value, &m) != nil {
+		return out
+	}
+	merged := mergeUploadLimits(out, m)
+	if raw, jerr := json.Marshal(m); jerr == nil {
+		_ = a.Cache.SetBytes(ctx, uploadLimitsKey(), raw, 5*time.Minute)
+	}
+	return merged
+}
+
+// mergeUploadLimits: key "avatar_mb" -> purpose "avatar".
+func mergeUploadLimits(base map[string]int64, cfg map[string]float64) map[string]int64 {
+	const hardMax = 52 << 20 // batas keras body
+	for purpose := range base {
+		v, ok := cfg[purpose+"_mb"]
+		if !ok || v <= 0 {
+			continue
+		}
+		mb := int64(v * float64(1<<20))
+		if mb > hardMax {
+			mb = hardMax
+		}
+		base[purpose] = mb
+	}
+	return base
+}
+
 // imagePolicy: lebar maksimum + varian yang dibuat per purpose.
 type imagePolicy struct {
 	maxWidth int
@@ -92,8 +142,8 @@ func (a *App) handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	purpose := r.FormValue("purpose")
-	limit, found := purposeLimits[purpose]
-	if !found {
+	limit, found := a.loadUploadLimits(ctx)[purpose]
+	if !found || limit <= 0 {
 		writeJSON(w, http.StatusUnprocessableEntity, fail("VALIDATION_ERROR", "Purpose tidak valid.", r))
 		return
 	}

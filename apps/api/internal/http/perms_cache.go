@@ -50,3 +50,9 @@ func loadPerms(ctx context.Context, c *cache.Cache, q *repo.Queries, userID stri
 func invalidatePerms(ctx context.Context, c *cache.Cache, userID string) {
 	_ = c.Del(ctx, permsKey(userID))
 }
+
+func feedWeightsKey() string { return "feed:weights" }
+
+func invalidateFeedWeights(ctx context.Context, c *cache.Cache) {
+	_ = c.Del(ctx, feedWeightsKey())
+}

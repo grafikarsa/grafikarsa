@@ -159,6 +159,31 @@ func (q *Queries) CreateBlock(ctx context.Context, arg CreateBlockParams) (pgtyp
 	return id, err
 }
 
+const createBlockFromSeries = `-- name: CreateBlockFromSeries :one
+INSERT INTO portfolio_blocks (portfolio_id, block_type, position, payload, is_from_series)
+VALUES ($1, $2, $3, $4, TRUE) RETURNING id
+`
+
+type CreateBlockFromSeriesParams struct {
+	PortfolioID pgtype.UUID `json:"portfolio_id"`
+	BlockType   string      `json:"block_type"`
+	Position    int32       `json:"position"`
+	Payload     []byte      `json:"payload"`
+}
+
+// Menyalin template series menjadi block portfolio (is_from_series=true).
+func (q *Queries) CreateBlockFromSeries(ctx context.Context, arg CreateBlockFromSeriesParams) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, createBlockFromSeries,
+		arg.PortfolioID,
+		arg.BlockType,
+		arg.Position,
+		arg.Payload,
+	)
+	var id pgtype.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const createPortfolio = `-- name: CreatePortfolio :one
 
 INSERT INTO portfolios (owner_id, title, slug, series_id)
@@ -780,6 +805,44 @@ func (q *Queries) ListPortfolioTags(ctx context.Context, portfolioID pgtype.UUID
 	return items, nil
 }
 
+const listPortfolioTagsBatch = `-- name: ListPortfolioTagsBatch :many
+SELECT pt.portfolio_id, t.id, t.slug, t.name FROM tags t
+JOIN portfolio_tags pt ON pt.tag_id = t.id WHERE pt.portfolio_id = ANY($1::uuid[]) ORDER BY t.name
+`
+
+type ListPortfolioTagsBatchRow struct {
+	PortfolioID pgtype.UUID `json:"portfolio_id"`
+	ID          pgtype.UUID `json:"id"`
+	Slug        string      `json:"slug"`
+	Name        string      `json:"name"`
+}
+
+// Satu query untuk semua kandidat feed (hindari N+1 ListPortfolioTags).
+func (q *Queries) ListPortfolioTagsBatch(ctx context.Context, dollar_1 []pgtype.UUID) ([]ListPortfolioTagsBatchRow, error) {
+	rows, err := q.db.Query(ctx, listPortfolioTagsBatch, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPortfolioTagsBatchRow{}
+	for rows.Next() {
+		var i ListPortfolioTagsBatchRow
+		if err := rows.Scan(
+			&i.PortfolioID,
+			&i.ID,
+			&i.Slug,
+			&i.Name,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPortfoliosForAdmin = `-- name: ListPortfoliosForAdmin :many
 SELECT p.id, p.title, p.slug, p.status, p.owner_id, p.submitted_at, p.published_at,
   u.username, u.name AS owner_name, u.major_id
@@ -1117,6 +1180,24 @@ type UpdateBlockPositionParams struct {
 
 func (q *Queries) UpdateBlockPosition(ctx context.Context, arg UpdateBlockPositionParams) error {
 	_, err := q.db.Exec(ctx, updateBlockPosition, arg.ID, arg.Position)
+	return err
+}
+
+const updatePortfolioDraft = `-- name: UpdatePortfolioDraft :exec
+UPDATE portfolios SET title = COALESCE(NULLIF($2,''), title), draft_payload = $3, updated_at = NOW()
+WHERE id = $1
+`
+
+type UpdatePortfolioDraftParams struct {
+	ID           pgtype.UUID `json:"id"`
+	Column2      interface{} `json:"column_2"`
+	DraftPayload []byte      `json:"draft_payload"`
+}
+
+// Autosave editor: hanya title + draft_payload (mentah dari FE, maks 64KB).
+// Konten final tetap dari portfolio_blocks saat submit.
+func (q *Queries) UpdatePortfolioDraft(ctx context.Context, arg UpdatePortfolioDraftParams) error {
+	_, err := q.db.Exec(ctx, updatePortfolioDraft, arg.ID, arg.Column2, arg.DraftPayload)
 	return err
 }
 

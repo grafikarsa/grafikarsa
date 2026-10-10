@@ -321,6 +321,45 @@ func (q *Queries) EnsurePortfolioStats(ctx context.Context, portfolioID pgtype.U
 	return err
 }
 
+const followMap = `-- name: FollowMap :many
+SELECT u.id AS owner_id,
+  EXISTS(SELECT 1 FROM follows f WHERE f.follower_id = $1 AND f.following_id = u.id) AS i_follow,
+  EXISTS(SELECT 1 FROM follows f WHERE f.follower_id = u.id AND f.following_id = $1) AS follows_me
+FROM users u WHERE u.id = ANY($2::uuid[])
+`
+
+type FollowMapParams struct {
+	FollowerID pgtype.UUID   `json:"follower_id"`
+	Column2    []pgtype.UUID `json:"column_2"`
+}
+
+type FollowMapRow struct {
+	OwnerID   pgtype.UUID `json:"owner_id"`
+	IFollow   bool        `json:"i_follow"`
+	FollowsMe bool        `json:"follows_me"`
+}
+
+// Relasi follow dua arah sekaligus untuk semua owner kandidat (hindari N+1 IsFollowing).
+func (q *Queries) FollowMap(ctx context.Context, arg FollowMapParams) ([]FollowMapRow, error) {
+	rows, err := q.db.Query(ctx, followMap, arg.FollowerID, arg.Column2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []FollowMapRow{}
+	for rows.Next() {
+		var i FollowMapRow
+		if err := rows.Scan(&i.OwnerID, &i.IFollow, &i.FollowsMe); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const followUser = `-- name: FollowUser :exec
 
 INSERT INTO follows (follower_id, following_id) VALUES ($1, $2) ON CONFLICT DO NOTHING

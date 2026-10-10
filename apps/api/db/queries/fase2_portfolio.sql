@@ -183,3 +183,19 @@ SELECT COUNT(*) FROM portfolios p JOIN users u ON u.id = p.owner_id
 WHERE p.deleted_at IS NULL
   AND ($1::text = '' OR p.status = $1)
   AND ($2::text = '' OR u.major_id::text = $2);
+
+-- name: UpdatePortfolioDraft :exec
+-- Autosave editor: hanya title + draft_payload (mentah dari FE, maks 64KB).
+-- Konten final tetap dari portfolio_blocks saat submit.
+UPDATE portfolios SET title = COALESCE(NULLIF($2,''), title), draft_payload = $3, updated_at = NOW()
+WHERE id = $1;
+
+-- name: CreateBlockFromSeries :one
+-- Menyalin template series menjadi block portfolio (is_from_series=true).
+INSERT INTO portfolio_blocks (portfolio_id, block_type, position, payload, is_from_series)
+VALUES ($1, $2, $3, $4, TRUE) RETURNING id;
+
+-- name: ListPortfolioTagsBatch :many
+-- Satu query untuk semua kandidat feed (hindari N+1 ListPortfolioTags).
+SELECT pt.portfolio_id, t.id, t.slug, t.name FROM tags t
+JOIN portfolio_tags pt ON pt.tag_id = t.id WHERE pt.portfolio_id = ANY($1::uuid[]) ORDER BY t.name;

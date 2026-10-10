@@ -327,3 +327,10 @@ WHERE deleted_at IS NULL AND is_active = TRUE
     OR ($1::text = 'guru' AND role_primary = 'guru')
     OR ($1::text = 'admin' AND role_primary IN ('admin', 'admin_jurusan'))
   );
+
+-- name: FollowMap :many
+-- Relasi follow dua arah sekaligus untuk semua owner kandidat (hindari N+1 IsFollowing).
+SELECT u.id AS owner_id,
+  EXISTS(SELECT 1 FROM follows f WHERE f.follower_id = $1 AND f.following_id = u.id) AS i_follow,
+  EXISTS(SELECT 1 FROM follows f WHERE f.follower_id = u.id AND f.following_id = $1) AS follows_me
+FROM users u WHERE u.id = ANY($2::uuid[]);

@@ -355,6 +355,22 @@ func (q *Queries) GetFeedbackThread(ctx context.Context, id pgtype.UUID) (GetFee
 	return i, err
 }
 
+const getSystemSetting = `-- name: GetSystemSetting :one
+SELECT key, value FROM system_settings WHERE key = $1 LIMIT 1
+`
+
+type GetSystemSettingRow struct {
+	Key   string `json:"key"`
+	Value []byte `json:"value"`
+}
+
+func (q *Queries) GetSystemSetting(ctx context.Context, key string) (GetSystemSettingRow, error) {
+	row := q.db.QueryRow(ctx, getSystemSetting, key)
+	var i GetSystemSettingRow
+	err := row.Scan(&i.Key, &i.Value)
+	return i, err
+}
+
 const listChangelogSections = `-- name: ListChangelogSections :many
 SELECT id, kind, title, body_md, sort FROM changelog_sections
 WHERE changelog_id = $1 ORDER BY sort ASC
@@ -732,6 +748,36 @@ func (q *Queries) ListScores(ctx context.Context, assessmentID pgtype.UUID) ([]L
 	return items, nil
 }
 
+const listSystemSettings = `-- name: ListSystemSettings :many
+SELECT key, value, updated_at FROM system_settings ORDER BY key ASC
+`
+
+type ListSystemSettingsRow struct {
+	Key       string             `json:"key"`
+	Value     []byte             `json:"value"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) ListSystemSettings(ctx context.Context) ([]ListSystemSettingsRow, error) {
+	rows, err := q.db.Query(ctx, listSystemSettings)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListSystemSettingsRow{}
+	for rows.Next() {
+		var i ListSystemSettingsRow
+		if err := rows.Scan(&i.Key, &i.Value, &i.UpdatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const markAllChangelogsRead = `-- name: MarkAllChangelogsRead :exec
 INSERT INTO changelog_reads (changelog_id, user_id)
 SELECT c.id, $1 FROM changelogs c
@@ -889,6 +935,22 @@ func (q *Queries) UpsertAssessment(ctx context.Context, arg UpsertAssessmentPara
 	var id pgtype.UUID
 	err := row.Scan(&id)
 	return id, err
+}
+
+const upsertSystemSetting = `-- name: UpsertSystemSetting :exec
+INSERT INTO system_settings (key, value, updated_by) VALUES ($1, $2, $3)
+ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_by = EXCLUDED.updated_by, updated_at = NOW()
+`
+
+type UpsertSystemSettingParams struct {
+	Key       string      `json:"key"`
+	Value     []byte      `json:"value"`
+	UpdatedBy pgtype.UUID `json:"updated_by"`
+}
+
+func (q *Queries) UpsertSystemSetting(ctx context.Context, arg UpsertSystemSettingParams) error {
+	_, err := q.db.Exec(ctx, upsertSystemSetting, arg.Key, arg.Value, arg.UpdatedBy)
+	return err
 }
 
 const voteFeedback = `-- name: VoteFeedback :exec

@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"math"
 	"regexp"
@@ -9,10 +10,64 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"grafikarsa/api/internal/repo"
 )
 
 func recencyScore(publishedAt interface{ GetTime() bool }) float64 { return 0 }
+
+// feedWeightsDefault dipakai bila system_settings belum ada / cache gagal.
+func feedWeightsDefault() map[string]float64 {
+	return map[string]float64{
+		"following": 0.30, "recency": 0.25, "engagement": 0.20, "interest": 0.15, "quality": 0.10,
+	}
+}
+
+// loadFeedWeights membaca bobot dari system_settings (diubah via /admin/settings
+// tanpa deploy), di-cache 5 menit. Normalisasi ulang agar total selalu 1.
+func (a *App) loadFeedWeights(ctx context.Context) map[string]float64 {
+	def := feedWeightsDefault()
+	cached, err := a.Cache.GetBytes(ctx, feedWeightsKey())
+	if err == nil && len(cached) > 0 {
+		var m map[string]float64
+		if jerr := json.Unmarshal(cached, &m); jerr == nil && len(m) > 0 {
+			return normalizeWeights(m, def)
+		}
+	}
+	row, err := a.Q.GetSystemSetting(ctx, "feed_weights")
+	if err != nil {
+		return def
+	}
+	var m map[string]float64
+	if jerr := json.Unmarshal(row.Value, &m); jerr != nil || len(m) == 0 {
+		return def
+	}
+	w := normalizeWeights(m, def)
+	if raw, jerr := json.Marshal(w); jerr == nil {
+		_ = a.Cache.SetBytes(ctx, feedWeightsKey(), raw, 5*time.Minute)
+	}
+	return w
+}
+
+func normalizeWeights(m, def map[string]float64) map[string]float64 {
+	out := map[string]float64{}
+	sum := 0.0
+	for k, d := range def {
+		v, ok := m[k]
+		if !ok || v < 0 || v > 1 {
+			v = d
+		}
+		out[k] = v
+		sum += v
+	}
+	if sum <= 0 {
+		return def
+	}
+	for k := range out {
+		out[k] /= sum
+	}
+	return out
+}
 
 func followingScore(isMutual, isOneWay bool) float64 {
 	if isMutual {
@@ -140,23 +195,45 @@ func (a *App) handleFeed(w http.ResponseWriter, r *http.Request) {
 			score float64
 		}
 		list := []scored{}
-		// Batch tags sekali untuk 50 kandidat (hindari N+1).
-		tagMap := map[string][]repo.ListPortfolioTagsRow{}
+		// Filter karya sendiri dulu, lalu 2 query batch (tags + follow map).
+		filtered := make([]repo.GetFeedCandidatesRow, 0, len(cands))
+		candIDs := make([]pgtype.UUID, 0, len(cands))
+		ownerIDs := make([]pgtype.UUID, 0, len(cands))
+		seenOwner := map[string]bool{}
 		for _, c := range cands {
 			if uuidStr(c.OwnerID) == uid {
 				continue // jangan tampilkan karya sendiri di smart feed
 			}
-			tags, _ := a.Q.ListPortfolioTags(r.Context(), c.ID)
-			tagMap[uuidStr(c.ID)] = tags
-		}
-		for _, c := range cands {
-			if _, skip := tagMap[uuidStr(c.ID)]; !skip {
-				continue
+			filtered = append(filtered, c)
+			candIDs = append(candIDs, c.ID)
+			if !seenOwner[uuidStr(c.OwnerID)] {
+				seenOwner[uuidStr(c.OwnerID)] = true
+				ownerIDs = append(ownerIDs, c.OwnerID)
 			}
-			reverse, _ := a.Q.IsFollowing(r.Context(), repo.IsFollowingParams{FollowerID: c.OwnerID, FollowingID: mustUUID(uid)})
+		}
+		tagMap := map[string][]repo.ListPortfolioTagsRow{}
+		if len(candIDs) > 0 {
+			if rows, terr := a.Q.ListPortfolioTagsBatch(r.Context(), candIDs); terr == nil {
+				for _, t := range rows {
+					pid := uuidStr(t.PortfolioID)
+					tagMap[pid] = append(tagMap[pid], repo.ListPortfolioTagsRow{ID: t.ID, Slug: t.Slug, Name: t.Name})
+				}
+			}
+		}
+		followMap := map[string]repo.FollowMapRow{}
+		if len(ownerIDs) > 0 {
+			if rows, ferr := a.Q.FollowMap(r.Context(), repo.FollowMapParams{FollowerID: mustUUID(uid), Column2: ownerIDs}); ferr == nil {
+				for _, f := range rows {
+					followMap[uuidStr(f.OwnerID)] = f
+				}
+			}
+		}
+		weights := a.loadFeedWeights(r.Context())
+		for _, c := range filtered {
+			rel := followMap[uuidStr(c.OwnerID)]
 			fScore := 0.0
-			if followSet[uuidStr(c.OwnerID)] {
-				if reverse > 0 {
+			if rel.IFollow {
+				if rel.FollowsMe {
 					fScore = 1.0
 				} else {
 					fScore = 0.8
@@ -206,7 +283,8 @@ func (a *App) handleFeed(w http.ResponseWriter, r *http.Request) {
 				classScore = 1
 			}
 			relevance := 0.5*cos + 0.3*majorScore + 0.2*classScore
-			final := 0.30*fScore + 0.25*recency + 0.20*eng + 0.15*relevance + 0.10*qual
+			final := weights["following"]*fScore + weights["recency"]*recency +
+				weights["engagement"]*eng + weights["interest"]*relevance + weights["quality"]*qual
 			list = append(list, scored{c, final})
 		}
 		for i := 1; i < len(list); i++ {

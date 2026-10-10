@@ -87,6 +87,12 @@ func (a *App) routes() http.Handler {
 				r.Use(a.requirePerm("series.manage"))
 				r.Get("/", a.handleListSeries)
 				r.Post("/", a.csrf(a.handleCreateSeries))
+				r.With(a.requirePerm("series.manage")).Post("/{id}/blocks", a.csrf(a.handleAddSeriesBlock))
+			})
+			r.Route("/settings", func(r chi.Router) {
+				r.Use(a.requirePerm("system.settings"))
+				r.Get("/", a.handleListSystemSettings)
+				r.Patch("/{key}", a.csrf(a.handleUpdateSystemSetting))
 			})
 			r.Route("/users", func(r chi.Router) {
 				r.Use(a.requireAnyPerm("users.view", "users.view_jurusan"))
@@ -179,6 +185,7 @@ func (a *App) routes() http.Handler {
 			r.Group(func(r chi.Router) {
 				r.Use(a.authRequired)
 				r.With(a.requirePerm("portfolios.create")).Post("/", a.csrf(a.handleCreatePortfolio))
+				r.Post("/id/{id}/apply-series", a.csrf(a.handleApplySeries))
 				r.Patch("/id/{id}", a.csrf(a.handleUpdatePortfolio))
 				r.Delete("/id/{id}", a.csrf(a.handleDeletePortfolio))
 				r.Post("/id/{id}/submit", a.csrf(a.handleSubmitPortfolio))

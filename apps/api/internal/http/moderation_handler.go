@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
 
@@ -296,4 +297,133 @@ func (a *App) handleCreateSeries(w http.ResponseWriter, r *http.Request) {
 	}
 	auditLog(r, a, "series.create", "series", uuidStr(id), req.Slug)
 	writeJSON(w, http.StatusCreated, ok(map[string]string{"id": uuidStr(id)}, r))
+}
+
+// handleListSystemSettings: baca semua pengaturan global.
+func (a *App) handleListSystemSettings(w http.ResponseWriter, r *http.Request) {
+	rows, err := a.Q.ListSystemSettings(r.Context())
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal memuat pengaturan.", r))
+		return
+	}
+	out := map[string]any{}
+	for _, s := range rows {
+		var v any
+		if err := json.Unmarshal(s.Value, &v); err == nil {
+			out[s.Key] = v
+		} else {
+			out[s.Key] = string(s.Value)
+		}
+	}
+	writeJSON(w, http.StatusOK, ok(out, r))
+}
+
+// handleUpdateSystemSetting: ubah satu key (feed_weights | upload_limits).
+// Nilai divalidasi bentuknya supaya tidak merusak worker/FE.
+func (a *App) handleUpdateSystemSetting(w http.ResponseWriter, r *http.Request) {
+	key := chi.URLParam(r, "key")
+	if key != "feed_weights" && key != "upload_limits" {
+		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Pengaturan tidak dikenal.", r))
+		return
+	}
+	var req struct {
+		Value map[string]float64 `json:"value"`
+	}
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if len(req.Value) == 0 {
+		writeJSON(w, http.StatusUnprocessableEntity, fail("VALIDATION_ERROR", "Value tidak boleh kosong.", r))
+		return
+	}
+	if key == "feed_weights" {
+		sum := 0.0
+		for _, v := range req.Value {
+			if v < 0 || v > 1 {
+				writeJSON(w, http.StatusUnprocessableEntity, fail("VALIDATION_ERROR", "Bobot harus 0..1.", r))
+				return
+			}
+			sum += v
+		}
+		if sum < 0.99 || sum > 1.01 {
+			writeJSON(w, http.StatusUnprocessableEntity, failDetails("VALIDATION_ERROR", "Total bobot harus 1.0.", []map[string]string{{"field": "value", "message": "Jumlahkan semua bobot menjadi 1."}}, r))
+			return
+		}
+	}
+	raw, _ := json.Marshal(req.Value)
+	_ = a.Q.UpsertSystemSetting(r.Context(), repo.UpsertSystemSettingParams{
+		Key: key, Value: raw, UpdatedBy: mustUUID(UserID(r)),
+	})
+	auditLog(r, a, "settings.update", "system_settings", key, "")
+	invalidateFeedWeights(r.Context(), a.Cache)
+	_ = a.Cache.Del(r.Context(), uploadLimitsKey())
+	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "ok"}, r))
+}
+
+// handleAddSeriesBlock: tambah satu template block ke series.
+func (a *App) handleAddSeriesBlock(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if _, err := a.Q.GetSeries(r.Context(), mustUUID(id)); err != nil {
+		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Series tidak ditemukan.", r))
+		return
+	}
+	var req struct {
+		BlockType   string `json:"block_type"`
+		Instruction string `json:"instruction"`
+	}
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if blockTypeAllowed(req.BlockType) == "" {
+		writeJSON(w, http.StatusUnprocessableEntity, fail("VALIDATION_ERROR", "Tipe block tidak valid.", r))
+		return
+	}
+	blocks, _ := a.Q.ListSeriesBlocks(r.Context(), mustUUID(id))
+	_ = a.Q.AddSeriesBlock(r.Context(), repo.AddSeriesBlockParams{
+		SeriesID: mustUUID(id), BlockType: req.BlockType, Instruction: req.Instruction, Position: int32(len(blocks)),
+	})
+	auditLog(r, a, "series.block_add", "series", id, req.BlockType)
+	writeJSON(w, http.StatusCreated, ok(map[string]string{"status": "ok"}, r))
+}
+
+// handleApplySeries: salin template series_blocks menjadi portfolio_blocks
+// dengan is_from_series=true. Hanya untuk portfolio draft milik sendiri yang
+// belum punya block (mencegah duplikasi).
+func (a *App) handleApplySeries(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	p, err := a.Q.GetPortfolioByID(r.Context(), mustUUID(id))
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Portfolio tidak ditemukan.", r))
+		return
+	}
+	if !isOwnerOrAdmin(r, p.OwnerID) {
+		writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Bukan milikmu.", r))
+		return
+	}
+	if p.Status != "draft" {
+		writeJSON(w, http.StatusUnprocessableEntity, fail("INVALID_STATUS_TRANSITION", "Hanya draft yang bisa memakai template.", r))
+		return
+	}
+	if !p.SeriesID.Valid {
+		writeJSON(w, http.StatusUnprocessableEntity, fail("VALIDATION_ERROR", "Portfolio belum memilih series.", r))
+		return
+	}
+	nb, _ := a.Q.CountPortfolioBlocks(r.Context(), p.ID)
+	if nb > 0 {
+		writeJSON(w, http.StatusConflict, fail("ALREADY_HAS_BLOCKS", "Portfolio sudah punya block.", r))
+		return
+	}
+	templates, err := a.Q.ListSeriesBlocks(r.Context(), p.SeriesID)
+	if err != nil || len(templates) == 0 {
+		writeJSON(w, http.StatusUnprocessableEntity, fail("VALIDATION_ERROR", "Template series kosong.", r))
+		return
+	}
+	for i, t := range templates {
+		payload, _ := json.Marshal(map[string]string{"instruction": t.Instruction, "markdown": ""})
+		_, _ = a.Q.CreateBlockFromSeries(r.Context(), repo.CreateBlockFromSeriesParams{
+			PortfolioID: p.ID, BlockType: t.BlockType, Position: int32(i), Payload: payload,
+		})
+	}
+	auditLog(r, a, "portfolio.apply_series", "portfolios", id, "")
+	writeJSON(w, http.StatusCreated, ok(map[string]int{"created": len(templates)}, r))
 }

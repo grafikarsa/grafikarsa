@@ -36,14 +36,20 @@ func (c *Cache) Set(ctx context.Context, key, val string, ttl time.Duration) err
 }
 
 func (c *Cache) GetStrings(ctx context.Context, key string) ([]string, error) {
-	return c.rdb.SMembers(ctx, key).Result()
+	return c.rdb.LRange(ctx, key, 0, -1).Result()
 }
 
 func (c *Cache) SetStrings(ctx context.Context, key string, vals []string, ttl time.Duration) error {
 	pipe := c.rdb.Pipeline()
 	pipe.Del(ctx, key)
 	if len(vals) > 0 {
-		pipe.SAdd(ctx, key, vals)
+		// LIST (RPUSH+LRANGE) menjaga urutan peringkat; SET (SADD/SMEMBERS)
+		// mengacak urutan sehingga feed ter-cache tampil acak.
+		args := make([]any, len(vals))
+		for i, v := range vals {
+			args[i] = v
+		}
+		pipe.RPush(ctx, key, args...)
 	}
 	pipe.Expire(ctx, key, ttl)
 	_, err := pipe.Exec(ctx)

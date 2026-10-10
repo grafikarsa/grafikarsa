@@ -148,3 +148,13 @@ INSERT INTO changelog_reads (changelog_id, user_id)
 SELECT c.id, $1 FROM changelogs c
 WHERE c.status = 'published' AND (c.publish_at IS NULL OR c.publish_at <= NOW())
 ON CONFLICT DO NOTHING;
+
+-- name: GetSystemSetting :one
+SELECT key, value FROM system_settings WHERE key = $1 LIMIT 1;
+
+-- name: ListSystemSettings :many
+SELECT key, value, updated_at FROM system_settings ORDER BY key ASC;
+
+-- name: UpsertSystemSetting :exec
+INSERT INTO system_settings (key, value, updated_by) VALUES ($1, $2, $3)
+ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_by = EXCLUDED.updated_by, updated_at = NOW();

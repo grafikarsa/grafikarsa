@@ -31,6 +31,7 @@ tags:
   - name: admin-promotion
   - name: admin-roles
   - name: admin-series
+  - name: admin-settings
   - name: admin-tags
   - name: admin-users
   - name: admin-years
@@ -1112,6 +1113,82 @@ paths:
       security:
         - bearerAuth: []
       x-permissions: [series.manage]
+      x-csrf: required
+      responses:
+        "200":
+          description: Berhasil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  "/api/v1/admin/series/{id}/blocks":
+    post:
+      tags: [admin-series]
+      operationId: post_admin_series_id_blocks
+      summary: "inline (butuh login, permission: series.manage, wajib CSRF)"
+      x-handler: inline
+      security:
+        - bearerAuth: []
+      x-permissions: [series.manage]
+      x-csrf: required
+      responses:
+        "200":
+          description: Berhasil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  "/api/v1/admin/settings":
+    get:
+      tags: [admin-settings]
+      operationId: get_admin_settings
+      summary: "inline (butuh login, permission: system.settings)"
+      x-handler: inline
+      security:
+        - bearerAuth: []
+      x-permissions: [system.settings]
+      responses:
+        "200":
+          description: Berhasil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  "/api/v1/admin/settings/{key}":
+    patch:
+      tags: [admin-settings]
+      operationId: patch_admin_settings_key
+      summary: "inline (butuh login, permission: system.settings, wajib CSRF)"
+      x-handler: inline
+      security:
+        - bearerAuth: []
+      x-permissions: [system.settings]
       x-csrf: required
       responses:
         "200":
@@ -2562,6 +2639,32 @@ paths:
     patch:
       tags: [portfolios]
       operationId: patch_portfolios_id_id
+      summary: "inline (butuh login, wajib CSRF)"
+      x-handler: inline
+      security:
+        - bearerAuth: []
+      x-csrf: required
+      responses:
+        "200":
+          description: Berhasil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  "/api/v1/portfolios/id/{id}/apply-series":
+    post:
+      tags: [portfolios]
+      operationId: post_portfolios_id_id_apply_series
       summary: "inline (butuh login, wajib CSRF)"
       x-handler: inline
       security:

@@ -432,6 +432,13 @@ type Sessions struct {
 	AbsoluteExpiresAt pgtype.Timestamptz `json:"absolute_expires_at"`
 }
 
+type SystemSettings struct {
+	Key       string             `json:"key"`
+	Value     []byte             `json:"value"`
+	UpdatedBy pgtype.UUID        `json:"updated_by"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Tags struct {
 	ID        pgtype.UUID        `json:"id"`
 	Slug      string             `json:"slug"`

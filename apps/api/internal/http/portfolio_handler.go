@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"net/http"
 	"regexp"
 	"strings"
@@ -209,10 +210,11 @@ func (a *App) handleUpdatePortfolio(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		Title     *string  `json:"title"`
-		SeriesID  *string  `json:"series_id"`
-		TagIDs    []string `json:"tag_ids"`
-		Thumbnail *string  `json:"thumbnail_media_id"`
+		Title        *string        `json:"title"`
+		SeriesID     *string        `json:"series_id"`
+		TagIDs       []string       `json:"tag_ids"`
+		Thumbnail    *string        `json:"thumbnail_media_id"`
+		DraftPayload map[string]any `json:"draft_payload"`
 	}
 	if !decodeJSON(w, r, &req) {
 		return
@@ -248,6 +250,21 @@ func (a *App) handleUpdatePortfolio(w http.ResponseWriter, r *http.Request) {
 		for _, tid := range req.TagIDs {
 			_ = a.Q.AddPortfolioTag(r.Context(), repo.AddPortfolioTagParams{PortfolioID: p.ID, TagID: mustUUID(tid)})
 		}
+	}
+	// Autosave draft editor (maks 64KB, hanya untuk draft milik sendiri).
+	if req.DraftPayload != nil {
+		raw, merr := json.Marshal(req.DraftPayload)
+		if merr != nil || len(raw) > 64*1024 {
+			writeJSON(w, http.StatusUnprocessableEntity, fail("VALIDATION_ERROR", "Draft terlalu besar (maks 64KB).", r))
+			return
+		}
+		title := ""
+		if req.Title != nil {
+			title = *req.Title
+		}
+		_ = a.Q.UpdatePortfolioDraft(r.Context(), repo.UpdatePortfolioDraftParams{
+			ID: p.ID, Column2: toPgText(title), DraftPayload: raw,
+		})
 	}
 	auditLog(r, a, "portfolio.update", "portfolios", id, "")
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "ok"}, r))
