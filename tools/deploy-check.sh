@@ -20,6 +20,13 @@ check JWT_ACCESS_SECRET
 check JWT_REFRESH_SECRET
 check CSRF_SECRET
 check ADMIN_SEED_PASSWORD
+check NEXT_PUBLIC_APP_URL
+check INTERNAL_API_URL
+# Origin check BFF memakai NEXT_PUBLIC_APP_URL; kalau masih localhost semua
+# mutasi (POST/PATCH) dibalas 403 CSRF_INVALID.
+if grep -qE '^NEXT_PUBLIC_APP_URL=.*localhost' .env; then
+  echo "FATAL: NEXT_PUBLIC_APP_URL masih localhost (mutasi akan 403 CSRF_INVALID)"; fail=1
+fi
 if [ "${DOMAIN:-localhost}" = "localhost" ]; then
   echo "FATAL: DOMAIN masih localhost (deploy butuh domain/IP publik)"; fail=1
 fi

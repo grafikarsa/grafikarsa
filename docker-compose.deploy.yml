@@ -134,11 +134,11 @@ services:
       storage:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "/api", "-healthcheck"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
+      test: ["CMD", "/worker", "-healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     networks:
       - grafikarsa-network
 
