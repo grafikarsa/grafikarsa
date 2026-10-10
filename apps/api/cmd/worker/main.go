@@ -71,8 +71,15 @@ func main() {
 			slog.Error("retention", "err", err)
 			os.Exit(1)
 		}
+	case "promotion-draft":
+		if err := createPromotionDraft(ctx, q); err != nil {
+			slog.Error("promotion-draft", "err", err)
+			os.Exit(1)
+		}
+	case "serve":
+		runScheduler(ctx, q, cfg)
 	default:
-		fmt.Fprintln(os.Stderr, "usage: worker [outbox|stats|leaderboard|cleanup-media|publish-changelogs|retention]")
+		fmt.Fprintln(os.Stderr, "usage: worker [serve|outbox|stats|leaderboard|cleanup-media|publish-changelogs|retention|promotion-draft]")
 		os.Exit(1)
 	}
 }
@@ -145,6 +152,10 @@ func dispatchOutbox(ctx context.Context, q *repo.Queries) error {
 					Data: it.Payload,
 				})
 			}
+		case "job.leaderboard_recompute":
+			if err := recomputeLeaderboard(ctx, q); err != nil {
+				slog.Error("leaderboard recompute", "err", err)
+			}
 		}
 		slog.Info("outbox sent", "id", it.ID, "topic", it.Topic)
 	}
@@ -153,14 +164,14 @@ func dispatchOutbox(ctx context.Context, q *repo.Queries) error {
 }
 
 func aggregateStats(ctx context.Context, q *repo.Queries) error {
-	cands, err := q.ProjectLeaderboardCandidates(ctx)
+	cands, err := q.StatsPortfolioCandidates(ctx)
 	if err != nil {
 		return err
 	}
 	maxL, maxV, maxC := 1.0, 1.0, 1.0
 	for _, c := range cands {
-		likes := toInt(c.Likes)
-		comments := toInt(c.Comments)
+		likes := toInt(c.TotalLikes)
+		comments := toInt(c.TotalComments)
 		v7, _ := q.CountViewsSince(ctx, repo.CountViewsSinceParams{PortfolioID: c.ID, Column2: 7})
 		v30, _ := q.CountViewsSince(ctx, repo.CountViewsSinceParams{PortfolioID: c.ID, Column2: 30})
 		l7, _ := q.CountLikesSince(ctx, repo.CountLikesSinceParams{PortfolioID: c.ID, Column2: "7"})
@@ -182,17 +193,27 @@ func aggregateStats(ctx context.Context, q *repo.Queries) error {
 		if engagement > 1 {
 			engagement = 1
 		}
-		quality := 0.5
-		if comments == 0 && likes == 0 {
-			quality = 0
+		// Quality: 50% kelengkapan (thumbnail) + 50% kualitas (assessment bila ada,
+		// selain itu sinyal interaksi). Skala 0-1.
+		quality := 0.0
+		if c.HasThumbnail {
+			quality += 0.5
+		}
+		if c.AssessmentAvg > 0 {
+			quality += 0.5 * c.AssessmentAvg / 10
+		} else if likes > 0 || comments > 0 {
+			quality += 0.25
 		}
 		trending := 0.5*norm(float64(l7), maxL) + 0.3*norm(float64(v7), maxV) + 0.2*norm(float64(c7), maxC)
 		trending *= expNeg(ageDays / 7)
-		_ = q.UpsertPortfolioStats(ctx, repo.UpsertPortfolioStatsParams{
+		if err := q.UpsertPortfolioStats(ctx, repo.UpsertPortfolioStatsParams{
 			PortfolioID: c.ID, Likes: int32(likes), Views7d: int32(v7), Views30d: int32(v30),
-			Comments: int32(comments), Quality: floatToNumeric(quality),
+			Comments: int32(comments), AssessmentAvg: floatToNumeric(c.AssessmentAvg),
+			Quality:    floatToNumeric(quality),
 			Engagement: floatToNumeric(engagement), Trending: floatToNumeric(trending),
-		})
+		}); err != nil {
+			slog.Error("stats upsert gagal", "portfolio", uuidStr(c.ID), "err", err)
+		}
 	}
 	slog.Info("stats done", "count", len(cands))
 	return nil
@@ -220,8 +241,15 @@ func scopeMajorCode(scope string) string {
 	return ""
 }
 
+func periodDays(period string) string {
+	if period == "monthly" {
+		return "30"
+	}
+	return "7"
+}
+
 func recomputeStudents(ctx context.Context, q *repo.Queries, period, scope string) error {
-	cands, err := q.StudentLeaderboardCandidates(ctx)
+	cands, err := q.StudentLeaderboardCandidates(ctx, periodDays(period))
 	if err != nil {
 		return err
 	}
@@ -246,7 +274,7 @@ func recomputeStudents(ctx context.Context, q *repo.Queries, period, scope strin
 		return err
 	}
 	_ = q.ClearLeaderboardEntries(ctx, lbID)
-	maxP, maxL, maxF := 1.0, 1.0, 1.0
+	maxP, maxL, maxA, maxF := 1.0, 1.0, 0.0, 1.0
 	for _, c := range cands {
 		if f := float64(toInt(c.PortfolioCount)); f > maxP {
 			maxP = f
@@ -254,14 +282,28 @@ func recomputeStudents(ctx context.Context, q *repo.Queries, period, scope strin
 		if f := float64(toInt(c.TotalLikes)); f > maxL {
 			maxL = f
 		}
+		if a := c.AssessmentAvg / 10; a > maxA {
+			maxA = a
+		}
 		if f := float64(toInt(c.Followers)); f > maxF {
 			maxF = f
 		}
 	}
 	rank := 1
 	for _, c := range cands {
-		score := 30*float64(toInt(c.PortfolioCount))/maxP + 25*float64(toInt(c.TotalLikes))/maxL + 15*float64(toInt(c.Followers))/maxF
-		bd, _ := json.Marshal(map[string]any{"portfolios": toInt(c.PortfolioCount), "likes": toInt(c.TotalLikes), "followers": toInt(c.Followers)})
+		// 30 portfolio + 25 likes + 30 assessment + 15 followers (PRD §9.2).
+		assess := 0.0
+		if maxA > 0 {
+			assess = 30 * (c.AssessmentAvg / 10) / maxA
+		}
+		score := 30*float64(toInt(c.PortfolioCount))/maxP +
+			25*float64(toInt(c.TotalLikes))/maxL +
+			assess +
+			15*float64(toInt(c.Followers))/maxF
+		bd, _ := json.Marshal(map[string]any{
+			"portfolios": toInt(c.PortfolioCount), "likes": toInt(c.TotalLikes),
+			"assessment": c.AssessmentAvg, "followers": toInt(c.Followers),
+		})
 		delta := 0
 		if pr, ok := prevRank[uuidStr(c.ID)]; ok {
 			delta = pr - rank
@@ -280,7 +322,7 @@ func recomputeStudents(ctx context.Context, q *repo.Queries, period, scope strin
 }
 
 func recomputeProjects(ctx context.Context, q *repo.Queries, period, scope string) error {
-	cands, err := q.ProjectLeaderboardCandidates(ctx)
+	cands, err := q.ProjectLeaderboardCandidates(ctx, periodDays(period))
 	if err != nil {
 		return err
 	}
@@ -326,9 +368,10 @@ func recomputeProjects(ctx context.Context, q *repo.Queries, period, scope strin
 		if !assessed && !topIDs[uuidStr(c.ID)] {
 			continue // belum dinilai dan bukan top-5% likes -> skip (label Rising hanya untuk top)
 		}
-		score := 30*float64(toInt(c.Likes))/maxL + 20*expNeg(ageDays/30) + 10*norm(float64(toInt(c.Comments)), 20)
+		// 50 assessment + 30 likes + 20 recency (PRD §9.2).
+		score := 30*float64(toInt(c.Likes))/maxL + 20*expNeg(ageDays/30)
 		if assessed {
-			score += 50 * float64(c.AssessmentAvg) / 10
+			score += 50 * c.AssessmentAvg / 10
 		}
 		bd, _ := json.Marshal(map[string]any{"likes": toInt(c.Likes), "comments": toInt(c.Comments), "rising": !assessed})
 		delta := 0
