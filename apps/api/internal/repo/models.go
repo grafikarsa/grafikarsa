@@ -23,6 +23,22 @@ type AcademicYears struct {
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
+type AssessmentMetrics struct {
+	ID        pgtype.UUID        `json:"id"`
+	Name      string             `json:"name"`
+	Sort      int32              `json:"sort"`
+	IsActive  bool               `json:"is_active"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type AssessmentScores struct {
+	ID           pgtype.UUID `json:"id"`
+	AssessmentID pgtype.UUID `json:"assessment_id"`
+	MetricID     pgtype.UUID `json:"metric_id"`
+	Score        int16       `json:"score"`
+	Comment      string      `json:"comment"`
+}
+
 type AuditLogs struct {
 	ID        int64              `json:"id"`
 	ActorID   pgtype.UUID        `json:"actor_id"`
@@ -41,6 +57,40 @@ type AuthAudit struct {
 	Event     string             `json:"event"`
 	Ip        *netip.Addr        `json:"ip"`
 	UserAgent pgtype.Text        `json:"user_agent"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type ChangelogContributors struct {
+	ChangelogID pgtype.UUID `json:"changelog_id"`
+	UserID      pgtype.UUID `json:"user_id"`
+	Role        string      `json:"role"`
+}
+
+type ChangelogReads struct {
+	ChangelogID pgtype.UUID        `json:"changelog_id"`
+	UserID      pgtype.UUID        `json:"user_id"`
+	ReadAt      pgtype.Timestamptz `json:"read_at"`
+}
+
+type ChangelogSections struct {
+	ID          pgtype.UUID `json:"id"`
+	ChangelogID pgtype.UUID `json:"changelog_id"`
+	Kind        string      `json:"kind"`
+	Title       string      `json:"title"`
+	BodyMd      string      `json:"body_md"`
+	Sort        int32       `json:"sort"`
+}
+
+type Changelogs struct {
+	ID        pgtype.UUID        `json:"id"`
+	Version   string             `json:"version"`
+	Title     string             `json:"title"`
+	Summary   string             `json:"summary"`
+	Channel   string             `json:"channel"`
+	Audience  string             `json:"audience"`
+	Status    string             `json:"status"`
+	PublishAt pgtype.Timestamptz `json:"publish_at"`
+	CreatedBy pgtype.UUID        `json:"created_by"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
@@ -70,9 +120,55 @@ type Comments struct {
 	DeletedAt   pgtype.Timestamptz `json:"deleted_at"`
 }
 
+// Histori kelas imutabel; is_current satu per user+tahun
+type Enrollments struct {
+	ID             pgtype.UUID        `json:"id"`
+	UserID         pgtype.UUID        `json:"user_id"`
+	ClassID        pgtype.UUID        `json:"class_id"`
+	AcademicYearID pgtype.UUID        `json:"academic_year_id"`
+	Status         string             `json:"status"`
+	IsCurrent      bool               `json:"is_current"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
 type FeedPreferences struct {
 	UserID    pgtype.UUID `json:"user_id"`
 	Algorithm string      `json:"algorithm"`
+}
+
+type FeedbackMessages struct {
+	ID         pgtype.UUID        `json:"id"`
+	ThreadID   pgtype.UUID        `json:"thread_id"`
+	AuthorID   pgtype.UUID        `json:"author_id"`
+	BodyMd     string             `json:"body_md"`
+	IsInternal bool               `json:"is_internal"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+}
+
+// Thread laporan/masukan; guest boleh via email+turnstile
+type FeedbackThreads struct {
+	ID                pgtype.UUID        `json:"id"`
+	ReporterID        pgtype.UUID        `json:"reporter_id"`
+	ReporterEmail     string             `json:"reporter_email"`
+	Category          string             `json:"category"`
+	Title             string             `json:"title"`
+	BodyMd            string             `json:"body_md"`
+	Status            string             `json:"status"`
+	Priority          string             `json:"priority"`
+	UpvotesCached     int32              `json:"upvotes_cached"`
+	AssigneeID        pgtype.UUID        `json:"assignee_id"`
+	IsPublic          bool               `json:"is_public"`
+	IsSpam            bool               `json:"is_spam"`
+	LinkedChangelogID pgtype.UUID        `json:"linked_changelog_id"`
+	ResolvedAt        pgtype.Timestamptz `json:"resolved_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
+type FeedbackVotes struct {
+	ThreadID  pgtype.UUID        `json:"thread_id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type Follows struct {
@@ -164,6 +260,17 @@ type Permissions struct {
 	Description     string      `json:"description"`
 }
 
+// Nilai guru per portfolio; total = AVG(scores)
+type PortfolioAssessments struct {
+	ID          pgtype.UUID        `json:"id"`
+	PortfolioID pgtype.UUID        `json:"portfolio_id"`
+	AssessorID  pgtype.UUID        `json:"assessor_id"`
+	TotalScore  pgtype.Numeric     `json:"total_score"`
+	Comment     string             `json:"comment"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
 // Block modular; payload tervalidasi JSON Schema per type
 type PortfolioBlocks struct {
 	ID           pgtype.UUID        `json:"id"`
@@ -231,6 +338,19 @@ type Portfolios struct {
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt         pgtype.Timestamptz `json:"deleted_at"`
+}
+
+// Kenaikan kelas dry-run -> approve -> execute transaksional
+type PromotionJobs struct {
+	ID           pgtype.UUID        `json:"id"`
+	FromYearID   pgtype.UUID        `json:"from_year_id"`
+	ToYearID     pgtype.UUID        `json:"to_year_id"`
+	Status       string             `json:"status"`
+	DryrunResult []byte             `json:"dryrun_result"`
+	Exceptions   []byte             `json:"exceptions"`
+	ExecutedBy   pgtype.UUID        `json:"executed_by"`
+	ExecutedAt   pgtype.Timestamptz `json:"executed_at"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 }
 
 type RolePermissions struct {
