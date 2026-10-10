@@ -4,6 +4,15 @@
 > Versi: 2.0.0 | Tanggal: 2026-10-09 | Penulis: PM + Solution Architect + Fullstack + Performance + System Designer + QA
 > Bahasa: Indonesia. Semua istilah teknis dalam Bahasa Inggris dipertahankan apa adanya.
 > Cakupan: monorepo baru, bukan patch v1. Data + file lama **wajib bisa migrasi**.
+>
+> **Status implementasi (audit terakhir).** Fase 0-3 selesai. Fase 4 tersedia:
+> `cmd/tools/migrate-old` (dry-run/`--execute`/`--migrate-media`, idempotent via
+> `legacy_id_map`, block gagal masuk `quarantine_blocks`), tabel `legacy_urls`,
+> redirect 301 `/v1/storage/*` -> `/v1/media/by-key/*`, dan status `quarantined`.
+> Kontrak `packages/contracts/openapi.yaml` (114 path/142 operasi) di-generate
+> dari `routes.go`; invariant dijaga test `gen-openapi/main_test.go` dan
+> `internal/http/contract_blocks_test.go`; JSON Schema blok ada di
+> `packages/contracts/blocks/*.json`.
 
 ---
 

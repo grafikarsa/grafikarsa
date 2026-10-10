@@ -78,5 +78,41 @@ tidak bisa dipakai mengunci akun orang lain.
 | Recompute leaderboard (weekly + monthly, semua scope) | harian 02:05 WIB |
 | Draft kenaikan kelas | harian 00:10 WIB |
 | Digest notifikasi harian | harian 07:00 WIB |
+| Flush view counter (HyperLogLog → agregat harian) | 1 menit |
+| Peluruhan bobot minat (decay 0.98/hari) | harian 03:00 WIB |
 
-Jalankan manual: `go run ./cmd/worker <outbox|stats|leaderboard|cleanup-media|publish-changelogs|retention|promotion-draft|digest|serve>`.
+Jalankan manual:
+`go run ./cmd/worker <outbox|stats|leaderboard|cleanup-media|publish-changelogs|retention|promotion-draft|digest|flush-views|decay-interests|serve>`.
+
+## View counter
+
+View dicatat di **HyperLogLog Dragonfly** (`views:hll:<portfolio>:<hari>`, unik
+per pengunjung/hari) lalu di-flush tiap menit ke `portfolio_view_counts`. Tidak
+ada INSERT per request; statistik membaca agregat harian ini.
+
+## Migrasi v1 → v2
+
+| Perintah | Fungsi |
+|---|---|
+| `migrate-old --v1 <dsn> --v2 <dsn> --dry-run` | Hitung + validasi tanpa menulis |
+| `migrate-old … --execute` | Tulis ke v2 (idempotent via `legacy_id_map`) |
+| `migrate-old … --execute --migrate-media` | Daftarkan URL `/storage/*` lama ke `media_assets` + `legacy_urls` |
+
+Block yang gagal validasi masuk `quarantine_blocks` (tidak hilang diam-diam).
+URL lama: `GET /v1/storage/*` → 301 ke `/v1/media/by-key/*` bila dikenal, 410
+bila tidak (6 bulan, PRD §16.1).
+
+## Endpoint yang sering dipakai FE
+
+| Method | Path | Deskripsi |
+|---|---|---|
+| GET/POST | `/v1/search` | Cari karya/user (GET `?q=`, POST `{"query"}`); query tanpa alfanumerik ditolak |
+| GET | `/v1/majors`, `/v1/classes` | Referensi publik (kelas tahun aktif) |
+| GET | `/v1/changelogs/latest`, `/v1/changelogs/version/{version}` | Rilis terbaru & halaman per versi |
+| GET | `/v1/portfolios?user=&major_id=&tag_id=&search=&sort=` | Filter gabungan (latest/top/relevance) |
+| GET | `/v1/admin/dashboard/stats` | Angka ringkas (scope global/jurusan) |
+| GET | `/v1/admin/jobs` | Status outbox |
+| GET/PATCH | `/v1/admin/settings`, `/v1/admin/settings/{key}` | `feed_weights`, `upload_limits` tanpa deploy |
+| GET/POST/DELETE | `/v1/admin/changelogs/{id}/contributors` | Kontributor rilis |
+| GET | `/v1/users/{username}/followers` dan `/following` | Pengikut/mengikuti |
+| POST | `/v1/feedback` | Guest menerima `follow_up_token` (`?t=`) untuk membuka thread-nya |

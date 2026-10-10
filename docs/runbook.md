@@ -53,12 +53,16 @@ localhost, dan `NEXT_PUBLIC_APP_URL` localhost yang membuat semua mutasi 403).
 | Kirim digest manual | `docker compose exec worker /worker digest` |
 | Revoke semua sesi user | admin: reset password user (otomatis revoke + wajib ganti) atau SQL `UPDATE sessions SET revoked_at=NOW() WHERE user_id=...` |
 | Media nyangkut | job `cleanup-media` (per jam) hanya menghapus media `pending` yang tidak direferensikan |
+| Flush view manual | `docker compose exec worker /worker flush-views` |
+| Migrasi v1→v2 | `go run ./cmd/tools/migrate-old --v1 <dsn-v1> --v2 <dsn-v2> --dry-run` lalu `--execute` |
+| URL lama | `GET /v1/storage/*`: 301 bila ada di `legacy_urls`, 410 bila tidak |
+| Ubah bobot feed | `/admin/settings` atau `PATCH /v1/admin/settings/feed_weights` |
 
 ## Job terjadwal
 
 Outbox 30 detik · stats 5 menit · publish changelog 5 menit · cleanup media 1 jam ·
 retensi 24 jam · leaderboard 02:05 WIB · draft kenaikan kelas 00:10 WIB ·
-digest 07:00 WIB. Semua job dibungkus `recover` sehingga panic satu job tidak
+digest 07:00 WIB · flush view 1 menit · decay minat 03:00 WIB. Semua job dibungkus `recover` sehingga panic satu job tidak
 mematikan scheduler. Jalankan satu job manual:
 `go run ./cmd/worker <outbox|stats|leaderboard|cleanup-media|publish-changelogs|retention|promotion-draft|digest>`.
 
@@ -78,4 +82,10 @@ mematikan scheduler. Jalankan satu job manual:
   yang tertinggal dikembalikan ke `pending` oleh reaper setiap kali dispatcher
   jalan (maks 5 percobaan).
 - **Rate limit** dibatasi per user (bila login) atau IP asli klien dari BFF
-  (`x-client-ip`); header `X-Forwarded-For` mentah tidak dipercaya.
+  (`x-client-ip`); `X-Forwarded-For` mentah tidak dipercaya.
+- **Status user** dicek via cache 60 detik tiap request: menonaktifkan atau
+  menghapus user langsung memutus akses meski token belum expired.
+- **Scope penilaian**: guru/admin_jurusan hanya melihat & menilai portfolio
+  jurusannya (404 untuk di luar scope).
+- **Media retire**: mengganti avatar/banner/thumbnail menghapus objek media lama
+  (objek + varian) sehingga kuota tidak menumpuk.
