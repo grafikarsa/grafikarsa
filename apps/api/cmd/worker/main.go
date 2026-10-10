@@ -129,24 +129,39 @@ func aggregateStats(ctx context.Context, q *repo.Queries) error {
 	if err != nil {
 		return err
 	}
+	maxL, maxV, maxC := 1.0, 1.0, 1.0
 	for _, c := range cands {
 		likes := toInt(c.Likes)
 		comments := toInt(c.Comments)
-		engagement := 0.0
-		if likes > 0 || comments > 0 {
-			engagement = float64(likes)/float64(likes+comments+1)*0.6 + float64(comments)/float64(likes+comments+1)*0.4
+		v7, _ := q.CountViewsSince(ctx, repo.CountViewsSinceParams{PortfolioID: c.ID, Column2: 7})
+		v30, _ := q.CountViewsSince(ctx, repo.CountViewsSinceParams{PortfolioID: c.ID, Column2: 30})
+		l7, _ := q.CountLikesSince(ctx, repo.CountLikesSinceParams{PortfolioID: c.ID, Column2: "7"})
+		c7, _ := q.CountCommentsSince(ctx, repo.CountCommentsSinceParams{PortfolioID: c.ID, Column2: "7"})
+		if float64(likes) > maxL {
+			maxL = float64(likes)
 		}
-		quality := 0.0
-		if comments > 0 {
-			quality = 0.5
+		if float64(v7) > maxV {
+			maxV = float64(v7)
+		}
+		if float64(comments) > maxC {
+			maxC = float64(comments)
 		}
 		ageDays := time.Since(c.PublishedAt.Time).Hours() / 24
 		if ageDays < 0 {
 			ageDays = 0
 		}
-		trending := 0.5*norm(float64(likes), 100) + 0.3*norm(float64(comments), 50) + 0.2*expDecay(ageDays, 7)
+		engagement := float64(l7)/maxL*0.6 + float64(v7)/maxV*0.4
+		if engagement > 1 {
+			engagement = 1
+		}
+		quality := 0.5
+		if comments == 0 && likes == 0 {
+			quality = 0
+		}
+		trending := 0.5*norm(float64(l7), maxL) + 0.3*norm(float64(v7), maxV) + 0.2*norm(float64(c7), maxC)
+		trending *= expNeg(ageDays / 7)
 		_ = q.UpsertPortfolioStats(ctx, repo.UpsertPortfolioStatsParams{
-			PortfolioID: c.ID, Likes: int32(likes), Views7d: 0, Views30d: 0,
+			PortfolioID: c.ID, Likes: int32(likes), Views7d: int32(v7), Views30d: int32(v30),
 			Comments: int32(comments), Quality: floatToNumeric(quality),
 			Engagement: floatToNumeric(engagement), Trending: floatToNumeric(trending),
 		})
@@ -156,8 +171,9 @@ func aggregateStats(ctx context.Context, q *repo.Queries) error {
 }
 
 func recomputeLeaderboard(ctx context.Context, q *repo.Queries) error {
+	scopes := []string{"global", "jurusan:rpl", "jurusan:tkj", "jurusan:mm", "jurusan:dkv", "jurusan:animasi"}
 	for _, period := range []string{"weekly", "monthly"} {
-		for _, scope := range []string{"global"} {
+		for _, scope := range scopes {
 			if err := recomputeStudents(ctx, q, period, scope); err != nil {
 				return err
 			}
@@ -169,10 +185,33 @@ func recomputeLeaderboard(ctx context.Context, q *repo.Queries) error {
 	return nil
 }
 
+func scopeMajorCode(scope string) string {
+	if len(scope) > 8 && scope[:8] == "jurusan:" {
+		return scope[8:]
+	}
+	return ""
+}
+
 func recomputeStudents(ctx context.Context, q *repo.Queries, period, scope string) error {
 	cands, err := q.StudentLeaderboardCandidates(ctx)
 	if err != nil {
 		return err
+	}
+	majorCode := scopeMajorCode(scope)
+	filtered := cands[:0]
+	for _, c := range cands {
+		if majorCode != "" && c.MajorCode != majorCode {
+			continue
+		}
+		filtered = append(filtered, c)
+	}
+	cands = filtered
+	prev, _ := q.PrevLeaderboardRanks(ctx, repo.PrevLeaderboardRanksParams{Period: period, Scope: scope, Kind: "best_students"})
+	prevRank := map[string]int{}
+	for _, p := range prev {
+		if p.SubjectUserID.Valid {
+			prevRank[uuidStr(p.SubjectUserID)] = int(p.Rank)
+		}
 	}
 	lbID, err := q.UpsertLeaderboard(ctx, repo.UpsertLeaderboardParams{Period: period, Scope: scope, Kind: "best_students"})
 	if err != nil {
@@ -195,9 +234,13 @@ func recomputeStudents(ctx context.Context, q *repo.Queries, period, scope strin
 	for _, c := range cands {
 		score := 30*float64(toInt(c.PortfolioCount))/maxP + 25*float64(toInt(c.TotalLikes))/maxL + 15*float64(toInt(c.Followers))/maxF
 		bd, _ := json.Marshal(map[string]any{"portfolios": toInt(c.PortfolioCount), "likes": toInt(c.TotalLikes), "followers": toInt(c.Followers)})
+		delta := 0
+		if pr, ok := prevRank[uuidStr(c.ID)]; ok {
+			delta = pr - rank
+		}
 		_ = q.InsertLeaderboardEntry(ctx, repo.InsertLeaderboardEntryParams{
 			LeaderboardID: lbID, Rank: int32(rank), SubjectUserID: uuidOrNull(c.ID),
-			Score: floatToNumeric(score), Breakdown: bd,
+			Score: floatToNumeric(score), Breakdown: bd, DeltaRank: int32(delta),
 		})
 		rank++
 		if rank > 20 {
@@ -212,6 +255,27 @@ func recomputeProjects(ctx context.Context, q *repo.Queries, period, scope strin
 	cands, err := q.ProjectLeaderboardCandidates(ctx)
 	if err != nil {
 		return err
+	}
+	majorCode := scopeMajorCode(scope)
+	filtered := cands[:0]
+	for _, c := range cands {
+		if majorCode != "" && c.OwnerMajorCode != majorCode {
+			continue
+		}
+		filtered = append(filtered, c)
+	}
+	cands = filtered
+	topIDs := map[string]bool{}
+	top, _ := q.TopLikedUnassessed(ctx, 100)
+	for _, t := range top {
+		topIDs[uuidStr(t)] = true
+	}
+	prev, _ := q.PrevLeaderboardRanks(ctx, repo.PrevLeaderboardRanksParams{Period: period, Scope: scope, Kind: "best_projects"})
+	prevRank := map[string]int{}
+	for _, p := range prev {
+		if p.SubjectPortfolioID.Valid {
+			prevRank[uuidStr(p.SubjectPortfolioID)] = int(p.Rank)
+		}
 	}
 	lbID, err := q.UpsertLeaderboard(ctx, repo.UpsertLeaderboardParams{Period: period, Scope: scope, Kind: "best_projects"})
 	if err != nil {
@@ -230,11 +294,22 @@ func recomputeProjects(ctx context.Context, q *repo.Queries, period, scope strin
 		if ageDays < 0 {
 			ageDays = 0
 		}
-		score := 30*float64(toInt(c.Likes))/maxL + 20*expDecay(ageDays, 30) + 10*norm(float64(toInt(c.Comments)), 20)
-		bd, _ := json.Marshal(map[string]any{"likes": toInt(c.Likes), "comments": toInt(c.Comments)})
+		assessed := c.AssessmentCount > 0
+		if !assessed && !topIDs[uuidStr(c.ID)] {
+			continue // belum dinilai dan bukan top-5% likes -> skip (label Rising hanya untuk top)
+		}
+		score := 30*float64(toInt(c.Likes))/maxL + 20*expNeg(ageDays/30) + 10*norm(float64(toInt(c.Comments)), 20)
+		if assessed {
+			score += 50 * float64(c.AssessmentAvg) / 10
+		}
+		bd, _ := json.Marshal(map[string]any{"likes": toInt(c.Likes), "comments": toInt(c.Comments), "rising": !assessed})
+		delta := 0
+		if pr, ok := prevRank[uuidStr(c.ID)]; ok {
+			delta = pr - rank
+		}
 		_ = q.InsertLeaderboardEntry(ctx, repo.InsertLeaderboardEntryParams{
 			LeaderboardID: lbID, Rank: int32(rank), SubjectPortfolioID: uuidOrNull(c.ID),
-			Score: floatToNumeric(score), Breakdown: bd,
+			Score: floatToNumeric(score), Breakdown: bd, DeltaRank: int32(delta),
 		})
 		rank++
 		if rank > 20 {

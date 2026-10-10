@@ -70,3 +70,23 @@ func floatToNumeric(f float64) pgtype.Numeric {
 	_ = n.Scan(d.String())
 	return n
 }
+
+func uuidStr(v pgtype.UUID) string {
+	if !v.Valid {
+		return ""
+	}
+	b := v.Bytes
+	const hex = "0123456789abcdef"
+	out := make([]byte, 36)
+	j := 0
+	for i, c := range b {
+		if i == 4 || i == 6 || i == 8 || i == 10 {
+			out[j] = '-'
+			j++
+		}
+		out[j] = hex[c>>4]
+		out[j+1] = hex[c&0xf]
+		j += 2
+	}
+	return string(out)
+}

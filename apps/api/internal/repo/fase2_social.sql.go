@@ -65,6 +65,22 @@ func (q *Queries) CountComments(ctx context.Context, portfolioID pgtype.UUID) (i
 	return count, err
 }
 
+const countCommentsSince = `-- name: CountCommentsSince :one
+SELECT COUNT(*) FROM comments WHERE portfolio_id = $1 AND deleted_at IS NULL AND created_at > NOW() - ($2::text || ' days')::interval
+`
+
+type CountCommentsSinceParams struct {
+	PortfolioID pgtype.UUID `json:"portfolio_id"`
+	Column2     string      `json:"column_2"`
+}
+
+func (q *Queries) CountCommentsSince(ctx context.Context, arg CountCommentsSinceParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countCommentsSince, arg.PortfolioID, arg.Column2)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countFollowers = `-- name: CountFollowers :one
 SELECT COUNT(*) FROM follows WHERE following_id = $1
 `
@@ -98,6 +114,33 @@ func (q *Queries) CountLikes(ctx context.Context, portfolioID pgtype.UUID) (int6
 	return count, err
 }
 
+const countLikesByUserSince = `-- name: CountLikesByUserSince :one
+SELECT COUNT(*) FROM portfolio_likes WHERE user_id = $1 AND created_at > NOW() - INTERVAL '1 hour'
+`
+
+func (q *Queries) CountLikesByUserSince(ctx context.Context, userID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countLikesByUserSince, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countLikesSince = `-- name: CountLikesSince :one
+SELECT COUNT(*) FROM portfolio_likes WHERE portfolio_id = $1 AND created_at > NOW() - ($2::text || ' days')::interval
+`
+
+type CountLikesSinceParams struct {
+	PortfolioID pgtype.UUID `json:"portfolio_id"`
+	Column2     string      `json:"column_2"`
+}
+
+func (q *Queries) CountLikesSince(ctx context.Context, arg CountLikesSinceParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countLikesSince, arg.PortfolioID, arg.Column2)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countUnreadNotifications = `-- name: CountUnreadNotifications :one
 SELECT COUNT(*) FROM notifications WHERE user_id = $1 AND is_read = FALSE
 `
@@ -109,12 +152,61 @@ func (q *Queries) CountUnreadNotifications(ctx context.Context, userID pgtype.UU
 	return count, err
 }
 
+const countUserLikesSince = `-- name: CountUserLikesSince :one
+SELECT COUNT(*) FROM portfolio_likes pl JOIN portfolios p ON p.id = pl.portfolio_id
+WHERE p.owner_id = $1 AND pl.created_at > NOW() - ($2 || ' days')::interval
+`
+
+type CountUserLikesSinceParams struct {
+	OwnerID pgtype.UUID `json:"owner_id"`
+	Column2 pgtype.Text `json:"column_2"`
+}
+
+func (q *Queries) CountUserLikesSince(ctx context.Context, arg CountUserLikesSinceParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countUserLikesSince, arg.OwnerID, arg.Column2)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countUserPortfoliosSince = `-- name: CountUserPortfoliosSince :one
+SELECT COUNT(*) FROM portfolios WHERE owner_id = $1 AND status = 'published' AND deleted_at IS NULL AND published_at > NOW() - ($2::text || ' days')::interval
+`
+
+type CountUserPortfoliosSinceParams struct {
+	OwnerID pgtype.UUID `json:"owner_id"`
+	Column2 string      `json:"column_2"`
+}
+
+func (q *Queries) CountUserPortfoliosSince(ctx context.Context, arg CountUserPortfoliosSinceParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countUserPortfoliosSince, arg.OwnerID, arg.Column2)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countUserPublished = `-- name: CountUserPublished :one
 SELECT COUNT(*) FROM portfolios WHERE owner_id = $1 AND status = 'published' AND deleted_at IS NULL
 `
 
 func (q *Queries) CountUserPublished(ctx context.Context, ownerID pgtype.UUID) (int64, error) {
 	row := q.db.QueryRow(ctx, countUserPublished, ownerID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countViewsSince = `-- name: CountViewsSince :one
+SELECT COUNT(*) FROM portfolio_views WHERE portfolio_id = $1 AND viewed_date > CURRENT_DATE - $2
+`
+
+type CountViewsSinceParams struct {
+	PortfolioID pgtype.UUID `json:"portfolio_id"`
+	Column2     interface{} `json:"column_2"`
+}
+
+func (q *Queries) CountViewsSince(ctx context.Context, arg CountViewsSinceParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countViewsSince, arg.PortfolioID, arg.Column2)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -876,25 +968,71 @@ func (q *Queries) MarkNotificationRead(ctx context.Context, arg MarkNotification
 	return err
 }
 
+const prevLeaderboardRanks = `-- name: PrevLeaderboardRanks :many
+SELECT e.subject_user_id, e.subject_portfolio_id, e.rank FROM leaderboard_entries e
+JOIN leaderboards l ON l.id = e.leaderboard_id
+WHERE l.period = $1 AND l.scope = $2 AND l.kind = $3
+ORDER BY l.computed_for DESC LIMIT 40
+`
+
+type PrevLeaderboardRanksParams struct {
+	Period string `json:"period"`
+	Scope  string `json:"scope"`
+	Kind   string `json:"kind"`
+}
+
+type PrevLeaderboardRanksRow struct {
+	SubjectUserID      pgtype.UUID `json:"subject_user_id"`
+	SubjectPortfolioID pgtype.UUID `json:"subject_portfolio_id"`
+	Rank               int32       `json:"rank"`
+}
+
+func (q *Queries) PrevLeaderboardRanks(ctx context.Context, arg PrevLeaderboardRanksParams) ([]PrevLeaderboardRanksRow, error) {
+	rows, err := q.db.Query(ctx, prevLeaderboardRanks, arg.Period, arg.Scope, arg.Kind)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []PrevLeaderboardRanksRow{}
+	for rows.Next() {
+		var i PrevLeaderboardRanksRow
+		if err := rows.Scan(&i.SubjectUserID, &i.SubjectPortfolioID, &i.Rank); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const projectLeaderboardCandidates = `-- name: ProjectLeaderboardCandidates :many
-SELECT p.id, p.title, p.slug, p.owner_id, p.published_at,
+SELECT p.id, p.title, p.slug, p.owner_id, p.published_at, COALESCE(m.code, '') AS owner_major_code,
   COUNT(DISTINCT pl.user_id) AS likes,
-  COUNT(DISTINCT c.id) AS comments
+  COUNT(DISTINCT c.id) AS comments,
+  0 AS assessment_count,
+  0 AS assessment_avg
 FROM portfolios p
+LEFT JOIN users u ON u.id = p.owner_id
+LEFT JOIN majors m ON m.id = u.major_id
 LEFT JOIN portfolio_likes pl ON pl.portfolio_id = p.id
 LEFT JOIN comments c ON c.portfolio_id = p.id AND c.deleted_at IS NULL
 WHERE p.status = 'published' AND p.deleted_at IS NULL
-GROUP BY p.id
+GROUP BY p.id, m.code
 `
 
 type ProjectLeaderboardCandidatesRow struct {
-	ID          pgtype.UUID        `json:"id"`
-	Title       string             `json:"title"`
-	Slug        string             `json:"slug"`
-	OwnerID     pgtype.UUID        `json:"owner_id"`
-	PublishedAt pgtype.Timestamptz `json:"published_at"`
-	Likes       int64              `json:"likes"`
-	Comments    int64              `json:"comments"`
+	ID              pgtype.UUID        `json:"id"`
+	Title           string             `json:"title"`
+	Slug            string             `json:"slug"`
+	OwnerID         pgtype.UUID        `json:"owner_id"`
+	PublishedAt     pgtype.Timestamptz `json:"published_at"`
+	OwnerMajorCode  string             `json:"owner_major_code"`
+	Likes           int64              `json:"likes"`
+	Comments        int64              `json:"comments"`
+	AssessmentCount int32              `json:"assessment_count"`
+	AssessmentAvg   int32              `json:"assessment_avg"`
 }
 
 func (q *Queries) ProjectLeaderboardCandidates(ctx context.Context) ([]ProjectLeaderboardCandidatesRow, error) {
@@ -912,8 +1050,11 @@ func (q *Queries) ProjectLeaderboardCandidates(ctx context.Context) ([]ProjectLe
 			&i.Slug,
 			&i.OwnerID,
 			&i.PublishedAt,
+			&i.OwnerMajorCode,
 			&i.Likes,
 			&i.Comments,
+			&i.AssessmentCount,
+			&i.AssessmentAvg,
 		); err != nil {
 			return nil, err
 		}
@@ -1040,22 +1181,24 @@ func (q *Queries) SearchUsers(ctx context.Context, similarity string) ([]SearchU
 }
 
 const studentLeaderboardCandidates = `-- name: StudentLeaderboardCandidates :many
-SELECT u.id, u.username, u.name,
+SELECT u.id, u.username, u.name, COALESCE(m.code, '') AS major_code,
   COUNT(DISTINCT p.id) AS portfolio_count,
   COUNT(DISTINCT pl.user_id) AS total_likes,
   COUNT(DISTINCT f.follower_id) AS followers
 FROM users u
+LEFT JOIN majors m ON m.id = u.major_id
 LEFT JOIN portfolios p ON p.owner_id = u.id AND p.status = 'published' AND p.deleted_at IS NULL
 LEFT JOIN portfolio_likes pl ON pl.portfolio_id = p.id
 LEFT JOIN follows f ON f.following_id = u.id
 WHERE u.role_primary = 'siswa' AND u.deleted_at IS NULL
-GROUP BY u.id HAVING COUNT(DISTINCT p.id) >= 1
+GROUP BY u.id, m.code HAVING COUNT(DISTINCT p.id) >= 1
 `
 
 type StudentLeaderboardCandidatesRow struct {
 	ID             pgtype.UUID `json:"id"`
 	Username       string      `json:"username"`
 	Name           string      `json:"name"`
+	MajorCode      string      `json:"major_code"`
 	PortfolioCount int64       `json:"portfolio_count"`
 	TotalLikes     int64       `json:"total_likes"`
 	Followers      int64       `json:"followers"`
@@ -1074,6 +1217,7 @@ func (q *Queries) StudentLeaderboardCandidates(ctx context.Context) ([]StudentLe
 			&i.ID,
 			&i.Username,
 			&i.Name,
+			&i.MajorCode,
 			&i.PortfolioCount,
 			&i.TotalLikes,
 			&i.Followers,
@@ -1110,6 +1254,34 @@ func (q *Queries) SuggestTags(ctx context.Context, similarity string) ([]Suggest
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const topLikedUnassessed = `-- name: TopLikedUnassessed :many
+SELECT p.id FROM portfolios p
+LEFT JOIN portfolio_likes pl ON pl.portfolio_id = p.id
+WHERE p.status = 'published' AND p.deleted_at IS NULL
+
+GROUP BY p.id ORDER BY COUNT(pl.user_id) DESC LIMIT $1
+`
+
+func (q *Queries) TopLikedUnassessed(ctx context.Context, limit int32) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, topLikedUnassessed, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.UUID{}
+	for rows.Next() {
+		var id pgtype.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

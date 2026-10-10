@@ -171,26 +171,31 @@ INSERT INTO audit_logs (actor_id, action, entity, entity_id, diff, ip)
 VALUES ($1, $2, $3, $4, $5, $6);
 
 -- name: StudentLeaderboardCandidates :many
-SELECT u.id, u.username, u.name,
+SELECT u.id, u.username, u.name, COALESCE(m.code, '') AS major_code,
   COUNT(DISTINCT p.id) AS portfolio_count,
   COUNT(DISTINCT pl.user_id) AS total_likes,
   COUNT(DISTINCT f.follower_id) AS followers
 FROM users u
+LEFT JOIN majors m ON m.id = u.major_id
 LEFT JOIN portfolios p ON p.owner_id = u.id AND p.status = 'published' AND p.deleted_at IS NULL
 LEFT JOIN portfolio_likes pl ON pl.portfolio_id = p.id
 LEFT JOIN follows f ON f.following_id = u.id
 WHERE u.role_primary = 'siswa' AND u.deleted_at IS NULL
-GROUP BY u.id HAVING COUNT(DISTINCT p.id) >= 1;
+GROUP BY u.id, m.code HAVING COUNT(DISTINCT p.id) >= 1;
 
 -- name: ProjectLeaderboardCandidates :many
-SELECT p.id, p.title, p.slug, p.owner_id, p.published_at,
+SELECT p.id, p.title, p.slug, p.owner_id, p.published_at, COALESCE(m.code, '') AS owner_major_code,
   COUNT(DISTINCT pl.user_id) AS likes,
-  COUNT(DISTINCT c.id) AS comments
+  COUNT(DISTINCT c.id) AS comments,
+  0 AS assessment_count,
+  0 AS assessment_avg
 FROM portfolios p
+LEFT JOIN users u ON u.id = p.owner_id
+LEFT JOIN majors m ON m.id = u.major_id
 LEFT JOIN portfolio_likes pl ON pl.portfolio_id = p.id
 LEFT JOIN comments c ON c.portfolio_id = p.id AND c.deleted_at IS NULL
 WHERE p.status = 'published' AND p.deleted_at IS NULL
-GROUP BY p.id;
+GROUP BY p.id, m.code;
 
 -- name: SuggestTags :many
 SELECT slug, name FROM tags WHERE similarity(name, $1) > 0.2 ORDER BY similarity(name, $1) DESC LIMIT 5;
@@ -213,3 +218,35 @@ ORDER BY f.created_at DESC LIMIT $2 OFFSET $3;
 SELECT u.id, u.username, u.name FROM users u
 JOIN follows f ON f.following_id = u.id WHERE f.follower_id = $1 AND u.deleted_at IS NULL
 ORDER BY f.created_at DESC LIMIT $2 OFFSET $3;
+
+-- name: CountViewsSince :one
+SELECT COUNT(*) FROM portfolio_views WHERE portfolio_id = $1 AND viewed_date > CURRENT_DATE - $2;
+
+-- name: CountLikesSince :one
+SELECT COUNT(*) FROM portfolio_likes WHERE portfolio_id = $1 AND created_at > NOW() - ($2::text || ' days')::interval;
+
+-- name: CountCommentsSince :one
+SELECT COUNT(*) FROM comments WHERE portfolio_id = $1 AND deleted_at IS NULL AND created_at > NOW() - ($2::text || ' days')::interval;
+
+-- name: CountUserLikesSince :one
+SELECT COUNT(*) FROM portfolio_likes pl JOIN portfolios p ON p.id = pl.portfolio_id
+WHERE p.owner_id = $1 AND pl.created_at > NOW() - ($2 || ' days')::interval;
+
+-- name: CountUserPortfoliosSince :one
+SELECT COUNT(*) FROM portfolios WHERE owner_id = $1 AND status = 'published' AND deleted_at IS NULL AND published_at > NOW() - ($2::text || ' days')::interval;
+
+-- name: TopLikedUnassessed :many
+SELECT p.id FROM portfolios p
+LEFT JOIN portfolio_likes pl ON pl.portfolio_id = p.id
+WHERE p.status = 'published' AND p.deleted_at IS NULL
+
+GROUP BY p.id ORDER BY COUNT(pl.user_id) DESC LIMIT $1;
+
+-- name: CountLikesByUserSince :one
+SELECT COUNT(*) FROM portfolio_likes WHERE user_id = $1 AND created_at > NOW() - INTERVAL '1 hour';
+
+-- name: PrevLeaderboardRanks :many
+SELECT e.subject_user_id, e.subject_portfolio_id, e.rank FROM leaderboard_entries e
+JOIN leaderboards l ON l.id = e.leaderboard_id
+WHERE l.period = $1 AND l.scope = $2 AND l.kind = $3
+ORDER BY l.computed_for DESC LIMIT 40;
