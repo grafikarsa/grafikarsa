@@ -12,7 +12,12 @@
 > Kontrak `packages/contracts/openapi.yaml` (114 path/142 operasi) di-generate
 > dari `routes.go`; invariant dijaga test `gen-openapi/main_test.go` dan
 > `internal/http/contract_blocks_test.go`; JSON Schema blok ada di
-> `packages/contracts/blocks/*.json`.
+> `packages/contracts/blocks/*.json`. Fitur lanjutan sudah terpasang:
+> preview PDF halaman-1 (`pdftoppm`), karantina media + pemulihan, statistik
+> inkremental (bukan full-scan), view counter HyperLogLog, digest & decay minat,
+> pengecualian promosi (tinggal kelas/pindah), tipe notifikasi `digest` &
+> `leaderboard_ranked`, dan tipe TS FE (`apps/web/lib/api-types.ts`) yang
+> diverifikasi CI agar tidak drift dari kontrak.
 
 ---
 

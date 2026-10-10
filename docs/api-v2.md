@@ -66,6 +66,35 @@ tidak bisa dipakai mengunci akun orang lain.
 - Delete menghapus objek utama + semua varian dari storage.
 - Media non-publik bisa diakses tamu hanya bila dipakai portfolio `published`.
 
+## PDF & karantina media
+
+- **Preview PDF**: worker `pdf-preview` merender halaman pertama PDF memakai
+  `pdftoppm` (poppler-utils; sudah ada di image) menjadi media JPEG dengan
+  varian 320/800. FE menampilkannya lewat `GET /v1/media/{id}?preview=1`
+  (visibilitas mengikuti media induknya). Bila poppler tidak ada, job dilewati
+  dengan peringatan dan FE hanya menampilkan tautan file.
+- **Karantina**: `scan-media` memeriksa objek media `confirmed` (HeadObject +
+  ukuran) dan mengubah statusnya menjadi `quarantined` bila objek hilang atau
+  berbeda ukuran. Admin melihatnya di `/admin/media/quarantine` dan memulihkan
+  dengan `POST /v1/admin/media/{id}/unquarantine` (menolak bila objek belum ada).
+
+## Statistik & minat
+
+- `stats` berjalan **inkremental**: hanya portfolio yang aktivitasnya lebih baru
+  dari `portfolio_stats.computed_at` (full sweep tiap 12 run) dan memakai satu
+  query agregat, bukan 4 query per portfolio. Penyebut normalisasi dihitung dari
+  seluruh katalog agar skor tetap sebanding.
+- Bobot minat (`user_interests`) diluruhkan 0.98/hari oleh job `decay-interests`.
+
+## Batas anti-abuse sosial
+
+| Aksi | Batas |
+|---|---|
+| Suka | 20/jam per akun (lebih dari itu ditolak + audit) |
+| Komentar | 5/menit dan 30/jam per akun |
+| Mengikuti | 60/jam per akun |
+| Balasan guest | 10/jam per thread+IP |
+
 ## Job terjadwal (worker)
 
 | Job | Interval |
@@ -80,9 +109,11 @@ tidak bisa dipakai mengunci akun orang lain.
 | Digest notifikasi harian | harian 07:00 WIB |
 | Flush view counter (HyperLogLog → agregat harian) | 1 menit |
 | Peluruhan bobot minat (decay 0.98/hari) | harian 03:00 WIB |
+| Pemindaian integritas media (karantina) | harian 03:30 WIB |
+| Preview PDF halaman-1 | 30 menit |
 
 Jalankan manual:
-`go run ./cmd/worker <outbox|stats|leaderboard|cleanup-media|publish-changelogs|retention|promotion-draft|digest|flush-views|decay-interests|serve>`.
+`go run ./cmd/worker <outbox|stats|leaderboard|cleanup-media|publish-changelogs|retention|promotion-draft|digest|flush-views|decay-interests|scan-media|pdf-preview|serve>`.
 
 ## View counter
 
@@ -115,4 +146,9 @@ bila tidak (6 bulan, PRD §16.1).
 | GET/PATCH | `/v1/admin/settings`, `/v1/admin/settings/{key}` | `feed_weights`, `upload_limits` tanpa deploy |
 | GET/POST/DELETE | `/v1/admin/changelogs/{id}/contributors` | Kontributor rilis |
 | GET | `/v1/users/{username}/followers` dan `/following` | Pengikut/mengikuti |
-| POST | `/v1/feedback` | Guest menerima `follow_up_token` (`?t=`) untuk membuka thread-nya |
+| POST | `/v1/feedback` | Guest menerima `follow_up_token` (`?t=`, berlaku 6 bulan) untuk membuka & membalas thread-nya |
+| GET | `/v1/media/{id}?preview=1` | Gambar preview halaman-1 PDF (bila sudah dibuat worker) |
+| GET | `/v1/admin/media/quarantine` | Daftar media yang dikarantina |
+| POST | `/v1/admin/media/{id}/unquarantine` | Pulihkan media setelah objeknya kembali |
+| GET | `/v1/admin/assessments?filter=` | Antrean penilaian (assessed/unassessed, ter-scope jurusan) |
+| GET/POST/DELETE | `/v1/admin/series/{id}/blocks` | Template block series |

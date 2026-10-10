@@ -19,8 +19,9 @@ DATABASE_URL := postgres://$(DB_USER):$(ENCODED_DB_PASSWORD)@$(DB_HOST):$(DB_POR
 
 .PHONY: help dev dev-web dev-down dev-logs \
 	migrate-up migrate-down migrate-status migrate-new sqlc seed verify-seed \
-	openapi openapi-check \
-	backup restore test test-backend test-web lint lint-backend lint-web \
+	openapi openapi-check types-web types-web-check \
+	backup restore test test-backend test-web test-load test-contract \
+	lint lint-backend lint-web \
 	prod prod-down deploy-check status
 
 help: ## Tampilkan bantuan
@@ -77,6 +78,16 @@ openapi-check: ## Cek drift kontrak OpenAPI (dipakai CI)
 	  && echo "openapi: sinkron" \
 	  || (echo "FATAL: openapi.yaml stale — jalankan make openapi" && exit 1)
 
+types-web: ## Generate tipe TS dari kontrak OpenAPI untuk FE
+	@pnpm --dir $(WEB_DIR) exec openapi-typescript ../../packages/contracts/openapi.yaml -o lib/api-types.ts
+	@echo "apps/web/lib/api-types.ts diperbarui"
+
+types-web-check: ## Cek drift tipe TS FE (dipakai CI)
+	@pnpm --dir $(WEB_DIR) exec openapi-typescript ../../packages/contracts/openapi.yaml -o /tmp/api-types.gen.ts >/dev/null 2>&1
+	@diff -q $(WEB_DIR)/lib/api-types.ts /tmp/api-types.gen.ts >/dev/null \
+	  && echo "types-web: sinkron" \
+	  || (echo "FATAL: lib/api-types.ts stale — jalankan make types-web" && exit 1)
+
 sqlc: ## Generate type-safe queries (butuh sqlc terinstall)
 	sqlc -f $(API_DIR)/sqlc.yaml generate
 
@@ -104,6 +115,13 @@ test-backend:
 
 test-web:
 	pnpm --dir $(WEB_DIR) test
+
+test-load: ## Smoke test beban (k6) terhadap API yang hidup
+	@command -v k6 >/dev/null 2>&1 && k6 run -e BASE=$${API_URL:-http://localhost:8091} tools/k6/smoke.js \
+	  || echo "SKIP: k6 belum terpasang (https://k6.io/docs/get-started/installation/)"
+
+test-contract: ## Uji kontrak OpenAPI terhadap API hidup (schemathesis)
+	@./tools/schemathesis.sh $${API_URL:-http://localhost:8091}
 
 test-e2e: ## E2E Playwright (jalankan bila sudah terpasang)
 	@pnpm --dir $(WEB_DIR) exec playwright test || echo "SKIP: playwright belum dikonfigurasi"

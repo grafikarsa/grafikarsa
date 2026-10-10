@@ -56,6 +56,14 @@ jobs:
         working-directory: apps/web
       - run: pnpm exec eslint .
         working-directory: apps/web
+      - name: Tipe kontrak FE tidak stale
+        working-directory: apps/web
+        run: |
+          pnpm exec openapi-typescript ../../packages/contracts/openapi.yaml -o /tmp/api-types.gen.ts >/dev/null
+          if ! diff -q lib/api-types.ts /tmp/api-types.gen.ts >/dev/null; then
+            echo "FATAL: lib/api-types.ts tidak sinkron dengan kontrak. Jalankan: make types-web"
+            exit 1
+          fi
       - run: pnpm test
         working-directory: apps/web
       - run: pnpm build

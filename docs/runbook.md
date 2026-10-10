@@ -57,12 +57,17 @@ localhost, dan `NEXT_PUBLIC_APP_URL` localhost yang membuat semua mutasi 403).
 | Migrasi v1→v2 | `go run ./cmd/tools/migrate-old --v1 <dsn-v1> --v2 <dsn-v2> --dry-run` lalu `--execute` |
 | URL lama | `GET /v1/storage/*`: 301 bila ada di `legacy_urls`, 410 bila tidak |
 | Ubah bobot feed | `/admin/settings` atau `PATCH /v1/admin/settings/feed_weights` |
+| Media karantina | `/admin/media/quarantine` → "Pulihkan" setelah objek di-restore |
+| Preview PDF | `docker compose exec worker /worker pdf-preview` (butuh poppler-utils) |
+| Uji beban (k6) | `make test-load` |
+| Uji kontrak (schemathesis) | `make test-contract` |
 
 ## Job terjadwal
 
 Outbox 30 detik · stats 5 menit · publish changelog 5 menit · cleanup media 1 jam ·
 retensi 24 jam · leaderboard 02:05 WIB · draft kenaikan kelas 00:10 WIB ·
-digest 07:00 WIB · flush view 1 menit · decay minat 03:00 WIB. Semua job dibungkus `recover` sehingga panic satu job tidak
+digest 07:00 WIB · flush view 1 menit · decay minat 03:00 WIB · scan media
+03:30 WIB · preview PDF tiap 30 menit. Semua job dibungkus `recover` sehingga panic satu job tidak
 mematikan scheduler. Jalankan satu job manual:
 `go run ./cmd/worker <outbox|stats|leaderboard|cleanup-media|publish-changelogs|retention|promotion-draft|digest>`.
 
