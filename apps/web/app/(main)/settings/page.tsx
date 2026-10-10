@@ -18,7 +18,7 @@ type Prefs = {
 };
 
 const LINKS = [
-  { href: "/profile", label: "Foto profil" },
+  { href: "/settings/profile", label: "Profil & foto" },
   { href: "/settings/password", label: "Ganti password" },
   { href: "/me/portfolios", label: "Portfolio saya" },
   { href: "/settings/sessions", label: "Perangkat & sesi" },
