@@ -97,7 +97,7 @@ restore: ## Restore DB: make restore FILE=backup/2026-10-09.dump
 	docker exec -i grafikarsa-db-dev pg_restore -c -U $(DB_USER) -d $(DB_NAME) < $(FILE)
 
 # ── TEST & LINT ───────────────────────────────
-test: test-backend ## Semua test (web menyusul Fase 1+)
+test: test-backend test-web ## Semua test (backend + web)
 
 test-backend:
 	$(COMPOSE_DEV) run --rm api go test ./...

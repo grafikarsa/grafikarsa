@@ -131,3 +131,7 @@ WHERE c.academic_year_id = $1 AND c.major_id = $2 AND c.grade = $3 AND c.class_g
 
 -- name: GetYearByID :one
 SELECT id, start_year FROM academic_years WHERE id = $1 LIMIT 1;
+
+-- name: SetEnrollmentStatus :exec
+-- Transferred (pindah sekolah) dibedakan dari graduated (lulus).
+UPDATE enrollments SET status = $3 WHERE user_id = $1 AND academic_year_id = $2;

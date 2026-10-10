@@ -179,8 +179,10 @@ func (a *App) executePromotion(r *http.Request, job repo.GetPromotionJobRow, _ s
 		grade := int(e.Grade)
 
 		if action == "transfer" {
-			// Pindahan: tandai transferred, tidak ikut naik.
-			_ = qtx.GraduateEnrollment(ctx, repo.GraduateEnrollmentParams{UserID: e.UserID, AcademicYearID: job.FromYearID})
+			// Pindahan: status 'transferred' (bukan graduated) dan tidak ikut naik.
+			_ = qtx.SetEnrollmentStatus(ctx, repo.SetEnrollmentStatusParams{
+				UserID: e.UserID, AcademicYearID: job.FromYearID, Status: "transferred",
+			})
 			continue
 		}
 		if action == "repeat" {

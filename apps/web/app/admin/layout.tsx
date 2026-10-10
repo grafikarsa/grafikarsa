@@ -23,6 +23,7 @@ const NAV: { href: string; label: string }[] = [
   { href: "/admin/promotion", label: "Kenaikan Kelas" },
   { href: "/admin/jobs", label: "Job Queue" },
   { href: "/admin/audit-logs", label: "Audit Log" },
+  { href: "/admin/media-quarantine", label: "Media Karantina" },
   { href: "/admin/settings", label: "Pengaturan" },
 ];
 

@@ -741,6 +741,22 @@ func (q *Queries) SetActiveYear(ctx context.Context, id pgtype.UUID) error {
 	return err
 }
 
+const setEnrollmentStatus = `-- name: SetEnrollmentStatus :exec
+UPDATE enrollments SET status = $3 WHERE user_id = $1 AND academic_year_id = $2
+`
+
+type SetEnrollmentStatusParams struct {
+	UserID         pgtype.UUID `json:"user_id"`
+	AcademicYearID pgtype.UUID `json:"academic_year_id"`
+	Status         string      `json:"status"`
+}
+
+// Transferred (pindah sekolah) dibedakan dari graduated (lulus).
+func (q *Queries) SetEnrollmentStatus(ctx context.Context, arg SetEnrollmentStatusParams) error {
+	_, err := q.db.Exec(ctx, setEnrollmentStatus, arg.UserID, arg.AcademicYearID, arg.Status)
+	return err
+}
+
 const setUserStatus = `-- name: SetUserStatus :exec
 UPDATE users SET status = $2 WHERE id = $1
 `
