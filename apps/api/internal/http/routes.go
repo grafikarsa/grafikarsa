@@ -150,6 +150,7 @@ func (a *App) routes() http.Handler {
 				r.Post("/", a.csrf(a.handleCreateChangelog))
 				r.With(a.requirePerm("changelog.publish")).Post("/{id}/publish", a.csrf(a.handlePublishChangelog))
 			})
+			r.With(a.requirePerm("system.jobs")).Post("/leaderboards/recompute", a.csrf(a.handleRecomputeLeaderboard))
 		})
 		r.Group(func(r chi.Router) {
 			r.Use(a.authRequired)

@@ -289,6 +289,19 @@ func (a *App) handleLeaderboards(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, ok(out, r))
 }
 
+func (a *App) handleRecomputeLeaderboard(w http.ResponseWriter, r *http.Request) {
+	n, _ := a.Cache.IncrWithExpire(r.Context(), "lb:recompute", time.Hour)
+	if n > 1 {
+		writeJSON(w, http.StatusTooManyRequests, fail("TOO_MANY_REQUESTS", "Recompute maksimal 1x per jam.", r))
+		return
+	}
+	_, _ = a.Q.EnqueueOutbox(r.Context(), repo.EnqueueOutboxParams{
+		Topic: "job.leaderboard_recompute", Payload: []byte("{}"),
+	})
+	auditLog(r, a, "leaderboards.recompute", "leaderboards", "", "manual")
+	writeJSON(w, http.StatusAccepted, ok(map[string]string{"status": "queued"}, r))
+}
+
 func (a *App) handleSearch(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query().Get("q")
 	if len(q) < 2 {
