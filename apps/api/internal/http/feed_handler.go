@@ -258,6 +258,16 @@ func (a *App) handleSearch(w http.ResponseWriter, r *http.Request) {
 	}
 	ports, _ := a.Q.SearchPortfolios(r.Context(), q)
 	users, _ := a.Q.SearchUsers(r.Context(), q)
+	suggest := []map[string]any{}
+	if len(ports) == 0 && len(users) == 0 {
+		tags, _ := a.Q.SuggestTags(r.Context(), q)
+		for _, t := range tags {
+			suggest = append(suggest, map[string]any{"slug": t.Slug, "name": t.Name})
+		}
+		if suggest == nil {
+			suggest = []map[string]any{}
+		}
+	}
 	pout := []map[string]any{}
 	for _, p := range ports {
 		pout = append(pout, map[string]any{"id": uuidStr(p.ID), "title": p.Title, "slug": p.Slug, "username": p.Username})
@@ -272,7 +282,7 @@ func (a *App) handleSearch(w http.ResponseWriter, r *http.Request) {
 	if uout == nil {
 		uout = []map[string]any{}
 	}
-	writeJSON(w, http.StatusOK, ok(map[string]any{"portfolios": pout, "users": uout}, r))
+	writeJSON(w, http.StatusOK, ok(map[string]any{"portfolios": pout, "users": uout, "suggest": suggest}, r))
 }
 
 func (a *App) handleListNotifications(w http.ResponseWriter, r *http.Request) {

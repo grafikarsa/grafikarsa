@@ -977,6 +977,35 @@ func (q *Queries) StudentLeaderboardCandidates(ctx context.Context) ([]StudentLe
 	return items, nil
 }
 
+const suggestTags = `-- name: SuggestTags :many
+SELECT slug, name FROM tags WHERE similarity(name, $1) > 0.2 ORDER BY similarity(name, $1) DESC LIMIT 5
+`
+
+type SuggestTagsRow struct {
+	Slug string `json:"slug"`
+	Name string `json:"name"`
+}
+
+func (q *Queries) SuggestTags(ctx context.Context, similarity string) ([]SuggestTagsRow, error) {
+	rows, err := q.db.Query(ctx, suggestTags, similarity)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SuggestTagsRow{}
+	for rows.Next() {
+		var i SuggestTagsRow
+		if err := rows.Scan(&i.Slug, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const unfollowUser = `-- name: UnfollowUser :exec
 DELETE FROM follows WHERE follower_id = $1 AND following_id = $2
 `

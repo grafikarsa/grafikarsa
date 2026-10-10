@@ -191,3 +191,6 @@ LEFT JOIN portfolio_likes pl ON pl.portfolio_id = p.id
 LEFT JOIN comments c ON c.portfolio_id = p.id AND c.deleted_at IS NULL
 WHERE p.status = 'published' AND p.deleted_at IS NULL
 GROUP BY p.id;
+
+-- name: SuggestTags :many
+SELECT slug, name FROM tags WHERE similarity(name, $1) > 0.2 ORDER BY similarity(name, $1) DESC LIMIT 5;
