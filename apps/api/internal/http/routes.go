@@ -104,6 +104,32 @@ func (a *App) routes() http.Handler {
 				r.With(a.requirePerm("roles.assign")).Delete("/assign", a.csrf(a.handleUnassignRole))
 			})
 			r.With(a.requirePerm("users.view")).Get("/audit-logs", a.handleAuditLogs)
+			r.Route("/majors", func(r chi.Router) {
+				r.Use(a.requirePerm("academic.view"))
+				r.Get("/", a.handleListMajors)
+				r.With(a.requirePerm("academic.manage_majors")).Post("/", a.csrf(a.handleCreateMajor))
+			})
+			r.Route("/years", func(r chi.Router) {
+				r.Use(a.requirePerm("academic.view"))
+				r.Get("/", a.handleListYears)
+				r.With(a.requirePerm("academic.manage_years")).Post("/", a.csrf(a.handleCreateYear))
+				r.With(a.requirePerm("academic.manage_years")).Post("/{id}/activate", a.csrf(a.handleActivateYear))
+			})
+			r.Route("/classes", func(r chi.Router) {
+				r.Use(a.requirePerm("academic.view"))
+				r.Get("/", a.handleListClasses)
+				r.With(a.requirePerm("academic.manage_classes")).Post("/", a.csrf(a.handleCreateClass))
+				r.With(a.requirePerm("academic.manage_classes")).Delete("/{id}", a.csrf(a.handleDeleteClass))
+				r.Get("/{id}/students", a.handleClassStudents)
+				r.With(a.requirePerm("academic.manage_classes")).Post("/enroll", a.csrf(a.handleEnrollStudent))
+			})
+			r.Route("/promotion", func(r chi.Router) {
+				r.Use(a.requirePerm("academic.promote_dryrun"))
+				r.Get("/jobs", a.handlePromotionJobs)
+				r.Post("/jobs/preview", a.csrf(a.handlePromotionPreview))
+				r.With(a.requirePerm("academic.promote_execute")).Post("/jobs/{id}/approve", a.csrf(a.handlePromotionApprove))
+				r.With(a.requirePerm("academic.promote_execute")).Post("/jobs/{id}/execute", a.csrf(a.handlePromotionExecute))
+			})
 		})
 		r.Group(func(r chi.Router) {
 			r.Use(a.authRequired)
