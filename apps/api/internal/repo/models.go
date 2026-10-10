@@ -220,6 +220,7 @@ type MediaAssets struct {
 	Status         string             `json:"status"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	ConfirmedAt    pgtype.Timestamptz `json:"confirmed_at"`
+	Variants       []byte             `json:"variants"`
 }
 
 type NotificationPreferences struct {

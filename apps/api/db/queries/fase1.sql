@@ -48,11 +48,11 @@ JOIN user_roles ur ON ur.role_id = rp.role_id
 WHERE ur.user_id = $1;
 
 -- name: CreateMedia :one
-INSERT INTO media_assets (owner_id, purpose, object_key, mime, size_bytes, width, height, checksum_sha256, status)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id;
+INSERT INTO media_assets (owner_id, purpose, object_key, mime, size_bytes, width, height, checksum_sha256, status, variants)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id;
 
 -- name: GetMediaByID :one
-SELECT id, owner_id, purpose, object_key, mime, size_bytes, width, height, checksum_sha256, status, created_at, confirmed_at
+SELECT id, owner_id, purpose, object_key, mime, size_bytes, width, height, checksum_sha256, status, variants, created_at, confirmed_at
 FROM media_assets WHERE id = $1 LIMIT 1;
 
 -- name: ConfirmMedia :exec
@@ -126,8 +126,24 @@ SELECT COALESCE(SUM(size_bytes), 0) FROM media_assets WHERE owner_id = $1 AND st
 SELECT COUNT(*) FROM media_assets WHERE owner_id = $1 AND created_at > NOW() - ($2 || ' hours')::interval;
 
 -- name: ListPendingMedia :many
-SELECT id, object_key FROM media_assets
-WHERE status = 'pending' AND created_at < NOW() - INTERVAL '24 hours' LIMIT 100;
+-- Hanya media pending yang TIDAK direferensikan siapa pun (aman dihapus).
+SELECT m.id, m.object_key FROM media_assets m
+WHERE m.status = 'pending' AND m.created_at < NOW() - INTERVAL '24 hours'
+  AND NOT EXISTS (SELECT 1 FROM users u WHERE u.avatar_media_id = m.id OR u.banner_media_id = m.id)
+  AND NOT EXISTS (SELECT 1 FROM portfolios p WHERE p.thumbnail_media_id = m.id)
+  AND NOT EXISTS (SELECT 1 FROM portfolio_blocks b WHERE b.asset_media_id = m.id)
+LIMIT 100;
+
+-- name: FindMediaByChecksum :one
+SELECT id, object_key, mime, width, height, variants FROM media_assets
+WHERE owner_id = $1 AND purpose = $2 AND checksum_sha256 = $3 AND status IN ('pending', 'confirmed')
+LIMIT 1;
+
+-- name: SetBlockAsset :exec
+UPDATE portfolio_blocks SET asset_media_id = $2 WHERE id = $1;
+
+-- name: ClearUserAvatarIfMedia :exec
+UPDATE users SET avatar_media_id = NULL WHERE avatar_media_id = $1;
 
 -- name: DeleteMediaRow :exec
 DELETE FROM media_assets WHERE id = $1;

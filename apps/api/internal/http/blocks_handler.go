@@ -135,6 +135,7 @@ func (a *App) handleCreateBlock(w http.ResponseWriter, r *http.Request) {
 	var assetID = nilUUID()
 	if req.MediaID != nil && *req.MediaID != "" {
 		assetID = mustUUID(*req.MediaID)
+		_ = a.Q.ConfirmMedia(r.Context(), assetID)
 	}
 	payloadBytes := toJSONBytes(req.Payload)
 	blockID, err := a.Q.CreateBlock(r.Context(), repo.CreateBlockParams{

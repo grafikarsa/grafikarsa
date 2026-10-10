@@ -82,6 +82,15 @@ func (q *Queries) CheckUsernameTaken(ctx context.Context, arg CheckUsernameTaken
 	return count, err
 }
 
+const clearUserAvatarIfMedia = `-- name: ClearUserAvatarIfMedia :exec
+UPDATE users SET avatar_media_id = NULL WHERE avatar_media_id = $1
+`
+
+func (q *Queries) ClearUserAvatarIfMedia(ctx context.Context, avatarMediaID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, clearUserAvatarIfMedia, avatarMediaID)
+	return err
+}
+
 const confirmMedia = `-- name: ConfirmMedia :exec
 UPDATE media_assets SET status = 'confirmed', confirmed_at = NOW() WHERE id = $1
 `
@@ -131,8 +140,8 @@ func (q *Queries) CountUsersScoped(ctx context.Context, dollar_1 interface{}) (i
 }
 
 const createMedia = `-- name: CreateMedia :one
-INSERT INTO media_assets (owner_id, purpose, object_key, mime, size_bytes, width, height, checksum_sha256, status)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id
+INSERT INTO media_assets (owner_id, purpose, object_key, mime, size_bytes, width, height, checksum_sha256, status, variants)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id
 `
 
 type CreateMediaParams struct {
@@ -145,6 +154,7 @@ type CreateMediaParams struct {
 	Height         pgtype.Int4 `json:"height"`
 	ChecksumSha256 string      `json:"checksum_sha256"`
 	Status         string      `json:"status"`
+	Variants       []byte      `json:"variants"`
 }
 
 func (q *Queries) CreateMedia(ctx context.Context, arg CreateMediaParams) (pgtype.UUID, error) {
@@ -158,6 +168,7 @@ func (q *Queries) CreateMedia(ctx context.Context, arg CreateMediaParams) (pgtyp
 		arg.Height,
 		arg.ChecksumSha256,
 		arg.Status,
+		arg.Variants,
 	)
 	var id pgtype.UUID
 	err := row.Scan(&id)
@@ -274,6 +285,41 @@ func (q *Queries) DeleteSocialLinks(ctx context.Context, userID pgtype.UUID) err
 	return err
 }
 
+const findMediaByChecksum = `-- name: FindMediaByChecksum :one
+SELECT id, object_key, mime, width, height, variants FROM media_assets
+WHERE owner_id = $1 AND purpose = $2 AND checksum_sha256 = $3 AND status IN ('pending', 'confirmed')
+LIMIT 1
+`
+
+type FindMediaByChecksumParams struct {
+	OwnerID        pgtype.UUID `json:"owner_id"`
+	Purpose        string      `json:"purpose"`
+	ChecksumSha256 string      `json:"checksum_sha256"`
+}
+
+type FindMediaByChecksumRow struct {
+	ID        pgtype.UUID `json:"id"`
+	ObjectKey string      `json:"object_key"`
+	Mime      string      `json:"mime"`
+	Width     pgtype.Int4 `json:"width"`
+	Height    pgtype.Int4 `json:"height"`
+	Variants  []byte      `json:"variants"`
+}
+
+func (q *Queries) FindMediaByChecksum(ctx context.Context, arg FindMediaByChecksumParams) (FindMediaByChecksumRow, error) {
+	row := q.db.QueryRow(ctx, findMediaByChecksum, arg.OwnerID, arg.Purpose, arg.ChecksumSha256)
+	var i FindMediaByChecksumRow
+	err := row.Scan(
+		&i.ID,
+		&i.ObjectKey,
+		&i.Mime,
+		&i.Width,
+		&i.Height,
+		&i.Variants,
+	)
+	return i, err
+}
+
 const getAuditLogs = `-- name: GetAuditLogs :many
 SELECT id, actor_id, action, entity, entity_id, created_at FROM audit_logs ORDER BY id DESC LIMIT $1 OFFSET $2
 `
@@ -331,13 +377,29 @@ func (q *Queries) GetMajorRequireSeries(ctx context.Context, id pgtype.UUID) (bo
 }
 
 const getMediaByID = `-- name: GetMediaByID :one
-SELECT id, owner_id, purpose, object_key, mime, size_bytes, width, height, checksum_sha256, status, created_at, confirmed_at
+SELECT id, owner_id, purpose, object_key, mime, size_bytes, width, height, checksum_sha256, status, variants, created_at, confirmed_at
 FROM media_assets WHERE id = $1 LIMIT 1
 `
 
-func (q *Queries) GetMediaByID(ctx context.Context, id pgtype.UUID) (MediaAssets, error) {
+type GetMediaByIDRow struct {
+	ID             pgtype.UUID        `json:"id"`
+	OwnerID        pgtype.UUID        `json:"owner_id"`
+	Purpose        string             `json:"purpose"`
+	ObjectKey      string             `json:"object_key"`
+	Mime           string             `json:"mime"`
+	SizeBytes      int64              `json:"size_bytes"`
+	Width          pgtype.Int4        `json:"width"`
+	Height         pgtype.Int4        `json:"height"`
+	ChecksumSha256 string             `json:"checksum_sha256"`
+	Status         string             `json:"status"`
+	Variants       []byte             `json:"variants"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	ConfirmedAt    pgtype.Timestamptz `json:"confirmed_at"`
+}
+
+func (q *Queries) GetMediaByID(ctx context.Context, id pgtype.UUID) (GetMediaByIDRow, error) {
 	row := q.db.QueryRow(ctx, getMediaByID, id)
-	var i MediaAssets
+	var i GetMediaByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.OwnerID,
@@ -349,6 +411,7 @@ func (q *Queries) GetMediaByID(ctx context.Context, id pgtype.UUID) (MediaAssets
 		&i.Height,
 		&i.ChecksumSha256,
 		&i.Status,
+		&i.Variants,
 		&i.CreatedAt,
 		&i.ConfirmedAt,
 	)
@@ -608,8 +671,12 @@ func (q *Queries) InsertAuthAudit(ctx context.Context, arg InsertAuthAuditParams
 }
 
 const listPendingMedia = `-- name: ListPendingMedia :many
-SELECT id, object_key FROM media_assets
-WHERE status = 'pending' AND created_at < NOW() - INTERVAL '24 hours' LIMIT 100
+SELECT m.id, m.object_key FROM media_assets m
+WHERE m.status = 'pending' AND m.created_at < NOW() - INTERVAL '24 hours'
+  AND NOT EXISTS (SELECT 1 FROM users u WHERE u.avatar_media_id = m.id OR u.banner_media_id = m.id)
+  AND NOT EXISTS (SELECT 1 FROM portfolios p WHERE p.thumbnail_media_id = m.id)
+  AND NOT EXISTS (SELECT 1 FROM portfolio_blocks b WHERE b.asset_media_id = m.id)
+LIMIT 100
 `
 
 type ListPendingMediaRow struct {
@@ -617,6 +684,7 @@ type ListPendingMediaRow struct {
 	ObjectKey string      `json:"object_key"`
 }
 
+// Hanya media pending yang TIDAK direferensikan siapa pun (aman dihapus).
 func (q *Queries) ListPendingMedia(ctx context.Context) ([]ListPendingMediaRow, error) {
 	rows, err := q.db.Query(ctx, listPendingMedia)
 	if err != nil {
@@ -967,6 +1035,20 @@ func (q *Queries) SaveNotifPrefs(ctx context.Context, arg SaveNotifPrefsParams) 
 		arg.NewFollower,
 		arg.DigestDaily,
 	)
+	return err
+}
+
+const setBlockAsset = `-- name: SetBlockAsset :exec
+UPDATE portfolio_blocks SET asset_media_id = $2 WHERE id = $1
+`
+
+type SetBlockAssetParams struct {
+	ID           pgtype.UUID `json:"id"`
+	AssetMediaID pgtype.UUID `json:"asset_media_id"`
+}
+
+func (q *Queries) SetBlockAsset(ctx context.Context, arg SetBlockAssetParams) error {
+	_, err := q.db.Exec(ctx, setBlockAsset, arg.ID, arg.AssetMediaID)
 	return err
 }
 

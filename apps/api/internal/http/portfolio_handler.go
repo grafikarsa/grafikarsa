@@ -225,7 +225,10 @@ func (a *App) handleUpdatePortfolio(w http.ResponseWriter, r *http.Request) {
 		_ = a.Q.UpdatePortfolioTitle(r.Context(), repo.UpdatePortfolioTitleParams{ID: p.ID, Title: *req.Title})
 	}
 	if req.Thumbnail != nil && *req.Thumbnail != "" {
-		_ = a.Q.UpdatePortfolioThumbnail(r.Context(), repo.UpdatePortfolioThumbnailParams{ID: p.ID, ThumbnailMediaID: mustUUID(*req.Thumbnail)})
+		thumbID := mustUUID(*req.Thumbnail)
+		_ = a.Q.UpdatePortfolioThumbnail(r.Context(), repo.UpdatePortfolioThumbnailParams{ID: p.ID, ThumbnailMediaID: thumbID})
+		// Media dipakai -> tandai confirmed agar tidak dibersihkan job pending.
+		_ = a.Q.ConfirmMedia(r.Context(), thumbID)
 	}
 	if req.SeriesID != nil {
 		sid := nilUUID()
