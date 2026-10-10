@@ -29,6 +29,7 @@ tags:
   - name: admin-jobs
   - name: admin-leaderboards
   - name: admin-majors
+  - name: admin-media
   - name: admin-portfolios
   - name: admin-promotion
   - name: admin-roles
@@ -805,6 +806,55 @@ paths:
       security:
         - bearerAuth: []
       x-permissions: [academic.manage_majors, academic.view]
+      x-csrf: required
+      responses:
+        "200":
+          description: Berhasil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  "/api/v1/admin/media/quarantine":
+    get:
+      tags: [admin-media]
+      operationId: get_admin_media_quarantine
+      summary: "inline (butuh login, permission: system.jobs)"
+      x-handler: inline
+      security:
+        - bearerAuth: []
+      x-permissions: [system.jobs]
+      responses:
+        "200":
+          description: Berhasil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  "/api/v1/admin/media/{id}/unquarantine":
+    post:
+      tags: [admin-media]
+      operationId: post_admin_media_id_unquarantine
+      summary: "inline (butuh login, permission: media.delete_any, wajib CSRF)"
+      x-handler: inline
+      security:
+        - bearerAuth: []
+      x-permissions: [media.delete_any]
       x-csrf: required
       responses:
         "200":

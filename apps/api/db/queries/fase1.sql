@@ -52,7 +52,7 @@ INSERT INTO media_assets (owner_id, purpose, object_key, mime, size_bytes, width
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id;
 
 -- name: GetMediaByID :one
-SELECT id, owner_id, purpose, object_key, mime, size_bytes, width, height, checksum_sha256, status, variants, created_at, confirmed_at
+SELECT id, owner_id, purpose, object_key, mime, size_bytes, width, height, checksum_sha256, status, variants, preview_media_id, created_at, confirmed_at
 FROM media_assets WHERE id = $1 LIMIT 1;
 
 -- name: ConfirmMedia :exec
@@ -274,3 +274,28 @@ WHERE ($1::text = '' OR action = $1)
 
 -- name: CountGlobalAdmins :one
 SELECT COUNT(*) FROM users WHERE role_primary = 'admin' AND deleted_at IS NULL;
+
+-- name: ListConfirmedMediaForScan :many
+-- Kandidat pemindaian integritas: media confirmed terbaru (dibatasi per batch).
+SELECT id, object_key, checksum_sha256, size_bytes FROM media_assets
+WHERE status = 'confirmed' ORDER BY created_at DESC LIMIT $1;
+
+-- name: QuarantineMedia :exec
+UPDATE media_assets SET status = 'quarantined' WHERE id = $1;
+
+-- name: UnquarantineMedia :exec
+UPDATE media_assets SET status = 'confirmed' WHERE id = $1 AND status = 'quarantined';
+
+-- name: ListQuarantinedMedia :many
+SELECT m.id, m.object_key, m.purpose, m.mime, m.size_bytes, m.created_at, u.username
+FROM media_assets m LEFT JOIN users u ON u.id = m.owner_id
+WHERE m.status = 'quarantined' ORDER BY m.created_at DESC LIMIT $1 OFFSET $2;
+
+-- name: ListPdfMediaWithoutPreview :many
+-- PDF terkonfirmasi yang belum punya preview (diproses job pdf-preview).
+SELECT id, owner_id, object_key, size_bytes FROM media_assets
+WHERE status = 'confirmed' AND mime = 'application/pdf' AND preview_media_id IS NULL
+ORDER BY created_at DESC LIMIT $1;
+
+-- name: SetMediaPreview :exec
+UPDATE media_assets SET preview_media_id = $2 WHERE id = $1;

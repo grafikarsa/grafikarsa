@@ -79,6 +79,14 @@ func (a *App) handleServeMedia(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	// ?preview=1 menyajikan gambar preview (halaman pertama PDF) bila ada.
+	if r.URL.Query().Get("preview") == "1" && m.PreviewMediaID.Valid {
+		pm, perr := a.Q.GetMediaByID(r.Context(), m.PreviewMediaID)
+		if perr == nil && pm.Status != "deleted" {
+			a.serveObject(w, r, pm.ObjectKey, pm.Mime, pm.ChecksumSha256, publicPurpose, "")
+			return
+		}
+	}
 	// Varian: ?w=320|800 memakai file yang sudah dibuat saat upload.
 	key := m.ObjectKey
 	if wq := r.URL.Query().Get("w"); wq != "" {
@@ -198,4 +206,33 @@ func (a *App) handleLegacyStorageRedirect(w http.ResponseWriter, r *http.Request
 		return
 	}
 	writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Media tidak ditemukan.", r))
+}
+
+// serveObject menyajikan objek storage sebagai respons HTTP dengan ETag,
+// cache policy, dan dukungan Range (dipakai oleh serve media & preview).
+func (a *App) serveObject(w http.ResponseWriter, r *http.Request, key, mime, etag string, public bool, filename string) {
+	body, err := a.Storage.Get(r.Context(), key)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "File tidak ditemukan.", r))
+		return
+	}
+	defer body.Close()
+	size, serr := a.Storage.Size(r.Context(), key)
+	if serr != nil || size <= 0 {
+		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "File tidak ditemukan.", r))
+		return
+	}
+	w.Header().Set("Content-Type", mime)
+	if etag != "" {
+		w.Header().Set("ETag", `"`+etag+`"`)
+	}
+	if public {
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	} else {
+		w.Header().Set("Cache-Control", "private, max-age=300")
+	}
+	if filename != "" {
+		w.Header().Set("Content-Disposition", "inline; filename=\"`+filename+`\"")
+	}
+	http.ServeContent(w, r, key, time.Now(), io.NewSectionReader(bodyReaderAt(body), 0, size))
 }

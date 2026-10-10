@@ -3,6 +3,7 @@ package http
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/microcosm-cc/bluemonday"
@@ -25,6 +26,11 @@ func (a *App) handleFollow(w http.ResponseWriter, r *http.Request) {
 	}
 	if u.RolePrimary == "admin" {
 		writeJSON(w, http.StatusUnprocessableEntity, fail("VALIDATION_ERROR", "Tidak bisa follow admin.", r))
+		return
+	}
+	// Anti-abuse: maksimal 60 follow/jam per akun.
+	if n, _ := a.Cache.IncrWithExpire(r.Context(), "follow:hour:"+uid, time.Hour); n > 60 {
+		writeJSON(w, http.StatusTooManyRequests, fail("TOO_MANY_REQUESTS", "Terlalu banyak mengikuti dalam satu jam.", r))
 		return
 	}
 	_ = a.Q.FollowUser(r.Context(), repo.FollowUserParams{FollowerID: mustUUID(uid), FollowingID: u.ID})
@@ -101,6 +107,15 @@ func (a *App) handleCreateComment(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(req.Content) < 1 || len(req.Content) > 2000 {
 		writeJSON(w, http.StatusUnprocessableEntity, failDetails("VALIDATION_ERROR", "Komentar tidak valid.", []map[string]string{{"field": "content", "message": "1-2000 karakter."}}, r))
+		return
+	}
+	// Anti-spam komentar: 5/menit dan 30/jam per akun.
+	if n, _ := a.Cache.IncrWithExpire(r.Context(), "comment:min:"+uid, time.Minute); n > 5 {
+		writeJSON(w, http.StatusTooManyRequests, fail("TOO_MANY_REQUESTS", "Terlalu cepat. Tunggu sebentar.", r))
+		return
+	}
+	if n, _ := a.Cache.IncrWithExpire(r.Context(), "comment:hour:"+uid, time.Hour); n > 30 {
+		writeJSON(w, http.StatusTooManyRequests, fail("TOO_MANY_REQUESTS", "Terlalu banyak komentar dalam satu jam.", r))
 		return
 	}
 	var parentID = nilUUID()

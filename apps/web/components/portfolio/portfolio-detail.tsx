@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { apiGet, apiSend } from "@/lib/api";
@@ -102,16 +105,52 @@ export function PortfolioDetail({ initial }: { initial: Portfolio }) {
 
 function BlockView({ b }: { b: Block }) {
   const p = b.payload as Record<string, string>;
+  const table = b.payload as unknown as { headers?: string[]; rows?: string[][] };
   switch (b.block_type) {
     case "text":
-      return <p className="whitespace-pre-wrap">{p.markdown ?? ""}</p>;
-    case "image":
-      return <img src={`/api/v1/media/${p.media_id}`} alt={p.alt ?? ""} className="rounded" loading="lazy" />;
+      return (
+        <div className="prose prose-sm dark:prose-invert max-w-none">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{p.markdown ?? ""}</ReactMarkdown>
+        </div>
+      );
+    case "image": {
+      const src = p.media_id ? `/api/v1/media/${p.media_id}?w=800` : (p.url ?? "");
+      if (!src) return null;
+      return (
+        <figure className="flex flex-col gap-1">
+          <img src={src} alt={p.alt ?? ""} className="rounded" loading="lazy" />
+          {p.caption && <figcaption className="text-muted-foreground text-xs">{p.caption}</figcaption>}
+        </figure>
+      );
+    }
+    case "table":
+      return (
+        <div className="overflow-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {(table.headers ?? []).map((h, i) => (
+                  <TableHead key={i}>{h}</TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(table.rows ?? []).map((r, i) => (
+                <TableRow key={i}>
+                  {(r ?? []).map((c, j) => (
+                    <TableCell key={j}>{c}</TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      );
     case "youtube":
       return (
         <iframe
           src={`https://www.youtube-nocookie.com/embed/${p.video_id}`}
-          className="aspect-video w-full"
+          className="aspect-video w-full rounded"
           loading="lazy"
           sandbox="allow-scripts allow-same-origin"
           title="YouTube"
@@ -119,18 +158,51 @@ function BlockView({ b }: { b: Block }) {
       );
     case "button":
       return (
-        <a href={p.url} target="_blank" rel="noreferrer">
-          <Button>{p.label ?? "Buka"}</Button>
+        <a href={p.url} target="_blank" rel="noreferrer" className={buttonVariants({ variant: p.variant === "secondary" ? "secondary" : "default" })}>
+          {p.label ?? "Buka"}
         </a>
       );
-    case "table":
-      return <pre className="overflow-auto rounded bg-muted p-2 text-xs">{JSON.stringify(p, null, 2)}</pre>;
+    case "link":
+      return (
+        <a href={p.url} target="_blank" rel="noreferrer" className="text-sm underline">
+          {p.title || p.url}
+        </a>
+      );
+    case "pdf": {
+      // Preview halaman-1 dibuat worker; kalau belum ada, tampilkan tautan file.
+      const previewSrc = p.media_id ? `/api/v1/media/${p.media_id}?preview=1` : "";
+      const fileHref = p.media_id ? `/api/v1/media/${p.media_id}` : (p.url ?? "");
+      if (!fileHref) return null;
+      return (
+        <div className="flex flex-col gap-2">
+          {previewSrc && (
+            <a href={fileHref} target="_blank" rel="noreferrer">
+              <img src={previewSrc} alt="Pratinjau dokumen PDF" className="max-h-96 rounded border object-contain" loading="lazy" />
+            </a>
+          )}
+          <a href={fileHref} target="_blank" rel="noreferrer" className="text-sm underline">
+            Buka dokumen PDF
+          </a>
+        </div>
+      );
+    }
+    case "ppt":
+    case "doc":
+    case "canva":
+    case "figma":
+    case "embed":
+      if (!p.url) return null;
+      return (
+        <iframe
+          src={p.url}
+          className="aspect-video w-full rounded"
+          loading="lazy"
+          sandbox="allow-scripts allow-same-origin"
+          referrerPolicy="no-referrer"
+          title={b.block_type}
+        />
+      );
     default:
-      if (p.url) {
-        return (
-          <iframe src={p.url} className="aspect-video w-full" loading="lazy" sandbox="allow-scripts allow-same-origin" referrerPolicy="no-referrer" title={b.block_type} />
-        );
-      }
       return null;
   }
 }

@@ -10,12 +10,13 @@ import (
 	"grafikarsa/api/internal/cache"
 	"grafikarsa/api/internal/config"
 	"grafikarsa/api/internal/repo"
+	"grafikarsa/api/internal/storage"
 )
 
 // Scheduler: menjalankan semua job berkala dalam satu proses.
 // Interval dipilih agar: outbox cepat (30 dtk), stats segar (5 mnt),
 // leaderboard harian 02:05 WIB, promotion draft harian 00:10 WIB.
-func runScheduler(ctx context.Context, q *repo.Queries, c *cache.Cache, cfg *config.Config) {
+func runScheduler(ctx context.Context, q *repo.Queries, c *cache.Cache, st *storage.Storage, cfg *config.Config) {
 	slog.Info("scheduler start")
 
 	go every(ctx, 30*time.Second, "outbox", func() error { return dispatchOutbox(ctx, q, c) })
@@ -23,6 +24,8 @@ func runScheduler(ctx context.Context, q *repo.Queries, c *cache.Cache, cfg *con
 	go every(ctx, 5*time.Minute, "publish-changelogs", func() error { return publishChangelogs(ctx, q) })
 	go every(ctx, time.Minute, "flush-views", func() error { return flushViews(ctx, q, c) })
 	go dailyAt(ctx, 3, 0, "decay-interests", func() error { return decayInterests(ctx, q) })
+	go dailyAt(ctx, 3, 30, "scan-media", func() error { return scanMedia(ctx, q, st) })
+	go every(ctx, 30*time.Minute, "pdf-preview", func() error { return pdfPreview(ctx, q, st) })
 	go every(ctx, time.Hour, "cleanup-media", func() error { return cleanupMedia(ctx, q, cfg) })
 	go every(ctx, 24*time.Hour, "retention", func() error { return retention(ctx, q) })
 	go dailyAt(ctx, 2, 5, "leaderboard", func() error { return recomputeLeaderboard(ctx, q) })

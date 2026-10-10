@@ -239,6 +239,7 @@ type MediaAssets struct {
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	ConfirmedAt    pgtype.Timestamptz `json:"confirmed_at"`
 	Variants       []byte             `json:"variants"`
+	PreviewMediaID pgtype.UUID        `json:"preview_media_id"`
 }
 
 type NotificationPreferences struct {

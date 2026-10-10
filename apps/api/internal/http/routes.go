@@ -169,6 +169,9 @@ func (a *App) routes() http.Handler {
 				r.Post("/{id}/contributors", a.csrf(a.handleAddChangelogContributor))
 				r.Delete("/{id}/contributors/{userId}", a.csrf(a.handleRemoveChangelogContributor))
 			})
+			// Life-cycle media: daftar karantina + pulihkan setelah objek kembali.
+			r.With(a.requirePerm("system.jobs")).Get("/media/quarantine", a.handleListQuarantinedMedia)
+			r.With(a.requirePerm("media.delete_any")).Post("/media/{id}/unquarantine", a.csrf(a.handleUnquarantineMedia))
 			r.With(a.requirePerm("system.jobs")).Post("/leaderboards/recompute", a.csrf(a.handleRecomputeLeaderboard))
 		})
 		r.Group(func(r chi.Router) {

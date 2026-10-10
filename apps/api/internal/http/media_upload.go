@@ -407,3 +407,45 @@ func (a *App) retireMedia(ctx context.Context, mediaID pgtype.UUID) {
 	_ = a.Q.ClearUserAvatarIfMedia(ctx, m.ID)
 	_ = a.Q.MarkMediaDeleted(ctx, m.ID)
 }
+
+// handleListQuarantinedMedia / handleUnquarantineMedia: life-cycle karantina.
+// Media dikarantina ketika objeknya hilang/rusak (job scan-media); admin bisa
+// memulihkannya setelah objek dikembalikan dari backup.
+func (a *App) handleListQuarantinedMedia(w http.ResponseWriter, r *http.Request) {
+	limit, offset, page := pageParams(r)
+	rows, err := a.Q.ListQuarantinedMedia(r.Context(), repo.ListQuarantinedMediaParams{Limit: limit, Offset: offset})
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal memuat media karantina.", r))
+		return
+	}
+	out := []map[string]any{}
+	for _, m := range rows {
+		out = append(out, map[string]any{
+			"id": uuidStr(m.ID), "object_key": m.ObjectKey, "purpose": m.Purpose,
+			"mime": m.Mime, "size_bytes": m.SizeBytes, "username": m.Username,
+			"created_at": m.CreatedAt.Time,
+		})
+	}
+	if out == nil {
+		out = []map[string]any{}
+	}
+	writeJSON(w, http.StatusOK, okMeta(out, meta(page, limit, int64(len(out))), r))
+}
+
+func (a *App) handleUnquarantineMedia(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	m, err := a.Q.GetMediaByID(r.Context(), mustUUID(id))
+	if err != nil || m.Status != "quarantined" {
+		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Media tidak dalam karantina.", r))
+		return
+	}
+	// Objek harus benar-benar ada sebelum dipulihkan.
+	size, serr := a.Storage.Size(r.Context(), m.ObjectKey)
+	if serr != nil || size <= 0 {
+		writeJSON(w, http.StatusUnprocessableEntity, fail("OBJECT_MISSING", "Objek belum ada di storage; restore dari backup dulu.", r))
+		return
+	}
+	_ = a.Q.UnquarantineMedia(r.Context(), m.ID)
+	auditLog(r, a, "media.unquarantine", "media_assets", id, m.ObjectKey)
+	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "confirmed"}, r))
+}

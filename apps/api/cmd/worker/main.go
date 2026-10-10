@@ -1,15 +1,26 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"sync/atomic"
 	"time"
 
 	"grafikarsa/api/internal/storage"
 
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"grafikarsa/api/internal/cache"
 	"grafikarsa/api/internal/config"
@@ -46,6 +57,7 @@ func main() {
 	q := repo.New(pool)
 	c := cache.New(cfg)
 	defer c.Close()
+	st := storage.New(cfg)
 
 	switch job {
 	case "outbox":
@@ -78,6 +90,16 @@ func main() {
 			slog.Error("retention", "err", err)
 			os.Exit(1)
 		}
+	case "pdf-preview":
+		if err := pdfPreview(ctx, q, st); err != nil {
+			slog.Error("pdf-preview", "err", err)
+			os.Exit(1)
+		}
+	case "scan-media":
+		if err := scanMedia(ctx, q, st); err != nil {
+			slog.Error("scan-media", "err", err)
+			os.Exit(1)
+		}
 	case "flush-views":
 		if err := flushViews(ctx, q, c); err != nil {
 			slog.Error("flush-views", "err", err)
@@ -99,7 +121,7 @@ func main() {
 			os.Exit(1)
 		}
 	case "serve":
-		runScheduler(ctx, q, c, cfg)
+		runScheduler(ctx, q, c, st, cfg)
 	default:
 		fmt.Fprintln(os.Stderr, "usage: worker [serve|outbox|stats|leaderboard|cleanup-media|publish-changelogs|retention|promotion-draft]")
 		os.Exit(1)
@@ -239,37 +261,53 @@ func dispatchOutbox(ctx context.Context, q *repo.Queries, c *cache.Cache) error 
 }
 
 func aggregateStats(ctx context.Context, q *repo.Queries) error {
-	cands, err := q.StatsPortfolioCandidates(ctx)
+	// Mode inkremental: hanya portfolio yang aktivitasnya lebih baru dari
+	// stats terakhir. Full sweep dipaksa setiap 12 batch (sekitar 1 jam) agar
+	// penyimpangan kecil tetap terkoreksi.
+	fullSweep := atomic.AddInt64(&statsRuns, 1)%12 == 1
+	cands, err := q.StatsPortfolioCandidates(ctx, repo.StatsPortfolioCandidatesParams{
+		Column1: !fullSweep, Limit: 500,
+	})
 	if err != nil {
 		return err
 	}
-	maxL, maxV, maxC := 1.0, 1.0, 1.0
+	if len(cands) == 0 {
+		slog.Info("stats: tidak ada perubahan", "mode", map[bool]string{true: "full", false: "inkremental"}[fullSweep])
+		return nil
+	}
+	// Penyebut normalisasi dihitung dari SELURUH portfolio published, bukan
+	// dari subset yang sedang dihitung.
+	limits, err := q.StatsNormalization(ctx)
+	if err != nil {
+		return err
+	}
+	maxL, maxV, maxC := limits.MaxLikes, limits.MaxViews7d, limits.MaxComments
+	if maxL <= 0 {
+		maxL = 1
+	}
+	if maxV <= 0 {
+		maxV = 1
+	}
+	if maxC <= 0 {
+		maxC = 1
+	}
+
 	for _, c := range cands {
 		likes := toInt(c.TotalLikes)
 		comments := toInt(c.TotalComments)
-		v7, _ := q.CountViewsSince(ctx, repo.CountViewsSinceParams{PortfolioID: c.ID, Column2: 7})
-		v30, _ := q.CountViewsSince(ctx, repo.CountViewsSinceParams{PortfolioID: c.ID, Column2: 30})
-		l7, _ := q.CountLikesSince(ctx, repo.CountLikesSinceParams{PortfolioID: c.ID, Column2: "7"})
-		c7, _ := q.CountCommentsSince(ctx, repo.CountCommentsSinceParams{PortfolioID: c.ID, Column2: "7"})
-		if float64(likes) > maxL {
-			maxL = float64(likes)
-		}
-		if float64(v7) > maxV {
-			maxV = float64(v7)
-		}
-		if float64(comments) > maxC {
-			maxC = float64(comments)
-		}
+		l7 := toInt(c.Likes7d)
+		c7 := toInt(c.Comments7d)
+		v7 := toInt(c.Views7d)
+		v30 := toInt(c.Views30d)
+
 		ageDays := time.Since(c.PublishedAt.Time).Hours() / 24
 		if ageDays < 0 {
 			ageDays = 0
 		}
-		engagement := float64(l7)/maxL*0.6 + float64(v7)/maxV*0.4
+		engagement := norm7(l7, maxL)*0.6 + norm7(v7, maxV)*0.4
 		if engagement > 1 {
 			engagement = 1
 		}
-		// Quality: 50% kelengkapan (thumbnail) + 50% kualitas (assessment bila ada,
-		// selain itu sinyal interaksi). Skala 0-1.
 		quality := 0.0
 		if c.HasThumbnail {
 			quality += 0.5
@@ -281,6 +319,7 @@ func aggregateStats(ctx context.Context, q *repo.Queries) error {
 		}
 		trending := 0.5*norm(float64(l7), maxL) + 0.3*norm(float64(v7), maxV) + 0.2*norm(float64(c7), maxC)
 		trending *= expNeg(ageDays / 7)
+
 		if err := q.UpsertPortfolioStats(ctx, repo.UpsertPortfolioStatsParams{
 			PortfolioID: c.ID, Likes: int32(likes), Views7d: int32(v7), Views30d: int32(v30),
 			Comments: int32(comments), AssessmentAvg: floatToNumeric(c.AssessmentAvg),
@@ -290,8 +329,23 @@ func aggregateStats(ctx context.Context, q *repo.Queries) error {
 			slog.Error("stats upsert gagal", "portfolio", uuidStr(c.ID), "err", err)
 		}
 	}
-	slog.Info("stats done", "count", len(cands))
+	slog.Info("stats done", "count", len(cands), "mode", map[bool]string{true: "full", false: "inkremental"}[fullSweep])
 	return nil
+}
+
+// statsRuns menghitung berapa kali job stats jalan (untuk memaksa full sweep).
+var statsRuns int64
+
+// norm7: normalisasi dengan penyebut berbasis count (>=1) agar tidak NaN.
+func norm7(v int, max float64) float64 {
+	if max <= 0 {
+		return 0
+	}
+	out := float64(v) / max
+	if out > 1 {
+		out = 1
+	}
+	return out
 }
 
 func recomputeLeaderboard(ctx context.Context, q *repo.Queries) error {
@@ -529,6 +583,133 @@ func emitNotif(ctx context.Context, q *repo.Queries, c *cache.Cache, params repo
 	if c != nil {
 		_ = c.Del(ctx, "notifcount:"+uuidStr(params.UserID))
 	}
+	return nil
+}
+
+// pdfPreview membuat gambar preview halaman pertama PDF memakai pdftoppm
+// (poppler-utils). Bila biner tidak tersedia, job dilewati dengan peringatan —
+// fitur preview bersifat opsional dan tidak boleh menggagalkan worker.
+func pdfPreview(ctx context.Context, q *repo.Queries, st *storage.Storage) error {
+	if _, err := exec.LookPath("pdftoppm"); err != nil {
+		slog.Warn("pdf-preview dilewati: pdftoppm (poppler-utils) tidak terpasang")
+		return nil
+	}
+	rows, err := q.ListPdfMediaWithoutPreview(ctx, 20)
+	if err != nil {
+		return err
+	}
+	made := 0
+	for _, m := range rows {
+		previewID, perr := renderPdfPreview(ctx, q, st, m)
+		if perr != nil {
+			slog.Warn("preview pdf gagal", "media", uuidStr(m.ID), "err", perr)
+			continue
+		}
+		if err := q.SetMediaPreview(ctx, repo.SetMediaPreviewParams{ID: m.ID, PreviewMediaID: previewID}); err != nil {
+			slog.Warn("simpan preview gagal", "media", uuidStr(m.ID), "err", err)
+			continue
+		}
+		made++
+	}
+	slog.Info("pdf-preview selesai", "diproses", len(rows), "berhasil", made)
+	return nil
+}
+
+// renderPdfPreview: unduh PDF -> render halaman 1 -> normalkan gambar ->
+// simpan sebagai media baru (mime JPEG, status confirmed) milik owner yang sama.
+func renderPdfPreview(ctx context.Context, q *repo.Queries, st *storage.Storage, m repo.ListPdfMediaWithoutPreviewRow) (pgtype.UUID, error) {
+	body, err := st.Get(ctx, m.ObjectKey)
+	if err != nil {
+		return pgtype.UUID{}, err
+	}
+	defer body.Close()
+	tmpDir, err := os.MkdirTemp("", "pdfpreview")
+	if err != nil {
+		return pgtype.UUID{}, err
+	}
+	defer os.RemoveAll(tmpDir)
+	pdfPath := filepath.Join(tmpDir, "in.pdf")
+	f, err := os.Create(pdfPath)
+	if err != nil {
+		return pgtype.UUID{}, err
+	}
+	if _, err := io.Copy(f, body); err != nil {
+		f.Close()
+		return pgtype.UUID{}, err
+	}
+	f.Close()
+
+	// -jpeg -r 80: halaman 1 saja, resolusi wajar untuk thumbnail.
+	outPrefix := filepath.Join(tmpDir, "page")
+	cmd := exec.CommandContext(ctx, "pdftoppm", "-jpeg", "-r", "80", "-f", "1", "-l", "1", pdfPath, outPrefix)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return pgtype.UUID{}, fmt.Errorf("pdftoppm: %v (%s)", err, strings.TrimSpace(string(out)))
+	}
+	matches, _ := filepath.Glob(outPrefix + "*.jpg")
+	if len(matches) == 0 {
+		return pgtype.UUID{}, fmt.Errorf("pdftoppm tidak menghasilkan gambar")
+	}
+	raw, err := os.ReadFile(matches[0])
+	if err != nil {
+		return pgtype.UUID{}, err
+	}
+	proc, err := storage.ProcessImage(raw, 1200, []int{320, 800})
+	if err != nil {
+		return pgtype.UUID{}, err
+	}
+	sum := sha256.Sum256(proc.Data)
+	key := fmt.Sprintf("previews/%s/%s.jpg", uuidStr(m.OwnerID), uuid.NewString())
+	if err := st.Put(ctx, key, proc.Mime, bytes.NewReader(proc.Data)); err != nil {
+		return pgtype.UUID{}, err
+	}
+	variantKeys := map[string]string{}
+	for w, vdata := range proc.Variants {
+		vkey := fmt.Sprintf("%s_%d.jpg", strings.TrimSuffix(key, ".jpg"), w)
+		if err := st.Put(ctx, vkey, proc.Mime, bytes.NewReader(vdata)); err != nil {
+			continue
+		}
+		variantKeys[strconv.Itoa(w)] = vkey
+	}
+	vb, _ := json.Marshal(variantKeys)
+	id, err := q.CreateMedia(ctx, repo.CreateMediaParams{
+		OwnerID: m.OwnerID, Purpose: "block_image", ObjectKey: key, Mime: proc.Mime,
+		SizeBytes: int64(len(proc.Data)), Width: pgtype.Int4{Int32: int32(proc.Width), Valid: true},
+		Height:         pgtype.Int4{Int32: int32(proc.Height), Valid: true},
+		ChecksumSha256: hex.EncodeToString(sum[:]), Status: "confirmed", Variants: vb,
+	})
+	if err != nil {
+		return pgtype.UUID{}, err
+	}
+	return id, nil
+}
+
+// scanMedia memeriksa integritas objek media confirmed: baris yang objeknya
+// hilang dari storage dikarantina (tidak dihapus) supaya tidak disajikan rusak
+// dan bisa dipulihkan dari backup (PRD §7.2 lifecycle).
+func scanMedia(ctx context.Context, q *repo.Queries, st *storage.Storage) error {
+	rows, err := q.ListConfirmedMediaForScan(ctx, 200)
+	if err != nil {
+		return err
+	}
+	quarantined := 0
+	for _, m := range rows {
+		size, serr := st.Size(ctx, m.ObjectKey)
+		if serr != nil || size <= 0 {
+			if uerr := q.QuarantineMedia(ctx, m.ID); uerr == nil {
+				quarantined++
+				slog.Warn("media dikarantina (objek hilang)", "media", uuidStr(m.ID), "key", m.ObjectKey)
+			}
+			continue
+		}
+		if m.SizeBytes > 0 && size != m.SizeBytes {
+			if uerr := q.QuarantineMedia(ctx, m.ID); uerr == nil {
+				quarantined++
+				slog.Warn("media dikarantina (ukuran tidak cocok)",
+					"media", uuidStr(m.ID), "db", m.SizeBytes, "storage", size)
+			}
+		}
+	}
+	slog.Info("scan media selesai", "diperiksa", len(rows), "dikarantina", quarantined)
 	return nil
 }
 

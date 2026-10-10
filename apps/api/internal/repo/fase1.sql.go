@@ -506,7 +506,7 @@ func (q *Queries) GetMajorRequireSeries(ctx context.Context, id pgtype.UUID) (bo
 }
 
 const getMediaByID = `-- name: GetMediaByID :one
-SELECT id, owner_id, purpose, object_key, mime, size_bytes, width, height, checksum_sha256, status, variants, created_at, confirmed_at
+SELECT id, owner_id, purpose, object_key, mime, size_bytes, width, height, checksum_sha256, status, variants, preview_media_id, created_at, confirmed_at
 FROM media_assets WHERE id = $1 LIMIT 1
 `
 
@@ -522,6 +522,7 @@ type GetMediaByIDRow struct {
 	ChecksumSha256 string             `json:"checksum_sha256"`
 	Status         string             `json:"status"`
 	Variants       []byte             `json:"variants"`
+	PreviewMediaID pgtype.UUID        `json:"preview_media_id"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	ConfirmedAt    pgtype.Timestamptz `json:"confirmed_at"`
 }
@@ -541,6 +542,7 @@ func (q *Queries) GetMediaByID(ctx context.Context, id pgtype.UUID) (GetMediaByI
 		&i.ChecksumSha256,
 		&i.Status,
 		&i.Variants,
+		&i.PreviewMediaID,
 		&i.CreatedAt,
 		&i.ConfirmedAt,
 	)
@@ -878,6 +880,83 @@ func (q *Queries) InsertAuthAudit(ctx context.Context, arg InsertAuthAuditParams
 	return err
 }
 
+const listConfirmedMediaForScan = `-- name: ListConfirmedMediaForScan :many
+SELECT id, object_key, checksum_sha256, size_bytes FROM media_assets
+WHERE status = 'confirmed' ORDER BY created_at DESC LIMIT $1
+`
+
+type ListConfirmedMediaForScanRow struct {
+	ID             pgtype.UUID `json:"id"`
+	ObjectKey      string      `json:"object_key"`
+	ChecksumSha256 string      `json:"checksum_sha256"`
+	SizeBytes      int64       `json:"size_bytes"`
+}
+
+// Kandidat pemindaian integritas: media confirmed terbaru (dibatasi per batch).
+func (q *Queries) ListConfirmedMediaForScan(ctx context.Context, limit int32) ([]ListConfirmedMediaForScanRow, error) {
+	rows, err := q.db.Query(ctx, listConfirmedMediaForScan, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListConfirmedMediaForScanRow{}
+	for rows.Next() {
+		var i ListConfirmedMediaForScanRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ObjectKey,
+			&i.ChecksumSha256,
+			&i.SizeBytes,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPdfMediaWithoutPreview = `-- name: ListPdfMediaWithoutPreview :many
+SELECT id, owner_id, object_key, size_bytes FROM media_assets
+WHERE status = 'confirmed' AND mime = 'application/pdf' AND preview_media_id IS NULL
+ORDER BY created_at DESC LIMIT $1
+`
+
+type ListPdfMediaWithoutPreviewRow struct {
+	ID        pgtype.UUID `json:"id"`
+	OwnerID   pgtype.UUID `json:"owner_id"`
+	ObjectKey string      `json:"object_key"`
+	SizeBytes int64       `json:"size_bytes"`
+}
+
+// PDF terkonfirmasi yang belum punya preview (diproses job pdf-preview).
+func (q *Queries) ListPdfMediaWithoutPreview(ctx context.Context, limit int32) ([]ListPdfMediaWithoutPreviewRow, error) {
+	rows, err := q.db.Query(ctx, listPdfMediaWithoutPreview, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPdfMediaWithoutPreviewRow{}
+	for rows.Next() {
+		var i ListPdfMediaWithoutPreviewRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.OwnerID,
+			&i.ObjectKey,
+			&i.SizeBytes,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPendingMedia = `-- name: ListPendingMedia :many
 SELECT m.id, m.object_key FROM media_assets m
 WHERE m.status = 'pending' AND m.created_at < NOW() - INTERVAL '24 hours'
@@ -908,6 +987,55 @@ func (q *Queries) ListPendingMedia(ctx context.Context) ([]ListPendingMediaRow, 
 	for rows.Next() {
 		var i ListPendingMediaRow
 		if err := rows.Scan(&i.ID, &i.ObjectKey); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listQuarantinedMedia = `-- name: ListQuarantinedMedia :many
+SELECT m.id, m.object_key, m.purpose, m.mime, m.size_bytes, m.created_at, u.username
+FROM media_assets m LEFT JOIN users u ON u.id = m.owner_id
+WHERE m.status = 'quarantined' ORDER BY m.created_at DESC LIMIT $1 OFFSET $2
+`
+
+type ListQuarantinedMediaParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+type ListQuarantinedMediaRow struct {
+	ID        pgtype.UUID        `json:"id"`
+	ObjectKey string             `json:"object_key"`
+	Purpose   string             `json:"purpose"`
+	Mime      string             `json:"mime"`
+	SizeBytes int64              `json:"size_bytes"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	Username  pgtype.Text        `json:"username"`
+}
+
+func (q *Queries) ListQuarantinedMedia(ctx context.Context, arg ListQuarantinedMediaParams) ([]ListQuarantinedMediaRow, error) {
+	rows, err := q.db.Query(ctx, listQuarantinedMedia, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListQuarantinedMediaRow{}
+	for rows.Next() {
+		var i ListQuarantinedMediaRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ObjectKey,
+			&i.Purpose,
+			&i.Mime,
+			&i.SizeBytes,
+			&i.CreatedAt,
+			&i.Username,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -1176,6 +1304,15 @@ func (q *Queries) MediaUsedInPublishedPortfolio(ctx context.Context, thumbnailMe
 	return used, err
 }
 
+const quarantineMedia = `-- name: QuarantineMedia :exec
+UPDATE media_assets SET status = 'quarantined' WHERE id = $1
+`
+
+func (q *Queries) QuarantineMedia(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, quarantineMedia, id)
+	return err
+}
+
 const reapStuckOutbox = `-- name: ReapStuckOutbox :exec
 UPDATE outbox SET status = 'pending', next_retry_at = NOW()
 WHERE status = 'processing' AND next_retry_at <= NOW()
@@ -1303,6 +1440,20 @@ func (q *Queries) SetFeedbackSpam(ctx context.Context, arg SetFeedbackSpamParams
 	return err
 }
 
+const setMediaPreview = `-- name: SetMediaPreview :exec
+UPDATE media_assets SET preview_media_id = $2 WHERE id = $1
+`
+
+type SetMediaPreviewParams struct {
+	ID             pgtype.UUID `json:"id"`
+	PreviewMediaID pgtype.UUID `json:"preview_media_id"`
+}
+
+func (q *Queries) SetMediaPreview(ctx context.Context, arg SetMediaPreviewParams) error {
+	_, err := q.db.Exec(ctx, setMediaPreview, arg.ID, arg.PreviewMediaID)
+	return err
+}
+
 const setMustChangePassword = `-- name: SetMustChangePassword :exec
 UPDATE users SET must_change_password = $2 WHERE id = $1
 `
@@ -1380,6 +1531,15 @@ type UnassignUserRoleParams struct {
 
 func (q *Queries) UnassignUserRole(ctx context.Context, arg UnassignUserRoleParams) error {
 	_, err := q.db.Exec(ctx, unassignUserRole, arg.UserID, arg.RoleID)
+	return err
+}
+
+const unquarantineMedia = `-- name: UnquarantineMedia :exec
+UPDATE media_assets SET status = 'confirmed' WHERE id = $1 AND status = 'quarantined'
+`
+
+func (q *Queries) UnquarantineMedia(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, unquarantineMedia, id)
 	return err
 }
 

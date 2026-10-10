@@ -312,18 +312,55 @@ WHERE l.id = (
 ORDER BY e.rank ASC;
 
 -- name: StatsPortfolioCandidates :many
-SELECT p.id, p.published_at,
-  COUNT(DISTINCT pl.user_id) AS total_likes,
-  COUNT(DISTINCT c.id) AS total_comments,
-  COALESCE((
-    SELECT AVG(pa.total_score) FROM portfolio_assessments pa WHERE pa.portfolio_id = p.id
-  ), 0)::float8 AS assessment_avg,
-  (p.thumbnail_media_id IS NOT NULL)::bool AS has_thumbnail
-FROM portfolios p
-LEFT JOIN portfolio_likes pl ON pl.portfolio_id = p.id
-LEFT JOIN comments c ON c.portfolio_id = p.id AND c.deleted_at IS NULL
-WHERE p.status = 'published' AND p.deleted_at IS NULL
-GROUP BY p.id;
+-- Semua metrik statistik dalam SATU query (menghilangkan 4 query per kandidat).
+-- $1 = only_changed: bila true, hanya portfolio yang aktivitasnya lebih baru
+-- dari stats terakhir (mode inkremental oleh worker).
+WITH activity AS (
+  SELECT p.id,
+    (SELECT COUNT(DISTINCT pl.user_id) FROM portfolio_likes pl WHERE pl.portfolio_id = p.id) AS total_likes,
+    (SELECT COUNT(*) FROM comments c WHERE c.portfolio_id = p.id AND c.deleted_at IS NULL) AS total_comments,
+    (SELECT COUNT(*) FROM portfolio_likes pl WHERE pl.portfolio_id = p.id AND pl.created_at > NOW() - INTERVAL '7 days') AS likes_7d,
+    (SELECT COUNT(*) FROM comments c WHERE c.portfolio_id = p.id AND c.deleted_at IS NULL AND c.created_at > NOW() - INTERVAL '7 days') AS comments_7d,
+    (SELECT COALESCE(SUM(v.unique_views), 0) FROM portfolio_view_counts v
+      WHERE v.portfolio_id = p.id AND v.viewed_date > CURRENT_DATE - 7) AS views_7d,
+    (SELECT COALESCE(SUM(v.unique_views), 0) FROM portfolio_view_counts v
+      WHERE v.portfolio_id = p.id AND v.viewed_date > CURRENT_DATE - 30) AS views_30d,
+    (SELECT COALESCE(AVG(pa.total_score), 0) FROM portfolio_assessments pa WHERE pa.portfolio_id = p.id)::float8 AS assessment_avg,
+    (p.thumbnail_media_id IS NOT NULL)::bool AS has_thumbnail,
+    p.published_at,
+    GREATEST(
+      COALESCE((SELECT MAX(pl.created_at) FROM portfolio_likes pl WHERE pl.portfolio_id = p.id), to_timestamp(0)),
+      COALESCE((SELECT MAX(c.created_at) FROM comments c WHERE c.portfolio_id = p.id), to_timestamp(0)),
+      COALESCE((SELECT MAX(v.updated_at) FROM portfolio_view_counts v WHERE v.portfolio_id = p.id), to_timestamp(0)),
+      COALESCE((SELECT MAX(pa.updated_at) FROM portfolio_assessments pa WHERE pa.portfolio_id = p.id), to_timestamp(0))
+    ) AS last_activity,
+    COALESCE(ps.computed_at, to_timestamp(0)) AS stats_computed_at
+  FROM portfolios p
+  LEFT JOIN portfolio_stats ps ON ps.portfolio_id = p.id
+  WHERE p.status = 'published' AND p.deleted_at IS NULL
+)
+SELECT id, published_at, total_likes, total_comments, likes_7d, comments_7d,
+  views_7d, views_30d, assessment_avg, has_thumbnail
+FROM activity
+WHERE NOT $1::bool OR stats_computed_at < last_activity
+LIMIT $2;
+
+-- name: StatsNormalization :one
+-- Nilai maksimum lintas semua portfolio published, dipakai sebagai penyebut
+-- normalisasi (tidak boleh dihitung dari subset inkremental).
+SELECT
+  GREATEST(COALESCE(MAX(total_likes), 1), 1)::float8 AS max_likes,
+  GREATEST(COALESCE(MAX(views_7d), 1), 1)::float8 AS max_views_7d,
+  GREATEST(COALESCE(MAX(total_comments), 1), 1)::float8 AS max_comments
+FROM (
+  SELECT p.id,
+    (SELECT COUNT(DISTINCT pl.user_id) FROM portfolio_likes pl WHERE pl.portfolio_id = p.id) AS total_likes,
+    (SELECT COUNT(*) FROM comments c WHERE c.portfolio_id = p.id AND c.deleted_at IS NULL) AS total_comments,
+    (SELECT COALESCE(SUM(v.unique_views), 0) FROM portfolio_view_counts v
+      WHERE v.portfolio_id = p.id AND v.viewed_date > CURRENT_DATE - 7) AS views_7d
+  FROM portfolios p
+  WHERE p.status = 'published' AND p.deleted_at IS NULL
+) t;
 
 -- name: ListModeratorIDs :many
 SELECT id FROM users
