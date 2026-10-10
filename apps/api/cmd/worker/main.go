@@ -75,6 +75,10 @@ func dispatchOutbox(ctx context.Context, q *repo.Queries) error {
 	for _, it := range items {
 		var p map[string]string
 		_ = json.Unmarshal(it.Payload, &p)
+		if shouldSkipNotif(ctx, q, p["user_id"], it.Topic) {
+			slog.Info("outbox skipped by prefs", "id", it.ID, "topic", it.Topic)
+			continue
+		}
 		switch it.Topic {
 		case "notify.new_follower":
 			_, _ = q.CreateNotification(ctx, repo.CreateNotificationParams{

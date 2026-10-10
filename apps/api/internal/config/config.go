@@ -30,6 +30,10 @@ type JWTConfig struct {
 	CSRFSalt                               string
 }
 
+type TurnstileConfig struct {
+	SiteKey, SecretKey string
+}
+
 type AdminSeed struct {
 	Email, Password string
 }
@@ -41,6 +45,7 @@ type Config struct {
 	S3     S3Config
 	Cache  DragonflyConfig
 	JWT    JWTConfig
+	Turn   TurnstileConfig
 	Admin  AdminSeed
 }
 
@@ -101,6 +106,10 @@ func Load() (*Config, error) {
 			Email:    getEnv("ADMIN_SEED_EMAIL", "admin@grafikarsa.com"),
 			Password: getEnv("ADMIN_SEED_PASSWORD", ""),
 		},
+		Turn: TurnstileConfig{
+			SiteKey:   getEnv("TURNSTILE_SITE_KEY", ""),
+			SecretKey: getEnv("TURNSTILE_SECRET_KEY", ""),
+		},
 	}
 
 	if cfg.AppEnv == "production" {
@@ -129,3 +138,5 @@ func (c *Config) CacheAddr() string {
 }
 
 func (c *JWTConfig) CSRFSecret() string { return c.CSRFSalt }
+
+func (c *Config) TurnstileSecret() string { return c.Turn.SecretKey }

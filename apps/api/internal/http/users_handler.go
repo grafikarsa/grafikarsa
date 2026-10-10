@@ -23,6 +23,27 @@ type updatePasswordRequest struct {
 	New     string `json:"new_password" validate:"required,min=10,max=128"`
 }
 
+func passwordStrong(pw string) (bool, string) {
+	if len(pw) < 10 {
+		return false, "Minimal 10 karakter."
+	}
+	var hasUpper, hasLower, hasDigit bool
+	for _, r := range pw {
+		switch {
+		case r >= 'A' && r <= 'Z':
+			hasUpper = true
+		case r >= 'a' && r <= 'z':
+			hasLower = true
+		case r >= '0' && r <= '9':
+			hasDigit = true
+		}
+	}
+	if !hasUpper || !hasLower || !hasDigit {
+		return false, "Harus ada huruf besar, kecil, dan angka."
+	}
+	return true, ""
+}
+
 func (a *App) handleMe(w http.ResponseWriter, r *http.Request) {
 	u, err := a.Q.GetUserByID(r.Context(), mustUUID(UserID(r)))
 	if err != nil {
@@ -192,6 +213,10 @@ func (a *App) handleUpdatePassword(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := validate.Struct(req); err != nil {
 		writeJSON(w, http.StatusUnprocessableEntity, failDetails("VALIDATION_ERROR", "Password tidak valid.", []map[string]string{{"field": "new_password", "message": "Minimal 10 karakter."}}, r))
+		return
+	}
+	if ok, msg := passwordStrong(req.New); !ok {
+		writeJSON(w, http.StatusUnprocessableEntity, failDetails("VALIDATION_ERROR", "Password lemah.", []map[string]string{{"field": "new_password", "message": msg}}, r))
 		return
 	}
 	u, err := a.Q.GetUserByID(r.Context(), mustUUID(UserID(r)))

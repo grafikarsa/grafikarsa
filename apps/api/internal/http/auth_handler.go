@@ -1,9 +1,14 @@
 package http
 
 import (
+	"context"
+	"encoding/json"
+	"grafikarsa/api/internal/config"
 	"grafikarsa/api/internal/repo"
 	"net/http"
+	"net/url"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -39,13 +44,19 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 	ip := clientIP(r)
 
 	failKey := "login:fail:" + req.Username + ":" + ip
+	lockKey := "login:lock:" + req.Username + ":" + ip
+	if locked, _ := a.Cache.Exists(ctx, lockKey); locked {
+		writeJSON(w, http.StatusTooManyRequests, fail("ACCOUNT_LOCKED", "Terkunci 30 menit karena terlalu banyak percobaan.", r))
+		return
+	}
 	n, _ := a.Cache.IncrWithExpire(ctx, failKey, 10*time.Minute)
 	if n > 10 {
+		_ = a.Cache.Set(ctx, lockKey, "1", 30*time.Minute)
 		audit(ctx, a.Q, "", "login_locked", ip, r.UserAgent())
 		writeJSON(w, http.StatusTooManyRequests, fail("ACCOUNT_LOCKED", "Terlalu banyak percobaan. Coba lagi 30 menit.", r))
 		return
 	}
-	if n > 5 && !verifyTurnstile(a.Cfg, req.CsrfToken) {
+	if n > 5 && !verifyTurnstile(r.Context(), a.Cfg, req.CsrfToken) {
 		writeJSON(w, http.StatusTooManyRequests, fail("CAPTCHA_REQUIRED", "Verifikasi keamanan diperlukan.", r))
 		return
 	}
@@ -248,6 +259,33 @@ func (a *App) handleDeleteSession(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Sesi tidak ditemukan.", r))
 }
 
-func verifyTurnstile(cfg interface{}, token string) bool { return token != "" }
+func verifyTurnstile(ctx context.Context, cfg *config.Config, token string) bool {
+	secret := cfg.TurnstileSecret()
+	if secret == "" {
+		return token != ""
+	}
+	if token == "" {
+		return false
+	}
+	form := url.Values{"secret": {secret}, "response": {token}}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://challenges.cloudflare.com/turnstile/v0/siteverify", strings.NewReader(form.Encode()))
+	if err != nil {
+		return false
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	client := &http.Client{Timeout: 5 * time.Second}
+	res, err := client.Do(req)
+	if err != nil {
+		return false
+	}
+	defer res.Body.Close()
+	var out struct {
+		Success bool `json:"success"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
+		return false
+	}
+	return out.Success
+}
 
 func verifyBcrypt(pw, hash string) bool { return checkBcrypt(pw, hash) }

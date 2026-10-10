@@ -1,9 +1,31 @@
 package main
 
 import (
+	"context"
+
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/shopspring/decimal"
+	"grafikarsa/api/internal/repo"
 )
+
+func shouldSkipNotif(ctx context.Context, q *repo.Queries, userID, topic string) bool {
+	if userID == "" {
+		return false
+	}
+	pref, err := q.GetNotifPrefs(ctx, mustUUID(userID))
+	if err != nil {
+		return false
+	}
+	switch topic {
+	case "notify.portfolio_liked":
+		return !pref.PortfolioLiked
+	case "notify.new_comment", "notify.reply_comment":
+		return !pref.NewComment
+	case "notify.new_follower":
+		return !pref.NewFollower
+	}
+	return false
+}
 
 func mustUUID(s string) pgtype.UUID {
 	var v pgtype.UUID
