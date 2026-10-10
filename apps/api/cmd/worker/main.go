@@ -61,8 +61,18 @@ func main() {
 			slog.Error("cleanup-media", "err", err)
 			os.Exit(1)
 		}
+	case "publish-changelogs":
+		if err := publishChangelogs(ctx, q); err != nil {
+			slog.Error("publish-changelogs", "err", err)
+			os.Exit(1)
+		}
+	case "retention":
+		if err := retention(ctx, q); err != nil {
+			slog.Error("retention", "err", err)
+			os.Exit(1)
+		}
 	default:
-		fmt.Fprintln(os.Stderr, "usage: worker [outbox|stats|leaderboard|cleanup-media]")
+		fmt.Fprintln(os.Stderr, "usage: worker [outbox|stats|leaderboard|cleanup-media|publish-changelogs|retention]")
 		os.Exit(1)
 	}
 }
@@ -121,6 +131,20 @@ func dispatchOutbox(ctx context.Context, q *repo.Queries) error {
 				Title: "Perlu perbaikan", Body: "Catatan: " + p["note"],
 				Data: it.Payload,
 			})
+		case "notify.feedback_updated":
+			_, _ = q.CreateNotification(ctx, repo.CreateNotificationParams{
+				UserID: mustUUID(p["user_id"]), Type: "feedback_updated",
+				Title: "Feedback diperbarui", Body: "Status: " + p["status"],
+				Data: it.Payload,
+			})
+		case "notify.announcement":
+			if p["user_id"] != "" {
+				_, _ = q.CreateNotification(ctx, repo.CreateNotificationParams{
+					UserID: mustUUID(p["user_id"]), Type: "announcement",
+					Title: "Pengumuman", Body: p["message"],
+					Data: it.Payload,
+				})
+			}
 		}
 		slog.Info("outbox sent", "id", it.ID, "topic", it.Topic)
 	}
@@ -341,3 +365,36 @@ func cleanupMedia(ctx context.Context, q *repo.Queries, cfg *config.Config) erro
 }
 
 func newStorage(cfg *config.Config) *storage.Storage { return storage.New(cfg) }
+
+func notifPayload(m map[string]string) []byte {
+	b, _ := json.Marshal(m)
+	return b
+}
+
+func publishChangelogs(ctx context.Context, q *repo.Queries) error {
+	rows, err := q.PublishDueChangelogs(ctx)
+	if err != nil {
+		return err
+	}
+	for _, c := range rows {
+		_, _ = q.EnqueueOutbox(ctx, repo.EnqueueOutboxParams{
+			Topic:   "notify.announcement",
+			Payload: notifPayload(map[string]string{"kind": "changelog_published", "changelog_id": uuidStr(c.ID), "version": c.Version}),
+		})
+		slog.Info("changelog published", "version", c.Version)
+	}
+	// announcement fanout: kirim ke semua user aktif (batch via notif langsung, bukan per-user outbox meledak).
+	// Fase 3: fanout sederhana — outbox dispatcher menangani per-user saat dibaca? Tidak.
+	// Dipilih: notif broadcast dibuat saat user buka /changelogs (mark read) + badge unread count.
+	// Jadi di sini cukup publish status; fanout push menyusul Fase 4 bila perlu.
+	slog.Info("publish-changelogs done", "count", len(rows))
+	return nil
+}
+
+func retention(ctx context.Context, q *repo.Queries) error {
+	if err := q.DeleteOldReadNotifications(ctx); err != nil {
+		return err
+	}
+	slog.Info("retention done")
+	return nil
+}
