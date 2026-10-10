@@ -14,6 +14,7 @@ const LINKS: { href: string; label: string }[] = [
   { href: "/portfolios", label: "Karya" },
   { href: "/leaderboards", label: "Peringkat" },
   { href: "/users", label: "Warga" },
+  { href: "/search", label: "Cari" },
   { href: "/changelog", label: "Changelog" },
 ];
 

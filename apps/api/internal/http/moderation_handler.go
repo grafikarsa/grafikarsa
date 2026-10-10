@@ -225,9 +225,13 @@ func nullIfEmpty(s string) any {
 	return s
 }
 
+// blockTypeAllowed: daftar tipe block yang boleh dipakai template series.
+// Dipakai juga oleh handler admin; 'heading'/'gallery'/'code' adalah alias
+// normalisasi dari migrasi.
 func blockTypeAllowed(t string) string {
 	switch t {
-	case "text", "image", "table", "youtube", "button", "embed", "figma", "canva", "ppt", "pdf", "doc", "heading", "gallery", "code":
+	case "text", "image", "table", "youtube", "button", "link",
+		"embed", "figma", "canva", "ppt", "pdf", "doc":
 		return t
 	}
 	return ""

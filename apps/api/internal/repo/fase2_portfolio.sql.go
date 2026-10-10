@@ -120,6 +120,36 @@ func (q *Queries) CountPortfoliosForAdmin(ctx context.Context, arg CountPortfoli
 	return count, err
 }
 
+const countPublishedFiltered = `-- name: CountPublishedFiltered :one
+SELECT COUNT(*) FROM portfolios p JOIN users u ON u.id = p.owner_id
+WHERE p.status = 'published' AND p.deleted_at IS NULL
+  AND ($1::text = '' OR u.username = $1)
+  AND ($2::text = '' OR u.major_id::text = $2)
+  AND ($3::uuid IS NULL OR EXISTS (
+        SELECT 1 FROM portfolio_tags pt WHERE pt.portfolio_id = p.id AND pt.tag_id = $3))
+  AND ($4::text = '' OR p.title ILIKE '%' || $4 || '%' OR p.slug ILIKE '%' || $4 || '%'
+       OR u.name ILIKE '%' || $4 || '%')
+`
+
+type CountPublishedFilteredParams struct {
+	Column1 string      `json:"column_1"`
+	Column2 string      `json:"column_2"`
+	Column3 pgtype.UUID `json:"column_3"`
+	Column4 string      `json:"column_4"`
+}
+
+func (q *Queries) CountPublishedFiltered(ctx context.Context, arg CountPublishedFilteredParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countPublishedFiltered,
+		arg.Column1,
+		arg.Column2,
+		arg.Column3,
+		arg.Column4,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countPublishedPortfolios = `-- name: CountPublishedPortfolios :one
 SELECT COUNT(*) FROM portfolios WHERE status = 'published' AND deleted_at IS NULL
 `
@@ -898,6 +928,86 @@ func (q *Queries) ListPortfoliosForAdmin(ctx context.Context, arg ListPortfolios
 			&i.Username,
 			&i.OwnerName,
 			&i.MajorID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPublishedFiltered = `-- name: ListPublishedFiltered :many
+SELECT p.id, p.owner_id, p.title, p.slug, p.thumbnail_media_id, p.published_at,
+  u.username, u.name AS owner_name
+FROM portfolios p
+JOIN users u ON u.id = p.owner_id
+LEFT JOIN portfolio_stats ps ON ps.portfolio_id = p.id
+WHERE p.status = 'published' AND p.deleted_at IS NULL
+  AND ($1::text = '' OR u.username = $1)
+  AND ($2::text = '' OR u.major_id::text = $2)
+  AND ($3::uuid IS NULL OR EXISTS (
+        SELECT 1 FROM portfolio_tags pt WHERE pt.portfolio_id = p.id AND pt.tag_id = $3))
+  AND ($4::text = '' OR p.title ILIKE '%' || $4 || '%' OR p.slug ILIKE '%' || $4 || '%'
+       OR u.name ILIKE '%' || $4 || '%')
+ORDER BY
+  CASE WHEN $5 = 'top' THEN COALESCE(ps.trending, 0) END DESC NULLS LAST,
+  CASE WHEN $5 = 'relevance' AND $4 <> '' THEN ts_rank(p.search_tsv, plainto_tsquery('simple', $4)) END DESC NULLS LAST,
+  p.published_at DESC
+LIMIT $6 OFFSET $7
+`
+
+type ListPublishedFilteredParams struct {
+	Column1 string      `json:"column_1"`
+	Column2 string      `json:"column_2"`
+	Column3 pgtype.UUID `json:"column_3"`
+	Column4 string      `json:"column_4"`
+	Column5 interface{} `json:"column_5"`
+	Limit   int32       `json:"limit"`
+	Offset  int32       `json:"offset"`
+}
+
+type ListPublishedFilteredRow struct {
+	ID               pgtype.UUID        `json:"id"`
+	OwnerID          pgtype.UUID        `json:"owner_id"`
+	Title            string             `json:"title"`
+	Slug             string             `json:"slug"`
+	ThumbnailMediaID pgtype.UUID        `json:"thumbnail_media_id"`
+	PublishedAt      pgtype.Timestamptz `json:"published_at"`
+	Username         string             `json:"username"`
+	OwnerName        string             `json:"owner_name"`
+}
+
+// Katalog publik dengan filter GABUNGAN (user, major, tag, search) + sort.
+// Tag memakai EXISTS agar tidak menggandakan baris portfolio multi-tag.
+func (q *Queries) ListPublishedFiltered(ctx context.Context, arg ListPublishedFilteredParams) ([]ListPublishedFilteredRow, error) {
+	rows, err := q.db.Query(ctx, listPublishedFiltered,
+		arg.Column1,
+		arg.Column2,
+		arg.Column3,
+		arg.Column4,
+		arg.Column5,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPublishedFilteredRow{}
+	for rows.Next() {
+		var i ListPublishedFilteredRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.OwnerID,
+			&i.Title,
+			&i.Slug,
+			&i.ThumbnailMediaID,
+			&i.PublishedAt,
+			&i.Username,
+			&i.OwnerName,
 		); err != nil {
 			return nil, err
 		}

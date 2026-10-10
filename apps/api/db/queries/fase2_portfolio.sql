@@ -199,3 +199,34 @@ VALUES ($1, $2, $3, $4, TRUE) RETURNING id;
 -- Satu query untuk semua kandidat feed (hindari N+1 ListPortfolioTags).
 SELECT pt.portfolio_id, t.id, t.slug, t.name FROM tags t
 JOIN portfolio_tags pt ON pt.tag_id = t.id WHERE pt.portfolio_id = ANY($1::uuid[]) ORDER BY t.name;
+
+-- name: ListPublishedFiltered :many
+-- Katalog publik dengan filter GABUNGAN (user, major, tag, search) + sort.
+-- Tag memakai EXISTS agar tidak menggandakan baris portfolio multi-tag.
+SELECT p.id, p.owner_id, p.title, p.slug, p.thumbnail_media_id, p.published_at,
+  u.username, u.name AS owner_name
+FROM portfolios p
+JOIN users u ON u.id = p.owner_id
+LEFT JOIN portfolio_stats ps ON ps.portfolio_id = p.id
+WHERE p.status = 'published' AND p.deleted_at IS NULL
+  AND ($1::text = '' OR u.username = $1)
+  AND ($2::text = '' OR u.major_id::text = $2)
+  AND ($3::uuid IS NULL OR EXISTS (
+        SELECT 1 FROM portfolio_tags pt WHERE pt.portfolio_id = p.id AND pt.tag_id = $3))
+  AND ($4::text = '' OR p.title ILIKE '%' || $4 || '%' OR p.slug ILIKE '%' || $4 || '%'
+       OR u.name ILIKE '%' || $4 || '%')
+ORDER BY
+  CASE WHEN $5 = 'top' THEN COALESCE(ps.trending, 0) END DESC NULLS LAST,
+  CASE WHEN $5 = 'relevance' AND $4 <> '' THEN ts_rank(p.search_tsv, plainto_tsquery('simple', $4)) END DESC NULLS LAST,
+  p.published_at DESC
+LIMIT $6 OFFSET $7;
+
+-- name: CountPublishedFiltered :one
+SELECT COUNT(*) FROM portfolios p JOIN users u ON u.id = p.owner_id
+WHERE p.status = 'published' AND p.deleted_at IS NULL
+  AND ($1::text = '' OR u.username = $1)
+  AND ($2::text = '' OR u.major_id::text = $2)
+  AND ($3::uuid IS NULL OR EXISTS (
+        SELECT 1 FROM portfolio_tags pt WHERE pt.portfolio_id = p.id AND pt.tag_id = $3))
+  AND ($4::text = '' OR p.title ILIKE '%' || $4 || '%' OR p.slug ILIKE '%' || $4 || '%'
+       OR u.name ILIKE '%' || $4 || '%');

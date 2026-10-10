@@ -40,10 +40,13 @@ func validateBlockPayload(blockType string, payload map[string]any) (string, boo
 		return "markdown 1-20000 karakter.", false
 	case "image":
 		mid, _ := payload["media_id"].(string)
-		alt, _ := payload["alt"].(string)
-		if mid == "" {
-			return "media_id wajib.", false
+		url, _ := payload["url"].(string)
+		// media_id (kanonis) ATAU url https (kompatibilitas hasil migrasi v1),
+		// sesuai packages/contracts/blocks/image.json.
+		if mid == "" && !strings.HasPrefix(url, "https://") {
+			return "media_id atau url https wajib.", false
 		}
+		alt, _ := payload["alt"].(string)
 		if len(alt) < 5 || len(alt) > 200 {
 			return "alt wajib 5-200 karakter.", false
 		}

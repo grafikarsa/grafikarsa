@@ -401,44 +401,18 @@ func (a *App) handleMyPortfolios(w http.ResponseWriter, r *http.Request) {
 func (a *App) handleListPublished(w http.ResponseWriter, r *http.Request) {
 	limit, offset, page := pageParams(r)
 	q := r.URL.Query()
-	search := q.Get("search")
-	tagID := q.Get("tag_id")
-	majorID := q.Get("major_id")
-	var rows []repo.FilterPublishedPortfoliosRow
-	var err error
-	var total int64
-	switch {
-	case search != "":
-		srows, e := a.Q.FilterBySearch(r.Context(), repo.FilterBySearchParams{Column1: toPgText(search), Limit: limit, Offset: offset})
-		err = e
-		for _, t := range srows {
-			rows = append(rows, repo.FilterPublishedPortfoliosRow(t))
-		}
-		total = int64(len(rows))
-	case tagID != "":
-		trows, e := a.Q.FilterByTag(r.Context(), repo.FilterByTagParams{TagID: mustUUID(tagID), Limit: limit, Offset: offset})
-		err = e
-		for _, t := range trows {
-			rows = append(rows, repo.FilterPublishedPortfoliosRow(t))
-		}
-		total = int64(len(rows))
-	case majorID != "":
-		mrows, e := a.Q.FilterByMajor(r.Context(), repo.FilterByMajorParams{MajorID: mustUUID(majorID), Limit: limit, Offset: offset})
-		err = e
-		for _, t := range mrows {
-			rows = append(rows, repo.FilterPublishedPortfoliosRow{
-				ID: t.ID, OwnerID: t.OwnerID, Title: t.Title, Slug: t.Slug,
-				ThumbnailMediaID: t.ThumbnailMediaID, PublishedAt: t.PublishedAt,
-				Username: t.Username, OwnerName: t.OwnerName,
-			})
-		}
-		total = int64(len(rows))
-	default:
-		rows, err = a.Q.FilterPublishedPortfolios(r.Context(), repo.FilterPublishedPortfoliosParams{
-			Column1: search, Limit: limit, Offset: offset,
-		})
-		total, _ = a.Q.CountFilteredPortfolios(r.Context(), search)
+	filters := repo.ListPublishedFilteredParams{
+		Column1: q.Get("user"),
+		Column2: q.Get("major_id"),
+		Column4: q.Get("search"),
+		Column5: normalizeSort(q.Get("sort")),
+		Limit:   limit,
+		Offset:  offset,
 	}
+	if tagID := q.Get("tag_id"); tagID != "" {
+		filters.Column3 = mustUUID(tagID)
+	}
+	rows, err := a.Q.ListPublishedFiltered(r.Context(), filters)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal memuat.", r))
 		return
@@ -448,10 +422,26 @@ func (a *App) handleListPublished(w http.ResponseWriter, r *http.Request) {
 		out = append(out, map[string]any{
 			"id": uuidStr(p.ID), "title": p.Title, "slug": p.Slug,
 			"username": p.Username, "owner_name": p.OwnerName,
+			"published_at": p.PublishedAt.Time,
 		})
 	}
 	if out == nil {
 		out = []map[string]any{}
 	}
+	total, _ := a.Q.CountPublishedFiltered(r.Context(), repo.CountPublishedFilteredParams{
+		Column1: filters.Column1, Column2: filters.Column2,
+		Column3: filters.Column3, Column4: filters.Column4,
+	})
 	writeJSON(w, http.StatusOK, okMeta(out, meta(page, limit, total), r))
+}
+
+// normalizeSort membatasi nilai sort ke daftar yang dikenal (anti cache/plan
+// injection dan agar perilaku FE dapat diprediksi).
+func normalizeSort(v string) string {
+	switch v {
+	case "top", "relevance", "latest":
+		return v
+	default:
+		return "latest"
+	}
 }
