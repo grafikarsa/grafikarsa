@@ -130,10 +130,22 @@ DELETE FROM notifications WHERE id = $1 AND user_id = $2;
 INSERT INTO outbox (topic, payload) VALUES ($1, $2) RETURNING id;
 
 -- name: ClaimOutbox :many
-UPDATE outbox SET status = 'sent' WHERE id IN (
+-- Tandai 'processing' (bukan 'sent') supaya crash tidak menghilangkan event.
+UPDATE outbox SET status = 'processing', attempts = attempts + 1,
+  next_retry_at = NOW() + INTERVAL '5 minutes'
+WHERE id IN (
   SELECT id FROM outbox WHERE status = 'pending' AND next_retry_at <= NOW()
   ORDER BY id ASC LIMIT 50 FOR UPDATE SKIP LOCKED
-) RETURNING id, topic, payload;
+) RETURNING id, topic, payload, attempts;
+
+-- name: MarkOutboxSent :exec
+UPDATE outbox SET status = 'sent' WHERE id = $1;
+
+-- name: MarkOutboxFailed :exec
+UPDATE outbox
+SET status = CASE WHEN attempts >= 5 THEN 'failed' ELSE 'pending' END,
+    next_retry_at = NOW() + (attempts * INTERVAL '1 minute')
+WHERE id = $1;
 
 -- name: UpsertPortfolioStats :exec
 INSERT INTO portfolio_stats (portfolio_id, likes, views_7d, views_30d, comments, assessment_avg, quality, engagement, trending)
@@ -288,3 +300,18 @@ LEFT JOIN portfolio_likes pl ON pl.portfolio_id = p.id
 LEFT JOIN comments c ON c.portfolio_id = p.id AND c.deleted_at IS NULL
 WHERE p.status = 'published' AND p.deleted_at IS NULL
 GROUP BY p.id;
+
+-- name: ListModeratorIDs :many
+SELECT id FROM users
+WHERE deleted_at IS NULL AND is_active = TRUE
+  AND (role_primary = 'admin' OR (role_primary = 'admin_jurusan' AND ($1::text = '' OR major_id::text = $1)));
+
+-- name: ListAudienceUserIDs :many
+SELECT id FROM users
+WHERE deleted_at IS NULL AND is_active = TRUE
+  AND (
+    $1::text = 'all'
+    OR ($1::text = 'siswa' AND role_primary = 'siswa')
+    OR ($1::text = 'guru' AND role_primary = 'guru')
+    OR ($1::text = 'admin' AND role_primary IN ('admin', 'admin_jurusan'))
+  );

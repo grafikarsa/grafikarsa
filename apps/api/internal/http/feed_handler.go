@@ -359,7 +359,14 @@ func (a *App) handleListNotifications(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) handleNotifCount(w http.ResponseWriter, r *http.Request) {
-	n, _ := a.Q.CountUnreadNotifications(r.Context(), mustUUID(UserID(r)))
+	uid := UserID(r)
+	key := "notifcount:" + uid
+	if cached, err := a.Cache.GetInt(r.Context(), key); err == nil && cached >= 0 {
+		writeJSON(w, http.StatusOK, ok(map[string]int64{"unread": cached}, r))
+		return
+	}
+	n, _ := a.Q.CountUnreadNotifications(r.Context(), mustUUID(uid))
+	_ = a.Cache.SetInt(r.Context(), key, n, time.Minute)
 	writeJSON(w, http.StatusOK, ok(map[string]int64{"unread": n}, r))
 }
 

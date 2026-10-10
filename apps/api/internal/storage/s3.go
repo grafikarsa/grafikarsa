@@ -28,6 +28,17 @@ func New(cfg *config.Config) *Storage {
 	return &Storage{client: client, bucket: cfg.S3.Bucket}
 }
 
+// EnsureBucket membuat bucket bila belum ada. Idempoten, aman dipanggil boot.
+func (s *Storage) EnsureBucket(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	if _, err := s.client.HeadBucket(ctx, &s3.HeadBucketInput{Bucket: aws.String(s.bucket)}); err == nil {
+		return nil
+	}
+	_, err := s.client.CreateBucket(ctx, &s3.CreateBucketInput{Bucket: aws.String(s.bucket)})
+	return err
+}
+
 func (s *Storage) Health(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()

@@ -19,6 +19,19 @@ import (
 )
 
 func main() {
+	// Mode healthcheck untuk distroless (tanpa shell/curl):
+	//   /api -healthcheck  -> exit 0 bila /health 200.
+	if len(os.Args) > 1 && os.Args[1] == "-healthcheck" {
+		client := &http.Client{Timeout: 3 * time.Second}
+		res, err := client.Get("http://127.0.0.1:8080/health")
+		if err != nil || res.StatusCode != http.StatusOK {
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+
+	// Log JSON terstruktur (mudah di-parse docker logs/Loki).
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})))
 	cfg, err := config.Load()
 	if err != nil {
 		slog.Error("config", "err", err)
@@ -37,6 +50,9 @@ func main() {
 	defer c.Close()
 
 	st := storage.New(cfg)
+	if err := st.EnsureBucket(ctx); err != nil {
+		slog.Warn("storage: bucket belum siap", "err", err)
+	}
 	app := apiphttp.NewApp(cfg, repo.New(pool), c, st)
 	app.Tx = apiphttp.NewTxRunner(pool)
 

@@ -1,0 +1,133 @@
+name: deploy
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  REGISTRY: docker.io
+
+jobs:
+  derive-urls:
+    runs-on: ubuntu-latest
+    outputs:
+      scheme: ${{ steps.d.outputs.scheme }}
+      app_url: ${{ steps.d.outputs.app_url }}
+      api_url: ${{ steps.d.outputs.api_url }}
+    steps:
+      - id: d
+        env:
+          DOMAIN: ${{ secrets.DOMAIN }}
+        run: |
+          if [[ "$DOMAIN" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then SCHEME=http; else SCHEME=https; fi
+          echo "scheme=$SCHEME" >> "$GITHUB_OUTPUT"
+          echo "app_url=$SCHEME://$DOMAIN" >> "$GITHUB_OUTPUT"
+          echo "api_url=$SCHEME://$DOMAIN/api/v1" >> "$GITHUB_OUTPUT"
+
+  build-push:
+    needs: derive-urls
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build & push api + worker
+        uses: docker/build-push-action@v6
+        with:
+          context: ./apps/api
+          target: production
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-api:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-api:sha-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push web
+        uses: docker/build-push-action@v6
+        with:
+          context: ./apps/web
+          push: true
+          build-args: |
+            NEXT_PUBLIC_APP_URL=${{ needs.derive-urls.outputs.app_url }}
+            NEXT_PUBLIC_TURNSTILE_SITE_KEY=${{ secrets.TURNSTILE_SITE_KEY }}
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-web:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-web:sha-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Trivy scan (blocking on HIGH/CRITICAL fixable)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-api:sha-${{ github.sha }}
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+  deploy:
+    needs: [derive-urls, build-push]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${{ secrets.SSH_PORT }}" -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+      - name: Copy deploy files
+        run: |
+          ssh -p "${{ secrets.SSH_PORT }}" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "mkdir -p /opt/grafikarsa && chmod 700 /opt/grafikarsa"
+          scp -P "${{ secrets.SSH_PORT }}" docker-compose.deploy.yml Caddyfile \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/grafikarsa/"
+      - name: Backup + migrate + deploy (dengan rollback)
+        run: |
+          ssh -p "${{ secrets.SSH_PORT }}" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            'bash -s' <<'REMOTE'
+          set -euo pipefail
+          cd /opt/grafikarsa
+          DC="docker compose -f docker-compose.deploy.yml"
+          PREV_TAG=$(grep -E '^IMAGE_TAG=' .env | cut -d= -f2 || echo latest)
+
+          # 1. Backup sebelum menyentuh apa pun (DB + storage listing).
+          mkdir -p backup
+          if $DC ps --status running db >/dev/null 2>&1; then
+            $DC exec -T db pg_dump -Fc -U "${DB_USER:-grafikarsa}" "${DB_NAME:-grafikarsa}" \
+              > "backup/pre-deploy-$(date +%F-%H%M).dump" || echo "WARN: backup gagal, lanjut"
+          fi
+
+          # 2. Pull image baru.
+          echo "IMAGE_TAG=sha-${{ github.sha }}" > .deploy-env
+          $DC pull || { echo "FAIL: pull"; exit 1; }
+
+          # 3. Migrasi goose (one-off container, idempoten).
+          $DC run --rm --entrypoint /migrate api up || { echo "FAIL: migrate"; exit 1; }
+
+          # 4. Naikkan service.
+          $DC up -d || { echo "FAIL: up"; exit 1; }
+
+          # 5. Healthcheck 30x10s.
+          ok=0
+          for i in $(seq 1 30); do
+            if $DC exec -T proxy wget -qO- http://backend:8080/api/v1/health >/dev/null 2>&1; then ok=1; break; fi
+            sleep 10
+          done
+
+          # 6. Rollback bila gagal.
+          if [ "$ok" != "1" ]; then
+            echo "FAIL: healthcheck; rollback ke $PREV_TAG"
+            echo "IMAGE_TAG=$PREV_TAG" > .deploy-env
+            $DC up -d
+            exit 1
+          fi
+
+          # 7. Bersihkan image lama hanya bila deploy hijau.
+          docker image prune -f --filter "until=168h" >/dev/null 2>&1 || true
+          echo "DEPLOY OK"
+          REMOTE

@@ -66,3 +66,11 @@ func (c *Cache) IncrWithExpire(ctx context.Context, key string, ttl time.Duratio
 }
 
 func (c *Cache) Close() error { return c.rdb.Close() }
+
+func (c *Cache) GetInt(ctx context.Context, key string) (int64, error) {
+	return c.rdb.Get(ctx, key).Int64()
+}
+
+func (c *Cache) SetInt(ctx context.Context, key string, val int64, ttl time.Duration) error {
+	return c.rdb.Set(ctx, key, val, ttl).Err()
+}

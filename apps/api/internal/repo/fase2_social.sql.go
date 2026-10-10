@@ -13,18 +13,22 @@ import (
 )
 
 const claimOutbox = `-- name: ClaimOutbox :many
-UPDATE outbox SET status = 'sent' WHERE id IN (
+UPDATE outbox SET status = 'processing', attempts = attempts + 1,
+  next_retry_at = NOW() + INTERVAL '5 minutes'
+WHERE id IN (
   SELECT id FROM outbox WHERE status = 'pending' AND next_retry_at <= NOW()
   ORDER BY id ASC LIMIT 50 FOR UPDATE SKIP LOCKED
-) RETURNING id, topic, payload
+) RETURNING id, topic, payload, attempts
 `
 
 type ClaimOutboxRow struct {
-	ID      int64  `json:"id"`
-	Topic   string `json:"topic"`
-	Payload []byte `json:"payload"`
+	ID       int64  `json:"id"`
+	Topic    string `json:"topic"`
+	Payload  []byte `json:"payload"`
+	Attempts int32  `json:"attempts"`
 }
 
+// Tandai 'processing' (bukan 'sent') supaya crash tidak menghilangkan event.
 func (q *Queries) ClaimOutbox(ctx context.Context) ([]ClaimOutboxRow, error) {
 	rows, err := q.db.Query(ctx, claimOutbox)
 	if err != nil {
@@ -34,7 +38,12 @@ func (q *Queries) ClaimOutbox(ctx context.Context) ([]ClaimOutboxRow, error) {
 	items := []ClaimOutboxRow{}
 	for rows.Next() {
 		var i ClaimOutboxRow
-		if err := rows.Scan(&i.ID, &i.Topic, &i.Payload); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Topic,
+			&i.Payload,
+			&i.Attempts,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -756,6 +765,37 @@ func (q *Queries) LikePortfolio(ctx context.Context, arg LikePortfolioParams) er
 	return err
 }
 
+const listAudienceUserIDs = `-- name: ListAudienceUserIDs :many
+SELECT id FROM users
+WHERE deleted_at IS NULL AND is_active = TRUE
+  AND (
+    $1::text = 'all'
+    OR ($1::text = 'siswa' AND role_primary = 'siswa')
+    OR ($1::text = 'guru' AND role_primary = 'guru')
+    OR ($1::text = 'admin' AND role_primary IN ('admin', 'admin_jurusan'))
+  )
+`
+
+func (q *Queries) ListAudienceUserIDs(ctx context.Context, dollar_1 string) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, listAudienceUserIDs, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.UUID{}
+	for rows.Next() {
+		var id pgtype.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listComments = `-- name: ListComments :many
 SELECT c.id, c.portfolio_id, c.author_id, c.parent_id, c.body_md, c.body_html,
   c.is_edited, c.created_at, u.username, u.name AS author_name
@@ -914,6 +954,32 @@ func (q *Queries) ListFollowingIDs(ctx context.Context, followerID pgtype.UUID) 
 	return items, nil
 }
 
+const listModeratorIDs = `-- name: ListModeratorIDs :many
+SELECT id FROM users
+WHERE deleted_at IS NULL AND is_active = TRUE
+  AND (role_primary = 'admin' OR (role_primary = 'admin_jurusan' AND ($1::text = '' OR major_id::text = $1)))
+`
+
+func (q *Queries) ListModeratorIDs(ctx context.Context, dollar_1 string) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, listModeratorIDs, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.UUID{}
+	for rows.Next() {
+		var id pgtype.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listNotifications = `-- name: ListNotifications :many
 SELECT id, user_id, type, title, body, data, is_read, read_at, created_at
 FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3
@@ -975,6 +1041,27 @@ type MarkNotificationReadParams struct {
 
 func (q *Queries) MarkNotificationRead(ctx context.Context, arg MarkNotificationReadParams) error {
 	_, err := q.db.Exec(ctx, markNotificationRead, arg.ID, arg.UserID)
+	return err
+}
+
+const markOutboxFailed = `-- name: MarkOutboxFailed :exec
+UPDATE outbox
+SET status = CASE WHEN attempts >= 5 THEN 'failed' ELSE 'pending' END,
+    next_retry_at = NOW() + (attempts * INTERVAL '1 minute')
+WHERE id = $1
+`
+
+func (q *Queries) MarkOutboxFailed(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, markOutboxFailed, id)
+	return err
+}
+
+const markOutboxSent = `-- name: MarkOutboxSent :exec
+UPDATE outbox SET status = 'sent' WHERE id = $1
+`
+
+func (q *Queries) MarkOutboxSent(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, markOutboxSent, id)
 	return err
 }
 

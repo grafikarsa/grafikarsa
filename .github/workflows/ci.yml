@@ -4,22 +4,32 @@ on:
   pull_request:
 
 jobs:
-  lint-test-build-api:
+  api:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
-      - run: gofmt -l ./apps/api
-      - run: go vet ./apps/api/...
+          go-version: "1.26"
+          cache-dependency-path: apps/api/go.sum
+      - name: gofmt (gate)
         working-directory: apps/api
-      - run: go test ./...
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "File tidak terformat:"; echo "$unformatted"; exit 1
+          fi
+      - name: go vet
         working-directory: apps/api
-      - run: go build ./...
+        run: go vet ./...
+      - name: go test (race)
         working-directory: apps/api
+        run: go test -race ./...
+      - name: go build
+        working-directory: apps/api
+        run: go build ./...
 
-  lint-typecheck-build-web:
+  web:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,7 +43,30 @@ jobs:
         working-directory: apps/web
       - run: pnpm exec tsc --noEmit
         working-directory: apps/web
-      - run: pnpm exec next lint
+      - run: pnpm exec eslint .
         working-directory: apps/web
       - run: pnpm build
         working-directory: apps/web
+
+  secrets-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  compose-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validasi compose + env example
+        run: |
+          cp .env.example .env
+          docker compose -f docker-compose.yml config >/dev/null
+          docker compose -f docker-compose.prod.yml config >/dev/null
+          docker compose -f docker-compose.deploy.yml config >/dev/null
+          echo "compose OK"

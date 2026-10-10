@@ -94,6 +94,7 @@ func dispatchOutbox(ctx context.Context, q *repo.Queries) error {
 		_ = json.Unmarshal(it.Payload, &p)
 		if shouldSkipNotif(ctx, q, p["user_id"], it.Topic) {
 			slog.Info("outbox skipped by prefs", "id", it.ID, "topic", it.Topic)
+			_ = q.MarkOutboxSent(ctx, it.ID)
 			continue
 		}
 		switch it.Topic {
@@ -155,8 +156,15 @@ func dispatchOutbox(ctx context.Context, q *repo.Queries) error {
 		case "job.leaderboard_recompute":
 			if err := recomputeLeaderboard(ctx, q); err != nil {
 				slog.Error("leaderboard recompute", "err", err)
+				_ = q.MarkOutboxFailed(ctx, it.ID)
+				continue
 			}
+		case "portfolio.submitted":
+			notifyModerators(ctx, q, p["portfolio_id"])
+		case "notify.changelog_published":
+			fanoutChangelog(ctx, q, p)
 		}
+		_ = q.MarkOutboxSent(ctx, it.ID)
 		slog.Info("outbox sent", "id", it.ID, "topic", it.Topic)
 	}
 	slog.Info("outbox done", "count", len(items))
@@ -409,6 +417,52 @@ func cleanupMedia(ctx context.Context, q *repo.Queries, cfg *config.Config) erro
 
 func newStorage(cfg *config.Config) *storage.Storage { return storage.New(cfg) }
 
+// notifyModerators: beri tahu admin + admin_jurusan terkait saat portfolio
+// masuk antrean review (bukan hanya menunggu mereka membuka dashboard).
+func notifyModerators(ctx context.Context, q *repo.Queries, portfolioID string) {
+	p, err := q.GetPortfolioByID(ctx, mustUUID(portfolioID))
+	if err != nil {
+		return
+	}
+	owner, _ := q.GetUserByID(ctx, p.OwnerID)
+	major := ""
+	if owner.MajorID.Valid {
+		major = uuidStr(owner.MajorID)
+	}
+	mods, err := q.ListModeratorIDs(ctx, major)
+	if err != nil {
+		return
+	}
+	data, _ := json.Marshal(map[string]string{"portfolio_id": portfolioID, "owner": owner.Username})
+	for _, m := range mods {
+		_, _ = q.CreateNotification(ctx, repo.CreateNotificationParams{
+			UserID: m, Type: "announcement",
+			Title: "Portfolio menunggu review",
+			Body:  owner.Name + " mengirim \"" + p.Title + "\" untuk direview.",
+			Data:  data,
+		})
+	}
+	slog.Info("moderator notified", "portfolio", portfolioID, "count", len(mods))
+}
+
+// fanoutChangelog: kirim pengumuman rilis ke user sesuai audience.
+func fanoutChangelog(ctx context.Context, q *repo.Queries, p map[string]string) {
+	ids, err := q.ListAudienceUserIDs(ctx, p["audience"])
+	if err != nil {
+		return
+	}
+	data, _ := json.Marshal(map[string]string{"version": p["version"], "changelog_id": p["changelog_id"]})
+	for _, uid := range ids {
+		_, _ = q.CreateNotification(ctx, repo.CreateNotificationParams{
+			UserID: uid, Type: "announcement",
+			Title: "Grafikarsa " + p["version"] + " rilis",
+			Body:  "Ada pembaruan platform. Lihat changelog untuk detailnya.",
+			Data:  data,
+		})
+	}
+	slog.Info("changelog fanout", "version", p["version"], "count", len(ids))
+}
+
 func notifPayload(m map[string]string) []byte {
 	b, _ := json.Marshal(m)
 	return b
@@ -421,8 +475,8 @@ func publishChangelogs(ctx context.Context, q *repo.Queries) error {
 	}
 	for _, c := range rows {
 		_, _ = q.EnqueueOutbox(ctx, repo.EnqueueOutboxParams{
-			Topic:   "notify.announcement",
-			Payload: notifPayload(map[string]string{"kind": "changelog_published", "changelog_id": uuidStr(c.ID), "version": c.Version}),
+			Topic:   "notify.changelog_published",
+			Payload: notifPayload(map[string]string{"kind": "changelog_published", "changelog_id": uuidStr(c.ID), "version": c.Version, "audience": c.Audience}),
 		})
 		slog.Info("changelog published", "version", c.Version)
 	}

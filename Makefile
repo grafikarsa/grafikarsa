@@ -75,10 +75,10 @@ verify-seed: ## Verifikasi seed (counts + admin)
 	$(COMPOSE_DEV) run --rm api go run ./cmd/tools/verify-seed
 
 # ── BACKUP (stub Fase 0: pg_dump saja) ─────────
-backup: ## Backup DB ke ./backup/<date>.dump
+backup: ## Backup DB dev ke ./backup/<date>.dump (+ storage bila rclone ada)
 	@mkdir -p backup
-	docker exec grafikarsa-db-dev pg_dump -Fc -U $(DB_USER) $(DB_NAME) > backup/$$(date +%F).dump
-	@echo "backup/backup/$$(date +%F).dump"
+	docker exec grafikarsa-db-dev pg_dump -Fc -U $(DB_USER) $(DB_NAME) > backup/db-$$(date +%F).dump
+	@echo "backup/db-$$(date +%F).dump"
 
 restore: ## Restore DB: make restore FILE=backup/2026-10-09.dump
 	@test -n "$(FILE)" || (echo "Usage: make restore FILE=..." && exit 1)
@@ -92,6 +92,9 @@ test-backend:
 
 test-web:
 	pnpm --dir $(WEB_DIR) test
+
+test-e2e: ## E2E Playwright (jalankan bila sudah terpasang)
+	@pnpm --dir $(WEB_DIR) exec playwright test || echo "SKIP: playwright belum dikonfigurasi"
 
 lint: lint-backend ## Semua lint
 

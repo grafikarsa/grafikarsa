@@ -288,7 +288,7 @@ func (a *App) handlePublishChangelog(w http.ResponseWriter, r *http.Request) {
 	_ = a.Q.SetChangelogStatus(r.Context(), repo.SetChangelogStatusParams{ID: c.ID, Status: "published"})
 	_ = a.Q.MarkChangelogPublished(r.Context(), c.ID)
 	_, _ = a.Q.EnqueueOutbox(r.Context(), repo.EnqueueOutboxParams{
-		Topic:   "notify.announcement",
+		Topic:   "notify.changelog_published",
 		Payload: notifPayload(map[string]string{"kind": "changelog_published", "changelog_id": id, "version": c.Version, "audience": c.Audience}),
 	})
 	auditLog(r, a, "changelog.publish", "changelogs", id, c.Version)
