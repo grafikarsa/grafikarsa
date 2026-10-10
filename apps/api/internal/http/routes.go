@@ -53,6 +53,29 @@ func (a *App) routes() http.Handler {
 		})
 		r.Route("/admin", func(r chi.Router) {
 			r.Use(a.authRequired)
+			r.Route("/portfolios", func(r chi.Router) {
+				r.Use(a.requirePerm("portfolios.view_all"))
+				r.Get("/", a.handleAdminListPortfolios)
+				r.Get("/pending", a.handleAdminPendingPortfolios)
+				r.Route("/{id}", func(r chi.Router) {
+					r.Get("/", a.handleAdminGetPortfolio)
+					r.With(a.requirePerm("portfolios.moderate")).Post("/approve", a.csrf(a.handleApprovePortfolio))
+					r.With(a.requirePerm("portfolios.moderate")).Post("/request-changes", a.csrf(a.handleRequestChanges))
+					r.With(a.requirePerm("portfolios.moderate")).Post("/reject", a.csrf(a.handleRejectPortfolio))
+				})
+			})
+			r.Route("/tags", func(r chi.Router) {
+				r.Use(a.requirePerm("tags.manage"))
+				r.Get("/", a.handleListTags)
+				r.Post("/", a.csrf(a.handleCreateTag))
+				r.Patch("/{id}", a.csrf(a.handleUpdateTag))
+				r.Delete("/{id}", a.csrf(a.handleDeleteTag))
+			})
+			r.Route("/series", func(r chi.Router) {
+				r.Use(a.requirePerm("series.manage"))
+				r.Get("/", a.handleListSeries)
+				r.Post("/", a.csrf(a.handleCreateSeries))
+			})
 			r.Route("/users", func(r chi.Router) {
 				r.Use(a.requirePerm("users.view"))
 				r.Get("/", a.handleAdminListUsers)
@@ -111,6 +134,43 @@ func (a *App) routes() http.Handler {
 			r.Get("/tags", a.handleListTags)
 			r.Get("/series", a.handleListSeries)
 			r.Get("/series/{id}", a.handleGetSeries)
+		})
+		r.Group(func(r chi.Router) {
+			r.Use(a.authRequired)
+			r.Post("/users/{username}/follow", a.csrf(a.handleFollow))
+			r.Delete("/users/{username}/follow", a.csrf(a.handleUnfollow))
+			r.Get("/users/{username}/followers", a.handleFollowers)
+			r.Get("/users/{username}/following", a.handleFollowing)
+			r.Post("/portfolios/id/{id}/like", a.csrf(a.handleLike))
+			r.Delete("/portfolios/id/{id}/like", a.csrf(a.handleUnlike))
+			r.Post("/portfolios/id/{id}/comments", a.csrf(a.handleCreateComment))
+			r.Delete("/comments/{id}", a.csrf(a.handleDeleteComment))
+		})
+		r.Group(func(r chi.Router) {
+			r.Use(a.authOptional)
+			r.Get("/portfolios/id/{id}/comments", a.handleListComments)
+		})
+		r.Group(func(r chi.Router) {
+			r.Use(a.authOptional)
+			r.Get("/feed", a.handleFeed)
+		})
+		r.Group(func(r chi.Router) {
+			r.Use(a.authRequired)
+			r.Get("/feed/preferences", a.handleGetFeedPrefs)
+			r.Put("/feed/preferences", a.csrf(a.handleUpdateFeedPrefs))
+		})
+		r.Group(func(r chi.Router) {
+			r.Use(a.authOptional)
+			r.Get("/leaderboards", a.handleLeaderboards)
+			r.Get("/search", a.handleSearch)
+		})
+		r.Group(func(r chi.Router) {
+			r.Use(a.authRequired)
+			r.Get("/notifications", a.handleListNotifications)
+			r.Get("/notifications/count", a.handleNotifCount)
+			r.Patch("/notifications/{id}/read", a.csrf(a.handleNotifRead))
+			r.Post("/notifications/read-all", a.csrf(a.handleNotifReadAll))
+			r.Delete("/notifications/{id}", a.csrf(a.handleNotifDelete))
 		})
 	})
 	return r

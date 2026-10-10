@@ -70,3 +70,17 @@ func publicUser(u repo.GetUserByUsernameRow) map[string]any {
 		"role_primary": u.RolePrimary, "status": u.Status,
 	}
 }
+
+func numericToFloat(v pgtype.Numeric) float64 {
+	if !v.Valid {
+		return 0
+	}
+	f, err := v.Float64Value()
+	if err != nil {
+		return 0
+	}
+	if !f.Valid {
+		return 0
+	}
+	return f.Float64
+}
