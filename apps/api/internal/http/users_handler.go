@@ -2,6 +2,7 @@ package http
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
@@ -104,6 +105,10 @@ func (a *App) handleUpdateMe(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusUnprocessableEntity, failDetails("VALIDATION_ERROR", "Username tidak valid.", []map[string]string{{"field": "username", "message": "3-30 karakter alfanumerik."}}, r))
 			return
 		}
+		if usernameReserved(*req.Username) {
+			writeJSON(w, http.StatusUnprocessableEntity, failDetails("VALIDATION_ERROR", "Username tidak tersedia.", []map[string]string{{"field": "username", "message": "Username ini dicadangkan sistem."}}, r))
+			return
+		}
 		n, _ := a.Q.CheckUsernameTaken(r.Context(), repo.CheckUsernameTakenParams{Username: *req.Username, ID: uid})
 		if n > 0 {
 			writeJSON(w, http.StatusConflict, fail("USERNAME_TAKEN", "Username sudah dipakai.", r))
@@ -122,8 +127,12 @@ func (a *App) handleUpdateMe(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) handleCheckUsername(w http.ResponseWriter, r *http.Request) {
+	if n, _ := a.Cache.IncrWithExpire(r.Context(), "chkuser:"+UserID(r), time.Minute); n > 30 {
+		writeJSON(w, http.StatusTooManyRequests, fail("TOO_MANY_REQUESTS", "Terlalu sering. Coba lagi sebentar.", r))
+		return
+	}
 	q := r.URL.Query().Get("username")
-	if !usernameRe.MatchString(q) {
+	if !usernameRe.MatchString(q) || usernameReserved(q) {
 		writeJSON(w, http.StatusOK, ok(map[string]bool{"available": false}, r))
 		return
 	}

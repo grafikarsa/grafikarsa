@@ -73,6 +73,10 @@ func (a *App) handleAdminCreateUser(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Admin jurusan hanya boleh buat siswa/guru.", r))
 		return
 	}
+	if usernameReserved(req.Username) {
+		writeJSON(w, http.StatusUnprocessableEntity, failDetails("VALIDATION_ERROR", "Username tidak tersedia.", []map[string]string{{"field": "username", "message": "Username ini dicadangkan sistem."}}, r))
+		return
+	}
 	var majorID = nilUUID()
 	if UserRole(r) == "admin_jurusan" && UserScope(r) != "" {
 		majorID = mustUUID(UserScope(r))

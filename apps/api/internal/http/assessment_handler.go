@@ -1,7 +1,9 @@
 package http
 
 import (
+	"crypto/rand"
 	"encoding/csv"
+	"math/big"
 	"net/http"
 	"strings"
 
@@ -145,8 +147,8 @@ func (a *App) handleImportStudents(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		username, email, name, role := strings.TrimSpace(row[0]), strings.TrimSpace(row[1]), strings.TrimSpace(row[2]), strings.TrimSpace(row[3])
-		if !usernameRe.MatchString(username) || name == "" {
-			errors = append(errors, "baris "+itoa(i+2)+": username/nama invalid")
+		if !usernameRe.MatchString(username) || name == "" || usernameReserved(username) {
+			errors = append(errors, "baris "+itoa(i+2)+": username/nama invalid atau dicadangkan")
 			continue
 		}
 		if role != "siswa" && role != "guru" {
@@ -170,11 +172,35 @@ func (a *App) handleImportStudents(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, ok(map[string]any{"created": created, "errors": errors, "dry_run": dryRun}, r))
 }
 
+// randomPassword: crypto/rand + pastikan ada huruf besar/kecil/angka
+// agar lolos passwordStrong().
 func randomPassword(n int) string {
-	const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = chars[i%len(chars)]
+	const lower = "abcdefghijklmnopqrstuvwxyz"
+	const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	const digits = "0123456789"
+	const all = lower + upper + digits
+	pick := func(set string) byte {
+		idx, err := rand.Int(rand.Reader, big.NewInt(int64(len(set))))
+		if err != nil {
+			return set[0]
+		}
+		return set[idx.Int64()]
 	}
-	return string(b) + "1A"
+	if n < 4 {
+		n = 12
+	}
+	b := make([]byte, n)
+	b[0], b[1], b[2] = pick(lower), pick(upper), pick(digits)
+	for i := 3; i < n; i++ {
+		b[i] = pick(all)
+	}
+	for i := len(b) - 1; i > 0; i-- {
+		j, err := rand.Int(rand.Reader, big.NewInt(int64(i+1)))
+		if err != nil {
+			break
+		}
+		k := j.Int64()
+		b[i], b[k] = b[k], b[i]
+	}
+	return string(b)
 }
