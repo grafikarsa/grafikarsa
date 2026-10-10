@@ -194,3 +194,22 @@ GROUP BY p.id;
 
 -- name: SuggestTags :many
 SELECT slug, name FROM tags WHERE similarity(name, $1) > 0.2 ORDER BY similarity(name, $1) DESC LIMIT 5;
+
+-- name: CountFollowers :one
+SELECT COUNT(*) FROM follows WHERE following_id = $1;
+
+-- name: CountFollowing :one
+SELECT COUNT(*) FROM follows WHERE follower_id = $1;
+
+-- name: CountUserPublished :one
+SELECT COUNT(*) FROM portfolios WHERE owner_id = $1 AND status = 'published' AND deleted_at IS NULL;
+
+-- name: ListFollowers :many
+SELECT u.id, u.username, u.name FROM users u
+JOIN follows f ON f.follower_id = u.id WHERE f.following_id = $1 AND u.deleted_at IS NULL
+ORDER BY f.created_at DESC LIMIT $2 OFFSET $3;
+
+-- name: ListFollowing :many
+SELECT u.id, u.username, u.name FROM users u
+JOIN follows f ON f.following_id = u.id WHERE f.follower_id = $1 AND u.deleted_at IS NULL
+ORDER BY f.created_at DESC LIMIT $2 OFFSET $3;

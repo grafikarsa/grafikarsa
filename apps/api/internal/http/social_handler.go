@@ -48,14 +48,6 @@ func (a *App) handleUnfollow(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "unfollowed"}, r))
 }
 
-func (a *App) handleFollowers(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, ok([]map[string]any{}, r))
-}
-
-func (a *App) handleFollowing(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, ok([]map[string]any{}, r))
-}
-
 func (a *App) handleLike(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	uid := UserID(r)

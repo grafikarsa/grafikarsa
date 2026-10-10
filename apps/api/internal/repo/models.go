@@ -102,11 +102,12 @@ type Leaderboards struct {
 
 // Master jurusan/program keahlian
 type Majors struct {
-	ID        pgtype.UUID        `json:"id"`
-	Code      string             `json:"code"`
-	Name      string             `json:"name"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	ID            pgtype.UUID        `json:"id"`
+	Code          string             `json:"code"`
+	Name          string             `json:"name"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	RequireSeries bool               `json:"require_series"`
 }
 
 // File upload; DB simpan object_key, bukan URL absolut
@@ -123,6 +124,14 @@ type MediaAssets struct {
 	Status         string             `json:"status"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	ConfirmedAt    pgtype.Timestamptz `json:"confirmed_at"`
+}
+
+type NotificationPreferences struct {
+	UserID         pgtype.UUID `json:"user_id"`
+	PortfolioLiked bool        `json:"portfolio_liked"`
+	NewComment     bool        `json:"new_comment"`
+	NewFollower    bool        `json:"new_follower"`
+	DigestDaily    bool        `json:"digest_daily"`
 }
 
 type Notifications struct {
@@ -297,6 +306,14 @@ type UserRoles struct {
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 }
 
+type UserSocialLinks struct {
+	ID        pgtype.UUID        `json:"id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	Platform  string             `json:"platform"`
+	Url       string             `json:"url"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
 // Akun; alumni = status lulus, bukan role
 type Users struct {
 	ID                 pgtype.UUID        `json:"id"`
@@ -317,4 +334,6 @@ type Users struct {
 	DeletedAt          pgtype.Timestamptz `json:"deleted_at"`
 	AvatarMediaID      pgtype.UUID        `json:"avatar_media_id"`
 	BannerMediaID      pgtype.UUID        `json:"banner_media_id"`
+	Bio                string             `json:"bio"`
+	ShowEmail          bool               `json:"show_email"`
 }

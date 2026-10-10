@@ -97,3 +97,7 @@ func toInt64(v any) int64 {
 		return 0
 	}
 }
+
+func isHTTPS(s string) bool {
+	return len(s) > 8 && s[:8] == "https://"
+}

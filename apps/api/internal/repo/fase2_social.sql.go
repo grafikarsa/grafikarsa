@@ -65,6 +65,28 @@ func (q *Queries) CountComments(ctx context.Context, portfolioID pgtype.UUID) (i
 	return count, err
 }
 
+const countFollowers = `-- name: CountFollowers :one
+SELECT COUNT(*) FROM follows WHERE following_id = $1
+`
+
+func (q *Queries) CountFollowers(ctx context.Context, followingID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countFollowers, followingID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countFollowing = `-- name: CountFollowing :one
+SELECT COUNT(*) FROM follows WHERE follower_id = $1
+`
+
+func (q *Queries) CountFollowing(ctx context.Context, followerID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countFollowing, followerID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countLikes = `-- name: CountLikes :one
 SELECT COUNT(*) FROM portfolio_likes WHERE portfolio_id = $1
 `
@@ -82,6 +104,17 @@ SELECT COUNT(*) FROM notifications WHERE user_id = $1 AND is_read = FALSE
 
 func (q *Queries) CountUnreadNotifications(ctx context.Context, userID pgtype.UUID) (int64, error) {
 	row := q.db.QueryRow(ctx, countUnreadNotifications, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countUserPublished = `-- name: CountUserPublished :one
+SELECT COUNT(*) FROM portfolios WHERE owner_id = $1 AND status = 'published' AND deleted_at IS NULL
+`
+
+func (q *Queries) CountUserPublished(ctx context.Context, ownerID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countUserPublished, ownerID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -667,6 +700,82 @@ func (q *Queries) ListComments(ctx context.Context, arg ListCommentsParams) ([]L
 			&i.Username,
 			&i.AuthorName,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listFollowers = `-- name: ListFollowers :many
+SELECT u.id, u.username, u.name FROM users u
+JOIN follows f ON f.follower_id = u.id WHERE f.following_id = $1 AND u.deleted_at IS NULL
+ORDER BY f.created_at DESC LIMIT $2 OFFSET $3
+`
+
+type ListFollowersParams struct {
+	FollowingID pgtype.UUID `json:"following_id"`
+	Limit       int32       `json:"limit"`
+	Offset      int32       `json:"offset"`
+}
+
+type ListFollowersRow struct {
+	ID       pgtype.UUID `json:"id"`
+	Username string      `json:"username"`
+	Name     string      `json:"name"`
+}
+
+func (q *Queries) ListFollowers(ctx context.Context, arg ListFollowersParams) ([]ListFollowersRow, error) {
+	rows, err := q.db.Query(ctx, listFollowers, arg.FollowingID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListFollowersRow{}
+	for rows.Next() {
+		var i ListFollowersRow
+		if err := rows.Scan(&i.ID, &i.Username, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listFollowing = `-- name: ListFollowing :many
+SELECT u.id, u.username, u.name FROM users u
+JOIN follows f ON f.following_id = u.id WHERE f.follower_id = $1 AND u.deleted_at IS NULL
+ORDER BY f.created_at DESC LIMIT $2 OFFSET $3
+`
+
+type ListFollowingParams struct {
+	FollowerID pgtype.UUID `json:"follower_id"`
+	Limit      int32       `json:"limit"`
+	Offset     int32       `json:"offset"`
+}
+
+type ListFollowingRow struct {
+	ID       pgtype.UUID `json:"id"`
+	Username string      `json:"username"`
+	Name     string      `json:"name"`
+}
+
+func (q *Queries) ListFollowing(ctx context.Context, arg ListFollowingParams) ([]ListFollowingRow, error) {
+	rows, err := q.db.Query(ctx, listFollowing, arg.FollowerID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListFollowingRow{}
+	for rows.Next() {
+		var i ListFollowingRow
+		if err := rows.Scan(&i.ID, &i.Username, &i.Name); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

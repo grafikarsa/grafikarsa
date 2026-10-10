@@ -27,6 +27,21 @@ func (q *Queries) AddRolePermission(ctx context.Context, arg AddRolePermissionPa
 	return err
 }
 
+const addSocialLink = `-- name: AddSocialLink :exec
+INSERT INTO user_social_links (user_id, platform, url) VALUES ($1, $2, $3) ON CONFLICT (user_id, platform) DO UPDATE SET url = EXCLUDED.url
+`
+
+type AddSocialLinkParams struct {
+	UserID   pgtype.UUID `json:"user_id"`
+	Platform string      `json:"platform"`
+	Url      string      `json:"url"`
+}
+
+func (q *Queries) AddSocialLink(ctx context.Context, arg AddSocialLinkParams) error {
+	_, err := q.db.Exec(ctx, addSocialLink, arg.UserID, arg.Platform, arg.Url)
+	return err
+}
+
 const assignUserRole = `-- name: AssignUserRole :exec
 INSERT INTO user_roles (user_id, role_id, scope_major_id, assigned_by, expires_at)
 VALUES ($1, $2, $3, $4, $5) ON CONFLICT (user_id, role_id) DO UPDATE SET scope_major_id = EXCLUDED.scope_major_id, expires_at = EXCLUDED.expires_at
@@ -49,6 +64,22 @@ func (q *Queries) AssignUserRole(ctx context.Context, arg AssignUserRoleParams) 
 		arg.ExpiresAt,
 	)
 	return err
+}
+
+const checkUsernameTaken = `-- name: CheckUsernameTaken :one
+SELECT COUNT(*) FROM users WHERE username = $1 AND id != $2 AND deleted_at IS NULL
+`
+
+type CheckUsernameTakenParams struct {
+	Username string      `json:"username"`
+	ID       pgtype.UUID `json:"id"`
+}
+
+func (q *Queries) CheckUsernameTaken(ctx context.Context, arg CheckUsernameTakenParams) (int64, error) {
+	row := q.db.QueryRow(ctx, checkUsernameTaken, arg.Username, arg.ID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const confirmMedia = `-- name: ConfirmMedia :exec
@@ -220,6 +251,71 @@ func (q *Queries) DeleteRole(ctx context.Context, id pgtype.UUID) error {
 	return err
 }
 
+const deleteSocialLinks = `-- name: DeleteSocialLinks :exec
+DELETE FROM user_social_links WHERE user_id = $1
+`
+
+func (q *Queries) DeleteSocialLinks(ctx context.Context, userID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteSocialLinks, userID)
+	return err
+}
+
+const getAuditLogs = `-- name: GetAuditLogs :many
+SELECT id, actor_id, action, entity, entity_id, created_at FROM audit_logs ORDER BY id DESC LIMIT $1 OFFSET $2
+`
+
+type GetAuditLogsParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+type GetAuditLogsRow struct {
+	ID        int64              `json:"id"`
+	ActorID   pgtype.UUID        `json:"actor_id"`
+	Action    string             `json:"action"`
+	Entity    string             `json:"entity"`
+	EntityID  string             `json:"entity_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+func (q *Queries) GetAuditLogs(ctx context.Context, arg GetAuditLogsParams) ([]GetAuditLogsRow, error) {
+	rows, err := q.db.Query(ctx, getAuditLogs, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetAuditLogsRow{}
+	for rows.Next() {
+		var i GetAuditLogsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ActorID,
+			&i.Action,
+			&i.Entity,
+			&i.EntityID,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getMajorRequireSeries = `-- name: GetMajorRequireSeries :one
+SELECT require_series FROM majors WHERE id = $1 LIMIT 1
+`
+
+func (q *Queries) GetMajorRequireSeries(ctx context.Context, id pgtype.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, getMajorRequireSeries, id)
+	var require_series bool
+	err := row.Scan(&require_series)
+	return require_series, err
+}
+
 const getMediaByID = `-- name: GetMediaByID :one
 SELECT id, owner_id, purpose, object_key, mime, size_bytes, width, height, checksum_sha256, status, created_at, confirmed_at
 FROM media_assets WHERE id = $1 LIMIT 1
@@ -241,6 +337,23 @@ func (q *Queries) GetMediaByID(ctx context.Context, id pgtype.UUID) (MediaAssets
 		&i.Status,
 		&i.CreatedAt,
 		&i.ConfirmedAt,
+	)
+	return i, err
+}
+
+const getNotifPrefs = `-- name: GetNotifPrefs :one
+SELECT user_id, portfolio_liked, new_comment, new_follower, digest_daily FROM notification_preferences WHERE user_id = $1 LIMIT 1
+`
+
+func (q *Queries) GetNotifPrefs(ctx context.Context, userID pgtype.UUID) (NotificationPreferences, error) {
+	row := q.db.QueryRow(ctx, getNotifPrefs, userID)
+	var i NotificationPreferences
+	err := row.Scan(
+		&i.UserID,
+		&i.PortfolioLiked,
+		&i.NewComment,
+		&i.NewFollower,
+		&i.DigestDaily,
 	)
 	return i, err
 }
@@ -307,7 +420,7 @@ func (q *Queries) GetSessionByHash(ctx context.Context, refreshHash string) (Get
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, username, email, password_hash, name, role_primary, status,
+SELECT id, username, email, password_hash, name, bio, role_primary, status,
   class_id, major_id, is_active, must_change_password, avatar_media_id, banner_media_id
 FROM users WHERE id = $1 AND deleted_at IS NULL LIMIT 1
 `
@@ -318,6 +431,7 @@ type GetUserByIDRow struct {
 	Email              string      `json:"email"`
 	PasswordHash       string      `json:"password_hash"`
 	Name               string      `json:"name"`
+	Bio                string      `json:"bio"`
 	RolePrimary        string      `json:"role_primary"`
 	Status             string      `json:"status"`
 	ClassID            pgtype.UUID `json:"class_id"`
@@ -337,6 +451,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDR
 		&i.Email,
 		&i.PasswordHash,
 		&i.Name,
+		&i.Bio,
 		&i.RolePrimary,
 		&i.Status,
 		&i.ClassID,
@@ -350,7 +465,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDR
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, email, password_hash, name, role_primary, status,
+SELECT id, username, email, password_hash, name, bio, role_primary, status,
   class_id, major_id, is_active, must_change_password, avatar_media_id, banner_media_id
 FROM users WHERE username = $1 AND deleted_at IS NULL LIMIT 1
 `
@@ -361,6 +476,7 @@ type GetUserByUsernameRow struct {
 	Email              string      `json:"email"`
 	PasswordHash       string      `json:"password_hash"`
 	Name               string      `json:"name"`
+	Bio                string      `json:"bio"`
 	RolePrimary        string      `json:"role_primary"`
 	Status             string      `json:"status"`
 	ClassID            pgtype.UUID `json:"class_id"`
@@ -380,6 +496,7 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (GetUs
 		&i.Email,
 		&i.PasswordHash,
 		&i.Name,
+		&i.Bio,
 		&i.RolePrimary,
 		&i.Status,
 		&i.ClassID,
@@ -390,6 +507,17 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (GetUs
 		&i.BannerMediaID,
 	)
 	return i, err
+}
+
+const getUserMajor = `-- name: GetUserMajor :one
+SELECT major_id FROM users WHERE id = $1 LIMIT 1
+`
+
+func (q *Queries) GetUserMajor(ctx context.Context, id pgtype.UUID) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, getUserMajor, id)
+	var major_id pgtype.UUID
+	err := row.Scan(&major_id)
+	return major_id, err
 }
 
 const getUserPermissions = `-- name: GetUserPermissions :many
@@ -498,6 +626,36 @@ func (q *Queries) ListRoles(ctx context.Context) ([]ListRolesRow, error) {
 			&i.ScopeType,
 			&i.IsSystem,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSocialLinks = `-- name: ListSocialLinks :many
+SELECT id, platform, url FROM user_social_links WHERE user_id = $1 ORDER BY platform
+`
+
+type ListSocialLinksRow struct {
+	ID       pgtype.UUID `json:"id"`
+	Platform string      `json:"platform"`
+	Url      string      `json:"url"`
+}
+
+func (q *Queries) ListSocialLinks(ctx context.Context, userID pgtype.UUID) ([]ListSocialLinksRow, error) {
+	rows, err := q.db.Query(ctx, listSocialLinks, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListSocialLinksRow{}
+	for rows.Next() {
+		var i ListSocialLinksRow
+		if err := rows.Scan(&i.ID, &i.Platform, &i.Url); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -636,6 +794,31 @@ func (q *Queries) RevokeSession(ctx context.Context, id pgtype.UUID) error {
 	return err
 }
 
+const saveNotifPrefs = `-- name: SaveNotifPrefs :exec
+INSERT INTO notification_preferences (user_id, portfolio_liked, new_comment, new_follower, digest_daily)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (user_id) DO UPDATE SET portfolio_liked = EXCLUDED.portfolio_liked, new_comment = EXCLUDED.new_comment, new_follower = EXCLUDED.new_follower, digest_daily = EXCLUDED.digest_daily
+`
+
+type SaveNotifPrefsParams struct {
+	UserID         pgtype.UUID `json:"user_id"`
+	PortfolioLiked bool        `json:"portfolio_liked"`
+	NewComment     bool        `json:"new_comment"`
+	NewFollower    bool        `json:"new_follower"`
+	DigestDaily    bool        `json:"digest_daily"`
+}
+
+func (q *Queries) SaveNotifPrefs(ctx context.Context, arg SaveNotifPrefsParams) error {
+	_, err := q.db.Exec(ctx, saveNotifPrefs,
+		arg.UserID,
+		arg.PortfolioLiked,
+		arg.NewComment,
+		arg.NewFollower,
+		arg.DigestDaily,
+	)
+	return err
+}
+
 const setMustChangePassword = `-- name: SetMustChangePassword :exec
 UPDATE users SET must_change_password = $2 WHERE id = $1
 `
@@ -704,6 +887,29 @@ type UnassignUserRoleParams struct {
 
 func (q *Queries) UnassignUserRole(ctx context.Context, arg UnassignUserRoleParams) error {
 	_, err := q.db.Exec(ctx, unassignUserRole, arg.UserID, arg.RoleID)
+	return err
+}
+
+const updateMe = `-- name: UpdateMe :exec
+UPDATE users SET name = $2, bio = $3, username = $4, show_email = $5, updated_at = NOW() WHERE id = $1
+`
+
+type UpdateMeParams struct {
+	ID        pgtype.UUID `json:"id"`
+	Name      string      `json:"name"`
+	Bio       string      `json:"bio"`
+	Username  string      `json:"username"`
+	ShowEmail bool        `json:"show_email"`
+}
+
+func (q *Queries) UpdateMe(ctx context.Context, arg UpdateMeParams) error {
+	_, err := q.db.Exec(ctx, updateMe,
+		arg.ID,
+		arg.Name,
+		arg.Bio,
+		arg.Username,
+		arg.ShowEmail,
+	)
 	return err
 }
 

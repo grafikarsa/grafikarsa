@@ -1,10 +1,10 @@
 -- name: GetUserByUsername :one
-SELECT id, username, email, password_hash, name, role_primary, status,
+SELECT id, username, email, password_hash, name, bio, role_primary, status,
   class_id, major_id, is_active, must_change_password, avatar_media_id, banner_media_id
 FROM users WHERE username = $1 AND deleted_at IS NULL LIMIT 1;
 
 -- name: GetUserByID :one
-SELECT id, username, email, password_hash, name, role_primary, status,
+SELECT id, username, email, password_hash, name, bio, role_primary, status,
   class_id, major_id, is_active, must_change_password, avatar_media_id, banner_media_id
 FROM users WHERE id = $1 AND deleted_at IS NULL LIMIT 1;
 
@@ -128,3 +128,37 @@ WHERE status = 'pending' AND created_at < NOW() - INTERVAL '24 hours' LIMIT 100;
 
 -- name: DeleteMediaRow :exec
 DELETE FROM media_assets WHERE id = $1;
+
+-- name: UpdateMe :exec
+UPDATE users SET name = $2, bio = $3, username = $4, show_email = $5, updated_at = NOW() WHERE id = $1;
+
+-- name: CheckUsernameTaken :one
+SELECT COUNT(*) FROM users WHERE username = $1 AND id != $2 AND deleted_at IS NULL;
+
+-- name: GetUserMajor :one
+SELECT major_id FROM users WHERE id = $1 LIMIT 1;
+
+-- name: GetMajorRequireSeries :one
+SELECT require_series FROM majors WHERE id = $1 LIMIT 1;
+
+-- name: ListSocialLinks :many
+SELECT id, platform, url FROM user_social_links WHERE user_id = $1 ORDER BY platform;
+
+
+
+-- name: DeleteSocialLinks :exec
+DELETE FROM user_social_links WHERE user_id = $1;
+
+-- name: AddSocialLink :exec
+INSERT INTO user_social_links (user_id, platform, url) VALUES ($1, $2, $3) ON CONFLICT (user_id, platform) DO UPDATE SET url = EXCLUDED.url;
+
+-- name: GetNotifPrefs :one
+SELECT user_id, portfolio_liked, new_comment, new_follower, digest_daily FROM notification_preferences WHERE user_id = $1 LIMIT 1;
+
+-- name: SaveNotifPrefs :exec
+INSERT INTO notification_preferences (user_id, portfolio_liked, new_comment, new_follower, digest_daily)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (user_id) DO UPDATE SET portfolio_liked = EXCLUDED.portfolio_liked, new_comment = EXCLUDED.new_comment, new_follower = EXCLUDED.new_follower, digest_daily = EXCLUDED.digest_daily;
+
+-- name: GetAuditLogs :many
+SELECT id, actor_id, action, entity, entity_id, created_at FROM audit_logs ORDER BY id DESC LIMIT $1 OFFSET $2;
