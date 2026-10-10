@@ -25,6 +25,7 @@ func runScheduler(ctx context.Context, q *repo.Queries, c *cache.Cache, cfg *con
 	go every(ctx, 24*time.Hour, "retention", func() error { return retention(ctx, q) })
 	go dailyAt(ctx, 2, 5, "leaderboard", func() error { return recomputeLeaderboard(ctx, q) })
 	go dailyAt(ctx, 0, 10, "promotion-draft", func() error { return createPromotionDraft(ctx, q) })
+	go dailyAt(ctx, 7, 0, "digest", func() error { return sendDailyDigest(ctx, q) })
 
 	<-ctx.Done()
 	slog.Info("scheduler stop")

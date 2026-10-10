@@ -28,6 +28,17 @@ jobs:
       - name: go build
         working-directory: apps/api
         run: go build ./...
+      - name: OpenAPI contract tidak stale
+        working-directory: apps/api
+        run: |
+          go run ./cmd/tools/gen-openapi > /tmp/openapi.gen.yaml
+          if ! diff -q ../../packages/contracts/openapi.yaml /tmp/openapi.gen.yaml >/dev/null; then
+            echo "FATAL: packages/contracts/openapi.yaml tidak sinkron dengan routes.go."
+            echo "Jalankan: make openapi"
+            diff -u ../../packages/contracts/openapi.yaml /tmp/openapi.gen.yaml | head -40
+            exit 1
+          fi
+          echo "openapi: sinkron"
 
   web:
     runs-on: ubuntu-latest

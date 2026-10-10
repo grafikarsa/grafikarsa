@@ -39,6 +39,19 @@ func (s *Storage) EnsureBucket(ctx context.Context) error {
 	return err
 }
 
+// Size mengembalikan ukuran objek (dipakai untuk streaming + ServeContent
+// agar tidak perlu membaca seluruh file ke memori).
+func (s *Storage) Size(ctx context.Context, key string) (int64, error) {
+	out, err := s.client.HeadObject(ctx, &s3.HeadObjectInput{Bucket: aws.String(s.bucket), Key: aws.String(key)})
+	if err != nil {
+		return 0, err
+	}
+	if out.ContentLength == nil {
+		return 0, nil
+	}
+	return *out.ContentLength, nil
+}
+
 func (s *Storage) Health(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()

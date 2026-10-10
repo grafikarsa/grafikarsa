@@ -224,6 +224,31 @@ func (q *Queries) DeleteScores(ctx context.Context, assessmentID pgtype.UUID) er
 	return err
 }
 
+const digestSummaryForUser = `-- name: DigestSummaryForUser :one
+SELECT COUNT(*)::int AS unread,
+  COALESCE(
+    (SELECT string_agg(t.title, ' • ') FROM (
+      SELECT title FROM notifications
+      WHERE user_id = $1 AND is_read = FALSE AND type <> 'digest'
+        AND created_at > NOW() - INTERVAL '24 hours'
+      ORDER BY created_at DESC LIMIT 3
+    ) t),
+    ''
+  )::text AS sample
+`
+
+type DigestSummaryForUserRow struct {
+	Unread int32  `json:"unread"`
+	Sample string `json:"sample"`
+}
+
+func (q *Queries) DigestSummaryForUser(ctx context.Context, userID pgtype.UUID) (DigestSummaryForUserRow, error) {
+	row := q.db.QueryRow(ctx, digestSummaryForUser, userID)
+	var i DigestSummaryForUserRow
+	err := row.Scan(&i.Unread, &i.Sample)
+	return i, err
+}
+
 const getAssessment = `-- name: GetAssessment :one
 SELECT id, portfolio_id, assessor_id, total_score, comment FROM portfolio_assessments
 WHERE portfolio_id = $1 LIMIT 1

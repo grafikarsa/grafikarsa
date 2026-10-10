@@ -493,9 +493,14 @@ func (q *Queries) GetFollowingFeed(ctx context.Context, arg GetFollowingFeedPara
 
 const getLeaderboard = `-- name: GetLeaderboard :many
 SELECT e.rank, e.subject_user_id, e.subject_portfolio_id, e.score, e.breakdown, e.delta_rank
-FROM leaderboard_entries e JOIN leaderboards l ON l.id = e.leaderboard_id
-WHERE l.period = $1 AND l.scope = $2 AND l.kind = $3
-ORDER BY l.computed_for DESC, e.rank ASC LIMIT 20
+FROM leaderboard_entries e
+JOIN leaderboards l ON l.id = e.leaderboard_id
+WHERE l.id = (
+  SELECT l2.id FROM leaderboards l2
+  WHERE l2.period = $1 AND l2.scope = $2 AND l2.kind = $3
+  ORDER BY l2.computed_for DESC LIMIT 1
+)
+ORDER BY e.rank ASC LIMIT 20
 `
 
 type GetLeaderboardParams struct {
@@ -513,6 +518,8 @@ type GetLeaderboardRow struct {
 	DeltaRank          int32          `json:"delta_rank"`
 }
 
+// Hanya snapshot TERBARU untuk kombinasi period/scope/kind, supaya entri
+// hari sebelumnya tidak tercampur saat jumlah baris < limit.
 func (q *Queries) GetLeaderboard(ctx context.Context, arg GetLeaderboardParams) ([]GetLeaderboardRow, error) {
 	rows, err := q.db.Query(ctx, getLeaderboard, arg.Period, arg.Scope, arg.Kind)
 	if err != nil {
@@ -1068,8 +1075,12 @@ func (q *Queries) MarkOutboxSent(ctx context.Context, id int64) error {
 const prevLeaderboardRanks = `-- name: PrevLeaderboardRanks :many
 SELECT e.subject_user_id, e.subject_portfolio_id, e.rank FROM leaderboard_entries e
 JOIN leaderboards l ON l.id = e.leaderboard_id
-WHERE l.period = $1 AND l.scope = $2 AND l.kind = $3
-ORDER BY l.computed_for DESC LIMIT 40
+WHERE l.id = (
+  SELECT l2.id FROM leaderboards l2
+  WHERE l2.period = $1 AND l2.scope = $2 AND l2.kind = $3
+  ORDER BY l2.computed_for DESC LIMIT 1
+)
+ORDER BY e.rank ASC
 `
 
 type PrevLeaderboardRanksParams struct {
@@ -1084,6 +1095,7 @@ type PrevLeaderboardRanksRow struct {
 	Rank               int32       `json:"rank"`
 }
 
+// Snapshot sebelumnya (bukan sembarang 40 baris) untuk menghitung delta_rank.
 func (q *Queries) PrevLeaderboardRanks(ctx context.Context, arg PrevLeaderboardRanksParams) ([]PrevLeaderboardRanksRow, error) {
 	rows, err := q.db.Query(ctx, prevLeaderboardRanks, arg.Period, arg.Scope, arg.Kind)
 	if err != nil {

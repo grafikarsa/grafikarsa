@@ -1,58 +1,82 @@
-# Grafikarsa v2 — API (Fase 1)
+# Grafikarsa v2 — API
 
-Base URL (via BFF): `/api/v1` → `http://api:8080/v1` internal.
+Dokumen ini ringkas saja: **daftar endpoint tidak ditulis manual di sini** agar
+tidak pernah stale. Sumber kebenarannya adalah kode, dan kontraknya di-generate:
 
-## Envelope
+```bash
+make openapi        # regenerate packages/contracts/openapi.yaml
+make openapi-check  # verifikasi kontrak tidak drift (dipakai CI)
+```
 
-Sukses: `{ success: true, data, request_id }`
-Gagal: `{ success: false, error: { code, message }, request_id }`
+Kontrak OpenAPI (semua endpoint, security, permission, CSRF):
+`packages/contracts/openapi.yaml` — 100 path / 126 operasi.
 
-## Endpoint Fase 0–1
+## Topologi
 
-| Method | Path | Auth | Deskripsi |
-|---|---|---|---|
-| GET | `/health` | — | Liveness |
-| GET | `/ready` | — | Readiness: `{ db, dragonfly, storage }` |
-| GET | `/v1/health` | — | Liveness versi API |
-| POST | `/v1/auth/login` | — | Login, set `__Host-rt` + `__Host-csrf` |
-| POST | `/v1/auth/refresh` | cookie | Rotasi refresh + reuse-detection |
-| POST | `/v1/auth/logout` | Bearer | Revoke sesi + blacklist access |
-| POST | `/v1/auth/logout-all` | Bearer | Revoke semua sesi |
-| GET | `/v1/auth/sessions` | Bearer | Daftar sesi aktif |
-| GET/DELETE | `/v1/auth/sessions/:id` | Bearer | Revoke satu sesi |
-| GET/PATCH | `/v1/me` | Bearer | Profil / edit profil (CSRF) |
-| PATCH | `/v1/me/password` | Bearer | Ganti password (CSRF, revoke semua) |
-| GET | `/v1/me/permissions` | Bearer | Union permission efektif |
-| GET | `/v1/users`, `/v1/users/:username` | `users.view` | Direktori user |
-| GET/POST | `/v1/admin/users` | `users.view/create` | List + buat (CSRF) |
-| GET/PATCH/DELETE | `/v1/admin/users/:id` | `users.edit/delete` | Detail/ubah/hapus (CSRF) |
-| POST | `/v1/admin/users/:id/activate`, `/reset-password` | khusus | Aktivasi + reset (CSRF) |
-| GET/POST | `/v1/admin/roles` | `roles.view/create` | List + buat custom (CSRF) |
-| POST/DELETE | `/v1/admin/roles/assign` | `roles.assign` | Assign/unassign (CSRF) |
-| POST | `/v1/media/upload` | `media.upload` | Multipart (CSRF) → `{media_id}` |
-| POST/DELETE | `/v1/media/:id/confirm`, `/v1/media/:id` | owner | Confirm / hapus (CSRF) |
-| GET | `/v1/media/:id` | optional | Stream ETag + Range (avatar/banner publik) |
+```
+Browser → Caddy (:80/:443) → web Next.js (:3000) → BFF /api/* → api Go (:8080, internal)
+```
 
-Kontrak lengkap: `packages/contracts/openapi.yaml`.
+Backend, database, cache, dan object storage **tidak** diekspos publik. Semua
+panggilan browser melewati Route Handler di `apps/web/app/api/[...path]/route.ts`
+yang meneruskan cookie (`__Host-rt`, `__Host-csrf`), `Range`, dan ETag.
 
-## Endpoint tambahan (pasca-audit)
+## Envelope respons
 
-| Method | Path | Auth | Deskripsi |
-|---|---|---|---|
-| GET | `/metrics` | — | Prometheus text (counter + runtime) |
-| GET | `/v1/users` | optional | Direktori publik (tanpa email) |
-| GET | `/v1/users/:username` | optional | Profil publik; email hanya self/admin/show_email |
-| GET | `/v1/changelogs/:id` | optional | Detail + sections (draft hanya untuk manager) |
-| GET | `/v1/changelogs/unread-count` | Bearer | Jumlah rilis belum dibaca |
-| POST | `/v1/changelogs/mark-all-read` | Bearer+CSRF | Tandai semua rilis dibaca |
-| POST | `/v1/admin/changelogs/:id/publish` \| `/unpublish` \| `/archive` | `changelog.publish` | Siklus rilis (unpublish >100 pembaca butuh admin) |
-| PATCH | `/v1/admin/feedback/:id/triage` | `feedback.triage` | Prioritas/publikasi/spam (CSRF) |
-| POST | `/v1/admin/leaderboards/recompute` | `system.jobs` | Recompute leaderboard (maks 1x/jam) |
-| GET | `/v1/changelogs/rss.xml` (web) | — | RSS changelog |
+```jsonc
+// sukses
+{ "success": true, "data": { /* payload */ }, "meta": { /* paginasi */ }, "request_id": "..." }
+// gagal
+{ "success": false, "error": { "code": "VALIDATION_ERROR", "message": "...", "details": [/* opsional */] }, "request_id": "..." }
+```
 
-### Catatan keamanan
+Kode error stabil ada di `components.schemas.ErrorCode` pada kontrak.
 
-- CSRF token terikat ke user (`HMAC(secret, hari:user_id)`) dan wajib pada semua mutasi termasuk logout/sesi.
-- Refresh token: 30 hari absolut + 7 hari idle (sliding), rotasi mencatat `rotated_to`, reuse terdeteksi → seluruh family dicabut.
-- Rate limit: 100 req/menit/IP global; login 5 gagal → Turnstile, 10 gagal → kunci 30 menit; upload 20/jam & 100/hari per user.
-- `must_change_password` memblokir seluruh endpoint kecuali ganti password sendiri.
+## Autentikasi & sesi
+
+| Aspek | Ketentuan |
+|---|---|
+| Access token | JWT HS256, **15 menit**, hanya di memori FE (`lib/auth-store.ts`), tidak di localStorage |
+| Refresh token | Opaque, cookie `__Host-rt` (HttpOnly, Secure, SameSite=Lax), **idle 7 hari + absolut 30 hari** |
+| Rotasi | Setiap refresh membuat sesi baru (`rotated_to`); token lama dipakai lagi → seluruh family dicabut + audit `reuse_detected` |
+| CSRF | Double-submit: cookie `__Host-csrf` + header `X-CSRF-Token`; token = `HMAC(secret, hari:user_id)` sehingga terikat user; wajib di **semua** mutasi kecuali login, refresh, dan feedback guest |
+| Claim JWT | `role_primary`, `scope_major_id` (batas jurusan), `mcp` (wajib ganti password) |
+| Wajib ganti password | `mcp=true` memblokir seluruh endpoint kecuali `/v1/me`, `/v1/me/password`, `/v1/auth/logout*`, `/v1/auth/sessions` |
+| Otorisasi | `requirePerm` / `requireAnyPerm`; role `admin` melewati daftar permission, `admin_jurusan` **selalu** difilter row-level `scope_major_id` (fail-closed) |
+
+## Rate limit & anti-abuse
+
+| Cakupan | Batas |
+|---|---|
+| Global `/v1` | `RATE_LIMIT_REQUESTS` (default **300**/menit), dikunci per **user** (login) atau IP asli klien dari BFF (`x-client-ip`) |
+| Login | 5 gagal → Turnstile; 10 gagal → kunci 15 menit (per username+IP); 50 percobaan/10 menit per IP |
+| Upload | 20 file/jam dan 100 file/hari per user, kuota 200 MB |
+| Feedback guest | Turnstile wajib (bila `TURNSTILE_SECRET_KEY` diisi) |
+| Recompute leaderboard | 1×/jam |
+
+Counter gagal login hanya bertambah saat password benar-benar salah, sehingga
+tidak bisa dipakai mengunci akun orang lain.
+
+## Media
+
+- Upload: `POST /v1/media/upload` (multipart, `purpose` ∈ avatar/banner/thumbnail/block_image/document/feedback/changelog_cover).
+- Gambar di-decode ulang (EXIF/GPS hilang), dinormalkan ke JPEG q82 (PNG transparan tetap PNG), disimpan bersama varian `?w=320` / `?w=800`.
+- Dedup sha256 per owner+purpose; magic bytes diperiksa (header klien tidak dipercaya); SVG/HTML ditolak.
+- Lifecycle: `pending` → `confirmed` saat dikaitkan (confirm `link_to` atau PATCH portfolio/block). Cleanup hanya menghapus media `pending` yang tidak direferensikan siapa pun.
+- Delete menghapus objek utama + semua varian dari storage.
+- Media non-publik bisa diakses tamu hanya bila dipakai portfolio `published`.
+
+## Job terjadwal (worker)
+
+| Job | Interval |
+|---|---|
+| Outbox dispatcher (notifikasi, fan-out changelog, recompute) | 30 detik |
+| Recompute `portfolio_stats` | 5 menit |
+| Publish changelog terjadwal | 5 menit |
+| Cleanup media pending | 1 jam |
+| Retensi notifikasi (90 hari; feedback & pengumuman 1 tahun) | 24 jam |
+| Recompute leaderboard (weekly + monthly, semua scope) | harian 02:05 WIB |
+| Draft kenaikan kelas | harian 00:10 WIB |
+| Digest notifikasi harian | harian 07:00 WIB |
+
+Jalankan manual: `go run ./cmd/worker <outbox|stats|leaderboard|cleanup-media|publish-changelogs|retention|promotion-draft|digest|serve>`.

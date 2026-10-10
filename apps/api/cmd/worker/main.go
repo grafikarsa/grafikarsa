@@ -78,6 +78,11 @@ func main() {
 			slog.Error("retention", "err", err)
 			os.Exit(1)
 		}
+	case "digest":
+		if err := sendDailyDigest(ctx, q); err != nil {
+			slog.Error("digest", "err", err)
+			os.Exit(1)
+		}
 	case "promotion-draft":
 		if err := createPromotionDraft(ctx, q); err != nil {
 			slog.Error("promotion-draft", "err", err)
@@ -433,6 +438,36 @@ func cleanupMedia(ctx context.Context, q *repo.Queries, cfg *config.Config) erro
 }
 
 func newStorage(cfg *config.Config) *storage.Storage { return storage.New(cfg) }
+
+// sendDailyDigest mengirim ringkasan notifikasi belum dibaca sekali sehari
+// untuk user yang mengaktifkan digest_daily (job harian 07:00 WIB).
+func sendDailyDigest(ctx context.Context, q *repo.Queries) error {
+	users, err := q.ListDigestUsers(ctx)
+	if err != nil {
+		return err
+	}
+	sent := 0
+	for _, u := range users {
+		sum, err := q.DigestSummaryForUser(ctx, u)
+		if err != nil || sum.Unread == 0 {
+			continue
+		}
+		body := fmt.Sprintf("Ada %d notifikasi belum dibaca.", sum.Unread)
+		if sum.Sample != "" {
+			body += " " + sum.Sample
+		}
+		if _, err := q.CreateNotification(ctx, repo.CreateNotificationParams{
+			UserID: u, Type: "digest", Title: "Ringkasan harian", Body: body,
+			Data: notifPayload(map[string]string{"kind": "digest"}),
+		}); err != nil {
+			slog.Error("digest gagal", "user", uuidStr(u), "err", err)
+			continue
+		}
+		sent++
+	}
+	slog.Info("digest terkirim", "count", sent, "kandidat", len(users))
+	return nil
+}
 
 // notifyModerators: beri tahu admin + admin_jurusan terkait saat portfolio
 // masuk antrean review (bukan hanya menunggu mereka membuka dashboard).

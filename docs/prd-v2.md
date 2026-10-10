@@ -261,7 +261,11 @@ Bukti riset stack (diringkas dari dokumentasi resmi, Okt 2026):
 - `username`/`email` `citext` unique, `slug` unique per user (bukan global).
 - Enum via `CHECK` atau Postgres `TYPE` (dipilih `TYPE` untuk `portfolio_status`, `role_scope`, `media_status`, dsb agar type-safe di sqlc).
 - Semua tabel hot punya `updated_at` trigger + `COMMENT`.
-- Tidak ada `payload JSONB` liar: setiap block type punya JSON Schema di `packages/contracts/blocks/*.json` + validasi di BE (go-jsonschema) + FE (zod). JSONB tetap dipakai tapi **tervalidasi**.
+- Tidak ada `payload JSONB` liar: tiap block type punya aturan validasi di BE
+  (`internal/http/blocks_handler.go` → `validateBlockPayload`, dijaga unit test) dan
+  FE memvalidasi hal yang sama sebelum kirim; daftar tipe + bentuk payload
+  didokumentasikan sebagai `components.schemas.PortfolioBlock` di kontrak
+  OpenAPI. Validasi terpusat di BE sehingga klien tidak dipercaya.
 - Uang/waktu: tidak ada uang; waktu selalu `timestamptz`, durasi `interval`.
 
 ### 4.2 ERD tekstual (inti)

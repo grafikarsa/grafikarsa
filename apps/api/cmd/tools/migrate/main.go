@@ -25,8 +25,12 @@ func main() {
 		err = db.MigrateUp(ctx, cfg)
 	case "down":
 		err = db.MigrateDown(ctx, cfg)
+	case "status":
+		err = db.MigrateStatus(ctx, cfg)
+	case "version":
+		err = db.MigrateVersion(ctx, cfg)
 	default:
-		fmt.Fprintln(os.Stderr, "usage: migrate [up|down]")
+		fmt.Fprintln(os.Stderr, "usage: migrate [up|down|status|version]")
 		os.Exit(1)
 	}
 	if err != nil {

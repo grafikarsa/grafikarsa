@@ -60,6 +60,13 @@ func (a *App) handleLike(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Portfolio tidak ditemukan.", r))
 		return
 	}
+	// Anti-gaming: like massal (>20/jam) tidak dihitung dan dicatat untuk audit,
+	// supaya leaderboard tidak bisa dinaikkan dengan spam like.
+	if n, cerr := a.Q.CountLikesByUserSince(r.Context(), mustUUID(uid)); cerr == nil && n >= 20 {
+		auditLog(r, a, "like.rate_limited", "portfolios", id, ">20/jam")
+		writeJSON(w, http.StatusTooManyRequests, fail("LIKE_RATE_LIMITED", "Terlalu banyak suka dalam satu jam. Coba lagi nanti.", r))
+		return
+	}
 	_ = a.Q.LikePortfolio(r.Context(), repo.LikePortfolioParams{UserID: mustUUID(uid), PortfolioID: p.ID})
 	trackLikeInterest(r.Context(), a, uid, p.ID)
 	if uuidStr(p.OwnerID) != uid {

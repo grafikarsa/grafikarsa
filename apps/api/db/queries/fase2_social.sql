@@ -181,10 +181,17 @@ INSERT INTO leaderboard_entries (leaderboard_id, rank, subject_user_id, subject_
 VALUES ($1, $2, $3, $4, $5, $6, $7);
 
 -- name: GetLeaderboard :many
+-- Hanya snapshot TERBARU untuk kombinasi period/scope/kind, supaya entri
+-- hari sebelumnya tidak tercampur saat jumlah baris < limit.
 SELECT e.rank, e.subject_user_id, e.subject_portfolio_id, e.score, e.breakdown, e.delta_rank
-FROM leaderboard_entries e JOIN leaderboards l ON l.id = e.leaderboard_id
-WHERE l.period = $1 AND l.scope = $2 AND l.kind = $3
-ORDER BY l.computed_for DESC, e.rank ASC LIMIT 20;
+FROM leaderboard_entries e
+JOIN leaderboards l ON l.id = e.leaderboard_id
+WHERE l.id = (
+  SELECT l2.id FROM leaderboards l2
+  WHERE l2.period = $1 AND l2.scope = $2 AND l2.kind = $3
+  ORDER BY l2.computed_for DESC LIMIT 1
+)
+ORDER BY e.rank ASC LIMIT 20;
 
 -- name: InsertAuditLog :exec
 INSERT INTO audit_logs (actor_id, action, entity, entity_id, diff, ip)
@@ -282,10 +289,15 @@ GROUP BY p.id ORDER BY COUNT(pl.user_id) DESC LIMIT $1;
 SELECT COUNT(*) FROM portfolio_likes WHERE user_id = $1 AND created_at > NOW() - INTERVAL '1 hour';
 
 -- name: PrevLeaderboardRanks :many
+-- Snapshot sebelumnya (bukan sembarang 40 baris) untuk menghitung delta_rank.
 SELECT e.subject_user_id, e.subject_portfolio_id, e.rank FROM leaderboard_entries e
 JOIN leaderboards l ON l.id = e.leaderboard_id
-WHERE l.period = $1 AND l.scope = $2 AND l.kind = $3
-ORDER BY l.computed_for DESC LIMIT 40;
+WHERE l.id = (
+  SELECT l2.id FROM leaderboards l2
+  WHERE l2.period = $1 AND l2.scope = $2 AND l2.kind = $3
+  ORDER BY l2.computed_for DESC LIMIT 1
+)
+ORDER BY e.rank ASC;
 
 -- name: StatsPortfolioCandidates :many
 SELECT p.id, p.published_at,

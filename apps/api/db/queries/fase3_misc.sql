@@ -123,6 +123,18 @@ DELETE FROM notifications WHERE is_read = TRUE
 -- name: ListDigestUsers :many
 SELECT user_id FROM notification_preferences WHERE digest_daily = TRUE LIMIT 100;
 
+-- name: DigestSummaryForUser :one
+SELECT COUNT(*)::int AS unread,
+  COALESCE(
+    (SELECT string_agg(t.title, ' • ') FROM (
+      SELECT title FROM notifications
+      WHERE user_id = $1 AND is_read = FALSE AND type <> 'digest'
+        AND created_at > NOW() - INTERVAL '24 hours'
+      ORDER BY created_at DESC LIMIT 3
+    ) t),
+    ''
+  )::text AS sample;
+
 -- name: MarkChangelogPublished :exec
 UPDATE changelogs SET publish_at = NOW() WHERE id = $1 AND publish_at IS NULL;
 
