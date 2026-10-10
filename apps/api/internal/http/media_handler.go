@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -110,4 +111,91 @@ func (a *App) handleServeMedia(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "private, max-age=300")
 	}
 	http.ServeContent(w, r, key, time.Now(), reader)
+}
+
+// handleServeMediaByKey melayani file via object key ( dipakai redirect 301
+// URL lama /storage/* -> /api/media/by-key/* selama 6 bulan pasca go-live,
+// PRD §16.1 ). Key dibatasi pola aman agar tidak bisa path traversal.
+func (a *App) handleServeMediaByKey(w http.ResponseWriter, r *http.Request) {
+	key := chi.URLParam(r, "*")
+	key = strings.TrimPrefix(key, "/")
+	if key == "" || strings.Contains(key, "..") || strings.HasPrefix(key, "/") {
+		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Media tidak ditemukan.", r))
+		return
+	}
+	m, err := a.Q.GetMediaByKey(r.Context(), key)
+	if err != nil || m.Status == "deleted" {
+		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Media tidak ditemukan.", r))
+		return
+	}
+	publicPurpose := m.Purpose == "avatar" || m.Purpose == "banner" || m.Purpose == "changelog_cover"
+	if !publicPurpose {
+		used, _ := a.Q.MediaUsedInPublishedPortfolio(r.Context(), m.ID)
+		ownerView := UserID(r) != "" && (uuidStr(m.OwnerID) == UserID(r) || UserRole(r) == "admin" || UserPerms(r)["portfolios.moderate"])
+		if !used && !ownerView {
+			if UserID(r) == "" {
+				writeJSON(w, http.StatusUnauthorized, fail("UNAUTHORIZED", "Sesi berakhir.", r))
+				return
+			}
+			writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Bukan milikmu.", r))
+			return
+		}
+	}
+	body, err := a.Storage.Get(r.Context(), m.ObjectKey)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "File tidak ditemukan.", r))
+		return
+	}
+	defer body.Close()
+	size, serr := a.Storage.Size(r.Context(), m.ObjectKey)
+	if serr != nil || size <= 0 {
+		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "File tidak ditemukan.", r))
+		return
+	}
+	reader := io.NewSectionReader(bodyReaderAt(body), 0, size)
+	w.Header().Set("Content-Type", m.Mime)
+	w.Header().Set("ETag", `"`+m.ChecksumSha256+`"`)
+	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	http.ServeContent(w, r, m.ObjectKey, time.Now(), reader)
+}
+
+// handleLegacyStorageRedirect menerima URL lama /storage/* (PRD §16.1):
+// bila old_url dikenal di legacy_urls -> 301 ke /api/media/by-key/<object_key>,
+// bila tidak dikenal -> 410 Gone (bukan 404, supaya crawler berhenti).
+func (a *App) handleLegacyStorageRedirect(w http.ResponseWriter, r *http.Request) {
+	rest := chi.URLParam(r, "*")
+	oldURL := "https://grafikarsa.com/storage/" + strings.TrimPrefix(rest, "/")
+	leg, err := a.Q.GetLegacyURL(r.Context(), oldURL)
+	if err != nil {
+		// Coba juga dengan host apa adanya (tanpa asumsi domain).
+		leg, err = a.Q.GetLegacyURL(r.Context(), r.URL.Path)
+		if err != nil {
+			w.Header().Set("Cache-Control", "public, max-age=86400")
+			writeJSON(w, http.StatusGone, fail("GONE", "File lama sudah tidak tersedia.", r))
+			return
+		}
+	}
+	_ = a.Q.TouchLegacyURL(r.Context(), leg.ID)
+	if leg.MediaID.Valid {
+		var objectKey string
+		if leg.ObjectKey.Valid {
+			objectKey = leg.ObjectKey.String
+		} else {
+			m, merr := a.Q.GetMediaByID(r.Context(), leg.MediaID)
+			if merr != nil {
+				writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Media tidak ditemukan.", r))
+				return
+			}
+			objectKey = m.ObjectKey
+		}
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		http.Redirect(w, r, "/v1/media/by-key/"+objectKey, http.StatusMovedPermanently)
+		return
+	}
+	if leg.ObjectKey.Valid {
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		http.Redirect(w, r, "/v1/media/by-key/"+leg.ObjectKey.String, http.StatusMovedPermanently)
+		return
+	}
+	writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Media tidak ditemukan.", r))
 }

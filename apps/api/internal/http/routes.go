@@ -168,6 +168,9 @@ func (a *App) routes() http.Handler {
 		r.Group(func(r chi.Router) {
 			r.Use(a.authOptional)
 			r.Get("/media/{id}", a.handleServeMedia)
+			r.Get("/media/by-key/*", a.handleServeMediaByKey)
+			// Redirect 301 URL lama v1 (/storage/*) selama 6 bulan pasca go-live.
+			r.Get("/storage/*", a.handleLegacyStorageRedirect)
 		})
 		r.Route("/portfolios", func(r chi.Router) {
 			r.With(a.authOptional).Get("/", a.handleListPublished)
