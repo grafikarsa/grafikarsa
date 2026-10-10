@@ -14,15 +14,20 @@ export default function NotificationsPage() {
   async function load() {
     try {
       const data = await apiGet<Notif[]>("v1/notifications");
-      setItems(data);
+      setItems(Array.isArray(data) ? data : []);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Gagal memuat.");
+      throw err;
     }
   }
 
+  // Load dulu; tandai terbaca HANYA bila pemuatan berhasil (jangan
+  // menghilangkan badge saat request gagal).
   useEffect(() => {
-    load();
-    apiSend("v1/notifications/read-all", "POST").catch(() => null);
+    load()
+      .then(() => apiSend("v1/notifications/read-all", "POST").catch(() => null))
+      .catch(() => null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

@@ -40,7 +40,8 @@ export default function AdminChangelogsPage() {
         summary,
         channel: "stable",
         audience: "all",
-        publish_at: publishAt || undefined,
+        // datetime-local tidak punya zona; konversi ke RFC3339.
+        publish_at: publishAt ? new Date(publishAt).toISOString() : undefined,
         sections: sections.filter((s) => s.title),
       }),
     onSuccess: () => {

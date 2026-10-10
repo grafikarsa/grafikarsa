@@ -22,9 +22,16 @@ export function SiteNav() {
   const pathname = usePathname();
   const router = useRouter();
 
+  const perms = useQuery({
+    queryKey: ["me-permissions"],
+    queryFn: () => apiGet<string[]>("v1/me/permissions"),
+    enabled: Boolean(user),
+  });
+  const isStaff = (perms.data ?? []).some((p) => p.startsWith("portfolios.moderate") || p === "academic.view");
+
   const notif = useQuery({
     queryKey: ["notif-count"],
-    queryFn: () => apiGet<{ unread: number }>("v1/notifications/unread-count"),
+    queryFn: () => apiGet<{ unread: number }>("v1/notifications/count"),
     enabled: Boolean(user),
     refetchInterval: 60_000,
   });
@@ -67,9 +74,14 @@ export function SiteNav() {
               <Link href="/settings" className="text-sm">
                 Pengaturan
               </Link>
+              {isStaff && (
+                <Link href="/admin/moderation" className="text-sm">
+                  Admin
+                </Link>
+              )}
               <Link href={`/${user.username}`}>
                 <Avatar className="size-7">
-                  <AvatarImage src={`/api/v1/media/avatar/${user.id}`} alt="" />
+                  <AvatarImage src={user.avatar_media_id ? `/api/v1/media/${user.avatar_media_id}?w=320` : ""} alt="" />
                   <AvatarFallback>{user.name?.slice(0, 1).toUpperCase()}</AvatarFallback>
                 </Avatar>
               </Link>

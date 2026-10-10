@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { login } from "@/lib/api";
+import { Turnstile } from "@/components/security/turnstile";
 
 function LoginInner() {
   const router = useRouter();
@@ -15,14 +16,17 @@ function LoginInner() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [captcha, setCaptcha] = useState("");
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     try {
-      await login(username, password);
+      await login(username, password, captcha || undefined);
       toast.success("Login berhasil.");
-      router.push(params.get("next") ?? "/");
+      // Hanya izinkan path internal (cegah open redirect via ?next=absolut).
+      const next = params.get("next") ?? "/";
+      router.push(next.startsWith("/") && !next.startsWith("//") ? next : "/");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Login gagal.");
     } finally {
@@ -46,7 +50,8 @@ function LoginInner() {
               <Label htmlFor="password">Password</Label>
               <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
             </div>
-            <Button type="submit" disabled={loading}>
+            <Turnstile onToken={setCaptcha} />
+        <Button type="submit" disabled={loading}>
               {loading ? "Masuk..." : "Masuk"}
             </Button>
           </form>

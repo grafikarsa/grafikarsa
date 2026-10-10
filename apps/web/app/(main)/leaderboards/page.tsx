@@ -15,6 +15,11 @@ type Entry = {
   breakdown: Record<string, number>;
   subject_user_id?: string | null;
   subject_portfolio_id?: string | null;
+  name?: string;
+  username?: string;
+  title?: string;
+  slug?: string;
+  owner_name?: string;
 };
 
 type Kind = "best_students" | "best_projects";
@@ -97,12 +102,19 @@ export default function LeaderboardsPage() {
               <Delta n={e.delta_rank} />
               <div className="flex-1">
                 <p className="text-sm">
-                  {e.subject_portfolio_id ? (
-                    <Link className="hover:underline" href={`/portfolios?highlight=${e.subject_portfolio_id}`}>
-                      Lihat karya
+                  {e.title && e.username && e.slug ? (
+                    <>
+                      <Link className="font-medium hover:underline" href={`/${e.username}/${e.slug}`}>
+                        {e.title}
+                      </Link>
+                      <span className="text-muted-foreground"> · @{e.username}</span>
+                    </>
+                  ) : e.username ? (
+                    <Link className="font-medium hover:underline" href={`/${e.username}`}>
+                      {e.name ?? `@${e.username}`}
                     </Link>
                   ) : (
-                    <span className="text-muted-foreground">Siswa #{e.rank}</span>
+                    <span className="text-muted-foreground">#{e.rank}</span>
                   )}
                 </p>
                 <p className="text-muted-foreground text-xs">

@@ -89,7 +89,10 @@ export default function AdminPortfoliosPage() {
                 <TableCell>
                   <Badge variant={p.status === "published" ? "default" : "secondary"}>{p.status}</Badge>
                 </TableCell>
-                <TableCell className="flex flex-wrap gap-1">
+                <TableCell className="flex flex-wrap items-center gap-1">
+                  <a className="rounded border px-2 py-1 text-xs" href={`/admin/assessments/${p.id}`}>
+                    Nilai
+                  </a>
                   {ACTIONS.filter(([a]) => {
                     if (p.status === "published") return a === "reject" || a === "restore";
                     if (p.status === "rejected") return a === "restore" || a === "approve";

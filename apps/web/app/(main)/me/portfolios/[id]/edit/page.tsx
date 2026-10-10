@@ -3,6 +3,7 @@
 import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -140,8 +141,38 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
     xhr.send(fd);
   }
 
+  const tags = useQuery({
+    queryKey: ["tags"],
+    queryFn: () => apiGet<{ id: string; name: string }[]>("v1/tags"),
+  });
+  const series = useQuery({
+    queryKey: ["series"],
+    queryFn: () => apiGet<{ id: string; name: string }[]>("v1/series"),
+  });
+  const [tagIDs, setTagIDs] = useState<string[]>([]);
+  const [seriesID, setSeriesID] = useState("");
+
+  async function saveMeta() {
+    try {
+      // Tag & series disimpan bersama PATCH portfolio; submit mensyaratkan ≥1 tag.
+      await apiSend(`v1/portfolios/id/${id}`, "PATCH", {
+        tag_ids: tagIDs,
+        series_id: seriesID || null,
+      });
+      toast.success("Tag & series disimpan.");
+      load(true);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal menyimpan tag.");
+    }
+  }
+
   async function submit() {
     try {
+      // Flush autosave judul dulu agar tidak ada PATCH yang tertinggal.
+      if (titleTimer.current) {
+        clearTimeout(titleTimer.current);
+        titleTimer.current = null;
+      }
       await apiSend(`v1/portfolios/id/${id}/submit`, "POST");
       toast.success("Dikirim ke review.");
       router.push("/me/portfolios");
@@ -180,6 +211,42 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
             <Input value={yt} onChange={(e) => setYt(e.target.value)} placeholder="URL YouTube..." />
             <Button variant="outline" onClick={addYt}>+ Video</Button>
           </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Tag & series</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              <div className="flex flex-wrap gap-2">
+                {(tags.data ?? []).map((t: { id: string; name: string }) => (
+                  <label key={t.id} className="flex items-center gap-1 rounded border px-2 py-1 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={tagIDs.includes(t.id)}
+                      onChange={(e) => setTagIDs(e.target.checked ? [...tagIDs, t.id] : tagIDs.filter((x) => x !== t.id))}
+                    />
+                    {t.name}
+                  </label>
+                ))}
+                {(tags.data ?? []).length === 0 && <p className="text-muted-foreground text-xs">Belum ada tag.</p>}
+              </div>
+              <div className="flex items-center gap-2">
+                <label htmlFor="series" className="text-sm">Series</label>
+                <select
+                  id="series"
+                  className="rounded border px-2 py-1 text-sm"
+                  value={seriesID}
+                  onChange={(e) => setSeriesID(e.target.value)}
+                >
+                  <option value="">(tanpa series)</option>
+                  {(series.data ?? []).map((x: { id: string; name: string }) => (
+                    <option key={x.id} value={x.id}>{x.name}</option>
+                  ))}
+                </select>
+                <Button variant="outline" size="sm" onClick={saveMeta}>Simpan tag & series</Button>
+              </div>
+              <p className="text-muted-foreground text-xs">Minimal 1 tag wajib sebelum kirim review.</p>
+            </CardContent>
+          </Card>
           <Button onClick={submit} disabled={status === "pending_review"}>Kirim review</Button>
         </CardContent>
       </Card>

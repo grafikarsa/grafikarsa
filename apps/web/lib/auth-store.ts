@@ -1,6 +1,13 @@
 import { create } from "zustand";
 
-export type AuthUser = { id: string; username: string; name: string; role_primary: string };
+export type AuthUser = {
+  id: string;
+  username: string;
+  name: string;
+  role_primary: string;
+  avatar_media_id?: string | null;
+  must_change_password?: boolean;
+};
 
 type AuthState = {
   accessToken: string | null;

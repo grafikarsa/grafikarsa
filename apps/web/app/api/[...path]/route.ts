@@ -55,6 +55,10 @@ async function proxy(req: NextRequest, path: string[]) {
   }
   const reqId = req.headers.get("x-request-id") ?? crypto.randomUUID();
   headers.set("x-request-id", reqId);
+  // IP klien asli untuk rate limit + audit (proxy menambahkan IP di akhir XFF).
+  const xff = req.headers.get("x-forwarded-for");
+  const realIP = xff ? xff.split(",").pop()!.trim() : (req.headers.get("x-real-ip") ?? "");
+  if (realIP) headers.set("x-client-ip", realIP);
 
   if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method) && !allowedOrigin(req)) {
     return NextResponse.json(
