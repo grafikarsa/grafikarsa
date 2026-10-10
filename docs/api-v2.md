@@ -34,3 +34,25 @@ Gagal: `{ success: false, error: { code, message }, request_id }`
 | GET | `/v1/media/:id` | optional | Stream ETag + Range (avatar/banner publik) |
 
 Kontrak lengkap: `packages/contracts/openapi.yaml`.
+
+## Endpoint tambahan (pasca-audit)
+
+| Method | Path | Auth | Deskripsi |
+|---|---|---|---|
+| GET | `/metrics` | — | Prometheus text (counter + runtime) |
+| GET | `/v1/users` | optional | Direktori publik (tanpa email) |
+| GET | `/v1/users/:username` | optional | Profil publik; email hanya self/admin/show_email |
+| GET | `/v1/changelogs/:id` | optional | Detail + sections (draft hanya untuk manager) |
+| GET | `/v1/changelogs/unread-count` | Bearer | Jumlah rilis belum dibaca |
+| POST | `/v1/changelogs/mark-all-read` | Bearer+CSRF | Tandai semua rilis dibaca |
+| POST | `/v1/admin/changelogs/:id/publish` \| `/unpublish` \| `/archive` | `changelog.publish` | Siklus rilis (unpublish >100 pembaca butuh admin) |
+| PATCH | `/v1/admin/feedback/:id/triage` | `feedback.triage` | Prioritas/publikasi/spam (CSRF) |
+| POST | `/v1/admin/leaderboards/recompute` | `system.jobs` | Recompute leaderboard (maks 1x/jam) |
+| GET | `/v1/changelogs/rss.xml` (web) | — | RSS changelog |
+
+### Catatan keamanan
+
+- CSRF token terikat ke user (`HMAC(secret, hari:user_id)`) dan wajib pada semua mutasi termasuk logout/sesi.
+- Refresh token: 30 hari absolut + 7 hari idle (sliding), rotasi mencatat `rotated_to`, reuse terdeteksi → seluruh family dicabut.
+- Rate limit: 100 req/menit/IP global; login 5 gagal → Turnstile, 10 gagal → kunci 30 menit; upload 20/jam & 100/hari per user.
+- `must_change_password` memblokir seluruh endpoint kecuali ganti password sendiri.
