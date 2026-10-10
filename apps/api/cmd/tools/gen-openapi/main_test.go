@@ -39,10 +39,17 @@ func TestSemuaRoutePunyaSecurity(t *testing.T) {
 // Semua mutasi wajib CSRF, kecuali tiga endpoint yang memang tidak punya
 // sesi/cookie untuk diverifikasi (login, refresh, feedback guest).
 func TestMutasiWajibCSRF(t *testing.T) {
+	// Pengecualian yang disengaja:
+	// - login/refresh: belum ada sesi untuk diverifikasi (login pakai Turnstile
+	//   saat brute-force, refresh memakai cookie + SameSite).
+	// - feedback: guest tanpa cookie; dilindungi Turnstile + rate limit.
+	// - search POST: endpoint BACA (tidak mengubah state) yang memakai POST
+	//   agar query panjang/UTF-8 aman; CSRF tidak relevan untuk data publik.
 	allowed := map[string]bool{
 		"/api/v1/auth/login":   true,
 		"/api/v1/auth/refresh": true,
 		"/api/v1/feedback":     true,
+		"/api/v1/search":       true,
 	}
 	for _, r := range loadRoutes(t) {
 		if r.method == "GET" || r.csrf || allowed[r.path] {
