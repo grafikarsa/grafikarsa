@@ -83,6 +83,35 @@ func (a *App) routes() http.Handler {
 			r.Use(a.authOptional)
 			r.Get("/media/{id}", a.handleServeMedia)
 		})
+		r.Route("/portfolios", func(r chi.Router) {
+			r.With(a.authOptional).Get("/", a.handleListPublished)
+			r.With(a.authOptional).Get("/by-slug", a.handleGetPortfolioBySlug)
+			r.Group(func(r chi.Router) {
+				r.Use(a.authRequired)
+				r.With(a.requirePerm("portfolios.create")).Post("/", a.csrf(a.handleCreatePortfolio))
+				r.Get("/id/{id}", a.handleGetPortfolio)
+				r.Patch("/id/{id}", a.csrf(a.handleUpdatePortfolio))
+				r.Delete("/id/{id}", a.csrf(a.handleDeletePortfolio))
+				r.Post("/id/{id}/submit", a.csrf(a.handleSubmitPortfolio))
+				r.Post("/id/{id}/cancel", a.csrf(a.handleCancelPortfolio))
+				r.Post("/id/{id}/archive", a.csrf(a.handleArchivePortfolio))
+				r.Post("/id/{id}/unarchive", a.csrf(a.handleUnarchivePortfolio))
+				r.Get("/me", a.handleMyPortfolios)
+				r.Post("/{portfolio_id}/blocks", a.csrf(a.handleCreateBlock))
+				r.Put("/{portfolio_id}/blocks/reorder", a.csrf(a.handleReorderBlocks))
+			})
+		})
+		r.Group(func(r chi.Router) {
+			r.Use(a.authRequired)
+			r.Patch("/blocks/{blockId}", a.csrf(a.handleUpdateBlock))
+			r.Delete("/blocks/{blockId}", a.csrf(a.handleDeleteBlock))
+		})
+		r.Group(func(r chi.Router) {
+			r.Use(a.authOptional)
+			r.Get("/tags", a.handleListTags)
+			r.Get("/series", a.handleListSeries)
+			r.Get("/series/{id}", a.handleGetSeries)
+		})
 	})
 	return r
 }

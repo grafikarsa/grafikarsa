@@ -677,14 +677,14 @@ func (q *Queries) ListTags(ctx context.Context, arg ListTagsParams) ([]ListTagsR
 }
 
 const maxBlockPosition = `-- name: MaxBlockPosition :one
-SELECT COALESCE(MAX(position), -1) FROM portfolio_blocks WHERE portfolio_id = $1
+SELECT COALESCE(MAX(position), -1)::int FROM portfolio_blocks WHERE portfolio_id = $1
 `
 
-func (q *Queries) MaxBlockPosition(ctx context.Context, portfolioID pgtype.UUID) (interface{}, error) {
+func (q *Queries) MaxBlockPosition(ctx context.Context, portfolioID pgtype.UUID) (int32, error) {
 	row := q.db.QueryRow(ctx, maxBlockPosition, portfolioID)
-	var coalesce interface{}
-	err := row.Scan(&coalesce)
-	return coalesce, err
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
 }
 
 const moderatePortfolio = `-- name: ModeratePortfolio :exec

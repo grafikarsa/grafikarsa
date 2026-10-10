@@ -126,4 +126,4 @@ UPDATE portfolio_blocks SET position = $2 WHERE id = $1;
 DELETE FROM portfolio_blocks WHERE id = $1;
 
 -- name: MaxBlockPosition :one
-SELECT COALESCE(MAX(position), -1) FROM portfolio_blocks WHERE portfolio_id = $1;
+SELECT COALESCE(MAX(position), -1)::int FROM portfolio_blocks WHERE portfolio_id = $1;
