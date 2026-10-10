@@ -480,3 +480,92 @@ func (a *App) handleFeedbackTriage(w http.ResponseWriter, r *http.Request) {
 	auditLog(r, a, "feedback.triage", "feedback_threads", id, "")
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "ok"}, r))
 }
+
+// handleLatestChangelog: rilis terbaru yang sudah terbit (untuk widget/landing).
+func (a *App) handleLatestChangelog(w http.ResponseWriter, r *http.Request) {
+	c, err := a.Q.LatestChangelog(r.Context())
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Belum ada changelog.", r))
+		return
+	}
+	secs, _ := a.Q.ListChangelogSections(r.Context(), c.ID)
+	out := []map[string]any{}
+	for _, sc := range secs {
+		out = append(out, map[string]any{"kind": sc.Kind, "title": sc.Title, "body_md": sc.BodyMd})
+	}
+	if out == nil {
+		out = []map[string]any{}
+	}
+	writeJSON(w, http.StatusOK, ok(map[string]any{
+		"id": uuidStr(c.ID), "version": c.Version, "title": c.Title, "summary": c.Summary,
+		"channel": c.Channel, "sections": out,
+	}, r))
+}
+
+// handleChangelogByVersion: halaman SEO /changelog/{version} (PRD §11.2).
+// Draft hanya terlihat manager; versi tak ada balas 404.
+func (a *App) handleChangelogByVersion(w http.ResponseWriter, r *http.Request) {
+	ver := chi.URLParam(r, "version")
+	c, err := a.Q.GetChangelogByVersion(r.Context(), ver)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Changelog tidak ditemukan.", r))
+		return
+	}
+	isManager := UserRole(r) == "admin" || UserPerms(r)["changelog.manage"]
+	visible := c.Status == "published" && (!c.PublishAt.Valid || !c.PublishAt.Time.After(time.Now()))
+	if !visible && !isManager {
+		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Changelog tidak ditemukan.", r))
+		return
+	}
+	secs, _ := a.Q.ListChangelogSections(r.Context(), c.ID)
+	out := []map[string]any{}
+	for _, sc := range secs {
+		out = append(out, map[string]any{"kind": sc.Kind, "title": sc.Title, "body_md": sc.BodyMd})
+	}
+	if out == nil {
+		out = []map[string]any{}
+	}
+	writeJSON(w, http.StatusOK, ok(map[string]any{
+		"id": uuidStr(c.ID), "version": c.Version, "title": c.Title, "summary": c.Summary,
+		"status": c.Status, "sections": out,
+	}, r))
+}
+
+// handleListPublicMajors / handleListPublicClasses: referensi untuk filter FE,
+// tidak butuh login (PRD §5) dan hanya menampilkan yang aktif.
+func (a *App) handleListPublicMajors(w http.ResponseWriter, r *http.Request) {
+	rows, err := a.Q.ListPublicMajors(r.Context())
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal memuat jurusan.", r))
+		return
+	}
+	out := []map[string]any{}
+	for _, m := range rows {
+		out = append(out, map[string]any{
+			"id": uuidStr(m.ID), "code": m.Code, "name": m.Name, "require_series": m.RequireSeries,
+		})
+	}
+	if out == nil {
+		out = []map[string]any{}
+	}
+	writeJSON(w, http.StatusOK, ok(out, r))
+}
+
+func (a *App) handleListPublicClasses(w http.ResponseWriter, r *http.Request) {
+	rows, err := a.Q.ListPublicClasses(r.Context())
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal memuat kelas.", r))
+		return
+	}
+	out := []map[string]any{}
+	for _, c := range rows {
+		out = append(out, map[string]any{
+			"id": uuidStr(c.ID), "name": c.Name, "grade": c.Grade, "group": c.ClassGroup,
+			"major_code": c.MajorCode, "start_year": c.StartYear,
+		})
+	}
+	if out == nil {
+		out = []map[string]any{}
+	}
+	writeJSON(w, http.StatusOK, ok(out, r))
+}

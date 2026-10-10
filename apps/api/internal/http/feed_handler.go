@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"math"
 	"regexp"
+	"strings"
 
 	"net/http"
 	"time"
@@ -433,10 +434,29 @@ func (a *App) handleRecomputeLeaderboard(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, http.StatusAccepted, ok(map[string]string{"status": "queued"}, r))
 }
 
+// handleSearch menerima GET ?q= dan POST {"query": "..."} (PRD §5 GET|POST).
 func (a *App) handleSearch(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query().Get("q")
-	if len(q) < 2 {
-		writeJSON(w, http.StatusBadRequest, fail("VALIDATION_ERROR", "Query minimal 2 karakter.", r))
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	if r.Method == http.MethodPost {
+		var req struct {
+			Query string `json:"query"`
+			Q     string `json:"q"`
+		}
+		if !decodeJSON(w, r, &req) {
+			return
+		}
+		if req.Query != "" {
+			q = strings.TrimSpace(req.Query)
+		} else if req.Q != "" {
+			q = strings.TrimSpace(req.Q)
+		}
+	}
+	// Minimal 2 karakter DAN harus ada karakter alfanumerik, supaya '%%'
+	// tidak mengembalikan seluruh katalog (perilaku sebelumnya).
+	if len(q) < 2 || !strings.ContainsFunc(q, func(rr rune) bool {
+		return (rr >= 'a' && rr <= 'z') || (rr >= 'A' && rr <= 'Z') || (rr >= '0' && rr <= '9')
+	}) {
+		writeJSON(w, http.StatusBadRequest, fail("VALIDATION_ERROR", "Query minimal 2 karakter alfanumerik.", r))
 		return
 	}
 	ports, _ := a.Q.SearchPortfolios(r.Context(), q)

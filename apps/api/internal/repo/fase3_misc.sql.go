@@ -103,6 +103,17 @@ func (q *Queries) CountFeedbackVotes(ctx context.Context, threadID pgtype.UUID) 
 	return count, err
 }
 
+const countOutboxJobs = `-- name: CountOutboxJobs :one
+SELECT COUNT(*) FROM outbox WHERE ($1::text = '' OR status = $1)
+`
+
+func (q *Queries) CountOutboxJobs(ctx context.Context, dollar_1 string) (int64, error) {
+	row := q.db.QueryRow(ctx, countOutboxJobs, dollar_1)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countUnreadChangelogs = `-- name: CountUnreadChangelogs :one
 SELECT COUNT(*) FROM changelogs c
 WHERE c.status = 'published' AND (c.publish_at IS NULL OR c.publish_at <= NOW())
@@ -190,6 +201,55 @@ func (q *Queries) CreateMetric(ctx context.Context, arg CreateMetricParams) (pgt
 	var id pgtype.UUID
 	err := row.Scan(&id)
 	return id, err
+}
+
+const dashboardStats = `-- name: DashboardStats :one
+SELECT
+  (SELECT COUNT(*) FROM users u WHERE u.deleted_at IS NULL AND ($1::text = '' OR u.major_id::text = $1)) AS users_total,
+  (SELECT COUNT(*) FROM users u WHERE u.deleted_at IS NULL AND u.is_active AND ($1::text = '' OR u.major_id::text = $1)) AS users_active,
+  (SELECT COUNT(*) FROM users u WHERE u.deleted_at IS NULL AND u.status = 'lulus' AND ($1::text = '' OR u.major_id::text = $1)) AS users_alumni,
+  (SELECT COUNT(*) FROM portfolios p JOIN users u ON u.id = p.owner_id
+    WHERE p.deleted_at IS NULL AND ($1::text = '' OR u.major_id::text = $1)) AS portfolios_total,
+  (SELECT COUNT(*) FROM portfolios p JOIN users u ON u.id = p.owner_id
+    WHERE p.deleted_at IS NULL AND p.status = 'published' AND ($1::text = '' OR u.major_id::text = $1)) AS portfolios_published,
+  (SELECT COUNT(*) FROM portfolios p JOIN users u ON u.id = p.owner_id
+    WHERE p.deleted_at IS NULL AND p.status = 'pending_review' AND ($1::text = '' OR u.major_id::text = $1)) AS portfolios_pending,
+  (SELECT COUNT(*) FROM feedback_threads f WHERE f.status IN ('open', 'triaged', 'in_progress')) AS feedback_open,
+  (SELECT COUNT(*) FROM outbox WHERE status IN ('pending', 'processing')) AS jobs_queued,
+  (SELECT COUNT(*) FROM outbox WHERE status = 'failed') AS jobs_failed,
+  (SELECT COUNT(*) FROM quarantine_blocks) AS blocks_quarantined
+`
+
+type DashboardStatsRow struct {
+	UsersTotal          int64 `json:"users_total"`
+	UsersActive         int64 `json:"users_active"`
+	UsersAlumni         int64 `json:"users_alumni"`
+	PortfoliosTotal     int64 `json:"portfolios_total"`
+	PortfoliosPublished int64 `json:"portfolios_published"`
+	PortfoliosPending   int64 `json:"portfolios_pending"`
+	FeedbackOpen        int64 `json:"feedback_open"`
+	JobsQueued          int64 `json:"jobs_queued"`
+	JobsFailed          int64 `json:"jobs_failed"`
+	BlocksQuarantined   int64 `json:"blocks_quarantined"`
+}
+
+// Angka ringkas untuk /admin/dashboard (scope ” = global, atau id jurusan).
+func (q *Queries) DashboardStats(ctx context.Context, dollar_1 string) (DashboardStatsRow, error) {
+	row := q.db.QueryRow(ctx, dashboardStats, dollar_1)
+	var i DashboardStatsRow
+	err := row.Scan(
+		&i.UsersTotal,
+		&i.UsersActive,
+		&i.UsersAlumni,
+		&i.PortfoliosTotal,
+		&i.PortfoliosPublished,
+		&i.PortfoliosPending,
+		&i.FeedbackOpen,
+		&i.JobsQueued,
+		&i.JobsFailed,
+		&i.BlocksQuarantined,
+	)
+	return i, err
 }
 
 const deleteMetric = `-- name: DeleteMetric :exec
@@ -309,6 +369,40 @@ func (q *Queries) GetChangelog(ctx context.Context, id pgtype.UUID) (GetChangelo
 	return i, err
 }
 
+const getChangelogByVersion = `-- name: GetChangelogByVersion :one
+SELECT id, version, title, summary, channel, audience, status, publish_at, created_at
+FROM changelogs WHERE version = $1 LIMIT 1
+`
+
+type GetChangelogByVersionRow struct {
+	ID        pgtype.UUID        `json:"id"`
+	Version   string             `json:"version"`
+	Title     string             `json:"title"`
+	Summary   string             `json:"summary"`
+	Channel   string             `json:"channel"`
+	Audience  string             `json:"audience"`
+	Status    string             `json:"status"`
+	PublishAt pgtype.Timestamptz `json:"publish_at"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+func (q *Queries) GetChangelogByVersion(ctx context.Context, version string) (GetChangelogByVersionRow, error) {
+	row := q.db.QueryRow(ctx, getChangelogByVersion, version)
+	var i GetChangelogByVersionRow
+	err := row.Scan(
+		&i.ID,
+		&i.Version,
+		&i.Title,
+		&i.Summary,
+		&i.Channel,
+		&i.Audience,
+		&i.Status,
+		&i.PublishAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getFeedbackThread = `-- name: GetFeedbackThread :one
 SELECT id, reporter_id, reporter_email, category, title, body_md, status, priority, upvotes_cached, assignee_id, is_public, is_spam, linked_changelog_id, resolved_at, created_at
 FROM feedback_threads WHERE id = $1 LIMIT 1
@@ -368,6 +462,42 @@ func (q *Queries) GetSystemSetting(ctx context.Context, key string) (GetSystemSe
 	row := q.db.QueryRow(ctx, getSystemSetting, key)
 	var i GetSystemSettingRow
 	err := row.Scan(&i.Key, &i.Value)
+	return i, err
+}
+
+const latestChangelog = `-- name: LatestChangelog :one
+SELECT id, version, title, summary, channel, audience, status, publish_at, created_at
+FROM changelogs
+WHERE status = 'published' AND (publish_at IS NULL OR publish_at <= NOW())
+ORDER BY COALESCE(publish_at, created_at) DESC LIMIT 1
+`
+
+type LatestChangelogRow struct {
+	ID        pgtype.UUID        `json:"id"`
+	Version   string             `json:"version"`
+	Title     string             `json:"title"`
+	Summary   string             `json:"summary"`
+	Channel   string             `json:"channel"`
+	Audience  string             `json:"audience"`
+	Status    string             `json:"status"`
+	PublishAt pgtype.Timestamptz `json:"publish_at"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+func (q *Queries) LatestChangelog(ctx context.Context) (LatestChangelogRow, error) {
+	row := q.db.QueryRow(ctx, latestChangelog)
+	var i LatestChangelogRow
+	err := row.Scan(
+		&i.ID,
+		&i.Version,
+		&i.Title,
+		&i.Summary,
+		&i.Channel,
+		&i.Audience,
+		&i.Status,
+		&i.PublishAt,
+		&i.CreatedAt,
+	)
 	return i, err
 }
 
@@ -613,6 +743,132 @@ func (q *Queries) ListMetrics(ctx context.Context) ([]ListMetricsRow, error) {
 			&i.Name,
 			&i.Sort,
 			&i.IsActive,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listOutboxJobs = `-- name: ListOutboxJobs :many
+SELECT id, topic, status, attempts, next_retry_at, created_at FROM outbox
+WHERE ($1::text = '' OR status = $1)
+ORDER BY id DESC LIMIT $2 OFFSET $3
+`
+
+type ListOutboxJobsParams struct {
+	Column1 string `json:"column_1"`
+	Limit   int32  `json:"limit"`
+	Offset  int32  `json:"offset"`
+}
+
+type ListOutboxJobsRow struct {
+	ID          int64              `json:"id"`
+	Topic       string             `json:"topic"`
+	Status      string             `json:"status"`
+	Attempts    int32              `json:"attempts"`
+	NextRetryAt pgtype.Timestamptz `json:"next_retry_at"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+func (q *Queries) ListOutboxJobs(ctx context.Context, arg ListOutboxJobsParams) ([]ListOutboxJobsRow, error) {
+	rows, err := q.db.Query(ctx, listOutboxJobs, arg.Column1, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListOutboxJobsRow{}
+	for rows.Next() {
+		var i ListOutboxJobsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Topic,
+			&i.Status,
+			&i.Attempts,
+			&i.NextRetryAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPublicClasses = `-- name: ListPublicClasses :many
+SELECT c.id, c.name, c.grade, c.class_group, m.code AS major_code, y.start_year
+FROM classes c JOIN majors m ON m.id = c.major_id JOIN academic_years y ON y.id = c.academic_year_id
+WHERE y.is_active ORDER BY c.name ASC
+`
+
+type ListPublicClassesRow struct {
+	ID         pgtype.UUID `json:"id"`
+	Name       string      `json:"name"`
+	Grade      int16       `json:"grade"`
+	ClassGroup string      `json:"class_group"`
+	MajorCode  string      `json:"major_code"`
+	StartYear  int32       `json:"start_year"`
+}
+
+func (q *Queries) ListPublicClasses(ctx context.Context) ([]ListPublicClassesRow, error) {
+	rows, err := q.db.Query(ctx, listPublicClasses)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPublicClassesRow{}
+	for rows.Next() {
+		var i ListPublicClassesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Grade,
+			&i.ClassGroup,
+			&i.MajorCode,
+			&i.StartYear,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPublicMajors = `-- name: ListPublicMajors :many
+SELECT id, code, name, require_series FROM majors ORDER BY name ASC
+`
+
+type ListPublicMajorsRow struct {
+	ID            pgtype.UUID `json:"id"`
+	Code          string      `json:"code"`
+	Name          string      `json:"name"`
+	RequireSeries bool        `json:"require_series"`
+}
+
+func (q *Queries) ListPublicMajors(ctx context.Context) ([]ListPublicMajorsRow, error) {
+	rows, err := q.db.Query(ctx, listPublicMajors)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPublicMajorsRow{}
+	for rows.Next() {
+		var i ListPublicMajorsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Code,
+			&i.Name,
+			&i.RequireSeries,
 		); err != nil {
 			return nil, err
 		}

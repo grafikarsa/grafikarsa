@@ -158,3 +158,46 @@ SELECT key, value, updated_at FROM system_settings ORDER BY key ASC;
 -- name: UpsertSystemSetting :exec
 INSERT INTO system_settings (key, value, updated_by) VALUES ($1, $2, $3)
 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_by = EXCLUDED.updated_by, updated_at = NOW();
+
+-- name: DashboardStats :one
+-- Angka ringkas untuk /admin/dashboard (scope '' = global, atau id jurusan).
+SELECT
+  (SELECT COUNT(*) FROM users u WHERE u.deleted_at IS NULL AND ($1::text = '' OR u.major_id::text = $1)) AS users_total,
+  (SELECT COUNT(*) FROM users u WHERE u.deleted_at IS NULL AND u.is_active AND ($1::text = '' OR u.major_id::text = $1)) AS users_active,
+  (SELECT COUNT(*) FROM users u WHERE u.deleted_at IS NULL AND u.status = 'lulus' AND ($1::text = '' OR u.major_id::text = $1)) AS users_alumni,
+  (SELECT COUNT(*) FROM portfolios p JOIN users u ON u.id = p.owner_id
+    WHERE p.deleted_at IS NULL AND ($1::text = '' OR u.major_id::text = $1)) AS portfolios_total,
+  (SELECT COUNT(*) FROM portfolios p JOIN users u ON u.id = p.owner_id
+    WHERE p.deleted_at IS NULL AND p.status = 'published' AND ($1::text = '' OR u.major_id::text = $1)) AS portfolios_published,
+  (SELECT COUNT(*) FROM portfolios p JOIN users u ON u.id = p.owner_id
+    WHERE p.deleted_at IS NULL AND p.status = 'pending_review' AND ($1::text = '' OR u.major_id::text = $1)) AS portfolios_pending,
+  (SELECT COUNT(*) FROM feedback_threads f WHERE f.status IN ('open', 'triaged', 'in_progress')) AS feedback_open,
+  (SELECT COUNT(*) FROM outbox WHERE status IN ('pending', 'processing')) AS jobs_queued,
+  (SELECT COUNT(*) FROM outbox WHERE status = 'failed') AS jobs_failed,
+  (SELECT COUNT(*) FROM quarantine_blocks) AS blocks_quarantined;
+
+-- name: ListOutboxJobs :many
+SELECT id, topic, status, attempts, next_retry_at, created_at FROM outbox
+WHERE ($1::text = '' OR status = $1)
+ORDER BY id DESC LIMIT $2 OFFSET $3;
+
+-- name: CountOutboxJobs :one
+SELECT COUNT(*) FROM outbox WHERE ($1::text = '' OR status = $1);
+
+-- name: LatestChangelog :one
+SELECT id, version, title, summary, channel, audience, status, publish_at, created_at
+FROM changelogs
+WHERE status = 'published' AND (publish_at IS NULL OR publish_at <= NOW())
+ORDER BY COALESCE(publish_at, created_at) DESC LIMIT 1;
+
+-- name: GetChangelogByVersion :one
+SELECT id, version, title, summary, channel, audience, status, publish_at, created_at
+FROM changelogs WHERE version = $1 LIMIT 1;
+
+-- name: ListPublicMajors :many
+SELECT id, code, name, require_series FROM majors ORDER BY name ASC;
+
+-- name: ListPublicClasses :many
+SELECT c.id, c.name, c.grade, c.class_group, m.code AS major_code, y.start_year
+FROM classes c JOIN majors m ON m.id = c.major_id JOIN academic_years y ON y.id = c.academic_year_id
+WHERE y.is_active ORDER BY c.name ASC;

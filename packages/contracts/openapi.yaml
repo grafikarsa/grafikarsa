@@ -23,8 +23,10 @@ tags:
   - name: admin-audit-logs
   - name: admin-changelogs
   - name: admin-classes
+  - name: admin-dashboard
   - name: admin-feedback
   - name: admin-import
+  - name: admin-jobs
   - name: admin-leaderboards
   - name: admin-majors
   - name: admin-portfolios
@@ -38,10 +40,12 @@ tags:
   - name: auth
   - name: blocks
   - name: changelogs
+  - name: classes
   - name: comments
   - name: feed
   - name: feedback
   - name: leaderboards
+  - name: majors
   - name: media
   - name: notifications
   - name: portfolios
@@ -478,6 +482,28 @@ paths:
           $ref: "#/components/responses/TooManyRequests"
         "500":
           $ref: "#/components/responses/InternalError"
+  "/api/v1/admin/dashboard/stats":
+    get:
+      tags: [admin-dashboard]
+      operationId: get_admin_dashboard_stats
+      summary: "inline (butuh login, permission: dashboard.view_global|dashboard.view_jurusan)"
+      x-handler: inline
+      security:
+        - bearerAuth: []
+      x-permissions: [dashboard.view_global, dashboard.view_jurusan]
+      responses:
+        "200":
+          description: Berhasil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
   "/api/v1/admin/feedback":
     get:
       tags: [admin-feedback]
@@ -597,6 +623,28 @@ paths:
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  "/api/v1/admin/jobs":
+    get:
+      tags: [admin-jobs]
+      operationId: get_admin_jobs
+      summary: "inline (butuh login, permission: system.jobs)"
+      x-handler: inline
+      security:
+        - bearerAuth: []
+      x-permissions: [system.jobs]
+      responses:
+        "200":
+          description: Berhasil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "429":
@@ -1769,6 +1817,26 @@ paths:
           $ref: "#/components/responses/TooManyRequests"
         "500":
           $ref: "#/components/responses/InternalError"
+  "/api/v1/changelogs/latest":
+    get:
+      tags: [changelogs]
+      operationId: get_changelogs_latest
+      summary: "inline (opsional login)"
+      x-handler: inline
+      security:
+        - bearerAuth: []
+        - {}
+      responses:
+        "200":
+          description: Berhasil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
   "/api/v1/changelogs/mark-all-read":
     post:
       tags: [changelogs]
@@ -1816,6 +1884,26 @@ paths:
           $ref: "#/components/responses/TooManyRequests"
         "500":
           $ref: "#/components/responses/InternalError"
+  "/api/v1/changelogs/version/{version}":
+    get:
+      tags: [changelogs]
+      operationId: get_changelogs_version_version
+      summary: "inline (opsional login)"
+      x-handler: inline
+      security:
+        - bearerAuth: []
+        - {}
+      responses:
+        "200":
+          description: Berhasil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
   "/api/v1/changelogs/{id}":
     get:
       tags: [changelogs]
@@ -1858,6 +1946,26 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  "/api/v1/classes":
+    get:
+      tags: [classes]
+      operationId: get_classes
+      summary: "inline (opsional login)"
+      x-handler: inline
+      security:
+        - bearerAuth: []
+        - {}
+      responses:
+        "200":
+          description: Berhasil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2091,6 +2199,26 @@ paths:
     get:
       tags: [leaderboards]
       operationId: get_leaderboards
+      summary: "inline (opsional login)"
+      x-handler: inline
+      security:
+        - bearerAuth: []
+        - {}
+      responses:
+        "200":
+          description: Berhasil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  "/api/v1/majors":
+    get:
+      tags: [majors]
+      operationId: get_majors
       summary: "inline (opsional login)"
       x-handler: inline
       security:
@@ -2976,6 +3104,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      tags: [search]
+      operationId: post_search
+      summary: "inline (opsional login)"
+      x-handler: inline
+      security:
+        - bearerAuth: []
+        - {}
+      responses:
+        "200":
+          description: Berhasil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "422":
+          $ref: "#/components/responses/ValidationError"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":

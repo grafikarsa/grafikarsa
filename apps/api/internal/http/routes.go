@@ -94,6 +94,8 @@ func (a *App) routes() http.Handler {
 				r.Get("/", a.handleListSystemSettings)
 				r.Patch("/{key}", a.csrf(a.handleUpdateSystemSetting))
 			})
+			r.With(a.requireAnyPerm("dashboard.view_global", "dashboard.view_jurusan")).Get("/dashboard/stats", a.handleDashboardStats)
+			r.With(a.requirePerm("system.jobs")).Get("/jobs", a.handleListJobs)
 			r.Route("/users", func(r chi.Router) {
 				r.Use(a.requireAnyPerm("users.view", "users.view_jurusan"))
 				r.Get("/", a.handleAdminListUsers)
@@ -205,6 +207,8 @@ func (a *App) routes() http.Handler {
 		r.Group(func(r chi.Router) {
 			r.Use(a.authOptional)
 			r.Get("/tags", a.handleListTags)
+			r.Get("/majors", a.handleListPublicMajors)
+			r.Get("/classes", a.handleListPublicClasses)
 			r.Get("/series", a.handleListSeries)
 			r.Get("/series/{id}", a.handleGetSeries)
 		})
@@ -234,7 +238,11 @@ func (a *App) routes() http.Handler {
 			r.Use(a.authOptional)
 			r.Get("/leaderboards", a.handleLeaderboards)
 			r.Get("/search", a.handleSearch)
+			// POST /search (PRD §5) — query dikirim di body agar panjang/UTF-8 aman.
+			r.Post("/search", a.handleSearch)
 			r.Get("/changelogs", a.handlePublishedChangelogs)
+			r.Get("/changelogs/latest", a.handleLatestChangelog)
+			r.Get("/changelogs/version/{version}", a.handleChangelogByVersion)
 			r.Get("/changelogs/{id}", a.handleChangelogDetail)
 		})
 		r.Group(func(r chi.Router) {
