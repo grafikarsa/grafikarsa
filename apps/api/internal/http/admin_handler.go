@@ -196,6 +196,13 @@ func (a *App) handleAdminResetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = a.Q.UpdatePasswordHash(r.Context(), repo.UpdatePasswordHashParams{ID: u.ID, PasswordHash: auth.HashPassword(newPw)})
 	_ = a.Q.RevokeAllUserSessions(r.Context(), u.ID)
+	// Password sementara: wajib diganti saat login pertama + cabut sesi lain
+	// + catat audit (sebelumnya flag dan audit terlewat di jalur ini).
+	_ = a.Q.SetMustChangePassword(r.Context(), repo.SetMustChangePasswordParams{ID: u.ID, MustChangePassword: true})
+	invalidatePerms(r.Context(), a.Cache, uuidStr(u.ID))
+	invalidateUserActive(r.Context(), a.Cache, uuidStr(u.ID))
+	auditLog(r, a, "users.reset_password", "users", uuidStr(u.ID), "")
+	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(w, http.StatusOK, ok(map[string]string{"password": newPw}, r))
 }
 

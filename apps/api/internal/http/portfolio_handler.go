@@ -233,6 +233,10 @@ func (a *App) handleUpdatePortfolio(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Media bukan milikmu.", r))
 			return
 		}
+		// Thumbnail lama di-retire (hapus objek + tandai deleted).
+		if p.ThumbnailMediaID.Valid && uuidStr(p.ThumbnailMediaID) != uuidStr(thumbID) {
+			a.retireMedia(r.Context(), p.ThumbnailMediaID)
+		}
 		_ = a.Q.UpdatePortfolioThumbnail(r.Context(), repo.UpdatePortfolioThumbnailParams{ID: p.ID, ThumbnailMediaID: thumbID})
 		// Media dipakai -> tandai confirmed agar tidak dibersihkan job pending.
 		_ = a.Q.ConfirmMedia(r.Context(), thumbID)

@@ -124,17 +124,25 @@ func dispatchOutbox(ctx context.Context, q *repo.Queries, c *cache.Cache) error 
 		}
 		switch it.Topic {
 		case "notify.new_follower":
-			_, _ = q.CreateNotification(ctx, repo.CreateNotificationParams{
+			if err := emitNotif(ctx, q, c, repo.CreateNotificationParams{
 				UserID: mustUUID(p["user_id"]), Type: "new_follower",
 				Title: "Pengikut baru", Body: "Seseorang mulai mengikutimu.",
 				Data: it.Payload,
-			})
+			}); err != nil {
+				slog.Error("notif gagal dibuat", "topic", it.Topic, "err", err)
+				_ = q.MarkOutboxFailed(ctx, it.ID)
+				continue
+			}
 		case "notify.portfolio_liked":
-			_, _ = q.CreateNotification(ctx, repo.CreateNotificationParams{
+			if err := emitNotif(ctx, q, c, repo.CreateNotificationParams{
 				UserID: mustUUID(p["user_id"]), Type: "portfolio_liked",
 				Title: "Portfolio disukai", Body: "Seseorang menyukai portfoliomu.",
 				Data: it.Payload,
-			})
+			}); err != nil {
+				slog.Error("notif gagal dibuat", "topic", it.Topic, "err", err)
+				_ = q.MarkOutboxFailed(ctx, it.ID)
+				continue
+			}
 		case "notify.new_comment", "notify.reply_comment":
 			t := "new_comment"
 			title := "Komentar baru"
@@ -142,41 +150,65 @@ func dispatchOutbox(ctx context.Context, q *repo.Queries, c *cache.Cache) error 
 				t = "reply_comment"
 				title = "Balasan komentar"
 			}
-			_, _ = q.CreateNotification(ctx, repo.CreateNotificationParams{
+			if err := emitNotif(ctx, q, c, repo.CreateNotificationParams{
 				UserID: mustUUID(p["user_id"]), Type: t, Title: title,
 				Body: "Ada komentar baru.", Data: it.Payload,
-			})
+			}); err != nil {
+				slog.Error("notif gagal dibuat", "topic", it.Topic, "err", err)
+				_ = q.MarkOutboxFailed(ctx, it.ID)
+				continue
+			}
 		case "notify.portfolio_approved":
-			_, _ = q.CreateNotification(ctx, repo.CreateNotificationParams{
+			if err := emitNotif(ctx, q, c, repo.CreateNotificationParams{
 				UserID: mustUUID(p["user_id"]), Type: "portfolio_approved",
 				Title: "Portfolio diterbitkan", Body: "Selamat! Portfoliomu sudah tayang.",
 				Data: it.Payload,
-			})
+			}); err != nil {
+				slog.Error("notif gagal dibuat", "topic", it.Topic, "err", err)
+				_ = q.MarkOutboxFailed(ctx, it.ID)
+				continue
+			}
 		case "notify.portfolio_rejected":
-			_, _ = q.CreateNotification(ctx, repo.CreateNotificationParams{
+			if err := emitNotif(ctx, q, c, repo.CreateNotificationParams{
 				UserID: mustUUID(p["user_id"]), Type: "portfolio_rejected",
 				Title: "Portfolio ditolak", Body: "Catatan: " + p["note"],
 				Data: it.Payload,
-			})
+			}); err != nil {
+				slog.Error("notif gagal dibuat", "topic", it.Topic, "err", err)
+				_ = q.MarkOutboxFailed(ctx, it.ID)
+				continue
+			}
 		case "notify.portfolio_changes_requested":
-			_, _ = q.CreateNotification(ctx, repo.CreateNotificationParams{
+			if err := emitNotif(ctx, q, c, repo.CreateNotificationParams{
 				UserID: mustUUID(p["user_id"]), Type: "portfolio_changes_requested",
 				Title: "Perlu perbaikan", Body: "Catatan: " + p["note"],
 				Data: it.Payload,
-			})
+			}); err != nil {
+				slog.Error("notif gagal dibuat", "topic", it.Topic, "err", err)
+				_ = q.MarkOutboxFailed(ctx, it.ID)
+				continue
+			}
 		case "notify.feedback_updated":
-			_, _ = q.CreateNotification(ctx, repo.CreateNotificationParams{
+			if err := emitNotif(ctx, q, c, repo.CreateNotificationParams{
 				UserID: mustUUID(p["user_id"]), Type: "feedback_updated",
 				Title: "Feedback diperbarui", Body: "Status: " + p["status"],
 				Data: it.Payload,
-			})
+			}); err != nil {
+				slog.Error("notif gagal dibuat", "topic", it.Topic, "err", err)
+				_ = q.MarkOutboxFailed(ctx, it.ID)
+				continue
+			}
 		case "notify.announcement":
 			if p["user_id"] != "" {
-				_, _ = q.CreateNotification(ctx, repo.CreateNotificationParams{
+				if err := emitNotif(ctx, q, c, repo.CreateNotificationParams{
 					UserID: mustUUID(p["user_id"]), Type: "announcement",
 					Title: "Pengumuman", Body: p["message"],
 					Data: it.Payload,
-				})
+				}); err != nil {
+					slog.Error("notif gagal dibuat", "topic", it.Topic, "err", err)
+					_ = q.MarkOutboxFailed(ctx, it.ID)
+					continue
+				}
 			}
 		case "job.leaderboard_recompute":
 			if err := recomputeLeaderboard(ctx, q); err != nil {
@@ -187,9 +219,9 @@ func dispatchOutbox(ctx context.Context, q *repo.Queries, c *cache.Cache) error 
 			// Snapshot berubah -> buang cache peringkat (key lb:*).
 			_ = c.DelPattern(ctx, "lb:*")
 		case "portfolio.submitted":
-			notifyModerators(ctx, q, p["portfolio_id"])
+			notifyModerators(ctx, q, c, p["portfolio_id"])
 		case "notify.changelog_published":
-			fanoutChangelog(ctx, q, p)
+			fanoutChangelog(ctx, q, c, p)
 		default:
 			// Topic tak dikenal: tandai gagal (jangan hilang diam-diam).
 			slog.Error("outbox topic tidak dikenal", "id", it.ID, "topic", it.Topic)
@@ -460,6 +492,18 @@ func cleanupMedia(ctx context.Context, q *repo.Queries, cfg *config.Config) erro
 
 func newStorage(cfg *config.Config) *storage.Storage { return storage.New(cfg) }
 
+// emitNotif membuat notifikasi dan membatalkan cache badge unread user, serta
+// mengembalikan error supaya kegagalan tidak hilang diam-diam (outbox di-retry).
+func emitNotif(ctx context.Context, q *repo.Queries, c *cache.Cache, params repo.CreateNotificationParams) error {
+	if _, err := q.CreateNotification(ctx, params); err != nil {
+		return err
+	}
+	if c != nil {
+		_ = c.Del(ctx, "notifcount:"+uuidStr(params.UserID))
+	}
+	return nil
+}
+
 // flushViews membaca HyperLogLog per portfolio/hari lalu menulis agregatnya ke
 // portfolio_view_counts. Idempotent: nilai diambil GREATEST sehingga pengulangan
 // tidak menurunkan angka.
@@ -533,7 +577,7 @@ func sendDailyDigest(ctx context.Context, q *repo.Queries) error {
 
 // notifyModerators: beri tahu admin + admin_jurusan terkait saat portfolio
 // masuk antrean review (bukan hanya menunggu mereka membuka dashboard).
-func notifyModerators(ctx context.Context, q *repo.Queries, portfolioID string) {
+func notifyModerators(ctx context.Context, q *repo.Queries, c *cache.Cache, portfolioID string) {
 	p, err := q.GetPortfolioByID(ctx, mustUUID(portfolioID))
 	if err != nil {
 		return
@@ -549,30 +593,36 @@ func notifyModerators(ctx context.Context, q *repo.Queries, portfolioID string) 
 	}
 	data, _ := json.Marshal(map[string]string{"portfolio_id": portfolioID, "owner": owner.Username})
 	for _, m := range mods {
-		_, _ = q.CreateNotification(ctx, repo.CreateNotificationParams{
+		if err := emitNotif(ctx, q, c, repo.CreateNotificationParams{
 			UserID: m, Type: "announcement",
 			Title: "Portfolio menunggu review",
 			Body:  owner.Name + " mengirim \"" + p.Title + "\" untuk direview.",
 			Data:  data,
-		})
+		}); err != nil {
+			slog.Error("notif moderator gagal", "user", uuidStr(m), "err", err)
+			continue
+		}
 	}
 	slog.Info("moderator notified", "portfolio", portfolioID, "count", len(mods))
 }
 
 // fanoutChangelog: kirim pengumuman rilis ke user sesuai audience.
-func fanoutChangelog(ctx context.Context, q *repo.Queries, p map[string]string) {
+func fanoutChangelog(ctx context.Context, q *repo.Queries, c *cache.Cache, p map[string]string) {
 	ids, err := q.ListAudienceUserIDs(ctx, p["audience"])
 	if err != nil {
 		return
 	}
 	data, _ := json.Marshal(map[string]string{"version": p["version"], "changelog_id": p["changelog_id"]})
 	for _, uid := range ids {
-		_, _ = q.CreateNotification(ctx, repo.CreateNotificationParams{
+		if err := emitNotif(ctx, q, c, repo.CreateNotificationParams{
 			UserID: uid, Type: "announcement",
 			Title: "Grafikarsa " + p["version"] + " rilis",
 			Body:  "Ada pembaruan platform. Lihat changelog untuk detailnya.",
 			Data:  data,
-		})
+		}); err != nil {
+			slog.Error("notif fanout gagal", "user", uuidStr(uid), "err", err)
+			continue
+		}
 	}
 	slog.Info("changelog fanout", "version", p["version"], "count", len(ids))
 }

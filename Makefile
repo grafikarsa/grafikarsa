@@ -12,7 +12,10 @@ COMPOSE_PROD := docker compose -f docker-compose.prod.yml
 API_DIR := apps/api
 WEB_DIR := apps/web
 
-DATABASE_URL := postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable
+# DSN untuk tooling host. Password di-escape agar karakter seperti '/', '@',
+# atau ':' (umum pada `openssl rand -base64`) tidak merusak URL.
+ENCODED_DB_PASSWORD := $(shell printf '%s' '$(DB_PASSWORD)' | sed -e 's/%/%25/g' -e 's/ /%20/g' -e 's/@/%40/g' -e 's|/|%2F|g' -e 's/:/%3A/g' -e 's/#/%23/g' -e 's/?/%3F/g')
+DATABASE_URL := postgres://$(DB_USER):$(ENCODED_DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable
 
 .PHONY: help dev dev-web dev-down dev-logs \
 	migrate-up migrate-down migrate-status migrate-new sqlc seed verify-seed \

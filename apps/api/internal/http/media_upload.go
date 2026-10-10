@@ -314,8 +314,15 @@ func (a *App) handleConfirmMedia(w http.ResponseWriter, r *http.Request) {
 	}
 	switch req.LinkTo {
 	case "avatar":
+		// Media lama di-retire agar storage/kuota tidak menumpuk.
+		if me, merr := a.Q.GetUserByID(r.Context(), mustUUID(uid)); merr == nil && me.AvatarMediaID.Valid && uuidStr(me.AvatarMediaID) != uuidStr(m.ID) {
+			a.retireMedia(r.Context(), me.AvatarMediaID)
+		}
 		_ = a.Q.UpdateUserAvatar(r.Context(), repo.UpdateUserAvatarParams{ID: mustUUID(uid), AvatarMediaID: m.ID})
 	case "banner":
+		if me, merr := a.Q.GetUserByID(r.Context(), mustUUID(uid)); merr == nil && me.BannerMediaID.Valid && uuidStr(me.BannerMediaID) != uuidStr(m.ID) {
+			a.retireMedia(r.Context(), me.BannerMediaID)
+		}
 		_ = a.Q.UpdateUserBanner(r.Context(), repo.UpdateUserBannerParams{ID: mustUUID(uid), BannerMediaID: m.ID})
 	case "thumbnail":
 		if req.PortfolioID == "" {
@@ -377,4 +384,26 @@ func (a *App) handleDeleteMedia(w http.ResponseWriter, r *http.Request) {
 	_ = a.Q.MarkMediaDeleted(r.Context(), m.ID)
 	auditLog(r, a, "media.delete", "media_assets", id, m.Purpose)
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "deleted"}, r))
+}
+
+// retireMedia menghapus objek + menandai media lama sebagai deleted ketika
+// digantikan (avatar/banner/thumbnail) supaya kuota & storage tidak menumpuk
+// (PRD §7.2). Aman dipanggil walau media sudah tidak ada.
+func (a *App) retireMedia(ctx context.Context, mediaID pgtype.UUID) {
+	if !mediaID.Valid {
+		return
+	}
+	m, err := a.Q.GetMediaByID(ctx, mediaID)
+	if err != nil || m.Status == "deleted" {
+		return
+	}
+	_ = a.Storage.Delete(ctx, m.ObjectKey)
+	var vs map[string]string
+	if json.Unmarshal(m.Variants, &vs) == nil {
+		for _, vkey := range vs {
+			_ = a.Storage.Delete(ctx, vkey)
+		}
+	}
+	_ = a.Q.ClearUserAvatarIfMedia(ctx, m.ID)
+	_ = a.Q.MarkMediaDeleted(ctx, m.ID)
 }

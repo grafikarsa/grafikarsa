@@ -524,17 +524,21 @@ func (a *App) handleNotifCount(w http.ResponseWriter, r *http.Request) {
 func (a *App) handleNotifRead(w http.ResponseWriter, r *http.Request) {
 	id := chiURLParam(r, "id")
 	_ = a.Q.MarkNotificationRead(r.Context(), repo.MarkNotificationReadParams{ID: mustUUID(id), UserID: mustUUID(UserID(r))})
+	// Badge unread di-cache 1 menit; invalidasi agar tidak stale.
+	_ = a.Cache.Del(r.Context(), "notifcount:"+UserID(r))
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "ok"}, r))
 }
 
 func (a *App) handleNotifReadAll(w http.ResponseWriter, r *http.Request) {
 	_ = a.Q.MarkAllNotificationsRead(r.Context(), mustUUID(UserID(r)))
+	_ = a.Cache.Del(r.Context(), "notifcount:"+UserID(r))
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "ok"}, r))
 }
 
 func (a *App) handleNotifDelete(w http.ResponseWriter, r *http.Request) {
 	id := chiURLParam(r, "id")
 	_ = a.Q.DeleteNotification(r.Context(), repo.DeleteNotificationParams{ID: mustUUID(id), UserID: mustUUID(UserID(r))})
+	_ = a.Cache.Del(r.Context(), "notifcount:"+UserID(r))
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "deleted"}, r))
 }
 
