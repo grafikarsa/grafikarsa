@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"math"
 
 	"net/http"
@@ -96,6 +97,15 @@ func (a *App) handleFeed(w http.ResponseWriter, r *http.Request) {
 			followSet[uuidStr(f)] = true
 		}
 		me, _ := a.Q.GetUserByID(r.Context(), mustUUID(uid))
+		interest, _ := a.Q.GetUserInterest(r.Context(), mustUUID(uid))
+		tagW := map[string]float64{}
+		majorW := map[string]float64{}
+		totalInterest := 0.0
+		if interest.UserID.Valid {
+			_ = json.Unmarshal(interest.TagWeights, &tagW)
+			_ = json.Unmarshal(interest.MajorWeights, &majorW)
+			totalInterest = float64(interest.TotalLikes)
+		}
 		type scored struct {
 			item  repo.GetFeedCandidatesRow
 			score float64
@@ -113,13 +123,44 @@ func (a *App) handleFeed(w http.ResponseWriter, r *http.Request) {
 			recency := math.Exp(-ageH / 168)
 			eng := numericToFloat(c.Engagement)
 			qual := numericToFloat(c.Quality)
-			relevance := 0.0
-			if me.MajorID.Valid && c.OwnerMajorID.Valid && uuidStr(me.MajorID) == uuidStr(c.OwnerMajorID) {
-				relevance += 0.15
+			tags, _ := a.Q.ListPortfolioTags(r.Context(), c.ID)
+			pTagVec := map[string]float64{}
+			for _, t := range tags {
+				pTagVec[uuidStr(t.ID)] = 1
 			}
+			tagKeys := []string{}
+			for k := range pTagVec {
+				tagKeys = append(tagKeys, k)
+			}
+			for k := range tagW {
+				found := false
+				for _, ek := range tagKeys {
+					if ek == k {
+						found = true
+					}
+				}
+				if !found {
+					tagKeys = append(tagKeys, k)
+				}
+			}
+			cos := cosineSimilarity(tagW, pTagVec, tagKeys)
+			majorScore := 0.0
+			if mw, ok := majorW[uuidStr(c.OwnerMajorID)]; ok && totalInterest > 0 {
+				majorScore = log1p(mw) / 5
+				if me.MajorID.Valid && c.OwnerMajorID.Valid && uuidStr(me.MajorID) == uuidStr(c.OwnerMajorID) {
+					majorScore += 0.5
+				}
+				if majorScore > 1 {
+					majorScore = 1
+				}
+			} else if me.MajorID.Valid && c.OwnerMajorID.Valid && uuidStr(me.MajorID) == uuidStr(c.OwnerMajorID) {
+				majorScore = 0.5
+			}
+			classScore := 0.0
 			if me.ClassID.Valid && c.OwnerClassID.Valid && uuidStr(me.ClassID) == uuidStr(c.OwnerClassID) {
-				relevance += 0.2
+				classScore = 1
 			}
+			relevance := 0.5*cos + 0.3*majorScore + 0.2*classScore
 			final := 0.30*fScore + 0.25*recency + 0.20*eng + 0.15*relevance + 0.10*qual
 			list = append(list, scored{c, final})
 		}

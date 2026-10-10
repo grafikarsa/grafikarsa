@@ -69,6 +69,7 @@ func (a *App) handleLike(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_ = a.Q.LikePortfolio(r.Context(), repo.LikePortfolioParams{UserID: mustUUID(uid), PortfolioID: p.ID})
+	trackLikeInterest(r.Context(), a, uid, p.ID)
 	if uuidStr(p.OwnerID) != uid {
 		_, _ = a.Q.EnqueueOutbox(r.Context(), repo.EnqueueOutboxParams{
 			Topic:   "notify.portfolio_liked",
