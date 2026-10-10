@@ -14,9 +14,9 @@ export default function CatalogPage() {
   const search = params.get("search") ?? "";
   const { data, isLoading } = useQuery({
     queryKey: ["portfolios", search],
-    queryFn: () => apiGet<{ data: Item[] }>(`v1/portfolios?page=1&per_page=20`),
+    queryFn: () => apiGet<Item[]>(`v1/portfolios?page=1&per_page=20`),
   });
-  const items = data?.data ?? [];
+  const items = data ?? [];
 
   return (
     <main className="mx-auto max-w-4xl p-4">

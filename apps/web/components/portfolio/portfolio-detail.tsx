@@ -46,8 +46,8 @@ export function PortfolioDetail({ initial }: { initial: Portfolio }) {
   async function reload() {
     const data = await apiGet<Portfolio>(`v1/portfolios/id/${p.id}`);
     setP(data);
-    const c = await apiGet<{ data: Comment[] }>(`v1/portfolios/id/${p.id}/comments`);
-    setComments(c.data);
+    const c = await apiGet<Comment[]>(`v1/portfolios/id/${p.id}/comments`);
+    setComments(c);
   }
 
   async function like() {

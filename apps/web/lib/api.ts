@@ -1,10 +1,23 @@
 import { useAuthStore } from "@/lib/auth-store";
 import type { ApiError, ApiSuccess } from "./api-client";
 
+export class ApiErrorWithCode extends Error {
+  code: string;
+  constructor(code: string, message: string) {
+    super(message);
+    this.code = code;
+  }
+}
+
 async function raw<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api/${path.replace(/^\//, "")}`, init);
-  const json = (await res.json()) as ApiSuccess<T> | ApiError;
-  if (!json.success) throw new Error(json.error.message);
+  let json: ApiSuccess<T> | ApiError;
+  try {
+    json = (await res.json()) as ApiSuccess<T> | ApiError;
+  } catch {
+    throw new ApiErrorWithCode("NETWORK_ERROR", `Server error ${res.status}.`);
+  }
+  if (!json.success) throw new ApiErrorWithCode(json.error.code, json.error.message);
   return json.data;
 }
 

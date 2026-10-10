@@ -18,8 +18,8 @@ export default function MyPortfoliosPage() {
 
   async function load() {
     try {
-      const data = await apiGet<{ data: Portfolio[] }>("v1/portfolios/me");
-      setItems(data.data);
+      const data = await apiGet<Portfolio[]>("v1/portfolios/me");
+      setItems(data);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Gagal memuat.");
     }

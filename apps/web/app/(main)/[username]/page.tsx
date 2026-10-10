@@ -7,16 +7,15 @@ import { apiGet } from "@/lib/api";
 
 type User = { id: string; username: string; name: string };
 
-async function getUser(username: string) {
-  const data = await apiGet<{ data: User } | User>(`v1/users/${username}`);
-  return "data" in data ? data.data : data;
+async function getUser(username: string): Promise<User> {
+  return apiGet<User>(`v1/users/${username}`);
 }
 
 export default function ProfileByUsername({ params }: { params: Promise<{ username: string }> }) {
   const { username } = use(params);
   const [data, setData] = useState<User | null>(null);
   useEffect(() => {
-    getUser(username).then(setData).catch(() => setData(null));
+    getUser(username).then((u) => setData(u)).catch(() => setData(null));
   }, [username]);
   if (!data) return <main className="p-8">Memuat...</main>;
   return (

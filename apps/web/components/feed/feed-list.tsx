@@ -19,12 +19,12 @@ export function FeedList() {
 
   const q = useInfiniteQuery({
     queryKey: ["feed", algo],
-    queryFn: ({ pageParam }) => apiGet<{ data: Item[] }>(`v1/feed?algorithm=${algo}&page=${pageParam ?? 1}&per_page=15`),
-    getNextPageParam: (last, all) => (last.data.length === 15 ? all.length + 1 : undefined),
+    queryFn: ({ pageParam }) => apiGet<Item[]>(`v1/feed?algorithm=${algo}&page=${pageParam ?? 1}&per_page=15`),
+    getNextPageParam: (last, all) => (last.length === 15 ? all.length + 1 : undefined),
     initialPageParam: 1,
   });
 
-  const items = q.data?.pages.flatMap((p) => p.data) ?? [];
+  const items = q.data?.pages.flatMap((p) => p) ?? [];
 
   async function like(id: string) {
     try {

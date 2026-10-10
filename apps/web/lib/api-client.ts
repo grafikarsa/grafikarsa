@@ -5,9 +5,4 @@ export type ApiError = {
   request_id?: string;
 };
 
-export async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(`/api/${path.replace(/^\//, "")}`);
-  const json = (await res.json()) as ApiSuccess<T> | ApiError;
-  if (!json.success) throw new Error(json.error.message);
-  return json.data;
-}
+

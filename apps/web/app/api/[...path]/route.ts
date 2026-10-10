@@ -10,12 +10,24 @@ async function proxy(req: NextRequest, path: string[]) {
   const headers = new Headers();
   const cookie = req.headers.get("cookie");
   if (cookie) headers.set("cookie", cookie);
+  const auth = req.headers.get("authorization");
+  if (auth) headers.set("authorization", auth);
   const ct = req.headers.get("content-type");
   if (ct) headers.set("content-type", ct);
   const csrf = req.headers.get("x-csrf-token");
   if (csrf) headers.set("x-csrf-token", csrf);
   const reqId = req.headers.get("x-request-id") ?? crypto.randomUUID();
   headers.set("x-request-id", reqId);
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
+    const origin = req.headers.get("origin");
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3020";
+    if (origin && !origin.startsWith(appUrl)) {
+      return NextResponse.json(
+        { success: false, error: { code: "CSRF_INVALID", message: "Origin tidak diizinkan." } },
+        { status: 403 },
+      );
+    }
+  }
 
   const hasBody = req.method !== "GET" && req.method !== "HEAD";
   const res = await fetch(url, {
