@@ -23,6 +23,17 @@ type AcademicYears struct {
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
+type AuditLogs struct {
+	ID        int64              `json:"id"`
+	ActorID   pgtype.UUID        `json:"actor_id"`
+	Action    string             `json:"action"`
+	Entity    string             `json:"entity"`
+	EntityID  string             `json:"entity_id"`
+	Diff      []byte             `json:"diff"`
+	Ip        *netip.Addr        `json:"ip"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
 // Audit login/refresh/logout, retensi 90 hari
 type AuthAudit struct {
 	ID        int64              `json:"id"`
@@ -44,6 +55,49 @@ type Classes struct {
 	HomeroomTeacherID pgtype.UUID        `json:"homeroom_teacher_id"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
+type Comments struct {
+	ID          pgtype.UUID        `json:"id"`
+	PortfolioID pgtype.UUID        `json:"portfolio_id"`
+	AuthorID    pgtype.UUID        `json:"author_id"`
+	ParentID    pgtype.UUID        `json:"parent_id"`
+	BodyMd      string             `json:"body_md"`
+	BodyHtml    string             `json:"body_html"`
+	IsEdited    bool               `json:"is_edited"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt   pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type FeedPreferences struct {
+	UserID    pgtype.UUID `json:"user_id"`
+	Algorithm string      `json:"algorithm"`
+}
+
+type Follows struct {
+	FollowerID  pgtype.UUID        `json:"follower_id"`
+	FollowingID pgtype.UUID        `json:"following_id"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type LeaderboardEntries struct {
+	LeaderboardID      pgtype.UUID    `json:"leaderboard_id"`
+	Rank               int32          `json:"rank"`
+	SubjectUserID      pgtype.UUID    `json:"subject_user_id"`
+	SubjectPortfolioID pgtype.UUID    `json:"subject_portfolio_id"`
+	Score              pgtype.Numeric `json:"score"`
+	Breakdown          []byte         `json:"breakdown"`
+	DeltaRank          int32          `json:"delta_rank"`
+}
+
+type Leaderboards struct {
+	ID          pgtype.UUID        `json:"id"`
+	Period      string             `json:"period"`
+	Scope       string             `json:"scope"`
+	Kind        string             `json:"kind"`
+	ComputedFor pgtype.Date        `json:"computed_for"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
 // Master jurusan/program keahlian
@@ -71,11 +125,103 @@ type MediaAssets struct {
 	ConfirmedAt    pgtype.Timestamptz `json:"confirmed_at"`
 }
 
+type Notifications struct {
+	ID        pgtype.UUID        `json:"id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	Type      string             `json:"type"`
+	Title     string             `json:"title"`
+	Body      string             `json:"body"`
+	Data      []byte             `json:"data"`
+	IsRead    bool               `json:"is_read"`
+	ReadAt    pgtype.Timestamptz `json:"read_at"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+// Transactional outbox untuk worker (notif, stats, leaderboard)
+type Outbox struct {
+	ID          int64              `json:"id"`
+	Topic       string             `json:"topic"`
+	Payload     []byte             `json:"payload"`
+	Status      string             `json:"status"`
+	Attempts    int32              `json:"attempts"`
+	NextRetryAt pgtype.Timestamptz `json:"next_retry_at"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
 type Permissions struct {
 	ID              pgtype.UUID `json:"id"`
 	Key             string      `json:"key"`
 	PermissionGroup string      `json:"permission_group"`
 	Description     string      `json:"description"`
+}
+
+// Block modular; payload tervalidasi JSON Schema per type
+type PortfolioBlocks struct {
+	ID           pgtype.UUID        `json:"id"`
+	PortfolioID  pgtype.UUID        `json:"portfolio_id"`
+	BlockType    string             `json:"block_type"`
+	Position     int32              `json:"position"`
+	Payload      []byte             `json:"payload"`
+	AssetMediaID pgtype.UUID        `json:"asset_media_id"`
+	IsFromSeries bool               `json:"is_from_series"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
+type PortfolioLikes struct {
+	UserID      pgtype.UUID        `json:"user_id"`
+	PortfolioID pgtype.UUID        `json:"portfolio_id"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+// Materialized oleh worker; sumber feed lapis 1
+type PortfolioStats struct {
+	PortfolioID   pgtype.UUID        `json:"portfolio_id"`
+	Likes         int32              `json:"likes"`
+	Views7d       int32              `json:"views_7d"`
+	Views30d      int32              `json:"views_30d"`
+	Comments      int32              `json:"comments"`
+	AssessmentAvg pgtype.Numeric     `json:"assessment_avg"`
+	Quality       pgtype.Numeric     `json:"quality"`
+	Engagement    pgtype.Numeric     `json:"engagement"`
+	Trending      pgtype.Numeric     `json:"trending"`
+	ComputedAt    pgtype.Timestamptz `json:"computed_at"`
+}
+
+type PortfolioTags struct {
+	PortfolioID pgtype.UUID `json:"portfolio_id"`
+	TagID       pgtype.UUID `json:"tag_id"`
+}
+
+// Agregat harian unik; bukan row per-view abadi
+type PortfolioViews struct {
+	ID          int64       `json:"id"`
+	PortfolioID pgtype.UUID `json:"portfolio_id"`
+	ViewerID    pgtype.UUID `json:"viewer_id"`
+	SessionID   pgtype.Text `json:"session_id"`
+	ViewedDate  pgtype.Date `json:"viewed_date"`
+}
+
+// Katalog; slug unik per owner; visibility via status
+type Portfolios struct {
+	ID                pgtype.UUID        `json:"id"`
+	OwnerID           pgtype.UUID        `json:"owner_id"`
+	Title             string             `json:"title"`
+	Slug              string             `json:"slug"`
+	Status            string             `json:"status"`
+	ThumbnailMediaID  pgtype.UUID        `json:"thumbnail_media_id"`
+	SeriesID          pgtype.UUID        `json:"series_id"`
+	DraftPayload      []byte             `json:"draft_payload"`
+	SubmittedSnapshot []byte             `json:"submitted_snapshot"`
+	PublishedAt       pgtype.Timestamptz `json:"published_at"`
+	SubmittedAt       pgtype.Timestamptz `json:"submitted_at"`
+	ReviewedBy        pgtype.UUID        `json:"reviewed_by"`
+	ReviewedAt        pgtype.Timestamptz `json:"reviewed_at"`
+	ReviewNote        string             `json:"review_note"`
+	ParentVersionID   pgtype.UUID        `json:"parent_version_id"`
+	SearchTsv         interface{}        `json:"search_tsv"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt         pgtype.Timestamptz `json:"deleted_at"`
 }
 
 type RolePermissions struct {
@@ -93,6 +239,25 @@ type Roles struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
+type Series struct {
+	ID          pgtype.UUID        `json:"id"`
+	Slug        string             `json:"slug"`
+	Name        string             `json:"name"`
+	Description string             `json:"description"`
+	IsActive    bool               `json:"is_active"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type SeriesBlocks struct {
+	ID          pgtype.UUID        `json:"id"`
+	SeriesID    pgtype.UUID        `json:"series_id"`
+	BlockType   string             `json:"block_type"`
+	Position    int32              `json:"position"`
+	Instruction string             `json:"instruction"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
 // Refresh token opaque (hash sha256), rotation + reuse-detection
 type Sessions struct {
 	ID          pgtype.UUID        `json:"id"`
@@ -106,6 +271,21 @@ type Sessions struct {
 	RevokedAt   pgtype.Timestamptz `json:"revoked_at"`
 	RotatedTo   pgtype.UUID        `json:"rotated_to"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type Tags struct {
+	ID        pgtype.UUID        `json:"id"`
+	Slug      string             `json:"slug"`
+	Name      string             `json:"name"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type UserInterests struct {
+	UserID       pgtype.UUID        `json:"user_id"`
+	TagWeights   []byte             `json:"tag_weights"`
+	MajorWeights []byte             `json:"major_weights"`
+	TotalLikes   int32              `json:"total_likes"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
 
 type UserRoles struct {
