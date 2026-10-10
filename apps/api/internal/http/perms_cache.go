@@ -56,3 +56,22 @@ func feedWeightsKey() string { return "feed:weights" }
 func invalidateFeedWeights(ctx context.Context, c *cache.Cache) {
 	_ = c.Del(ctx, feedWeightsKey())
 }
+
+// ---- view counter (HyperLogLog) ----
+
+func viewHLLKey(portfolioID, day string) string { return "views:hll:" + portfolioID + ":" + day }
+func viewDirtyKey(day string) string            { return "views:dirty:" + day }
+
+// recordViewHLL mencatat satu view unik di HLL + menandai portfolio sebagai
+// dirty agar worker mem-flush agregatnya. TTL HLL 40 hari (cukup untuk statistik
+// 30 hari), dirty set 2 hari.
+func (a *App) recordViewHLL(ctx context.Context, portfolioID, viewerKey string) {
+	day := time.Now().Format("2006-01-02")
+	key := viewHLLKey(portfolioID, day)
+	if err := a.Cache.PFAdd(ctx, key, viewerKey); err != nil {
+		return
+	}
+	_ = a.Cache.Expire(ctx, key, 40*24*time.Hour)
+	_ = a.Cache.SAdd(ctx, viewDirtyKey(day), portfolioID)
+	_ = a.Cache.Expire(ctx, viewDirtyKey(day), 48*time.Hour)
+}

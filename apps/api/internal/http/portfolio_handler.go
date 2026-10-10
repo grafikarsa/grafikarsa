@@ -139,17 +139,16 @@ func (a *App) handleGetPortfolioBySlug(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if p.Status == "published" {
+		// View dihitung di HyperLogLog (Dragonfly) lalu di-flush berkala oleh
+		// worker: tidak ada INSERT per request, unik per pengunjung/hari.
 		viewer := UserID(r)
-		var viewerUUID = nilUUID()
-		sessionID := r.Header.Get("X-Session-ID")
-		if viewer != "" {
-			viewerUUID = mustUUID(viewer)
-		} else if sessionID == "" {
-			sessionID = "anon-" + uuid.NewString()[:8]
+		if viewer == "" {
+			viewer = r.Header.Get("X-Session-ID")
 		}
-		_ = a.Q.RecordView(r.Context(), repo.RecordViewParams{
-			PortfolioID: p.ID, ViewerID: viewerUUID, SessionID: toPgText(sessionID),
-		})
+		if viewer == "" {
+			viewer = "anon-" + uuid.NewString()
+		}
+		a.recordViewHLL(r.Context(), uuidStr(p.ID), viewer)
 	}
 	writeJSON(w, http.StatusOK, ok(portfolioDetail(r, a, byID), r))
 }

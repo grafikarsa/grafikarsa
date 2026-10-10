@@ -201,3 +201,43 @@ SELECT id, code, name, require_series FROM majors ORDER BY name ASC;
 SELECT c.id, c.name, c.grade, c.class_group, m.code AS major_code, y.start_year
 FROM classes c JOIN majors m ON m.id = c.major_id JOIN academic_years y ON y.id = c.academic_year_id
 WHERE y.is_active ORDER BY c.name ASC;
+
+-- name: ListChangelogContributors :many
+SELECT u.id, u.username, u.name, c.role FROM changelog_contributors c
+JOIN users u ON u.id = c.user_id WHERE c.changelog_id = $1 ORDER BY c.role, u.name;
+
+-- name: AddChangelogContributor :exec
+INSERT INTO changelog_contributors (changelog_id, user_id, role) VALUES ($1, $2, $3)
+ON CONFLICT (changelog_id, user_id) DO UPDATE SET role = EXCLUDED.role;
+
+-- name: RemoveChangelogContributor :exec
+DELETE FROM changelog_contributors WHERE changelog_id = $1 AND user_id = $2;
+
+-- name: SetFeedbackLinkedChangelog :exec
+UPDATE feedback_threads SET linked_changelog_id = $2 WHERE id = $1;
+
+-- name: ListFeedbackVoterIDs :many
+SELECT user_id FROM feedback_votes WHERE thread_id = $1;
+
+-- name: ListLeaderboardRankedUserIDs :many
+-- Penerima notifikasi peringkat: user yang masuk top-N best_students.
+SELECT DISTINCT e.subject_user_id FROM leaderboard_entries e
+JOIN leaderboards l ON l.id = e.leaderboard_id
+WHERE l.period = $1 AND l.scope = 'global' AND l.kind = 'best_students'
+  AND e.rank <= $2 AND e.subject_user_id IS NOT NULL;
+
+-- name: DecayUserInterests :exec
+-- Peluruhan bobot minat (decay) agar like lama tidak mendominasi selamanya.
+-- Nilai dibatasi minimum 0.01 lalu dibulatkan 4 desimal.
+UPDATE user_interests SET
+  tag_weights = COALESCE((
+    SELECT jsonb_object_agg(t.k, GREATEST(0.01::numeric, round(t.v::numeric * $1::numeric, 4)))
+    FROM jsonb_each_text(user_interests.tag_weights) AS t(k, v)
+  ), '{}'::jsonb),
+  major_weights = COALESCE((
+    SELECT jsonb_object_agg(t.k, GREATEST(0.01::numeric, round(t.v::numeric * $1::numeric, 4)))
+    FROM jsonb_each_text(user_interests.major_weights) AS t(k, v)
+  ), '{}'::jsonb),
+  total_likes = GREATEST(0, (total_likes * $1)::int),
+  updated_at = NOW()
+WHERE updated_at < NOW() - INTERVAL '1 day';

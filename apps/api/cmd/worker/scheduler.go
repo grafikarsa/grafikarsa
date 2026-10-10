@@ -21,6 +21,8 @@ func runScheduler(ctx context.Context, q *repo.Queries, c *cache.Cache, cfg *con
 	go every(ctx, 30*time.Second, "outbox", func() error { return dispatchOutbox(ctx, q, c) })
 	go every(ctx, 5*time.Minute, "stats", func() error { return aggregateStats(ctx, q) })
 	go every(ctx, 5*time.Minute, "publish-changelogs", func() error { return publishChangelogs(ctx, q) })
+	go every(ctx, time.Minute, "flush-views", func() error { return flushViews(ctx, q, c) })
+	go dailyAt(ctx, 3, 0, "decay-interests", func() error { return decayInterests(ctx, q) })
 	go every(ctx, time.Hour, "cleanup-media", func() error { return cleanupMedia(ctx, q, cfg) })
 	go every(ctx, 24*time.Hour, "retention", func() error { return retention(ctx, q) })
 	go dailyAt(ctx, 2, 5, "leaderboard", func() error { return recomputeLeaderboard(ctx, q) })

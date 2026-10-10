@@ -1,6 +1,9 @@
 package http
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
 	"net/http"
 	"strings"
 	"time"
@@ -65,7 +68,28 @@ func (a *App) handleCreateFeedback(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal mengirim.", r))
 		return
 	}
-	writeJSON(w, http.StatusCreated, ok(map[string]string{"id": uuidStr(id)}, r))
+	resp := map[string]any{"id": uuidStr(id)}
+	// Guest tidak punya sesi: beri token follow-up (?t=) agar bisa membuka
+	// kembali thread-nya tanpa login. Token = HMAC(secret, thread_id).
+	if uid == "" {
+		resp["follow_up_token"] = feedbackFollowUpToken(a.Cfg.JWT.CSRFSecret(), uuidStr(id))
+		resp["follow_up_url"] = "/feedback?t=" + feedbackFollowUpToken(a.Cfg.JWT.CSRFSecret(), uuidStr(id))
+	}
+	writeJSON(w, http.StatusCreated, ok(resp, r))
+}
+
+// feedbackFollowUpToken: token akses guest untuk satu thread.
+func feedbackFollowUpToken(secret, threadID string) string {
+	mac := hmac.New(sha256.New, []byte(secret+"|feedback"))
+	mac.Write([]byte(threadID))
+	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+}
+
+func feedbackFollowUpValid(secret, threadID, token string) bool {
+	if token == "" {
+		return false
+	}
+	return hmac.Equal([]byte(token), []byte(feedbackFollowUpToken(secret, threadID)))
 }
 
 func (a *App) handleListFeedback(w http.ResponseWriter, r *http.Request) {
@@ -103,10 +127,11 @@ func (a *App) handleGetFeedback(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Thread tidak ditemukan.", r))
 		return
 	}
-	// Thread privat hanya untuk pelapor dan moderator.
+	// Thread privat hanya untuk pelapor, moderator, atau pemegang token guest.
 	canTriage := UserRole(r) == "admin" || UserPerms(r)["feedback.triage"]
 	isReporter := t.ReporterID.Valid && uuidStr(t.ReporterID) == UserID(r)
-	if !t.IsPublic && !canTriage && !isReporter {
+	hasGuestToken := feedbackFollowUpValid(a.Cfg.JWT.CSRFSecret(), uuidStr(t.ID), r.URL.Query().Get("t"))
+	if !t.IsPublic && !canTriage && !isReporter && !hasGuestToken {
 		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Thread tidak ditemukan.", r))
 		return
 	}
@@ -148,10 +173,11 @@ func (a *App) handleReplyFeedback(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Thread tidak ditemukan.", r))
 		return
 	}
-	// Thread privat hanya untuk pelapor dan moderator.
+	// Thread privat hanya untuk pelapor, moderator, atau pemegang token guest.
 	canTriage := UserRole(r) == "admin" || UserPerms(r)["feedback.triage"]
 	isReporter := t.ReporterID.Valid && uuidStr(t.ReporterID) == UserID(r)
-	if !t.IsPublic && !canTriage && !isReporter {
+	hasGuestToken := feedbackFollowUpValid(a.Cfg.JWT.CSRFSecret(), uuidStr(t.ID), r.URL.Query().Get("t"))
+	if !t.IsPublic && !canTriage && !isReporter && !hasGuestToken {
 		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Thread tidak ditemukan.", r))
 		return
 	}
@@ -317,10 +343,18 @@ func (a *App) handleChangelogDetail(w http.ResponseWriter, r *http.Request) {
 		out = []map[string]any{}
 	}
 	reads, _ := a.Q.CountChangelogReads(r.Context(), c.ID)
+	contribs := []map[string]any{}
+	if rows, cerr := a.Q.ListChangelogContributors(r.Context(), c.ID); cerr == nil {
+		for _, x := range rows {
+			contribs = append(contribs, map[string]any{
+				"user_id": uuidStr(x.ID), "username": x.Username, "name": x.Name, "role": x.Role,
+			})
+		}
+	}
 	writeJSON(w, http.StatusOK, ok(map[string]any{
 		"id": uuidStr(c.ID), "version": c.Version, "title": c.Title, "summary": c.Summary,
 		"channel": c.Channel, "audience": c.Audience, "status": c.Status, "reads": reads,
-		"sections": out,
+		"sections": out, "contributors": contribs,
 	}, r))
 }
 
@@ -452,9 +486,10 @@ func slaBreached(t repo.GetFeedbackThreadRow) bool {
 func (a *App) handleFeedbackTriage(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	var req struct {
-		Priority *string `json:"priority"`
-		IsPublic *bool   `json:"is_public"`
-		IsSpam   *bool   `json:"is_spam"`
+		Priority        *string `json:"priority"`
+		IsPublic        *bool   `json:"is_public"`
+		IsSpam          *bool   `json:"is_spam"`
+		LinkedChangelog string  `json:"linked_changelog_id"`
 	}
 	if !decodeJSON(w, r, &req) {
 		return
@@ -476,6 +511,28 @@ func (a *App) handleFeedbackTriage(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.IsSpam != nil {
 		_ = a.Q.SetFeedbackSpam(r.Context(), repo.SetFeedbackSpamParams{ID: uid, IsSpam: *req.IsSpam})
+	}
+	// Tautkan ke changelog (roadmap linkage) + beri tahu voters.
+	if req.LinkedChangelog != "" {
+		cl, cerr := a.Q.GetChangelog(r.Context(), mustUUID(req.LinkedChangelog))
+		if cerr != nil {
+			writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Changelog tidak ditemukan.", r))
+			return
+		}
+		_ = a.Q.SetFeedbackLinkedChangelog(r.Context(), repo.SetFeedbackLinkedChangelogParams{
+			ID: uid, LinkedChangelogID: mustUUID(req.LinkedChangelog),
+		})
+		if voters, verr := a.Q.ListFeedbackVoterIDs(r.Context(), uid); verr == nil {
+			for _, v := range voters {
+				_, _ = a.Q.EnqueueOutbox(r.Context(), repo.EnqueueOutboxParams{
+					Topic: "notify.announcement",
+					Payload: notifPayload(map[string]string{
+						"user_id": uuidStr(v), "kind": "feedback_released",
+						"message": "Masukanmu dirilis di Grafikarsa v" + cl.Version + ".",
+					}),
+				})
+			}
+		}
 	}
 	auditLog(r, a, "feedback.triage", "feedback_threads", id, "")
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "ok"}, r))
@@ -568,4 +625,66 @@ func (a *App) handleListPublicClasses(w http.ResponseWriter, r *http.Request) {
 		out = []map[string]any{}
 	}
 	writeJSON(w, http.StatusOK, ok(out, r))
+}
+
+// handleListChangelogContributors: daftar kontributor satu rilis.
+func (a *App) handleListChangelogContributors(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	rows, err := a.Q.ListChangelogContributors(r.Context(), mustUUID(id))
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal memuat kontributor.", r))
+		return
+	}
+	out := []map[string]any{}
+	for _, x := range rows {
+		out = append(out, map[string]any{
+			"user_id": uuidStr(x.ID), "username": x.Username, "name": x.Name, "role": x.Role,
+		})
+	}
+	if out == nil {
+		out = []map[string]any{}
+	}
+	writeJSON(w, http.StatusOK, ok(out, r))
+}
+
+// handleAddChangelogContributor: tambah/ubah kontributor (dev/design/qa/...).
+func (a *App) handleAddChangelogContributor(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	var req struct {
+		UserID string `json:"user_id"`
+		Role   string `json:"role"`
+	}
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if req.UserID == "" {
+		writeJSON(w, http.StatusUnprocessableEntity, fail("VALIDATION_ERROR", "user_id wajib.", r))
+		return
+	}
+	role := strings.ToLower(strings.TrimSpace(req.Role))
+	switch role {
+	case "dev", "design", "qa", "pm", "docs":
+	default:
+		role = "dev"
+	}
+	if _, err := a.Q.GetUserByID(r.Context(), mustUUID(req.UserID)); err != nil {
+		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "User tidak ditemukan.", r))
+		return
+	}
+	_ = a.Q.AddChangelogContributor(r.Context(), repo.AddChangelogContributorParams{
+		ChangelogID: mustUUID(id), UserID: mustUUID(req.UserID), Role: role,
+	})
+	auditLog(r, a, "changelog.contributor_add", "changelogs", id, role)
+	writeJSON(w, http.StatusCreated, ok(map[string]string{"status": "ok"}, r))
+}
+
+// handleRemoveChangelogContributor: hapus kontributor.
+func (a *App) handleRemoveChangelogContributor(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	userID := chi.URLParam(r, "userId")
+	_ = a.Q.RemoveChangelogContributor(r.Context(), repo.RemoveChangelogContributorParams{
+		ChangelogID: mustUUID(id), UserID: mustUUID(userID),
+	})
+	auditLog(r, a, "changelog.contributor_remove", "changelogs", id, "")
+	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "ok"}, r))
 }

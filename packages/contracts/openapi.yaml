@@ -304,6 +304,81 @@ paths:
           $ref: "#/components/responses/TooManyRequests"
         "500":
           $ref: "#/components/responses/InternalError"
+  "/api/v1/admin/changelogs/{id}/contributors":
+    get:
+      tags: [admin-changelogs]
+      operationId: get_admin_changelogs_id_contributors
+      summary: "inline (butuh login, permission: changelog.manage)"
+      x-handler: inline
+      security:
+        - bearerAuth: []
+      x-permissions: [changelog.manage]
+      responses:
+        "200":
+          description: Berhasil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      tags: [admin-changelogs]
+      operationId: post_admin_changelogs_id_contributors
+      summary: "inline (butuh login, permission: changelog.manage, wajib CSRF)"
+      x-handler: inline
+      security:
+        - bearerAuth: []
+      x-permissions: [changelog.manage]
+      x-csrf: required
+      responses:
+        "200":
+          description: Berhasil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  "/api/v1/admin/changelogs/{id}/contributors/{userId}":
+    delete:
+      tags: [admin-changelogs]
+      operationId: delete_admin_changelogs_id_contributors_userId
+      summary: "inline (butuh login, permission: changelog.manage, wajib CSRF)"
+      x-handler: inline
+      security:
+        - bearerAuth: []
+      x-permissions: [changelog.manage]
+      x-csrf: required
+      responses:
+        "200":
+          description: Berhasil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
   "/api/v1/admin/changelogs/{id}/publish":
     post:
       tags: [admin-changelogs]
@@ -3604,6 +3679,7 @@ components:
             - feedback_updated
             - announcement
             - digest
+            - leaderboard_ranked
         title: { type: string }
         body: { type: string }
         is_read: { type: boolean }

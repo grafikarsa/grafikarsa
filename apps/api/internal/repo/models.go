@@ -327,6 +327,13 @@ type PortfolioTags struct {
 	TagID       pgtype.UUID `json:"tag_id"`
 }
 
+type PortfolioViewCounts struct {
+	PortfolioID pgtype.UUID        `json:"portfolio_id"`
+	ViewedDate  pgtype.Date        `json:"viewed_date"`
+	UniqueViews int32              `json:"unique_views"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
 // Agregat harian unik; bukan row per-view abadi
 type PortfolioViews struct {
 	ID          int64       `json:"id"`

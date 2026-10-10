@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/shopspring/decimal"
@@ -111,4 +112,13 @@ func uuidStr(v pgtype.UUID) string {
 		j += 2
 	}
 	return string(out)
+}
+
+// toPgDate mengonversi "YYYY-MM-DD" menjadi pgtype.Date.
+func toPgDate(day string) pgtype.Date {
+	t, err := time.Parse("2006-01-02", day)
+	if err != nil {
+		return pgtype.Date{}
+	}
+	return pgtype.Date{Time: t, Valid: true}
 }

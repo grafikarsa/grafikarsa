@@ -263,7 +263,19 @@ JOIN follows f ON f.following_id = u.id WHERE f.follower_id = $1 AND u.deleted_a
 ORDER BY f.created_at DESC LIMIT $2 OFFSET $3;
 
 -- name: CountViewsSince :one
-SELECT COUNT(*) FROM portfolio_views WHERE portfolio_id = $1 AND viewed_date > CURRENT_DATE - $2;
+-- Dibaca dari agregat harian hasil flush HyperLogLog (bukan tabel mentah).
+SELECT COALESCE(SUM(unique_views), 0)::bigint FROM portfolio_view_counts
+WHERE portfolio_id = $1 AND viewed_date > CURRENT_DATE - $2;
+
+-- name: UpsertViewCount :exec
+INSERT INTO portfolio_view_counts (portfolio_id, viewed_date, unique_views)
+VALUES ($1, $2, $3)
+ON CONFLICT (portfolio_id, viewed_date) DO UPDATE
+SET unique_views = GREATEST(portfolio_view_counts.unique_views, EXCLUDED.unique_views),
+    updated_at = NOW();
+
+-- name: DeleteOldViewCounts :exec
+DELETE FROM portfolio_view_counts WHERE viewed_date < CURRENT_DATE - 400;
 
 -- name: CountLikesSince :one
 SELECT COUNT(*) FROM portfolio_likes WHERE portfolio_id = $1 AND created_at > NOW() - ($2::text || ' days')::interval;

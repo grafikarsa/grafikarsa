@@ -206,7 +206,8 @@ func (q *Queries) CountUserPublished(ctx context.Context, ownerID pgtype.UUID) (
 }
 
 const countViewsSince = `-- name: CountViewsSince :one
-SELECT COUNT(*) FROM portfolio_views WHERE portfolio_id = $1 AND viewed_date > CURRENT_DATE - $2
+SELECT COALESCE(SUM(unique_views), 0)::bigint FROM portfolio_view_counts
+WHERE portfolio_id = $1 AND viewed_date > CURRENT_DATE - $2
 `
 
 type CountViewsSinceParams struct {
@@ -214,11 +215,12 @@ type CountViewsSinceParams struct {
 	Column2     interface{} `json:"column_2"`
 }
 
+// Dibaca dari agregat harian hasil flush HyperLogLog (bukan tabel mentah).
 func (q *Queries) CountViewsSince(ctx context.Context, arg CountViewsSinceParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countViewsSince, arg.PortfolioID, arg.Column2)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
 }
 
 const createComment = `-- name: CreateComment :one
@@ -293,6 +295,15 @@ type DeleteNotificationParams struct {
 
 func (q *Queries) DeleteNotification(ctx context.Context, arg DeleteNotificationParams) error {
 	_, err := q.db.Exec(ctx, deleteNotification, arg.ID, arg.UserID)
+	return err
+}
+
+const deleteOldViewCounts = `-- name: DeleteOldViewCounts :exec
+DELETE FROM portfolio_view_counts WHERE viewed_date < CURRENT_DATE - 400
+`
+
+func (q *Queries) DeleteOldViewCounts(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, deleteOldViewCounts)
 	return err
 }
 
@@ -1603,5 +1614,24 @@ func (q *Queries) UpsertPortfolioStats(ctx context.Context, arg UpsertPortfolioS
 		arg.Engagement,
 		arg.Trending,
 	)
+	return err
+}
+
+const upsertViewCount = `-- name: UpsertViewCount :exec
+INSERT INTO portfolio_view_counts (portfolio_id, viewed_date, unique_views)
+VALUES ($1, $2, $3)
+ON CONFLICT (portfolio_id, viewed_date) DO UPDATE
+SET unique_views = GREATEST(portfolio_view_counts.unique_views, EXCLUDED.unique_views),
+    updated_at = NOW()
+`
+
+type UpsertViewCountParams struct {
+	PortfolioID pgtype.UUID `json:"portfolio_id"`
+	ViewedDate  pgtype.Date `json:"viewed_date"`
+	UniqueViews int32       `json:"unique_views"`
+}
+
+func (q *Queries) UpsertViewCount(ctx context.Context, arg UpsertViewCountParams) error {
+	_, err := q.db.Exec(ctx, upsertViewCount, arg.PortfolioID, arg.ViewedDate, arg.UniqueViews)
 	return err
 }

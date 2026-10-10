@@ -11,6 +11,22 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const addChangelogContributor = `-- name: AddChangelogContributor :exec
+INSERT INTO changelog_contributors (changelog_id, user_id, role) VALUES ($1, $2, $3)
+ON CONFLICT (changelog_id, user_id) DO UPDATE SET role = EXCLUDED.role
+`
+
+type AddChangelogContributorParams struct {
+	ChangelogID pgtype.UUID `json:"changelog_id"`
+	UserID      pgtype.UUID `json:"user_id"`
+	Role        string      `json:"role"`
+}
+
+func (q *Queries) AddChangelogContributor(ctx context.Context, arg AddChangelogContributorParams) error {
+	_, err := q.db.Exec(ctx, addChangelogContributor, arg.ChangelogID, arg.UserID, arg.Role)
+	return err
+}
+
 const addChangelogSection = `-- name: AddChangelogSection :exec
 INSERT INTO changelog_sections (changelog_id, kind, title, body_md, sort)
 VALUES ($1, $2, $3, $4, $5)
@@ -250,6 +266,28 @@ func (q *Queries) DashboardStats(ctx context.Context, dollar_1 string) (Dashboar
 		&i.BlocksQuarantined,
 	)
 	return i, err
+}
+
+const decayUserInterests = `-- name: DecayUserInterests :exec
+UPDATE user_interests SET
+  tag_weights = COALESCE((
+    SELECT jsonb_object_agg(t.k, GREATEST(0.01::numeric, round(t.v::numeric * $1::numeric, 4)))
+    FROM jsonb_each_text(user_interests.tag_weights) AS t(k, v)
+  ), '{}'::jsonb),
+  major_weights = COALESCE((
+    SELECT jsonb_object_agg(t.k, GREATEST(0.01::numeric, round(t.v::numeric * $1::numeric, 4)))
+    FROM jsonb_each_text(user_interests.major_weights) AS t(k, v)
+  ), '{}'::jsonb),
+  total_likes = GREATEST(0, (total_likes * $1)::int),
+  updated_at = NOW()
+WHERE updated_at < NOW() - INTERVAL '1 day'
+`
+
+// Peluruhan bobot minat (decay) agar like lama tidak mendominasi selamanya.
+// Nilai dibatasi minimum 0.01 lalu dibulatkan 4 desimal.
+func (q *Queries) DecayUserInterests(ctx context.Context, dollar_1 pgtype.Numeric) error {
+	_, err := q.db.Exec(ctx, decayUserInterests, dollar_1)
+	return err
 }
 
 const deleteMetric = `-- name: DeleteMetric :exec
@@ -501,6 +539,43 @@ func (q *Queries) LatestChangelog(ctx context.Context) (LatestChangelogRow, erro
 	return i, err
 }
 
+const listChangelogContributors = `-- name: ListChangelogContributors :many
+SELECT u.id, u.username, u.name, c.role FROM changelog_contributors c
+JOIN users u ON u.id = c.user_id WHERE c.changelog_id = $1 ORDER BY c.role, u.name
+`
+
+type ListChangelogContributorsRow struct {
+	ID       pgtype.UUID `json:"id"`
+	Username string      `json:"username"`
+	Name     string      `json:"name"`
+	Role     string      `json:"role"`
+}
+
+func (q *Queries) ListChangelogContributors(ctx context.Context, changelogID pgtype.UUID) ([]ListChangelogContributorsRow, error) {
+	rows, err := q.db.Query(ctx, listChangelogContributors, changelogID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListChangelogContributorsRow{}
+	for rows.Next() {
+		var i ListChangelogContributorsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Username,
+			&i.Name,
+			&i.Role,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listChangelogSections = `-- name: ListChangelogSections :many
 SELECT id, kind, title, body_md, sort FROM changelog_sections
 WHERE changelog_id = $1 ORDER BY sort ASC
@@ -709,6 +784,63 @@ func (q *Queries) ListFeedbackThreads(ctx context.Context, arg ListFeedbackThrea
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listFeedbackVoterIDs = `-- name: ListFeedbackVoterIDs :many
+SELECT user_id FROM feedback_votes WHERE thread_id = $1
+`
+
+func (q *Queries) ListFeedbackVoterIDs(ctx context.Context, threadID pgtype.UUID) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, listFeedbackVoterIDs, threadID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.UUID{}
+	for rows.Next() {
+		var user_id pgtype.UUID
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, user_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listLeaderboardRankedUserIDs = `-- name: ListLeaderboardRankedUserIDs :many
+SELECT DISTINCT e.subject_user_id FROM leaderboard_entries e
+JOIN leaderboards l ON l.id = e.leaderboard_id
+WHERE l.period = $1 AND l.scope = 'global' AND l.kind = 'best_students'
+  AND e.rank <= $2 AND e.subject_user_id IS NOT NULL
+`
+
+type ListLeaderboardRankedUserIDsParams struct {
+	Period string `json:"period"`
+	Rank   int32  `json:"rank"`
+}
+
+// Penerima notifikasi peringkat: user yang masuk top-N best_students.
+func (q *Queries) ListLeaderboardRankedUserIDs(ctx context.Context, arg ListLeaderboardRankedUserIDsParams) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, listLeaderboardRankedUserIDs, arg.Period, arg.Rank)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.UUID{}
+	for rows.Next() {
+		var subject_user_id pgtype.UUID
+		if err := rows.Scan(&subject_user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, subject_user_id)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -1107,6 +1239,20 @@ func (q *Queries) PublishDueChangelogs(ctx context.Context) ([]PublishDueChangel
 	return items, nil
 }
 
+const removeChangelogContributor = `-- name: RemoveChangelogContributor :exec
+DELETE FROM changelog_contributors WHERE changelog_id = $1 AND user_id = $2
+`
+
+type RemoveChangelogContributorParams struct {
+	ChangelogID pgtype.UUID `json:"changelog_id"`
+	UserID      pgtype.UUID `json:"user_id"`
+}
+
+func (q *Queries) RemoveChangelogContributor(ctx context.Context, arg RemoveChangelogContributorParams) error {
+	_, err := q.db.Exec(ctx, removeChangelogContributor, arg.ChangelogID, arg.UserID)
+	return err
+}
+
 const setChangelogStatus = `-- name: SetChangelogStatus :exec
 UPDATE changelogs SET status = $2 WHERE id = $1
 `
@@ -1118,6 +1264,20 @@ type SetChangelogStatusParams struct {
 
 func (q *Queries) SetChangelogStatus(ctx context.Context, arg SetChangelogStatusParams) error {
 	_, err := q.db.Exec(ctx, setChangelogStatus, arg.ID, arg.Status)
+	return err
+}
+
+const setFeedbackLinkedChangelog = `-- name: SetFeedbackLinkedChangelog :exec
+UPDATE feedback_threads SET linked_changelog_id = $2 WHERE id = $1
+`
+
+type SetFeedbackLinkedChangelogParams struct {
+	ID                pgtype.UUID `json:"id"`
+	LinkedChangelogID pgtype.UUID `json:"linked_changelog_id"`
+}
+
+func (q *Queries) SetFeedbackLinkedChangelog(ctx context.Context, arg SetFeedbackLinkedChangelogParams) error {
+	_, err := q.db.Exec(ctx, setFeedbackLinkedChangelog, arg.ID, arg.LinkedChangelogID)
 	return err
 }
 

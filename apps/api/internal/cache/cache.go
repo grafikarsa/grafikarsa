@@ -98,3 +98,34 @@ func (c *Cache) DelPattern(ctx context.Context, pattern string) error {
 	}
 	return iter.Err()
 }
+
+// ---- HyperLogLog (view counter) ----
+
+func (c *Cache) PFAdd(ctx context.Context, key, val string) error {
+	return c.rdb.PFAdd(ctx, key, val).Err()
+}
+
+func (c *Cache) PFCount(ctx context.Context, key string) (int64, error) {
+	return c.rdb.PFCount(ctx, key).Result()
+}
+
+func (c *Cache) Expire(ctx context.Context, key string, ttl time.Duration) error {
+	return c.rdb.Expire(ctx, key, ttl).Err()
+}
+
+// ---- SET mentah (dirty marker; LIST dipakai untuk feed yang butuh urutan) ----
+
+func (c *Cache) SAdd(ctx context.Context, key string, vals ...string) error {
+	if len(vals) == 0 {
+		return nil
+	}
+	args := make([]any, len(vals))
+	for i, v := range vals {
+		args[i] = v
+	}
+	return c.rdb.SAdd(ctx, key, args...).Err()
+}
+
+func (c *Cache) SMembers(ctx context.Context, key string) ([]string, error) {
+	return c.rdb.SMembers(ctx, key).Result()
+}

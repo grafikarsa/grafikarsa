@@ -78,6 +78,16 @@ func main() {
 			slog.Error("retention", "err", err)
 			os.Exit(1)
 		}
+	case "flush-views":
+		if err := flushViews(ctx, q, c); err != nil {
+			slog.Error("flush-views", "err", err)
+			os.Exit(1)
+		}
+	case "decay-interests":
+		if err := decayInterests(ctx, q); err != nil {
+			slog.Error("decay-interests", "err", err)
+			os.Exit(1)
+		}
 	case "digest":
 		if err := sendDailyDigest(ctx, q); err != nil {
 			slog.Error("digest", "err", err)
@@ -342,6 +352,17 @@ func recomputeStudents(ctx context.Context, q *repo.Queries, period, scope strin
 			LeaderboardID: lbID, Rank: int32(rank), SubjectUserID: uuidOrNull(c.ID),
 			Score: floatToNumeric(score), Breakdown: bd, DeltaRank: int32(delta),
 		})
+		// Notifikasi kenaikan peringkat (hanya global, 10 besar, naik).
+		if scope == "global" && rank <= 10 && delta > 0 {
+			if _, nerr := q.CreateNotification(ctx, repo.CreateNotificationParams{
+				UserID: c.ID, Type: "leaderboard_ranked",
+				Title: "Peringkat naik",
+				Body:  fmt.Sprintf("Peringkatmu naik ke #%d (%s).", rank, period),
+				Data:  notifPayload(map[string]string{"kind": "leaderboard_ranked", "rank": fmt.Sprint(rank), "period": period}),
+			}); nerr != nil {
+				slog.Warn("notif peringkat gagal", "user", uuidStr(c.ID), "err", nerr)
+			}
+		}
 		rank++
 		if rank > 20 {
 			break
@@ -438,6 +459,47 @@ func cleanupMedia(ctx context.Context, q *repo.Queries, cfg *config.Config) erro
 }
 
 func newStorage(cfg *config.Config) *storage.Storage { return storage.New(cfg) }
+
+// flushViews membaca HyperLogLog per portfolio/hari lalu menulis agregatnya ke
+// portfolio_view_counts. Idempotent: nilai diambil GREATEST sehingga pengulangan
+// tidak menurunkan angka.
+func flushViews(ctx context.Context, q *repo.Queries, c *cache.Cache) error {
+	day := time.Now().Format("2006-01-02")
+	dirtyKey := "views:dirty:" + day
+	ids, err := c.SMembers(ctx, dirtyKey)
+	if err != nil || len(ids) == 0 {
+		return nil
+	}
+	flushed := 0
+	for _, pid := range ids {
+		n, perr := c.PFCount(ctx, "views:hll:"+pid+":"+day)
+		if perr != nil {
+			continue
+		}
+		if uerr := q.UpsertViewCount(ctx, repo.UpsertViewCountParams{
+			PortfolioID: mustUUID(pid), ViewedDate: toPgDate(day), UniqueViews: int32(n),
+		}); uerr != nil {
+			slog.Warn("view count gagal disimpan", "portfolio", pid, "err", uerr)
+			continue
+		}
+		flushed++
+	}
+	_ = q.DeleteOldViewCounts(ctx)
+	_ = c.Del(ctx, dirtyKey)
+	slog.Info("view flush", "portfolio", flushed, "hari", day)
+	return nil
+}
+
+// decayInterests meluruhkan bobot minat sekali sehari agar preferensi lama tidak
+// mendominasi rekomendasi (0.98^hari).
+func decayInterests(ctx context.Context, q *repo.Queries) error {
+	factor := floatToNumeric(0.98)
+	if err := q.DecayUserInterests(ctx, factor); err != nil {
+		return err
+	}
+	slog.Info("interests decay dijalankan", "factor", 0.98)
+	return nil
+}
 
 // sendDailyDigest mengirim ringkasan notifikasi belum dibaca sekali sehari
 // untuk user yang mengaktifkan digest_daily (job harian 07:00 WIB).

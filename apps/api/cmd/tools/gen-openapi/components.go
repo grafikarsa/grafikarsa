@@ -266,6 +266,7 @@ const componentsYAML = `components:
             - feedback_updated
             - announcement
             - digest
+            - leaderboard_ranked
         title: { type: string }
         body: { type: string }
         is_read: { type: boolean }
