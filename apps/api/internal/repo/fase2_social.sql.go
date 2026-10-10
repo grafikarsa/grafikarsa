@@ -254,7 +254,7 @@ func (q *Queries) GetComment(ctx context.Context, id pgtype.UUID) (GetCommentRow
 }
 
 const getFeedCandidates = `-- name: GetFeedCandidates :many
-SELECT p.id, p.title, p.slug, p.thumbnail_media_id, p.published_at,
+SELECT p.id, p.owner_id, p.title, p.slug, p.thumbnail_media_id, p.published_at,
   COALESCE(ps.engagement, 0) AS engagement, COALESCE(ps.quality, 0) AS quality,
   COALESCE(ps.trending, 0) AS trending,
   u.username, u.name AS owner_name, u.major_id AS owner_major_id, u.class_id AS owner_class_id
@@ -268,6 +268,7 @@ ORDER BY COALESCE(ps.trending, 0) DESC LIMIT 50
 
 type GetFeedCandidatesRow struct {
 	ID               pgtype.UUID        `json:"id"`
+	OwnerID          pgtype.UUID        `json:"owner_id"`
 	Title            string             `json:"title"`
 	Slug             string             `json:"slug"`
 	ThumbnailMediaID pgtype.UUID        `json:"thumbnail_media_id"`
@@ -292,6 +293,7 @@ func (q *Queries) GetFeedCandidates(ctx context.Context) ([]GetFeedCandidatesRow
 		var i GetFeedCandidatesRow
 		if err := rows.Scan(
 			&i.ID,
+			&i.OwnerID,
 			&i.Title,
 			&i.Slug,
 			&i.ThumbnailMediaID,

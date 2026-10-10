@@ -55,7 +55,7 @@ VALUES ($1, $2, $3, CURRENT_DATE)
 ON CONFLICT DO NOTHING;
 
 -- name: GetFeedCandidates :many
-SELECT p.id, p.title, p.slug, p.thumbnail_media_id, p.published_at,
+SELECT p.id, p.owner_id, p.title, p.slug, p.thumbnail_media_id, p.published_at,
   COALESCE(ps.engagement, 0) AS engagement, COALESCE(ps.quality, 0) AS quality,
   COALESCE(ps.trending, 0) AS trending,
   u.username, u.name AS owner_name, u.major_id AS owner_major_id, u.class_id AS owner_class_id

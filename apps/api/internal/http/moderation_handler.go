@@ -111,6 +111,62 @@ func (a *App) handleApprovePortfolio(w http.ResponseWriter, r *http.Request) {
 	a.moderate(w, r, "published", false)
 }
 
+func (a *App) handleBulkApprove(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		IDs []string `json:"ids"`
+	}
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if len(req.IDs) == 0 || len(req.IDs) > 20 {
+		writeJSON(w, http.StatusUnprocessableEntity, fail("VALIDATION_ERROR", "Maksimal 20 ID.", r))
+		return
+	}
+	okCount := 0
+	for _, id := range req.IDs {
+		p, err := a.Q.GetPortfolioByID(r.Context(), mustUUID(id))
+		if err != nil || p.Status != "pending_review" {
+			continue
+		}
+		if !canModerate(r, a, p) {
+			continue
+		}
+		_ = a.Q.ModeratePortfolio(r.Context(), repo.ModeratePortfolioParams{
+			ID: p.ID, Status: "published", ReviewedBy: mustUUID(UserID(r)),
+		})
+		_, _ = a.Q.EnqueueOutbox(r.Context(), repo.EnqueueOutboxParams{
+			Topic:   "notify.portfolio_approved",
+			Payload: notifPayload(map[string]string{"user_id": uuidStr(p.OwnerID), "portfolio_id": id}),
+		})
+		_ = a.Q.UpsertPortfolioStats(r.Context(), repo.UpsertPortfolioStatsParams{PortfolioID: p.ID})
+		auditLog(r, a, "portfolio.moderate.published", "portfolios", id, "bulk")
+		okCount++
+	}
+	writeJSON(w, http.StatusOK, ok(map[string]int{"approved": okCount}, r))
+}
+
+func (a *App) handleRestorePortfolio(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	_ = a.Q.RestorePortfolio(r.Context(), mustUUID(id))
+	auditLog(r, a, "portfolio.restore", "portfolios", id, "")
+	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "restored"}, r))
+}
+
+func canModerate(r *http.Request, a *App, p repo.GetPortfolioByIDRow) bool {
+	if UserRole(r) == "admin" || UserPerms(r)["portfolios.moderate"] {
+		return true
+	}
+	if !UserPerms(r)["portfolios.moderate_jurusan"] {
+		return false
+	}
+	owner, _ := a.Q.GetUserByID(r.Context(), p.OwnerID)
+	scope := ""
+	if owner.MajorID.Valid {
+		scope = uuidStr(owner.MajorID)
+	}
+	return UserScope(r) == "" || scope == UserScope(r)
+}
+
 func (a *App) handleRequestChanges(w http.ResponseWriter, r *http.Request) {
 	a.moderate(w, r, "changes_requested", true)
 }

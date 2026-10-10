@@ -290,11 +290,19 @@ func (a *App) handleSubmitPortfolio(w http.ResponseWriter, r *http.Request) {
 	if nt == 0 {
 		details = append(details, map[string]string{"field": "tag_ids", "message": "Minimal 1 tag."})
 	}
+	if p.SeriesID.Valid == false {
+		if owner, err := a.Q.GetUserByID(r.Context(), p.OwnerID); err == nil && owner.MajorID.Valid {
+			if req, err := a.Q.GetMajorRequireSeries(r.Context(), owner.MajorID); err == nil && req {
+				details = append(details, map[string]string{"field": "series_id", "message": "Jurusanmu mewajibkan series."})
+			}
+		}
+	}
 	if len(details) > 0 {
 		writeJSON(w, http.StatusUnprocessableEntity, failDetails("INCOMPLETE_PORTFOLIO", "Portfolio belum lengkap.", details, r))
 		return
 	}
-	_ = a.Q.SubmitPortfolio(r.Context(), repo.SubmitPortfolioParams{ID: p.ID, SubmittedSnapshot: []byte("{}")})
+	snap := buildSnapshot(r, a, p)
+	_ = a.Q.SubmitPortfolio(r.Context(), repo.SubmitPortfolioParams{ID: p.ID, SubmittedSnapshot: snap})
 	_, _ = a.Q.EnqueueOutbox(r.Context(), repo.EnqueueOutboxParams{Topic: "portfolio.submitted", Payload: []byte(`{"portfolio_id":"` + id + `"}`)})
 	auditLog(r, a, "portfolio.submit", "portfolios", id, "")
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "pending_review"}, r))
@@ -363,12 +371,42 @@ func (a *App) handleMyPortfolios(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) handleListPublished(w http.ResponseWriter, r *http.Request) {
 	limit, offset, page := pageParams(r)
-	rows, err := a.Q.ListPublishedPortfolios(r.Context(), repo.ListPublishedPortfoliosParams{Limit: limit, Offset: offset})
+	q := r.URL.Query()
+	search := q.Get("search")
+	tagID := q.Get("tag_id")
+	majorID := q.Get("major_id")
+	var rows []repo.FilterPublishedPortfoliosRow
+	var err error
+	var total int64
+	switch {
+	case tagID != "":
+		trows, e := a.Q.FilterByTag(r.Context(), repo.FilterByTagParams{TagID: mustUUID(tagID), Limit: limit, Offset: offset})
+		err = e
+		for _, t := range trows {
+			rows = append(rows, repo.FilterPublishedPortfoliosRow(t))
+		}
+		total = int64(len(rows))
+	case majorID != "":
+		mrows, e := a.Q.FilterByMajor(r.Context(), repo.FilterByMajorParams{MajorID: mustUUID(majorID), Limit: limit, Offset: offset})
+		err = e
+		for _, t := range mrows {
+			rows = append(rows, repo.FilterPublishedPortfoliosRow{
+				ID: t.ID, OwnerID: t.OwnerID, Title: t.Title, Slug: t.Slug,
+				ThumbnailMediaID: t.ThumbnailMediaID, PublishedAt: t.PublishedAt,
+				Username: t.Username, OwnerName: t.OwnerName,
+			})
+		}
+		total = int64(len(rows))
+	default:
+		rows, err = a.Q.FilterPublishedPortfolios(r.Context(), repo.FilterPublishedPortfoliosParams{
+			Column1: search, Limit: limit, Offset: offset,
+		})
+		total, _ = a.Q.CountFilteredPortfolios(r.Context(), search)
+	}
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal memuat.", r))
 		return
 	}
-	total, _ := a.Q.CountPublishedPortfolios(r.Context())
 	out := []map[string]any{}
 	for _, p := range rows {
 		out = append(out, map[string]any{

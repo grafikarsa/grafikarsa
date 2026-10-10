@@ -81,10 +81,28 @@ func (a *App) handleFeed(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusUnauthorized, fail("UNAUTHORIZED", "Login untuk feed smart.", r))
 			return
 		}
-		cacheKey := "feed:" + uid + ":smart:" + r.URL.Query().Get("page")
-		if cached, err := a.Cache.GetStrings(r.Context(), cacheKey); err == nil && len(cached) > 0 {
-			writeJSON(w, http.StatusOK, okMeta([]map[string]any{}, meta(page, limit, 0), r))
-			return
+		if page == 1 {
+			if ids, err := a.Cache.GetStrings(r.Context(), "feed:smart:"+uid); err == nil && len(ids) > 0 {
+				out := []map[string]any{}
+				for _, pid := range ids {
+					p, err := a.Q.GetPortfolioByID(r.Context(), mustUUID(pid))
+					if err != nil || p.Status != "published" {
+						continue
+					}
+					owner, _ := a.Q.GetUserByID(r.Context(), p.OwnerID)
+					out = append(out, map[string]any{
+						"id": uuidStr(p.ID), "title": p.Title, "slug": p.Slug,
+						"username": owner.Username, "owner_name": owner.Name,
+					})
+					if len(out) >= int(limit) {
+						break
+					}
+				}
+				if len(out) > 0 {
+					writeJSON(w, http.StatusOK, okMeta(out, meta(page, limit, int64(len(out))), r))
+					return
+				}
+			}
 		}
 		cands, err := a.Q.GetFeedCandidates(r.Context())
 		if err != nil {
@@ -111,10 +129,27 @@ func (a *App) handleFeed(w http.ResponseWriter, r *http.Request) {
 			score float64
 		}
 		list := []scored{}
+		// Batch tags sekali untuk 50 kandidat (hindari N+1).
+		tagMap := map[string][]repo.ListPortfolioTagsRow{}
 		for _, c := range cands {
+			if uuidStr(c.OwnerID) == uid {
+				continue // jangan tampilkan karya sendiri di smart feed
+			}
+			tags, _ := a.Q.ListPortfolioTags(r.Context(), c.ID)
+			tagMap[uuidStr(c.ID)] = tags
+		}
+		for _, c := range cands {
+			if _, skip := tagMap[uuidStr(c.ID)]; !skip {
+				continue
+			}
+			reverse, _ := a.Q.IsFollowing(r.Context(), repo.IsFollowingParams{FollowerID: c.OwnerID, FollowingID: mustUUID(uid)})
 			fScore := 0.0
-			if followSet[uuidStr(c.ID)] {
-				fScore = 0.8
+			if followSet[uuidStr(c.OwnerID)] {
+				if reverse > 0 {
+					fScore = 1.0
+				} else {
+					fScore = 0.8
+				}
 			}
 			ageH := time.Since(c.PublishedAt.Time).Hours()
 			if ageH < 0 {
@@ -123,9 +158,8 @@ func (a *App) handleFeed(w http.ResponseWriter, r *http.Request) {
 			recency := math.Exp(-ageH / 168)
 			eng := numericToFloat(c.Engagement)
 			qual := numericToFloat(c.Quality)
-			tags, _ := a.Q.ListPortfolioTags(r.Context(), c.ID)
 			pTagVec := map[string]float64{}
-			for _, t := range tags {
+			for _, t := range tagMap[uuidStr(c.ID)] {
 				pTagVec[uuidStr(t.ID)] = 1
 			}
 			tagKeys := []string{}
@@ -164,11 +198,11 @@ func (a *App) handleFeed(w http.ResponseWriter, r *http.Request) {
 			final := 0.30*fScore + 0.25*recency + 0.20*eng + 0.15*relevance + 0.10*qual
 			list = append(list, scored{c, final})
 		}
-		for i := 0; i < len(list); i++ {
-			for j := i + 1; j < len(list); j++ {
-				if list[j].score > list[i].score {
-					list[i], list[j] = list[j], list[i]
-				}
+		for i := 1; i < len(list); i++ {
+			j := i
+			for j > 0 && list[j].score > list[j-1].score {
+				list[j], list[j-1] = list[j-1], list[j]
+				j--
 			}
 		}
 		start := int(offset)
@@ -180,14 +214,19 @@ func (a *App) handleFeed(w http.ResponseWriter, r *http.Request) {
 			end = len(list)
 		}
 		out := []map[string]any{}
+		ids := []string{}
 		for _, s := range list[start:end] {
 			out = append(out, map[string]any{
 				"id": uuidStr(s.item.ID), "title": s.item.Title, "slug": s.item.Slug,
 				"username": s.item.Username, "owner_name": s.item.OwnerName, "score": s.score,
 			})
+			ids = append(ids, uuidStr(s.item.ID))
 		}
 		if out == nil {
 			out = []map[string]any{}
+		}
+		if page == 1 && len(ids) > 0 {
+			_ = a.Cache.SetStrings(r.Context(), "feed:smart:"+uid, ids, 2*time.Minute)
 		}
 		writeJSON(w, http.StatusOK, okMeta(out, meta(page, limit, int64(len(list))), r))
 	}

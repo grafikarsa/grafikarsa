@@ -63,11 +63,13 @@ func (a *App) routes() http.Handler {
 				r.Use(a.requirePerm("portfolios.view_all"))
 				r.Get("/", a.handleAdminListPortfolios)
 				r.Get("/pending", a.handleAdminPendingPortfolios)
+				r.With(a.requirePerm("portfolios.moderate")).Post("/bulk-approve", a.csrf(a.handleBulkApprove))
 				r.Route("/{id}", func(r chi.Router) {
 					r.Get("/", a.handleAdminGetPortfolio)
 					r.With(a.requirePerm("portfolios.moderate")).Post("/approve", a.csrf(a.handleApprovePortfolio))
 					r.With(a.requirePerm("portfolios.moderate")).Post("/request-changes", a.csrf(a.handleRequestChanges))
 					r.With(a.requirePerm("portfolios.moderate")).Post("/reject", a.csrf(a.handleRejectPortfolio))
+					r.With(a.requirePerm("portfolios.moderate")).Post("/restore", a.csrf(a.handleRestorePortfolio))
 				})
 			})
 			r.Route("/tags", func(r chi.Router) {

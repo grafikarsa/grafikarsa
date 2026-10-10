@@ -127,3 +127,32 @@ DELETE FROM portfolio_blocks WHERE id = $1;
 
 -- name: MaxBlockPosition :one
 SELECT COALESCE(MAX(position), -1)::int FROM portfolio_blocks WHERE portfolio_id = $1;
+
+-- name: FilterPublishedPortfolios :many
+SELECT p.id, p.owner_id, p.title, p.slug, p.thumbnail_media_id, p.published_at,
+  u.username, u.name AS owner_name
+FROM portfolios p JOIN users u ON u.id = p.owner_id
+WHERE p.status = 'published' AND p.deleted_at IS NULL
+  AND ($1 = '' OR p.title ILIKE '%' || $1 || '%' OR u.name ILIKE '%' || $1 || '%')
+ORDER BY p.published_at DESC LIMIT $2 OFFSET $3;
+
+-- name: CountFilteredPortfolios :one
+SELECT COUNT(*) FROM portfolios p
+JOIN users u ON u.id = p.owner_id
+WHERE p.status = 'published' AND p.deleted_at IS NULL
+  AND ($1 = '' OR p.title ILIKE '%' || $1 || '%' OR u.name ILIKE '%' || $1 || '%');
+
+-- name: FilterByTag :many
+SELECT p.id, p.owner_id, p.title, p.slug, p.thumbnail_media_id, p.published_at,
+  u.username, u.name AS owner_name
+FROM portfolios p JOIN users u ON u.id = p.owner_id
+JOIN portfolio_tags pt ON pt.portfolio_id = p.id AND pt.tag_id = $1
+WHERE p.status = 'published' AND p.deleted_at IS NULL
+ORDER BY p.published_at DESC LIMIT $2 OFFSET $3;
+
+-- name: FilterByMajor :many
+SELECT p.id, p.owner_id, p.title, p.slug, p.thumbnail_media_id, p.published_at,
+  u.username, u.name AS owner_name
+FROM portfolios p JOIN users u ON u.id = p.owner_id
+WHERE p.status = 'published' AND p.deleted_at IS NULL AND u.major_id = $1
+ORDER BY p.published_at DESC LIMIT $2 OFFSET $3;

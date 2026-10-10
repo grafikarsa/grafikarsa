@@ -162,3 +162,4 @@ ON CONFLICT (user_id) DO UPDATE SET portfolio_liked = EXCLUDED.portfolio_liked, 
 
 -- name: GetAuditLogs :many
 SELECT id, actor_id, action, entity, entity_id, created_at FROM audit_logs ORDER BY id DESC LIMIT $1 OFFSET $2;
+

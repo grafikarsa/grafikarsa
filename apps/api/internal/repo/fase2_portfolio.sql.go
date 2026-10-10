@@ -43,6 +43,20 @@ func (q *Queries) CancelSubmit(ctx context.Context, id pgtype.UUID) error {
 	return err
 }
 
+const countFilteredPortfolios = `-- name: CountFilteredPortfolios :one
+SELECT COUNT(*) FROM portfolios p
+JOIN users u ON u.id = p.owner_id
+WHERE p.status = 'published' AND p.deleted_at IS NULL
+  AND ($1 = '' OR p.title ILIKE '%' || $1 || '%' OR u.name ILIKE '%' || $1 || '%')
+`
+
+func (q *Queries) CountFilteredPortfolios(ctx context.Context, dollar_1 interface{}) (int64, error) {
+	row := q.db.QueryRow(ctx, countFilteredPortfolios, dollar_1)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countPortfolioBlocks = `-- name: CountPortfolioBlocks :one
 SELECT COUNT(*) FROM portfolio_blocks WHERE portfolio_id = $1
 `
@@ -180,6 +194,170 @@ func (q *Queries) EnsureTag(ctx context.Context, arg EnsureTagParams) (pgtype.UU
 	var id pgtype.UUID
 	err := row.Scan(&id)
 	return id, err
+}
+
+const filterByMajor = `-- name: FilterByMajor :many
+SELECT p.id, p.owner_id, p.title, p.slug, p.thumbnail_media_id, p.published_at,
+  u.username, u.name AS owner_name
+FROM portfolios p JOIN users u ON u.id = p.owner_id
+WHERE p.status = 'published' AND p.deleted_at IS NULL AND u.major_id = $1
+ORDER BY p.published_at DESC LIMIT $2 OFFSET $3
+`
+
+type FilterByMajorParams struct {
+	MajorID pgtype.UUID `json:"major_id"`
+	Limit   int32       `json:"limit"`
+	Offset  int32       `json:"offset"`
+}
+
+type FilterByMajorRow struct {
+	ID               pgtype.UUID        `json:"id"`
+	OwnerID          pgtype.UUID        `json:"owner_id"`
+	Title            string             `json:"title"`
+	Slug             string             `json:"slug"`
+	ThumbnailMediaID pgtype.UUID        `json:"thumbnail_media_id"`
+	PublishedAt      pgtype.Timestamptz `json:"published_at"`
+	Username         string             `json:"username"`
+	OwnerName        string             `json:"owner_name"`
+}
+
+func (q *Queries) FilterByMajor(ctx context.Context, arg FilterByMajorParams) ([]FilterByMajorRow, error) {
+	rows, err := q.db.Query(ctx, filterByMajor, arg.MajorID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []FilterByMajorRow{}
+	for rows.Next() {
+		var i FilterByMajorRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.OwnerID,
+			&i.Title,
+			&i.Slug,
+			&i.ThumbnailMediaID,
+			&i.PublishedAt,
+			&i.Username,
+			&i.OwnerName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const filterByTag = `-- name: FilterByTag :many
+SELECT p.id, p.owner_id, p.title, p.slug, p.thumbnail_media_id, p.published_at,
+  u.username, u.name AS owner_name
+FROM portfolios p JOIN users u ON u.id = p.owner_id
+JOIN portfolio_tags pt ON pt.portfolio_id = p.id AND pt.tag_id = $1
+WHERE p.status = 'published' AND p.deleted_at IS NULL
+ORDER BY p.published_at DESC LIMIT $2 OFFSET $3
+`
+
+type FilterByTagParams struct {
+	TagID  pgtype.UUID `json:"tag_id"`
+	Limit  int32       `json:"limit"`
+	Offset int32       `json:"offset"`
+}
+
+type FilterByTagRow struct {
+	ID               pgtype.UUID        `json:"id"`
+	OwnerID          pgtype.UUID        `json:"owner_id"`
+	Title            string             `json:"title"`
+	Slug             string             `json:"slug"`
+	ThumbnailMediaID pgtype.UUID        `json:"thumbnail_media_id"`
+	PublishedAt      pgtype.Timestamptz `json:"published_at"`
+	Username         string             `json:"username"`
+	OwnerName        string             `json:"owner_name"`
+}
+
+func (q *Queries) FilterByTag(ctx context.Context, arg FilterByTagParams) ([]FilterByTagRow, error) {
+	rows, err := q.db.Query(ctx, filterByTag, arg.TagID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []FilterByTagRow{}
+	for rows.Next() {
+		var i FilterByTagRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.OwnerID,
+			&i.Title,
+			&i.Slug,
+			&i.ThumbnailMediaID,
+			&i.PublishedAt,
+			&i.Username,
+			&i.OwnerName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const filterPublishedPortfolios = `-- name: FilterPublishedPortfolios :many
+SELECT p.id, p.owner_id, p.title, p.slug, p.thumbnail_media_id, p.published_at,
+  u.username, u.name AS owner_name
+FROM portfolios p JOIN users u ON u.id = p.owner_id
+WHERE p.status = 'published' AND p.deleted_at IS NULL
+  AND ($1 = '' OR p.title ILIKE '%' || $1 || '%' OR u.name ILIKE '%' || $1 || '%')
+ORDER BY p.published_at DESC LIMIT $2 OFFSET $3
+`
+
+type FilterPublishedPortfoliosParams struct {
+	Column1 interface{} `json:"column_1"`
+	Limit   int32       `json:"limit"`
+	Offset  int32       `json:"offset"`
+}
+
+type FilterPublishedPortfoliosRow struct {
+	ID               pgtype.UUID        `json:"id"`
+	OwnerID          pgtype.UUID        `json:"owner_id"`
+	Title            string             `json:"title"`
+	Slug             string             `json:"slug"`
+	ThumbnailMediaID pgtype.UUID        `json:"thumbnail_media_id"`
+	PublishedAt      pgtype.Timestamptz `json:"published_at"`
+	Username         string             `json:"username"`
+	OwnerName        string             `json:"owner_name"`
+}
+
+func (q *Queries) FilterPublishedPortfolios(ctx context.Context, arg FilterPublishedPortfoliosParams) ([]FilterPublishedPortfoliosRow, error) {
+	rows, err := q.db.Query(ctx, filterPublishedPortfolios, arg.Column1, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []FilterPublishedPortfoliosRow{}
+	for rows.Next() {
+		var i FilterPublishedPortfoliosRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.OwnerID,
+			&i.Title,
+			&i.Slug,
+			&i.ThumbnailMediaID,
+			&i.PublishedAt,
+			&i.Username,
+			&i.OwnerName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getBlock = `-- name: GetBlock :one

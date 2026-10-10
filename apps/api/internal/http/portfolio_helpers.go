@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -30,4 +31,20 @@ func auditLog(r *http.Request, a *App, action, entity, entityID, diff string) {
 		ActorID: actor, Action: action, Entity: entity, EntityID: entityID,
 		Diff: []byte(diff), Ip: toPgInet(clientIP(r)),
 	})
+}
+
+func buildSnapshot(r *http.Request, a *App, p repo.GetPortfolioByIDRow) []byte {
+	blocks, _ := a.Q.ListBlocks(r.Context(), p.ID)
+	tags, _ := a.Q.ListPortfolioTags(r.Context(), p.ID)
+	tagIDs := []string{}
+	for _, t := range tags {
+		tagIDs = append(tagIDs, uuidStr(t.ID))
+	}
+	snap := map[string]any{
+		"title": p.Title, "tag_ids": tagIDs, "series_id": nullableUUID(p.SeriesID),
+		"thumbnail_media_id": nullableUUID(p.ThumbnailMediaID),
+		"blocks":             blocks,
+	}
+	b, _ := json.Marshal(snap)
+	return b
 }
