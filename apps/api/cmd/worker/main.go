@@ -8,6 +8,8 @@ import (
 	"os"
 	"time"
 
+	"grafikarsa/api/internal/storage"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 	"grafikarsa/api/internal/cache"
 	"grafikarsa/api/internal/config"
@@ -54,8 +56,13 @@ func main() {
 			slog.Error("leaderboard", "err", err)
 			os.Exit(1)
 		}
+	case "cleanup-media":
+		if err := cleanupMedia(ctx, q, cfg); err != nil {
+			slog.Error("cleanup-media", "err", err)
+			os.Exit(1)
+		}
 	default:
-		fmt.Fprintln(os.Stderr, "usage: worker [outbox|stats|leaderboard]")
+		fmt.Fprintln(os.Stderr, "usage: worker [outbox|stats|leaderboard|cleanup-media]")
 		os.Exit(1)
 	}
 }
@@ -237,3 +244,21 @@ func recomputeProjects(ctx context.Context, q *repo.Queries, period, scope strin
 	slog.Info("leaderboard projects", "period", period, "count", rank-1)
 	return nil
 }
+
+func cleanupMedia(ctx context.Context, q *repo.Queries, cfg *config.Config) error {
+	rows, err := q.ListPendingMedia(ctx)
+	if err != nil {
+		return err
+	}
+	st := newStorage(cfg)
+	n := 0
+	for _, m := range rows {
+		_ = st.Delete(ctx, m.ObjectKey)
+		_ = q.DeleteMediaRow(ctx, m.ID)
+		n++
+	}
+	slog.Info("cleanup-media done", "count", n)
+	return nil
+}
+
+func newStorage(cfg *config.Config) *storage.Storage { return storage.New(cfg) }

@@ -121,3 +121,10 @@ SELECT COALESCE(SUM(size_bytes), 0) FROM media_assets WHERE owner_id = $1 AND st
 
 -- name: CountUploadsSince :one
 SELECT COUNT(*) FROM media_assets WHERE owner_id = $1 AND created_at > NOW() - ($2 || ' hours')::interval;
+
+-- name: ListPendingMedia :many
+SELECT id, object_key FROM media_assets
+WHERE status = 'pending' AND created_at < NOW() - INTERVAL '24 hours' LIMIT 100;
+
+-- name: DeleteMediaRow :exec
+DELETE FROM media_assets WHERE id = $1;

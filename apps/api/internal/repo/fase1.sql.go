@@ -202,6 +202,15 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (pgtype.
 	return id, err
 }
 
+const deleteMediaRow = `-- name: DeleteMediaRow :exec
+DELETE FROM media_assets WHERE id = $1
+`
+
+func (q *Queries) DeleteMediaRow(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteMediaRow, id)
+	return err
+}
+
 const deleteRole = `-- name: DeleteRole :exec
 DELETE FROM roles WHERE id = $1 AND is_system = FALSE
 `
@@ -429,6 +438,36 @@ func (q *Queries) InsertAuthAudit(ctx context.Context, arg InsertAuthAuditParams
 		arg.UserAgent,
 	)
 	return err
+}
+
+const listPendingMedia = `-- name: ListPendingMedia :many
+SELECT id, object_key FROM media_assets
+WHERE status = 'pending' AND created_at < NOW() - INTERVAL '24 hours' LIMIT 100
+`
+
+type ListPendingMediaRow struct {
+	ID        pgtype.UUID `json:"id"`
+	ObjectKey string      `json:"object_key"`
+}
+
+func (q *Queries) ListPendingMedia(ctx context.Context) ([]ListPendingMediaRow, error) {
+	rows, err := q.db.Query(ctx, listPendingMedia)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPendingMediaRow{}
+	for rows.Next() {
+		var i ListPendingMediaRow
+		if err := rows.Scan(&i.ID, &i.ObjectKey); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listRoles = `-- name: ListRoles :many

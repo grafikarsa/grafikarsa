@@ -39,10 +39,27 @@ var purposeMimes = map[string][]string{
 
 func (a *App) handleUpload(w http.ResponseWriter, r *http.Request) {
 	uid := UserID(r)
+	ctx := r.Context()
 	r.Body = http.MaxBytesReader(w, r.Body, 52<<20)
 	if err := r.ParseMultipartForm(52 << 20); err != nil {
 		writeJSON(w, http.StatusBadRequest, fail("FILE_TOO_LARGE", "File terlalu besar (maks 52MB).", r))
 		return
+	}
+	// Rate-limit: 20/jam, 100/hari per user.
+	if n, _ := a.Cache.IncrWithExpire(ctx, "upload:hour:"+uid, time.Hour); n > 20 {
+		writeJSON(w, http.StatusTooManyRequests, fail("TOO_MANY_UPLOADS", "Maksimal 20 file per jam.", r))
+		return
+	}
+	if n, _ := a.Cache.IncrWithExpire(ctx, "upload:day:"+uid, 24*time.Hour); n > 100 {
+		writeJSON(w, http.StatusTooManyRequests, fail("TOO_MANY_UPLOADS", "Maksimal 100 file per hari.", r))
+		return
+	}
+	// Quota: 200MB total confirmed per user.
+	if used, err := a.Q.SumUserMedia(ctx, mustUUID(uid)); err == nil {
+		if toInt64(used) > 200<<20 {
+			writeJSON(w, http.StatusUnprocessableEntity, fail("QUOTA_EXCEEDED", "Kuota 200MB habis.", r))
+			return
+		}
 	}
 	purpose := r.FormValue("purpose")
 	limit, found := purposeLimits[purpose]
