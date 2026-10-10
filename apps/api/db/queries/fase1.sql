@@ -254,3 +254,15 @@ UPDATE legacy_urls SET hit_count = hit_count + 1, last_hit_at = NOW() WHERE id =
 -- name: CreateLegacyURL :exec
 INSERT INTO legacy_urls (old_url, media_id, object_key) VALUES ($1, $2, $3)
 ON CONFLICT (old_url) DO UPDATE SET media_id = EXCLUDED.media_id, object_key = EXCLUDED.object_key;
+
+-- name: GetAuditLogsFiltered :many
+-- Filter opsional per aksi + entitas (dipakai halaman Audit Log admin).
+SELECT id, actor_id, action, entity, entity_id, diff, ip, created_at FROM audit_logs
+WHERE ($1::text = '' OR action = $1)
+  AND ($2::text = '' OR entity = $2)
+ORDER BY id DESC LIMIT $3 OFFSET $4;
+
+-- name: CountAuditLogs :one
+SELECT COUNT(*) FROM audit_logs
+WHERE ($1::text = '' OR action = $1)
+  AND ($2::text = '' OR entity = $2);

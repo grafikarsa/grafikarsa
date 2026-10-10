@@ -92,7 +92,9 @@ export default function ChangelogPage() {
         <Card key={c.id} className="mb-3">
           <CardHeader>
             <CardTitle>
-              v{c.version} — {c.title}
+              <a className="hover:underline" href={`/changelog/${c.version}`}>
+                v{c.version} — {c.title}
+              </a>
             </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">

@@ -100,6 +100,24 @@ func (q *Queries) ConfirmMedia(ctx context.Context, id pgtype.UUID) error {
 	return err
 }
 
+const countAuditLogs = `-- name: CountAuditLogs :one
+SELECT COUNT(*) FROM audit_logs
+WHERE ($1::text = '' OR action = $1)
+  AND ($2::text = '' OR entity = $2)
+`
+
+type CountAuditLogsParams struct {
+	Column1 string `json:"column_1"`
+	Column2 string `json:"column_2"`
+}
+
+func (q *Queries) CountAuditLogs(ctx context.Context, arg CountAuditLogsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countAuditLogs, arg.Column1, arg.Column2)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countUploadsSince = `-- name: CountUploadsSince :one
 SELECT COUNT(*) FROM media_assets WHERE owner_id = $1 AND created_at > NOW() - ($2 || ' hours')::interval
 `
@@ -381,6 +399,55 @@ func (q *Queries) GetAuditLogs(ctx context.Context, arg GetAuditLogsParams) ([]G
 			&i.Action,
 			&i.Entity,
 			&i.EntityID,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAuditLogsFiltered = `-- name: GetAuditLogsFiltered :many
+SELECT id, actor_id, action, entity, entity_id, diff, ip, created_at FROM audit_logs
+WHERE ($1::text = '' OR action = $1)
+  AND ($2::text = '' OR entity = $2)
+ORDER BY id DESC LIMIT $3 OFFSET $4
+`
+
+type GetAuditLogsFilteredParams struct {
+	Column1 string `json:"column_1"`
+	Column2 string `json:"column_2"`
+	Limit   int32  `json:"limit"`
+	Offset  int32  `json:"offset"`
+}
+
+// Filter opsional per aksi + entitas (dipakai halaman Audit Log admin).
+func (q *Queries) GetAuditLogsFiltered(ctx context.Context, arg GetAuditLogsFilteredParams) ([]AuditLogs, error) {
+	rows, err := q.db.Query(ctx, getAuditLogsFiltered,
+		arg.Column1,
+		arg.Column2,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []AuditLogs{}
+	for rows.Next() {
+		var i AuditLogs
+		if err := rows.Scan(
+			&i.ID,
+			&i.ActorID,
+			&i.Action,
+			&i.Entity,
+			&i.EntityID,
+			&i.Diff,
+			&i.Ip,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err

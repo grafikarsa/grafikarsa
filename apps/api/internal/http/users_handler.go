@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
@@ -198,22 +199,35 @@ func (a *App) handleSaveNotifPrefs(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) handleAuditLogs(w http.ResponseWriter, r *http.Request) {
 	limit, offset, page := pageParams(r)
-	rows, err := a.Q.GetAuditLogs(r.Context(), repo.GetAuditLogsParams{Limit: limit, Offset: offset})
+	action := strings.TrimSpace(r.URL.Query().Get("action"))
+	entity := strings.TrimSpace(r.URL.Query().Get("entity"))
+	rows, err := a.Q.GetAuditLogsFiltered(r.Context(), repo.GetAuditLogsFilteredParams{
+		Column1: action, Column2: entity, Limit: limit, Offset: offset,
+	})
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal memuat audit.", r))
 		return
 	}
 	out := []map[string]any{}
 	for _, l := range rows {
+		note := ""
+		var diff map[string]any
+		if len(l.Diff) > 0 && json.Unmarshal(l.Diff, &diff) == nil {
+			if v, ok := diff["note"].(string); ok {
+				note = v
+			}
+		}
 		out = append(out, map[string]any{
 			"id": l.ID, "actor_id": nullableUUID(l.ActorID), "action": l.Action,
-			"entity": l.Entity, "entity_id": l.EntityID, "created_at": l.CreatedAt.Time,
+			"entity": l.Entity, "entity_id": l.EntityID, "note": note,
+			"ip": l.Ip, "created_at": l.CreatedAt.Time,
 		})
 	}
 	if out == nil {
 		out = []map[string]any{}
 	}
-	writeJSON(w, http.StatusOK, okMeta(out, meta(page, limit, int64(len(out))), r))
+	total, _ := a.Q.CountAuditLogs(r.Context(), repo.CountAuditLogsParams{Column1: action, Column2: entity})
+	writeJSON(w, http.StatusOK, okMeta(out, meta(page, limit, total), r))
 }
 
 func (a *App) handleUpdatePassword(w http.ResponseWriter, r *http.Request) {

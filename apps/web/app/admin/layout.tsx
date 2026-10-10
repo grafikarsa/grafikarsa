@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
 
 const NAV: { href: string; label: string }[] = [
+  { href: "/admin/dashboard", label: "Dashboard" },
   { href: "/admin/users", label: "Pengguna" },
   { href: "/admin/moderation", label: "Moderasi" },
   { href: "/admin/portfolios", label: "Portfolio" },
@@ -19,6 +20,9 @@ const NAV: { href: string; label: string }[] = [
   { href: "/admin/changelogs", label: "Changelog" },
   { href: "/admin/import", label: "Import" },
   { href: "/admin/promotion", label: "Kenaikan Kelas" },
+  { href: "/admin/jobs", label: "Job Queue" },
+  { href: "/admin/audit-logs", label: "Audit Log" },
+  { href: "/admin/settings", label: "Pengaturan" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
