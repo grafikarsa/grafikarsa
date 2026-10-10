@@ -1,74 +1,124 @@
 "use client";
 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { AvatarUploader } from "@/components/user/avatar-uploader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { apiGet, apiSend } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 
+type Me = {
+  id: string;
+  username: string;
+  name: string;
+  bio?: string;
+  email: string;
+  avatar_media_id?: string | null;
+  banner_media_id?: string | null;
+  show_email?: boolean;
+};
+
+// Skema sederhana untuk validasi klien (mencerminkan validator backend).
+function validateProfile(name: string, bio: string, username: string): string | null {
+  if (name.trim().length < 2 || name.trim().length > 100) return "Nama 2-100 karakter.";
+  if (bio.length > 500) return "Bio maksimal 500 karakter.";
+  if (!/^[a-z0-9._-]{3,30}$/.test(username)) return "Username 3-30 karakter (huruf kecil, angka, . _ -).";
+  return null;
+}
+
 export default function ProfilePage() {
-  const user = useAuthStore((s) => s.user);
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [progress, setProgress] = useState<number | null>(null);
+  const me = useAuthStore((s) => s.user);
+  const qc = useQueryClient();
+  const profile = useQuery({ queryKey: ["me-profile"], queryFn: () => apiGet<Me>("v1/me") });
+  const [name, setName] = useState("");
+  const [bio, setBio] = useState("");
+  const [username, setUsername] = useState("");
+  const [showEmail, setShowEmail] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    apiGet<{ avatar_url?: string }>("v1/me").catch(() => null);
-  }, []);
+    if (!profile.data) return;
+    setName(profile.data.name ?? "");
+    setBio(profile.data.bio ?? "");
+    setUsername(profile.data.username ?? "");
+    setShowEmail(Boolean(profile.data.show_email));
+  }, [profile.data]);
 
-  async function upload() {
-    if (!file) return;
-    setProgress(0);
-    const fd = new FormData();
-    fd.append("purpose", "avatar");
-    fd.append("file", file);
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", "/api/v1/media/upload");
-    const { accessToken, csrfToken } = useAuthStore.getState();
-    if (accessToken) xhr.setRequestHeader("Authorization", `Bearer ${accessToken}`);
-    if (csrfToken) xhr.setRequestHeader("X-CSRF-Token", csrfToken);
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 100));
-    };
-    xhr.onload = async () => {
-      try {
-        const json = JSON.parse(xhr.responseText);
-        if (!json.success) throw new Error(json.error.message);
-        await apiSend(`v1/media/${json.data.media_id}/confirm`, "POST", { link_to: "avatar" });
-        setPreview(`/api/v1/media/${json.data.media_id}`);
-        toast.success("Avatar diperbarui.");
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Upload gagal.");
-      } finally {
-        setProgress(null);
-      }
-    };
-    xhr.onerror = () => {
-      toast.error("Upload gagal.");
-      setProgress(null);
-    };
-    xhr.send(fd);
+  const save = useMutation({
+    mutationFn: () => {
+      const body: Record<string, unknown> = { name, bio, show_email: showEmail };
+      if (profile.data && username !== profile.data.username) body.username = username;
+      return apiSend("v1/me", "PATCH", body);
+    },
+    onSuccess: () => {
+      toast.success("Profil disimpan.");
+      qc.invalidateQueries({ queryKey: ["me-profile"] });
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Gagal menyimpan."),
+  });
+
+  function submit() {
+    const vErr = validateProfile(name, bio, username);
+    if (vErr) {
+      setError(vErr);
+      return;
+    }
+    setError(null);
+    save.mutate();
   }
 
   return (
     <main className="mx-auto max-w-xl p-8">
       <Card>
         <CardHeader>
-          <CardTitle>Profil — {user?.name ?? "tamu"}</CardTitle>
+          <CardTitle>Profil — {me?.name ?? "tamu"}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          {preview && <img src={preview} alt="Avatar" className="h-24 w-24 rounded-full object-cover" />}
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          />
-          {progress !== null && <p className="text-sm">Mengunggah... {progress}%</p>}
-          <Button onClick={upload} disabled={!file || progress !== null}>
-            Unggah avatar
+          <div className="grid gap-2">
+            <Label>Foto profil (potong 1:1 sebelum unggah)</Label>
+            <AvatarUploader
+              currentMediaID={profile.data?.avatar_media_id ?? null}
+              onDone={() => {
+                qc.invalidateQueries({ queryKey: ["me-profile"] });
+                qc.invalidateQueries({ queryKey: ["profile"] });
+              }}
+            />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="username">Username</Label>
+            <Input id="username" value={username} onChange={(e) => setUsername(e.target.value.toLowerCase())} />
+            <p className="text-muted-foreground text-xs">Mengubah username mengubah URL profilmu.</p>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="name">Nama</Label>
+            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="bio">Bio (maks 500)</Label>
+            <Textarea id="bio" rows={3} value={bio} onChange={(e) => setBio(e.target.value)} />
+            <p className="text-muted-foreground text-xs">{bio.length}/500</p>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <Label htmlFor="show-email">Tampilkan email di profil publik</Label>
+            <Switch id="show-email" checked={showEmail} onCheckedChange={setShowEmail} />
+          </div>
+
+          <p className="text-muted-foreground text-xs">Email: {profile.data?.email}</p>
+          {error && <p className="text-destructive text-xs">{error}</p>}
+
+          <Button onClick={submit} disabled={save.isPending || profile.isLoading}>
+            Simpan profil
           </Button>
-          <p className="text-muted-foreground text-xs">Maks 2MB, JPG/PNG/WebP. SVG/HTML ditolak.</p>
         </CardContent>
       </Card>
     </main>

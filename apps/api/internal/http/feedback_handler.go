@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -78,18 +79,29 @@ func (a *App) handleCreateFeedback(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, ok(resp, r))
 }
 
-// feedbackFollowUpToken: token akses guest untuk satu thread.
+// feedbackFollowUpToken: token akses guest untuk satu thread, berlaku 6 bulan
+// (format "<exp>.<hmac>"). Guest memakainya lewat ?t= untuk membuka thread.
 func feedbackFollowUpToken(secret, threadID string) string {
+	exp := time.Now().AddDate(0, 6, 0).Unix()
+	return strconv.FormatInt(exp, 10) + "." + feedbackTokenMAC(secret, threadID, exp)
+}
+
+func feedbackTokenMAC(secret, threadID string, exp int64) string {
 	mac := hmac.New(sha256.New, []byte(secret+"|feedback"))
-	mac.Write([]byte(threadID))
+	mac.Write([]byte(threadID + "|" + strconv.FormatInt(exp, 10)))
 	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 }
 
 func feedbackFollowUpValid(secret, threadID, token string) bool {
-	if token == "" {
+	parts := strings.SplitN(token, ".", 2)
+	if len(parts) != 2 {
 		return false
 	}
-	return hmac.Equal([]byte(token), []byte(feedbackFollowUpToken(secret, threadID)))
+	exp, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil || time.Now().Unix() > exp {
+		return false
+	}
+	return hmac.Equal([]byte(parts[1]), []byte(feedbackTokenMAC(secret, threadID, exp)))
 }
 
 func (a *App) handleListFeedback(w http.ResponseWriter, r *http.Request) {
@@ -186,6 +198,7 @@ func (a *App) handleReplyFeedback(w http.ResponseWriter, r *http.Request) {
 		IsInternal bool   `json:"is_internal"`
 		Status     string `json:"status"`
 		Priority   string `json:"priority"`
+		Token      string `json:"t"`
 	}
 	if !decodeJSON(w, r, &req) {
 		return

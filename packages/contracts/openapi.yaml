@@ -111,6 +111,28 @@ paths:
           $ref: "#/components/responses/TooManyRequests"
         "500":
           $ref: "#/components/responses/InternalError"
+  "/api/v1/admin/assessments":
+    get:
+      tags: [admin-assessments]
+      operationId: get_admin_assessments
+      summary: "inline (butuh login, permission: assessments.view)"
+      x-handler: inline
+      security:
+        - bearerAuth: []
+      x-permissions: [assessments.view]
+      responses:
+        "200":
+          description: Berhasil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
   "/api/v1/admin/assessments/metrics":
     get:
       tags: [admin-assessments]

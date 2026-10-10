@@ -7,28 +7,88 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import {
+  BLOCK_TYPES,
+  BlockForm,
+  type BlockType,
+  type Draft,
+  updateBlock,
+  useUpload,
+} from "@/components/portfolio/block-form";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { apiSend, apiGet } from "@/lib/api";
-import { useAuthStore } from "@/lib/auth-store";
+import { SelectField } from "@/components/ui/select-field";
+import { apiGet, apiSend } from "@/lib/api";
 
 type Block = { id: string; block_type: string; position: number; payload: Record<string, unknown> };
 
-function SortableBlock({ b, onDelete }: { b: Block; onDelete: () => void }) {
+function previewText(b: Block): string {
+  const p = b.payload as Record<string, unknown>;
+  const v = p.markdown ?? p.alt ?? p.url ?? p.video_id ?? p.label ?? p.title ?? "";
+  return String(v).slice(0, 90);
+}
+
+function SortableBlock({
+  b,
+  disabled,
+  onDelete,
+  onSave,
+}: {
+  b: Block;
+  disabled: boolean;
+  onDelete: () => void;
+  onSave: (payload: Draft) => Promise<void>;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: b.id });
   const style = { transform: CSS.Transform.toString(transform), transition };
-  const p = b.payload as Record<string, string>;
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
+
   return (
-    <div ref={setNodeRef} style={style} className="flex items-center gap-2 border-b py-2">
-      <button {...attributes} {...listeners} className="cursor-grab px-2" title="Seret untuk susun ulang">⠿</button>
-      <div className="flex-1">
-        <p className="text-xs text-muted-foreground">[{b.block_type}]</p>
-        <p className="text-sm">{String(p.markdown ?? p.url ?? p.video_id ?? p.label ?? "").slice(0, 80)}</p>
+    <div ref={setNodeRef} style={style} className="flex flex-col gap-2 border-b py-3">
+      <div className="flex items-center gap-2">
+        <button
+          {...attributes}
+          {...listeners}
+          className="cursor-grab px-2"
+          title="Seret untuk susun ulang"
+          aria-label="Pindahkan block"
+          disabled={disabled}
+        >
+          ⠿
+        </button>
+        <Badge variant="secondary">{b.block_type}</Badge>
+        <span className="text-muted-foreground flex-1 truncate text-sm">{previewText(b)}</span>
+        <Button variant="ghost" size="sm" onClick={() => setEditing((v) => !v)} disabled={disabled || busy}>
+          {editing ? "Tutup" : "Edit"}
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onDelete} disabled={disabled}>
+          Hapus
+        </Button>
       </div>
-      <Button variant="ghost" size="sm" onClick={onDelete}>Hapus</Button>
+      {editing && (
+        <div className="pl-8">
+          <BlockForm
+            blockType={b.block_type as BlockType}
+            initial={b.payload}
+            busy={busy}
+            submitLabel="Simpan perubahan"
+            onCancel={() => setEditing(false)}
+            onSubmit={async (payload) => {
+              setBusy(true);
+              try {
+                await onSave(payload);
+                setEditing(false);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -36,20 +96,46 @@ function SortableBlock({ b, onDelete }: { b: Block; onDelete: () => void }) {
 export default function EditorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const { upload, progress } = useUpload();
+
   const [title, setTitle] = useState("");
   const [status, setStatus] = useState("");
   const [blocks, setBlocks] = useState<Block[]>([]);
-  const [text, setText] = useState("");
-  const [yt, setYt] = useState("");
+  const [newType, setNewType] = useState<BlockType>("text");
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [tagIDs, setTagIDs] = useState<string[]>([]);
+  const [seriesID, setSeriesID] = useState("");
+  const [metaLoaded, setMetaLoaded] = useState(false);
   const titleTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const tags = useQuery({
+    queryKey: ["tags"],
+    queryFn: () => apiGet<{ id: string; name: string }[]>("v1/tags"),
+  });
+  const series = useQuery({
+    queryKey: ["series"],
+    queryFn: () => apiGet<{ id: string; name: string }[]>("v1/series"),
+  });
 
   async function load(silent = false) {
     try {
-      const p = await apiGet<{ title: string; status: string; blocks: Block[] }>(`v1/portfolios/id/${id}`);
+      const p = await apiGet<{
+        title: string;
+        status: string;
+        blocks: Block[];
+        tags?: { id: string; slug: string; name: string }[];
+        series_id?: string | null;
+      }>(`v1/portfolios/id/${id}`);
       setTitle(p.title);
       setStatus(p.status);
-      setBlocks(p.blocks);
+      setBlocks(p.blocks ?? []);
+      // Tag & series hanya dimuat sekali supaya pilihan user tidak tertimpa
+      // oleh refresh setelah menambah/mengedit block.
+      if (!metaLoaded) {
+        if (Array.isArray(p.tags)) setTagIDs(p.tags.map((t) => t.id));
+        if (p.series_id) setSeriesID(p.series_id);
+        setMetaLoaded(true);
+      }
     } catch {
       if (!silent) toast.error("Gagal memuat.");
     }
@@ -63,45 +149,48 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
   function onTitleChange(v: string) {
     setTitle(v);
     if (titleTimer.current) clearTimeout(titleTimer.current);
+    // Autosave judul + penanda draft: pekerjaan tidak hilang bila tab ditutup
+    // sebelum block sempat ditambahkan.
     titleTimer.current = setTimeout(async () => {
       try {
-        await apiSend(`v1/portfolios/id/${id}`, "PATCH", { title: v });
+        await apiSend(`v1/portfolios/id/${id}`, "PATCH", {
+          title: v,
+          draft_payload: { blocks_count: blocks.length, saved_from: "editor" },
+        });
         setSavedAt(new Date().toLocaleTimeString("id-ID"));
       } catch {
-        /* abaikan autosave gagal */
+        /* diamkan; akan dicoba lagi saat judul berubah */
       }
     }, 10000);
   }
 
-  async function addBlock(block_type: string, payload: Record<string, unknown>) {
-    await apiSend(`v1/portfolios/${id}/blocks`, "POST", { block_type, payload });
-    load(true);
-  }
-
-  async function addText() {
-    if (!text.trim()) return;
-    await addBlock("text", { markdown: text });
-    setText("");
-  }
-
-  function ytId(url: string): string | null {
-    const m = url.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{11})/);
-    return m ? m[1] : null;
-  }
-
-  async function addYt() {
-    const vid = ytId(yt);
-    if (!vid) {
-      toast.error("URL YouTube tidak valid.");
-      return;
+  async function addBlock(payload: Draft) {
+    try {
+      await apiSend(`v1/portfolios/${id}/blocks`, "POST", { block_type: newType, payload });
+      toast.success("Block ditambahkan.");
+      load(true);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal menambah block.");
     }
-    await addBlock("youtube", { video_id: vid });
-    setYt("");
   }
 
   async function removeBlock(bid: string) {
-    await apiSend(`v1/blocks/${bid}`, "DELETE");
-    load(true);
+    try {
+      await apiSend(`v1/blocks/${bid}`, "DELETE");
+      load(true);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal menghapus.");
+    }
+  }
+
+  async function saveBlock(bid: string, payload: Draft) {
+    try {
+      await updateBlock(bid, payload);
+      toast.success("Block disimpan.");
+      load(true);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal menyimpan block.");
+    }
   }
 
   async function onDragEnd(e: DragEndEvent) {
@@ -113,48 +202,31 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
     const next = [...order];
     const [moved] = next.splice(from, 1);
     next.splice(to, 0, moved);
-    setBlocks(next.map((bid, i) => blocks.find((b) => b.id === bid)!).filter(Boolean));
-    await apiSend(`v1/portfolios/${id}/blocks/reorder`, "PUT", {
-      orders: next.map((bid, i) => ({ id: bid, position: i })),
-    });
-    toast.success("Urutan tersimpan.");
+    setBlocks(next.map((bid) => blocks.find((b) => b.id === bid)!).filter(Boolean));
+    try {
+      await apiSend(`v1/portfolios/${id}/blocks/reorder`, "PUT", {
+        orders: next.map((bid, i) => ({ id: bid, position: i })),
+      });
+      toast.success("Urutan tersimpan.");
+    } catch {
+      toast.error("Gagal menyimpan urutan.");
+      load(true);
+    }
   }
 
   async function uploadThumb(file: File) {
-    const fd = new FormData();
-    fd.append("purpose", "thumbnail");
-    fd.append("file", file);
-    const { accessToken, csrfToken } = useAuthStore.getState();
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", "/api/v1/media/upload");
-    if (accessToken) xhr.setRequestHeader("Authorization", `Bearer ${accessToken}`);
-    if (csrfToken) xhr.setRequestHeader("X-CSRF-Token", csrfToken);
-    xhr.onload = async () => {
-      const json = JSON.parse(xhr.responseText);
-      if (!json.success) {
-        toast.error(json.error.message);
-        return;
-      }
-      await apiSend(`v1/portfolios/id/${id}`, "PATCH", { thumbnail_media_id: json.data.media_id });
+    try {
+      const res = await upload("thumbnail", file);
+      await apiSend(`v1/portfolios/id/${id}`, "PATCH", { thumbnail_media_id: res.media_id });
       toast.success("Thumbnail tersimpan.");
-    };
-    xhr.send(fd);
+      load(true);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload thumbnail gagal.");
+    }
   }
-
-  const tags = useQuery({
-    queryKey: ["tags"],
-    queryFn: () => apiGet<{ id: string; name: string }[]>("v1/tags"),
-  });
-  const series = useQuery({
-    queryKey: ["series"],
-    queryFn: () => apiGet<{ id: string; name: string }[]>("v1/series"),
-  });
-  const [tagIDs, setTagIDs] = useState<string[]>([]);
-  const [seriesID, setSeriesID] = useState("");
 
   async function saveMeta() {
     try {
-      // Tag & series disimpan bersama PATCH portfolio; submit mensyaratkan ≥1 tag.
       await apiSend(`v1/portfolios/id/${id}`, "PATCH", {
         tag_ids: tagIDs,
         series_id: seriesID || null,
@@ -166,9 +238,18 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
     }
   }
 
+  async function applySeries() {
+    try {
+      const res = await apiSend<{ created: number }>(`v1/portfolios/id/${id}/apply-series`, "POST");
+      toast.success(`Template series diterapkan (${res.created} block).`);
+      load(true);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal menerapkan template.");
+    }
+  }
+
   async function submit() {
     try {
-      // Flush autosave judul dulu agar tidak ada PATCH yang tertinggal.
       if (titleTimer.current) {
         clearTimeout(titleTimer.current);
         titleTimer.current = null;
@@ -181,47 +262,90 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
     }
   }
 
+  const readOnly = status === "pending_review";
+
   return (
-    <main className="mx-auto max-w-2xl p-4">
+    <main className="mx-auto max-w-3xl p-4">
       <Card>
         <CardHeader>
-          <CardTitle>Edit portfolio {savedAt && <span className="text-xs font-normal text-muted-foreground">· Tersimpan {savedAt}</span>}</CardTitle>
+          <CardTitle>
+            Edit portfolio{" "}
+            {savedAt && <span className="text-muted-foreground text-xs font-normal">· Tersimpan {savedAt}</span>}
+          </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="grid gap-2">
-            <Label>Judul (autosave 10 dtk)</Label>
-            <Input value={title} onChange={(e) => onTitleChange(e.target.value)} disabled={status === "pending_review"} />
+            <Label htmlFor="title">Judul (autosave 10 dtk)</Label>
+            <Input id="title" value={title} onChange={(e) => onTitleChange(e.target.value)} disabled={readOnly} />
+            <p className="text-muted-foreground text-xs">Minimal 10 karakter saat dikirim review.</p>
           </div>
+
           <div className="grid gap-2">
             <Label>Thumbnail 4:3 (maks 5MB)</Label>
-            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => e.target.files?.[0] && uploadThumb(e.target.files[0])} />
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              disabled={readOnly}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) uploadThumb(f).catch(() => null);
+              }}
+            />
+            {progress !== null && <span className="text-xs">Mengunggah… {progress}%</span>}
           </div>
-          <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-            <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
-              {blocks.map((b) => (
-                <SortableBlock key={b.id} b={b} onDelete={() => removeBlock(b.id)} />
-              ))}
-            </SortableContext>
-          </DndContext>
-          <div className="flex gap-2">
-            <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Tambah block teks..." />
-            <Button variant="outline" onClick={addText}>Tambah</Button>
-          </div>
-          <div className="flex gap-2">
-            <Input value={yt} onChange={(e) => setYt(e.target.value)} placeholder="URL YouTube..." />
-            <Button variant="outline" onClick={addYt}>+ Video</Button>
-          </div>
+
           <Card>
             <CardHeader>
-              <CardTitle>Tag & series</CardTitle>
+              <CardTitle className="text-base">Block konten</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+                <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+                  {blocks.map((b) => (
+                    <SortableBlock
+                      key={b.id}
+                      b={b}
+                      disabled={readOnly}
+                      onDelete={() => removeBlock(b.id)}
+                      onSave={(payload) => saveBlock(b.id, payload)}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
+              {blocks.length === 0 && (
+                <p className="text-muted-foreground text-sm">
+                  Belum ada block. Tambahkan minimal satu sebelum kirim review.
+                </p>
+              )}
+
+              {!readOnly && (
+                <div className="flex flex-col gap-3 rounded border p-3">
+                  <div className="grid gap-1 sm:w-72">
+                    <Label>Tambah block</Label>
+                    <SelectField
+                      value={newType}
+                      onValueChange={(v) => setNewType(v as BlockType)}
+                      options={BLOCK_TYPES.map((b) => ({ value: b.value, label: b.label }))}
+                    />
+                  </div>
+                  <BlockForm blockType={newType} onSubmit={addBlock} />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Tag & series</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
               <div className="flex flex-wrap gap-2">
-                {(tags.data ?? []).map((t: { id: string; name: string }) => (
+                {(tags.data ?? []).map((t) => (
                   <label key={t.id} className="flex items-center gap-1 rounded border px-2 py-1 text-xs">
                     <input
                       type="checkbox"
                       checked={tagIDs.includes(t.id)}
+                      disabled={readOnly}
                       onChange={(e) => setTagIDs(e.target.checked ? [...tagIDs, t.id] : tagIDs.filter((x) => x !== t.id))}
                     />
                     {t.name}
@@ -229,25 +353,39 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
                 ))}
                 {(tags.data ?? []).length === 0 && <p className="text-muted-foreground text-xs">Belum ada tag.</p>}
               </div>
-              <div className="flex items-center gap-2">
-                <label htmlFor="series" className="text-sm">Series</label>
-                <select
-                  id="series"
-                  className="rounded border px-2 py-1 text-sm"
+              <div className="flex flex-wrap items-center gap-2">
+                <SelectField
                   value={seriesID}
-                  onChange={(e) => setSeriesID(e.target.value)}
-                >
-                  <option value="">(tanpa series)</option>
-                  {(series.data ?? []).map((x: { id: string; name: string }) => (
-                    <option key={x.id} value={x.id}>{x.name}</option>
-                  ))}
-                </select>
-                <Button variant="outline" size="sm" onClick={saveMeta}>Simpan tag & series</Button>
+                  onValueChange={setSeriesID}
+                  placeholder="(tanpa series)"
+                  className="w-56"
+                  options={[
+                    { value: "", label: "(tanpa series)" },
+                    ...(series.data ?? []).map((x) => ({ value: x.id, label: x.name })),
+                  ]}
+                />
+                <Button variant="outline" size="sm" onClick={saveMeta} disabled={readOnly}>
+                  Simpan tag & series
+                </Button>
+                <Button variant="ghost" size="sm" onClick={applySeries} disabled={readOnly || !seriesID}>
+                  Terapkan template series
+                </Button>
               </div>
-              <p className="text-muted-foreground text-xs">Minimal 1 tag wajib sebelum kirim review.</p>
+              <p className="text-muted-foreground text-xs">
+                Minimal 1 tag wajib sebelum kirim review. Template series hanya bisa diterapkan saat portfolio belum
+                punya block.
+              </p>
             </CardContent>
           </Card>
-          <Button onClick={submit} disabled={status === "pending_review"}>Kirim review</Button>
+
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={submit} disabled={readOnly}>
+              Kirim review
+            </Button>
+            <Button variant="outline" onClick={() => router.push("/me/portfolios")}>
+              Kembali
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </main>

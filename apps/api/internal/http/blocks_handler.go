@@ -71,7 +71,16 @@ func validateBlockPayload(blockType string, payload map[string]any) (string, boo
 			return "label 1-50 + url https.", false
 		}
 		return "", true
-	case "embed", "figma", "canva", "ppt", "pdf", "doc":
+	case "pdf":
+		// PDF boleh dari URL https mana pun (file, bukan iframe) atau media
+		// yang diunggah; tidak terkena allowlist domain embed.
+		mid, _ := payload["media_id"].(string)
+		url, _ := payload["url"].(string)
+		if mid == "" && !strings.HasPrefix(url, "https://") {
+			return "media_id atau url https wajib.", false
+		}
+		return "", true
+	case "embed", "figma", "canva", "ppt", "doc":
 		url, _ := payload["url"].(string)
 		if !strings.HasPrefix(url, "https://") {
 			return "url harus https.", false
@@ -150,9 +159,13 @@ func (a *App) handleCreateBlock(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Media di dalam payload (image/gallery) juga harus milik sendiri.
-	if mid := payloadMediaID(req.Payload); mid != "" && !a.ownsMedia(r.Context(), mustUUID(mid), UserID(r)) {
-		writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Media di payload bukan milikmu.", r))
-		return
+	if mid := payloadMediaID(req.Payload); mid != "" {
+		if !a.ownsMedia(r.Context(), mustUUID(mid), UserID(r)) {
+			writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Media di payload bukan milikmu.", r))
+			return
+		}
+		// Ditandai confirmed agar tidak dihapus job cleanup (media pending).
+		_ = a.Q.ConfirmMedia(r.Context(), mustUUID(mid))
 	}
 	maxPos, _ := a.Q.MaxBlockPosition(r.Context(), p.ID)
 	var assetID = nilUUID()
@@ -198,9 +211,12 @@ func (a *App) handleUpdateBlock(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusUnprocessableEntity, failDetails("VALIDATION_ERROR", "Payload tidak valid.", []map[string]string{{"field": "payload", "message": msg}}, r))
 		return
 	}
-	if mid := payloadMediaID(req.Payload); mid != "" && !a.ownsMedia(r.Context(), mustUUID(mid), UserID(r)) {
-		writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Media di payload bukan milikmu.", r))
-		return
+	if mid := payloadMediaID(req.Payload); mid != "" {
+		if !a.ownsMedia(r.Context(), mustUUID(mid), UserID(r)) {
+			writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Media di payload bukan milikmu.", r))
+			return
+		}
+		_ = a.Q.ConfirmMedia(r.Context(), mustUUID(mid))
 	}
 	_ = a.Q.UpdateBlockPayload(r.Context(), repo.UpdateBlockPayloadParams{ID: b.ID, Payload: toJSONBytes(req.Payload)})
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "ok"}, r))

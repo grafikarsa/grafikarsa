@@ -250,3 +250,44 @@ func (a *App) canAssessPortfolio(ctx context.Context, r *http.Request, ownerID p
 	}
 	return uuidStr(me.MajorID) == uuidStr(owner.MajorID)
 }
+
+// handleAssessmentQueue: daftar portfolio published + status penilaian, dengan
+// scope jurusan yang sama seperti penilaian itu sendiri (fail-closed).
+func (a *App) handleAssessmentQueue(w http.ResponseWriter, r *http.Request) {
+	limit, offset, page := pageParams(r)
+	filter := r.URL.Query().Get("filter")
+	switch filter {
+	case "assessed", "unassessed":
+	default:
+		filter = ""
+	}
+	scope := ""
+	if UserRole(r) != "admin" {
+		me, err := a.Q.GetUserByID(r.Context(), mustUUID(UserID(r)))
+		if err != nil || !me.MajorID.Valid {
+			writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Scope jurusan belum diset.", r))
+			return
+		}
+		scope = uuidStr(me.MajorID)
+	}
+	rows, err := a.Q.ListAssessmentQueue(r.Context(), repo.ListAssessmentQueueParams{
+		Column1: scope, Column2: filter, Limit: limit, Offset: offset,
+	})
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal memuat antrean.", r))
+		return
+	}
+	out := []map[string]any{}
+	for _, x := range rows {
+		out = append(out, map[string]any{
+			"id": uuidStr(x.ID), "title": x.Title, "slug": x.Slug,
+			"username": x.Username, "owner_name": x.OwnerName,
+			"assessed": x.Assessed, "total_score": x.TotalScore,
+		})
+	}
+	if out == nil {
+		out = []map[string]any{}
+	}
+	total, _ := a.Q.CountAssessmentQueue(r.Context(), repo.CountAssessmentQueueParams{Column1: scope, Column2: filter})
+	writeJSON(w, http.StatusOK, okMeta(out, meta(page, limit, total), r))
+}

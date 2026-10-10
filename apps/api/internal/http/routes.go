@@ -144,6 +144,7 @@ func (a *App) routes() http.Handler {
 			})
 			r.Route("/assessments", func(r chi.Router) {
 				r.Use(a.requirePerm("assessments.view"))
+				r.Get("/", a.handleAssessmentQueue)
 				r.Get("/metrics", a.handleListMetrics)
 				r.With(a.requirePerm("assessments.manage_metrics")).Post("/metrics", a.csrf(a.handleCreateMetric))
 				r.With(a.requirePerm("assessments.score")).Get("/portfolio/{id}", a.handleGetAssessment)

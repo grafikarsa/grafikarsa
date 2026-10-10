@@ -883,7 +883,12 @@ SELECT m.id, m.object_key FROM media_assets m
 WHERE m.status = 'pending' AND m.created_at < NOW() - INTERVAL '24 hours'
   AND NOT EXISTS (SELECT 1 FROM users u WHERE u.avatar_media_id = m.id OR u.banner_media_id = m.id)
   AND NOT EXISTS (SELECT 1 FROM portfolios p WHERE p.thumbnail_media_id = m.id)
-  AND NOT EXISTS (SELECT 1 FROM portfolio_blocks b WHERE b.asset_media_id = m.id)
+  AND NOT EXISTS (
+    SELECT 1 FROM portfolio_blocks b
+    WHERE b.asset_media_id = m.id
+       -- media gambar block disimpan di payload, bukan asset_media_id
+       OR (b.block_type = 'image' AND b.payload->>'media_id' = m.id::text)
+  )
 LIMIT 100
 `
 

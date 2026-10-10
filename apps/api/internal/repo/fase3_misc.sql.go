@@ -97,6 +97,28 @@ func (q *Queries) AddScore(ctx context.Context, arg AddScoreParams) error {
 	return err
 }
 
+const countAssessmentQueue = `-- name: CountAssessmentQueue :one
+SELECT COUNT(*) FROM portfolios p
+JOIN users u ON u.id = p.owner_id
+LEFT JOIN portfolio_assessments a ON a.portfolio_id = p.id
+WHERE p.status = 'published' AND p.deleted_at IS NULL
+  AND ($1::text = '' OR u.major_id::text = $1)
+  AND ($2::text = '' OR ($2::text = 'assessed' AND a.id IS NOT NULL)
+       OR ($2::text = 'unassessed' AND a.id IS NULL))
+`
+
+type CountAssessmentQueueParams struct {
+	Column1 string `json:"column_1"`
+	Column2 string `json:"column_2"`
+}
+
+func (q *Queries) CountAssessmentQueue(ctx context.Context, arg CountAssessmentQueueParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countAssessmentQueue, arg.Column1, arg.Column2)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countChangelogReads = `-- name: CountChangelogReads :one
 SELECT COUNT(*) FROM changelog_reads WHERE changelog_id = $1
 `
@@ -537,6 +559,74 @@ func (q *Queries) LatestChangelog(ctx context.Context) (LatestChangelogRow, erro
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const listAssessmentQueue = `-- name: ListAssessmentQueue :many
+SELECT p.id, p.title, p.slug, u.username, u.name AS owner_name,
+  (a.id IS NOT NULL)::bool AS assessed, COALESCE(a.total_score, 0) AS total_score,
+  p.published_at
+FROM portfolios p
+JOIN users u ON u.id = p.owner_id
+LEFT JOIN portfolio_assessments a ON a.portfolio_id = p.id
+WHERE p.status = 'published' AND p.deleted_at IS NULL
+  AND ($1::text = '' OR u.major_id::text = $1)
+  AND ($2::text = '' OR ($2::text = 'assessed' AND a.id IS NOT NULL)
+       OR ($2::text = 'unassessed' AND a.id IS NULL))
+ORDER BY (a.id IS NULL) DESC, p.published_at DESC
+LIMIT $3 OFFSET $4
+`
+
+type ListAssessmentQueueParams struct {
+	Column1 string `json:"column_1"`
+	Column2 string `json:"column_2"`
+	Limit   int32  `json:"limit"`
+	Offset  int32  `json:"offset"`
+}
+
+type ListAssessmentQueueRow struct {
+	ID          pgtype.UUID        `json:"id"`
+	Title       string             `json:"title"`
+	Slug        string             `json:"slug"`
+	Username    string             `json:"username"`
+	OwnerName   string             `json:"owner_name"`
+	Assessed    bool               `json:"assessed"`
+	TotalScore  pgtype.Numeric     `json:"total_score"`
+	PublishedAt pgtype.Timestamptz `json:"published_at"`
+}
+
+// Antrean penilaian: portfolio published + status dinilai/belum, dibatasi scope.
+func (q *Queries) ListAssessmentQueue(ctx context.Context, arg ListAssessmentQueueParams) ([]ListAssessmentQueueRow, error) {
+	rows, err := q.db.Query(ctx, listAssessmentQueue,
+		arg.Column1,
+		arg.Column2,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListAssessmentQueueRow{}
+	for rows.Next() {
+		var i ListAssessmentQueueRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Slug,
+			&i.Username,
+			&i.OwnerName,
+			&i.Assessed,
+			&i.TotalScore,
+			&i.PublishedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listChangelogContributors = `-- name: ListChangelogContributors :many

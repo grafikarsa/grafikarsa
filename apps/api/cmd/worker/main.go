@@ -117,6 +117,9 @@ func dispatchOutbox(ctx context.Context, q *repo.Queries, c *cache.Cache) error 
 	for _, it := range items {
 		var p map[string]string
 		_ = json.Unmarshal(it.Payload, &p)
+		// Perkaya payload dengan username/slug agar notifikasi bisa deep-link
+		// ke halaman yang tepat tanpa query tambahan di FE.
+		p = enrichNotifPayload(ctx, q, p)
 		if shouldSkipNotif(ctx, q, p["user_id"], it.Topic) {
 			slog.Info("outbox skipped by prefs", "id", it.ID, "topic", it.Topic)
 			_ = q.MarkOutboxSent(ctx, it.ID)
@@ -491,6 +494,31 @@ func cleanupMedia(ctx context.Context, q *repo.Queries, cfg *config.Config) erro
 }
 
 func newStorage(cfg *config.Config) *storage.Storage { return storage.New(cfg) }
+
+// enrichNotifPayload menambahkan username/slug portfolio (bila ada) dan
+// username aktor (follower) supaya FE bisa membangun tautan langsung.
+func enrichNotifPayload(ctx context.Context, q *repo.Queries, p map[string]string) map[string]string {
+	if p == nil {
+		return nil
+	}
+	if pid := p["portfolio_id"]; pid != "" {
+		if port, err := q.GetPortfolioByID(ctx, mustUUID(pid)); err == nil {
+			p["slug"] = port.Slug
+			if owner, oerr := q.GetUserByID(ctx, port.OwnerID); oerr == nil {
+				p["username"] = owner.Username
+			}
+		}
+	}
+	if aid := p["actor_id"]; aid != "" {
+		if actor, err := q.GetUserByID(ctx, mustUUID(aid)); err == nil {
+			p["actor_username"] = actor.Username
+		}
+		if _, ok := p["username"]; !ok && p["actor_username"] != "" {
+			p["username"] = p["actor_username"]
+		}
+	}
+	return p
+}
 
 // emitNotif membuat notifikasi dan membatalkan cache badge unread user, serta
 // mengembalikan error supaya kegagalan tidak hilang diam-diam (outbox di-retry).

@@ -241,3 +241,27 @@ UPDATE user_interests SET
   total_likes = GREATEST(0, (total_likes * $1)::int),
   updated_at = NOW()
 WHERE updated_at < NOW() - INTERVAL '1 day';
+
+-- name: ListAssessmentQueue :many
+-- Antrean penilaian: portfolio published + status dinilai/belum, dibatasi scope.
+SELECT p.id, p.title, p.slug, u.username, u.name AS owner_name,
+  (a.id IS NOT NULL)::bool AS assessed, COALESCE(a.total_score, 0) AS total_score,
+  p.published_at
+FROM portfolios p
+JOIN users u ON u.id = p.owner_id
+LEFT JOIN portfolio_assessments a ON a.portfolio_id = p.id
+WHERE p.status = 'published' AND p.deleted_at IS NULL
+  AND ($1::text = '' OR u.major_id::text = $1)
+  AND ($2::text = '' OR ($2::text = 'assessed' AND a.id IS NOT NULL)
+       OR ($2::text = 'unassessed' AND a.id IS NULL))
+ORDER BY (a.id IS NULL) DESC, p.published_at DESC
+LIMIT $3 OFFSET $4;
+
+-- name: CountAssessmentQueue :one
+SELECT COUNT(*) FROM portfolios p
+JOIN users u ON u.id = p.owner_id
+LEFT JOIN portfolio_assessments a ON a.portfolio_id = p.id
+WHERE p.status = 'published' AND p.deleted_at IS NULL
+  AND ($1::text = '' OR u.major_id::text = $1)
+  AND ($2::text = '' OR ($2::text = 'assessed' AND a.id IS NOT NULL)
+       OR ($2::text = 'unassessed' AND a.id IS NULL));
