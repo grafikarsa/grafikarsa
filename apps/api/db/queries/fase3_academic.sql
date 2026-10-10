@@ -98,3 +98,15 @@ UPDATE users SET status = $2 WHERE id = $1;
 
 -- name: CountClassStudents :one
 SELECT COUNT(*) FROM enrollments WHERE class_id = $1 AND is_current = TRUE;
+
+-- name: ListAdminUserIDs :many
+SELECT id FROM users WHERE role_primary = 'admin' AND is_active = TRUE AND deleted_at IS NULL;
+
+-- name: GetActiveYearFull :one
+SELECT id, start_year, promotion_month, promotion_day FROM academic_years WHERE is_active = TRUE LIMIT 1;
+
+-- name: FindYearByStartYear :one
+SELECT id, start_year FROM academic_years WHERE start_year = $1 LIMIT 1;
+
+-- name: GetPromotionJobByYears :one
+SELECT id, status FROM promotion_jobs WHERE from_year_id = $1 AND to_year_id = $2 LIMIT 1;

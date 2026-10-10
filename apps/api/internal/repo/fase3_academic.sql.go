@@ -173,6 +173,22 @@ func (q *Queries) DeleteMajor(ctx context.Context, id pgtype.UUID) error {
 	return err
 }
 
+const findYearByStartYear = `-- name: FindYearByStartYear :one
+SELECT id, start_year FROM academic_years WHERE start_year = $1 LIMIT 1
+`
+
+type FindYearByStartYearRow struct {
+	ID        pgtype.UUID `json:"id"`
+	StartYear int32       `json:"start_year"`
+}
+
+func (q *Queries) FindYearByStartYear(ctx context.Context, startYear int32) (FindYearByStartYearRow, error) {
+	row := q.db.QueryRow(ctx, findYearByStartYear, startYear)
+	var i FindYearByStartYearRow
+	err := row.Scan(&i.ID, &i.StartYear)
+	return i, err
+}
+
 const getActiveYear = `-- name: GetActiveYear :one
 SELECT id, start_year FROM academic_years WHERE is_active = TRUE LIMIT 1
 `
@@ -186,6 +202,29 @@ func (q *Queries) GetActiveYear(ctx context.Context) (GetActiveYearRow, error) {
 	row := q.db.QueryRow(ctx, getActiveYear)
 	var i GetActiveYearRow
 	err := row.Scan(&i.ID, &i.StartYear)
+	return i, err
+}
+
+const getActiveYearFull = `-- name: GetActiveYearFull :one
+SELECT id, start_year, promotion_month, promotion_day FROM academic_years WHERE is_active = TRUE LIMIT 1
+`
+
+type GetActiveYearFullRow struct {
+	ID             pgtype.UUID `json:"id"`
+	StartYear      int32       `json:"start_year"`
+	PromotionMonth int16       `json:"promotion_month"`
+	PromotionDay   int16       `json:"promotion_day"`
+}
+
+func (q *Queries) GetActiveYearFull(ctx context.Context) (GetActiveYearFullRow, error) {
+	row := q.db.QueryRow(ctx, getActiveYearFull)
+	var i GetActiveYearFullRow
+	err := row.Scan(
+		&i.ID,
+		&i.StartYear,
+		&i.PromotionMonth,
+		&i.PromotionDay,
+	)
 	return i, err
 }
 
@@ -245,6 +284,51 @@ func (q *Queries) GetPromotionJob(ctx context.Context, id pgtype.UUID) (GetPromo
 		&i.ExecutedAt,
 	)
 	return i, err
+}
+
+const getPromotionJobByYears = `-- name: GetPromotionJobByYears :one
+SELECT id, status FROM promotion_jobs WHERE from_year_id = $1 AND to_year_id = $2 LIMIT 1
+`
+
+type GetPromotionJobByYearsParams struct {
+	FromYearID pgtype.UUID `json:"from_year_id"`
+	ToYearID   pgtype.UUID `json:"to_year_id"`
+}
+
+type GetPromotionJobByYearsRow struct {
+	ID     pgtype.UUID `json:"id"`
+	Status string      `json:"status"`
+}
+
+func (q *Queries) GetPromotionJobByYears(ctx context.Context, arg GetPromotionJobByYearsParams) (GetPromotionJobByYearsRow, error) {
+	row := q.db.QueryRow(ctx, getPromotionJobByYears, arg.FromYearID, arg.ToYearID)
+	var i GetPromotionJobByYearsRow
+	err := row.Scan(&i.ID, &i.Status)
+	return i, err
+}
+
+const listAdminUserIDs = `-- name: ListAdminUserIDs :many
+SELECT id FROM users WHERE role_primary = 'admin' AND is_active = TRUE AND deleted_at IS NULL
+`
+
+func (q *Queries) ListAdminUserIDs(ctx context.Context) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, listAdminUserIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.UUID{}
+	for rows.Next() {
+		var id pgtype.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listClassStudents = `-- name: ListClassStudents :many

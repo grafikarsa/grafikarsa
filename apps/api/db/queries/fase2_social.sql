@@ -64,7 +64,8 @@ JOIN users u ON u.id = p.owner_id
 LEFT JOIN portfolio_stats ps ON ps.portfolio_id = p.id
 WHERE p.status = 'published' AND p.deleted_at IS NULL
   AND p.published_at > NOW() - INTERVAL '90 days'
-ORDER BY COALESCE(ps.trending, 0) DESC LIMIT 50;
+ORDER BY (COALESCE(ps.trending, 0) + CASE WHEN p.published_at > NOW() - INTERVAL '3 days' THEN 0.5 ELSE 0 END) DESC
+LIMIT 50;
 
 -- name: GetRecentFeed :many
 SELECT p.id, p.title, p.slug, p.thumbnail_media_id, p.published_at,
@@ -171,24 +172,40 @@ INSERT INTO audit_logs (actor_id, action, entity, entity_id, diff, ip)
 VALUES ($1, $2, $3, $4, $5, $6);
 
 -- name: StudentLeaderboardCandidates :many
+-- $1 = jumlah hari periode (weekly 7, monthly 30).
+-- Anti-gaming: like dari akun berumur <7 hari tidak dihitung.
 SELECT u.id, u.username, u.name, COALESCE(m.code, '') AS major_code,
-  COUNT(DISTINCT p.id) AS portfolio_count,
-  COUNT(DISTINCT pl.user_id) AS total_likes,
-  COUNT(DISTINCT f.follower_id) AS followers
+  COUNT(DISTINCT p.id) FILTER (WHERE p.published_at > NOW() - ($1::text || ' days')::interval) AS portfolio_count,
+  COUNT(DISTINCT pl.user_id) FILTER (
+    WHERE lu.created_at < NOW() - INTERVAL '7 days'
+      AND pl.created_at > NOW() - ($1::text || ' days')::interval
+  ) AS total_likes,
+  COUNT(DISTINCT f.follower_id) FILTER (WHERE f.created_at > NOW() - ($1::text || ' days')::interval) AS followers,
+  COALESCE((
+    SELECT AVG(pa.total_score) FROM portfolio_assessments pa
+    JOIN portfolios p2 ON p2.id = pa.portfolio_id
+    WHERE p2.owner_id = u.id AND p2.status = 'published' AND p2.deleted_at IS NULL
+      AND pa.updated_at > NOW() - ($1::text || ' days')::interval
+  ), 0)::float8 AS assessment_avg
 FROM users u
 LEFT JOIN majors m ON m.id = u.major_id
 LEFT JOIN portfolios p ON p.owner_id = u.id AND p.status = 'published' AND p.deleted_at IS NULL
 LEFT JOIN portfolio_likes pl ON pl.portfolio_id = p.id
+LEFT JOIN users lu ON lu.id = pl.user_id
 LEFT JOIN follows f ON f.following_id = u.id
 WHERE u.role_primary = 'siswa' AND u.deleted_at IS NULL
-GROUP BY u.id, m.code HAVING COUNT(DISTINCT p.id) >= 1;
+GROUP BY u.id, m.code
+HAVING COUNT(DISTINCT p.id) FILTER (WHERE p.published_at > NOW() - ($1::text || ' days')::interval) >= 1;
 
 -- name: ProjectLeaderboardCandidates :many
+-- $1 = jumlah hari periode.
 SELECT p.id, p.title, p.slug, p.owner_id, p.published_at, COALESCE(m.code, '') AS owner_major_code,
-  COUNT(DISTINCT pl.user_id) AS likes,
-  COUNT(DISTINCT c.id) AS comments,
-  0 AS assessment_count,
-  0 AS assessment_avg
+  COUNT(DISTINCT pl.user_id) FILTER (WHERE pl.created_at > NOW() - ($1::text || ' days')::interval) AS likes,
+  COUNT(DISTINCT c.id) FILTER (WHERE c.created_at > NOW() - ($1::text || ' days')::interval) AS comments,
+  COALESCE((SELECT COUNT(*) FROM portfolio_assessments pa WHERE pa.portfolio_id = p.id
+    AND pa.updated_at > NOW() - ($1::text || ' days')::interval), 0)::int8 AS assessment_count,
+  COALESCE((SELECT AVG(total_score) FROM portfolio_assessments pa WHERE pa.portfolio_id = p.id
+    AND pa.updated_at > NOW() - ($1::text || ' days')::interval), 0)::float8 AS assessment_avg
 FROM portfolios p
 LEFT JOIN users u ON u.id = p.owner_id
 LEFT JOIN majors m ON m.id = u.major_id
@@ -239,7 +256,7 @@ SELECT COUNT(*) FROM portfolios WHERE owner_id = $1 AND status = 'published' AND
 SELECT p.id FROM portfolios p
 LEFT JOIN portfolio_likes pl ON pl.portfolio_id = p.id
 WHERE p.status = 'published' AND p.deleted_at IS NULL
-
+  AND NOT EXISTS (SELECT 1 FROM portfolio_assessments pa WHERE pa.portfolio_id = p.id)
 GROUP BY p.id ORDER BY COUNT(pl.user_id) DESC LIMIT $1;
 
 -- name: CountLikesByUserSince :one
@@ -250,3 +267,17 @@ SELECT e.subject_user_id, e.subject_portfolio_id, e.rank FROM leaderboard_entrie
 JOIN leaderboards l ON l.id = e.leaderboard_id
 WHERE l.period = $1 AND l.scope = $2 AND l.kind = $3
 ORDER BY l.computed_for DESC LIMIT 40;
+
+-- name: StatsPortfolioCandidates :many
+SELECT p.id, p.published_at,
+  COUNT(DISTINCT pl.user_id) AS total_likes,
+  COUNT(DISTINCT c.id) AS total_comments,
+  COALESCE((
+    SELECT AVG(pa.total_score) FROM portfolio_assessments pa WHERE pa.portfolio_id = p.id
+  ), 0)::float8 AS assessment_avg,
+  (p.thumbnail_media_id IS NOT NULL)::bool AS has_thumbnail
+FROM portfolios p
+LEFT JOIN portfolio_likes pl ON pl.portfolio_id = p.id
+LEFT JOIN comments c ON c.portfolio_id = p.id AND c.deleted_at IS NULL
+WHERE p.status = 'published' AND p.deleted_at IS NULL
+GROUP BY p.id;
