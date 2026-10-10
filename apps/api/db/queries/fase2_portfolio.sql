@@ -156,3 +156,11 @@ SELECT p.id, p.owner_id, p.title, p.slug, p.thumbnail_media_id, p.published_at,
 FROM portfolios p JOIN users u ON u.id = p.owner_id
 WHERE p.status = 'published' AND p.deleted_at IS NULL AND u.major_id = $1
 ORDER BY p.published_at DESC LIMIT $2 OFFSET $3;
+
+-- name: FilterBySearch :many
+SELECT p.id, p.owner_id, p.title, p.slug, p.thumbnail_media_id, p.published_at,
+  u.username, u.name AS owner_name
+FROM portfolios p JOIN users u ON u.id = p.owner_id
+WHERE p.status = 'published' AND p.deleted_at IS NULL
+  AND (p.title ILIKE '%' || $1 || '%' OR p.slug ILIKE '%' || $1 || '%')
+ORDER BY p.published_at DESC LIMIT $2 OFFSET $3;

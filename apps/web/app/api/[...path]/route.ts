@@ -42,8 +42,12 @@ function allowedOrigin(req: NextRequest): boolean {
 }
 
 async function proxy(req: NextRequest, path: string[]) {
-  const base = process.env.INTERNAL_API_URL ?? "http://localhost:8080/v1";
-  const url = `${base}/${path.join("/")}${req.nextUrl.search}`;
+  const base = (process.env.INTERNAL_API_URL ?? "http://localhost:8080/v1").replace(/\/$/, "");
+  // Normalisasi: base boleh berisi /v1 dan path FE juga berawalan v1/ —
+  // jangan sampai jadi /v1/v1. Terima kedua bentuk env.
+  const joined = path.join("/");
+  const upstreamPath = base.endsWith("/v1") && joined.startsWith("v1/") ? joined.slice(3) : joined;
+  const url = `${base}/${upstreamPath}${req.nextUrl.search}`;
   const headers = new Headers();
   for (const h of FORWARD_REQ) {
     const v = req.headers.get(h);

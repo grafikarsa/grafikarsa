@@ -3,17 +3,23 @@ import { NextRequest, NextResponse } from "next/server";
 // Middleware: CSP nonce + auth gate berbasis cookie __Host-rt.
 // - Nonce dipakai Next untuk script sendiri (tanpa unsafe-inline).
 // - Auth gate hanya cek keberadaan cookie (validasi token tetap di API).
-const PUBLIC_PATHS = ["/login", "/", "/portfolios", "/users", "/search", "/changelog", "/feedback"];
+const PUBLIC_PATHS = ["/", "/login", "/register", "/forgot-password", "/reset-password", "/portfolios", "/users", "/search", "/changelog", "/changelogs", "/feedback", "/leaderboards", "/feed"];
+
+// Kata yang TIDAK boleh diperlakukan sebagai username (jalur privat).
+const RESERVED = new Set([
+  "admin", "me", "settings", "notifications", "api", "_next",
+  ...PUBLIC_PATHS.filter((p) => p !== "/").map((p) => p.slice(1)),
+]);
 
 function isPublic(pathname: string): boolean {
   if (PUBLIC_PATHS.includes(pathname)) return true;
   for (const p of PUBLIC_PATHS) {
     if (p !== "/" && pathname.startsWith(p + "/")) return true;
   }
-  // Profil & portfolio publik: /{username} dan /{username}/{slug} (2 segmen).
+  // Profil ({username}) dan karya ({username}/{slug}) — bukan jalur privat.
   const seg = pathname.split("/").filter(Boolean);
-  if (seg.length === 1) return true;
-  if (seg.length === 2) return true;
+  if (seg.length === 1 && !RESERVED.has(seg[0])) return true;
+  if (seg.length === 2 && !RESERVED.has(seg[0])) return true;
   return false;
 }
 

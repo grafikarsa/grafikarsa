@@ -74,3 +74,21 @@ func (c *Cache) GetInt(ctx context.Context, key string) (int64, error) {
 func (c *Cache) SetInt(ctx context.Context, key string, val int64, ttl time.Duration) error {
 	return c.rdb.Set(ctx, key, val, ttl).Err()
 }
+
+func (c *Cache) GetBytes(ctx context.Context, key string) ([]byte, error) {
+	return c.rdb.Get(ctx, key).Bytes()
+}
+
+func (c *Cache) SetBytes(ctx context.Context, key string, val []byte, ttl time.Duration) error {
+	return c.rdb.Set(ctx, key, val, ttl).Err()
+}
+
+// DelPattern menghapus key dengan pola (dipakai invalidasi cache leaderboard).
+// Memakai SCAN agar tidak memblokir Dragonfly.
+func (c *Cache) DelPattern(ctx context.Context, pattern string) error {
+	iter := c.rdb.Scan(ctx, 0, pattern, 200).Iterator()
+	for iter.Next(ctx) {
+		_ = c.rdb.Del(ctx, iter.Val()).Err()
+	}
+	return iter.Err()
+}

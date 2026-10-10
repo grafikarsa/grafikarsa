@@ -250,6 +250,61 @@ func (q *Queries) FilterByMajor(ctx context.Context, arg FilterByMajorParams) ([
 	return items, nil
 }
 
+const filterBySearch = `-- name: FilterBySearch :many
+SELECT p.id, p.owner_id, p.title, p.slug, p.thumbnail_media_id, p.published_at,
+  u.username, u.name AS owner_name
+FROM portfolios p JOIN users u ON u.id = p.owner_id
+WHERE p.status = 'published' AND p.deleted_at IS NULL
+  AND (p.title ILIKE '%' || $1 || '%' OR p.slug ILIKE '%' || $1 || '%')
+ORDER BY p.published_at DESC LIMIT $2 OFFSET $3
+`
+
+type FilterBySearchParams struct {
+	Column1 pgtype.Text `json:"column_1"`
+	Limit   int32       `json:"limit"`
+	Offset  int32       `json:"offset"`
+}
+
+type FilterBySearchRow struct {
+	ID               pgtype.UUID        `json:"id"`
+	OwnerID          pgtype.UUID        `json:"owner_id"`
+	Title            string             `json:"title"`
+	Slug             string             `json:"slug"`
+	ThumbnailMediaID pgtype.UUID        `json:"thumbnail_media_id"`
+	PublishedAt      pgtype.Timestamptz `json:"published_at"`
+	Username         string             `json:"username"`
+	OwnerName        string             `json:"owner_name"`
+}
+
+func (q *Queries) FilterBySearch(ctx context.Context, arg FilterBySearchParams) ([]FilterBySearchRow, error) {
+	rows, err := q.db.Query(ctx, filterBySearch, arg.Column1, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []FilterBySearchRow{}
+	for rows.Next() {
+		var i FilterBySearchRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.OwnerID,
+			&i.Title,
+			&i.Slug,
+			&i.ThumbnailMediaID,
+			&i.PublishedAt,
+			&i.Username,
+			&i.OwnerName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const filterByTag = `-- name: FilterByTag :many
 SELECT p.id, p.owner_id, p.title, p.slug, p.thumbnail_media_id, p.published_at,
   u.username, u.name AS owner_name

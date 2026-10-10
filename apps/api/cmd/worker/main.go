@@ -42,7 +42,7 @@ func main() {
 
 	switch job {
 	case "outbox":
-		if err := dispatchOutbox(ctx, q); err != nil {
+		if err := dispatchOutbox(ctx, q, c); err != nil {
 			slog.Error("outbox", "err", err)
 			os.Exit(1)
 		}
@@ -77,14 +77,14 @@ func main() {
 			os.Exit(1)
 		}
 	case "serve":
-		runScheduler(ctx, q, cfg)
+		runScheduler(ctx, q, c, cfg)
 	default:
 		fmt.Fprintln(os.Stderr, "usage: worker [serve|outbox|stats|leaderboard|cleanup-media|publish-changelogs|retention|promotion-draft]")
 		os.Exit(1)
 	}
 }
 
-func dispatchOutbox(ctx context.Context, q *repo.Queries) error {
+func dispatchOutbox(ctx context.Context, q *repo.Queries, c *cache.Cache) error {
 	items, err := q.ClaimOutbox(ctx)
 	if err != nil {
 		return err
@@ -159,6 +159,8 @@ func dispatchOutbox(ctx context.Context, q *repo.Queries) error {
 				_ = q.MarkOutboxFailed(ctx, it.ID)
 				continue
 			}
+			// Snapshot berubah -> buang cache peringkat (key lb:*).
+			_ = c.DelPattern(ctx, "lb:*")
 		case "portfolio.submitted":
 			notifyModerators(ctx, q, p["portfolio_id"])
 		case "notify.changelog_published":

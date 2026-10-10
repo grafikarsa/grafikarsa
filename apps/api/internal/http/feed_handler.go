@@ -270,6 +270,13 @@ func (a *App) handleLeaderboards(w http.ResponseWriter, r *http.Request) {
 	if kind == "" {
 		kind = "best_projects"
 	}
+	// Snapshot peringkat di-cache 1 jam (mahal & berubah harian).
+	cacheKey := "lb:" + period + ":" + scope + ":" + kind
+	if cached, err := a.Cache.GetBytes(r.Context(), cacheKey); err == nil && len(cached) > 0 {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(cached)
+		return
+	}
 	rows, err := a.Q.GetLeaderboard(r.Context(), repo.GetLeaderboardParams{Period: period, Scope: scope, Kind: kind})
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal memuat leaderboard.", r))
@@ -277,16 +284,39 @@ func (a *App) handleLeaderboards(w http.ResponseWriter, r *http.Request) {
 	}
 	out := []map[string]any{}
 	for _, e := range rows {
-		out = append(out, map[string]any{
+		item := map[string]any{
 			"rank": e.Rank, "score": e.Score, "breakdown": e.Breakdown, "delta_rank": e.DeltaRank,
 			"subject_user_id":      nullableUUID(e.SubjectUserID),
 			"subject_portfolio_id": nullableUUID(e.SubjectPortfolioID),
-		})
+		}
+		// Enrichment untuk tampilan: nama user / judul+tampilan karya.
+		if e.SubjectUserID.Valid {
+			if u, uerr := a.Q.GetUserByID(r.Context(), e.SubjectUserID); uerr == nil {
+				item["name"] = u.Name
+				item["username"] = u.Username
+				item["major"] = u.MajorID
+			}
+		}
+		if e.SubjectPortfolioID.Valid {
+			if p, perr := a.Q.GetPortfolioByID(r.Context(), e.SubjectPortfolioID); perr == nil {
+				item["title"] = p.Title
+				item["slug"] = p.Slug
+				if o, oerr := a.Q.GetUserByID(r.Context(), p.OwnerID); oerr == nil {
+					item["username"] = o.Username
+					item["owner_name"] = o.Name
+				}
+			}
+		}
+		out = append(out, item)
 	}
 	if out == nil {
 		out = []map[string]any{}
 	}
-	writeJSON(w, http.StatusOK, ok(out, r))
+	payload, _ := json.Marshal(okMeta(out, nil, r))
+	// TTL pendek (10 menit) + invalidasi saat recompute selesai.
+	_ = a.Cache.SetBytes(r.Context(), cacheKey, payload, 10*time.Minute)
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(payload)
 }
 
 func (a *App) handleRecomputeLeaderboard(w http.ResponseWriter, r *http.Request) {

@@ -63,11 +63,14 @@ func checkBcrypt(pw, hash string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(pw)) == nil
 }
 
+// publicUser: bentuk user yang konsisten dengan GET /me (id = UUID),
+// supaya FE tidak salah memakai username sebagai id.
 func publicUser(u repo.GetUserByUsernameRow) map[string]any {
 	return map[string]any{
-		"id": u.Username, "username": u.Username,
+		"id": uuidStr(u.ID), "username": u.Username,
 		"name": u.Name, "email": u.Email,
 		"role_primary": u.RolePrimary, "status": u.Status,
+		"must_change_password": u.MustChangePassword,
 	}
 }
 

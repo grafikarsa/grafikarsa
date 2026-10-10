@@ -382,6 +382,13 @@ func (a *App) handleListPublished(w http.ResponseWriter, r *http.Request) {
 	var err error
 	var total int64
 	switch {
+	case search != "":
+		srows, e := a.Q.FilterBySearch(r.Context(), repo.FilterBySearchParams{Column1: toPgText(search), Limit: limit, Offset: offset})
+		err = e
+		for _, t := range srows {
+			rows = append(rows, repo.FilterPublishedPortfoliosRow(t))
+		}
+		total = int64(len(rows))
 	case tagID != "":
 		trows, e := a.Q.FilterByTag(r.Context(), repo.FilterByTagParams{TagID: mustUUID(tagID), Limit: limit, Offset: offset})
 		err = e

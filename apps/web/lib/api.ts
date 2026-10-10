@@ -88,6 +88,20 @@ export async function apiGet<T>(path: string): Promise<T> {
   return request<T>(path, { headers: authHeaders(), cache: "no-store" });
 }
 
+// apiUpload: multipart (FormData) dengan CSRF + Authorization, tanpa
+// Content-Type manual (biar boundary diisi browser/Node).
+export async function apiUpload<T>(path: string, form: FormData, retry = true): Promise<T> {
+  const { csrfToken, accessToken } = useAuthStore.getState();
+  const headers: Record<string, string> = {};
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+  if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
+  const res = await fetch(`/api/${path.replace(/^\//, "")}`, { method: "POST", headers, body: form });
+  if (res.status === 401 && retry && (await refreshSession())) {
+    return apiUpload<T>(path, form, false);
+  }
+  return parse<T>(res);
+}
+
 export async function apiSend<T>(path: string, method: string, body?: unknown): Promise<T> {
   return request<T>(path, {
     method,

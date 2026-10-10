@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"grafikarsa/api/internal/cache"
 	"grafikarsa/api/internal/config"
 	"grafikarsa/api/internal/repo"
 )
@@ -14,10 +15,10 @@ import (
 // Scheduler: menjalankan semua job berkala dalam satu proses.
 // Interval dipilih agar: outbox cepat (30 dtk), stats segar (5 mnt),
 // leaderboard harian 02:05 WIB, promotion draft harian 00:10 WIB.
-func runScheduler(ctx context.Context, q *repo.Queries, cfg *config.Config) {
+func runScheduler(ctx context.Context, q *repo.Queries, c *cache.Cache, cfg *config.Config) {
 	slog.Info("scheduler start")
 
-	go every(ctx, 30*time.Second, "outbox", func() error { return dispatchOutbox(ctx, q) })
+	go every(ctx, 30*time.Second, "outbox", func() error { return dispatchOutbox(ctx, q, c) })
 	go every(ctx, 5*time.Minute, "stats", func() error { return aggregateStats(ctx, q) })
 	go every(ctx, 5*time.Minute, "publish-changelogs", func() error { return publishChangelogs(ctx, q) })
 	go every(ctx, time.Hour, "cleanup-media", func() error { return cleanupMedia(ctx, q, cfg) })

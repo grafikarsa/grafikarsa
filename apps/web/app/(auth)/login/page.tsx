@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { login } from "@/lib/api";
 
-export default function LoginPage() {
+function LoginInner() {
   const router = useRouter();
   const params = useSearchParams();
   const [username, setUsername] = useState("");
@@ -53,5 +53,14 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  // useSearchParams (?next=) butuh Suspense boundary saat prerender.
+  return (
+    <Suspense fallback={<main className="mx-auto max-w-sm p-8">Memuat...</main>}>
+      <LoginInner />
+    </Suspense>
   );
 }

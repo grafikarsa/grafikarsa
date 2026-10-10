@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,12 +10,12 @@ import { apiGet } from "@/lib/api";
 
 type Item = { id: string; title: string; slug: string; username: string; owner_name: string };
 
-export default function CatalogPage() {
+function CatalogInner() {
   const params = useSearchParams();
   const search = params.get("search") ?? "";
   const { data, isLoading } = useQuery({
     queryKey: ["portfolios", search],
-    queryFn: () => apiGet<Item[]>(`v1/portfolios?page=1&per_page=20`),
+    queryFn: () => apiGet<Item[]>(`v1/portfolios?page=1&per_page=20${search ? `&search=${encodeURIComponent(search)}` : ""}`),
   });
   const items = data ?? [];
 
@@ -38,5 +39,14 @@ export default function CatalogPage() {
         ))}
       </div>
     </main>
+  );
+}
+
+export default function CatalogPage() {
+  // useSearchParams butuh Suspense boundary saat prerender.
+  return (
+    <Suspense fallback={<p className="p-4 text-sm">Memuat katalog...</p>}>
+      <CatalogInner />
+    </Suspense>
   );
 }
