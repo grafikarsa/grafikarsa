@@ -21,22 +21,33 @@ func (a *App) handlePromotionPreview(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal preview.", r))
 		return
 	}
-	naik := map[string]int{}
+	counts := map[string]int{}
 	lulus := 0
 	warn := []string{}
+	classSize := map[string]int{}
 	for _, e := range enrolls {
-		grade := e.Grade
-		if grade == 12 {
+		classSize[e.ClassName]++
+	}
+	for _, e := range enrolls {
+		if e.Grade >= 12 {
 			lulus++
-		} else {
-			key := "grade-" + itoa(int(grade)) + "-to-" + itoa(int(grade)+1)
-			naik[key]++
+			continue
+		}
+		key := e.ClassName + " -> " + classNameFor(int32(e.Grade+1), "", e.ClassGroup)
+		counts[key]++
+	}
+	for name, n := range classSize {
+		if n > 0 && n < 5 {
+			warn = append(warn, name+" hanya "+itoa(n)+" siswa (pertimbangkan merge).")
 		}
 	}
 	if len(enrolls) == 0 {
 		warn = append(warn, "Tidak ada enrollment aktif di tahun asal.")
 	}
-	result := map[string]any{"naik": naik, "lulus": lulus, "total": len(enrolls), "warnings": warn}
+	result := map[string]any{
+		"naik": counts, "lulus": lulus, "total": len(enrolls),
+		"kelas_baru_dibuat": len(counts), "warnings": warn,
+	}
 	b, _ := json.Marshal(result)
 	id, err := a.Q.CreatePromotionJob(r.Context(), repo.CreatePromotionJobParams{
 		FromYearID: mustUUID(req.FromYearID), ToYearID: mustUUID(req.ToYearID), DryrunResult: b,
@@ -99,111 +110,130 @@ func (a *App) handlePromotionExecute(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusUnprocessableEntity, fail("INVALID_STATUS_TRANSITION", "Job harus approved dulu.", r))
 		return
 	}
-	if req.Confirm == "" {
-		writeJSON(w, http.StatusUnprocessableEntity, fail("VALIDATION_ERROR", "Ketik konfirmasi tahun.", r))
+	// Konfirmasi wajib sama persis dengan tahun tujuan (bukan sekadar non-empty).
+	target, err := a.Q.GetYearByID(r.Context(), job.ToYearID)
+	if err != nil {
+		writeJSON(w, http.StatusUnprocessableEntity, fail("NOT_FOUND", "Tahun tujuan tidak ditemukan.", r))
 		return
 	}
-	if err := a.executePromotion(r, job); err != nil {
-		_ = err
-		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Eksekusi gagal.", r))
+	if req.Confirm != itoa(int(target.StartYear)) {
+		writeJSON(w, http.StatusUnprocessableEntity, fail("VALIDATION_ERROR", "Konfirmasi salah. Ketik "+itoa(int(target.StartYear))+" untuk melanjutkan.", r))
 		return
 	}
-	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "done"}, r))
-}
-
-func (a *App) executePromotion(r *http.Request, job repo.GetPromotionJobRow) error {
-	ctx := r.Context()
-	if err := func() error {
-		pool := a.Tx.pool
-		tx, err := pool.Begin(ctx)
-		if err != nil {
-			return err
-		}
-		defer tx.Rollback(ctx)
-		qtx := a.Q.WithTx(tx)
-		enrolls, err := qtx.ListEnrollmentsByYear(ctx, job.FromYearID)
-		if err != nil {
-			return err
-		}
-		var exceptions []map[string]string
-		_ = json.Unmarshal(job.Exceptions, &exceptions)
-		excMap := map[string]string{}
-		for _, e := range exceptions {
-			excMap[e["user_id"]] = e["action"]
-		}
-		majors, _ := qtx.ListMajorsFull(ctx)
-		codeByID := map[string]string{}
-		for _, m := range majors {
-			codeByID[uuidStr(m.ID)] = m.Code
-		}
-		classCache := map[string]interface{ ID() string }{}
-		_ = classCache
-		newClassID := map[string]string{}
-		getClass := func(majorID string, grade int, group string) string {
-			key := majorID + "|" + itoa(grade) + "|" + group
-			if id, ok := newClassID[key]; ok {
-				return id
-			}
-			return ""
-		}
-		_ = getClass
-		for _, e := range enrolls {
-			uid := uuidStr(e.UserID)
-			action := excMap[uid]
-			grade := int(e.Grade)
-			if action == "repeat" {
-				// tinggal kelas: grade sama, tahun baru
-				cid, err := qtx.CreateClassForYear(ctx, repo.CreateClassForYearParams{
-					AcademicYearID: job.ToYearID, MajorID: e.MajorID,
-					Grade: int16(grade), ClassGroup: "A",
-					Name: classNameFor(int32(grade), codeByID[uuidStr(e.MajorID)], "A"),
-				})
-				if err != nil {
-					return err
-				}
-				_ = qtx.DeactivateEnrollments(ctx, repo.DeactivateEnrollmentsParams{UserID: e.UserID, AcademicYearID: job.FromYearID})
-				_ = qtx.UpsertEnrollment(ctx, repo.UpsertEnrollmentParams{
-					UserID: e.UserID, ClassID: cid, AcademicYearID: job.ToYearID, Status: "repeated",
-				})
-				continue
-			}
-			if grade >= 12 {
-				_ = qtx.DeactivateEnrollments(ctx, repo.DeactivateEnrollmentsParams{UserID: e.UserID, AcademicYearID: job.FromYearID})
-				_ = qtx.UpsertEnrollment(ctx, repo.UpsertEnrollmentParams{
-					UserID: e.UserID, ClassID: e.ClassID, AcademicYearID: job.ToYearID, Status: "graduated",
-				})
-				_ = qtx.SetUserStatus(ctx, repo.SetUserStatusParams{ID: e.UserID, Status: "lulus"})
-				_, _ = qtx.EnqueueOutbox(ctx, repo.EnqueueOutboxParams{
-					Topic:   "notify.announcement",
-					Payload: notifPayload(map[string]string{"user_id": uid, "kind": "promotion_result", "message": "Akun alumni aktif."}),
-				})
-				continue
-			}
-			cid, err := qtx.CreateClassForYear(ctx, repo.CreateClassForYearParams{
-				AcademicYearID: job.ToYearID, MajorID: e.MajorID,
-				Grade: int16(grade + 1), ClassGroup: "A",
-				Name: classNameFor(int32(grade+1), codeByID[uuidStr(e.MajorID)], "A"),
-			})
-			if err != nil {
-				return err
-			}
-			_ = qtx.DeactivateEnrollments(ctx, repo.DeactivateEnrollmentsParams{UserID: e.UserID, AcademicYearID: job.FromYearID})
-			_ = qtx.UpsertEnrollment(ctx, repo.UpsertEnrollmentParams{
-				UserID: e.UserID, ClassID: cid, AcademicYearID: job.ToYearID, Status: "promoted",
-			})
-			_, _ = qtx.EnqueueOutbox(ctx, repo.EnqueueOutboxParams{
-				Topic:   "notify.announcement",
-				Payload: notifPayload(map[string]string{"user_id": uid, "kind": "promotion_result", "message": "Kamu naik kelas."}),
-			})
-		}
-		_ = qtx.SetActiveYear(ctx, job.ToYearID)
-		return tx.Commit(ctx)
-	}(); err != nil {
-		return err
+	if err := a.Q.MarkPromotionExecuting(r.Context(), job.ID); err != nil {
+		writeJSON(w, http.StatusUnprocessableEntity, fail("INVALID_STATUS_TRANSITION", "Job tidak bisa dieksekusi (sudah berjalan/selesai).", r))
+		return
+	}
+	if err := a.executePromotion(r, job, req.Confirm); err != nil {
+		_ = a.Q.MarkPromotionFailed(r.Context(), job.ID)
+		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Eksekusi gagal: "+err.Error(), r))
+		return
 	}
 	_ = a.Q.MarkPromotionDone(r.Context(), repo.MarkPromotionDoneParams{ID: job.ID, ExecutedBy: mustUUID(UserID(r))})
 	auditLog(r, a, "promotion.execute", "promotion_jobs", uuidStr(job.ID), "")
-	return nil
+	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "done"}, r))
+}
+
+func isNumeric(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+func (a *App) executePromotion(r *http.Request, job repo.GetPromotionJobRow, _ string) error {
+	ctx := r.Context()
+	pool := a.Tx.pool
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	qtx := a.Q.WithTx(tx)
+
+	enrolls, err := qtx.ListEnrollmentsByYear(ctx, job.FromYearID)
+	if err != nil {
+		return err
+	}
+	var exceptions []map[string]string
+	_ = json.Unmarshal(job.Exceptions, &exceptions)
+	excMap := map[string]string{}
+	for _, e := range exceptions {
+		excMap[e["user_id"]] = e["action"]
+	}
+
+	majors, _ := qtx.ListMajorsFull(ctx)
+	codeByID := map[string]string{}
+	for _, m := range majors {
+		codeByID[uuidStr(m.ID)] = m.Code
+	}
+
+	for _, e := range enrolls {
+		uid := uuidStr(e.UserID)
+		action := excMap[uid]
+		grade := int(e.Grade)
+
+		if action == "transfer" {
+			// Pindahan: tandai transferred, tidak ikut naik.
+			_ = qtx.GraduateEnrollment(ctx, repo.GraduateEnrollmentParams{UserID: e.UserID, AcademicYearID: job.FromYearID})
+			continue
+		}
+		if action == "repeat" {
+			// Tinggal kelas: grade sama, rombel dipertahankan.
+			cid, cerr := qtx.CreateClassForYear(ctx, repo.CreateClassForYearParams{
+				AcademicYearID: job.ToYearID, MajorID: e.MajorID,
+				Grade: int16(grade), ClassGroup: e.ClassGroup,
+				Name: classNameFor(int32(grade), codeByID[uuidStr(e.MajorID)], e.ClassGroup),
+			})
+			if cerr != nil {
+				return cerr
+			}
+			_ = qtx.DeactivateEnrollments(ctx, repo.DeactivateEnrollmentsParams{UserID: e.UserID, AcademicYearID: job.FromYearID})
+			_ = qtx.UpsertEnrollment(ctx, repo.UpsertEnrollmentParams{
+				UserID: e.UserID, ClassID: cid, AcademicYearID: job.ToYearID, Status: "repeated",
+			})
+			_, _ = qtx.EnqueueOutbox(ctx, repo.EnqueueOutboxParams{
+				Topic:   "notify.announcement",
+				Payload: notifPayload(map[string]string{"user_id": uid, "kind": "promotion_result", "message": "Kamu tinggal kelas di " + classNameFor(int32(grade), codeByID[uuidStr(e.MajorID)], e.ClassGroup) + "."}),
+			})
+			continue
+		}
+		if grade >= 12 {
+			// Lulus: enrollment lama jadi graduated & tidak current; TIDAK
+			// dibuatkan enrollment tahun baru (alumni bukan siswa aktif).
+			_ = qtx.GraduateEnrollment(ctx, repo.GraduateEnrollmentParams{UserID: e.UserID, AcademicYearID: job.FromYearID})
+			_ = qtx.SetUserStatus(ctx, repo.SetUserStatusParams{ID: e.UserID, Status: "lulus"})
+			_, _ = qtx.EnqueueOutbox(ctx, repo.EnqueueOutboxParams{
+				Topic:   "notify.announcement",
+				Payload: notifPayload(map[string]string{"user_id": uid, "kind": "promotion_result", "message": "Selamat! Akun alumnimu aktif."}),
+			})
+			continue
+		}
+		// Naik kelas: rombel (class_group) dipertahankan.
+		cid, cerr := qtx.CreateClassForYear(ctx, repo.CreateClassForYearParams{
+			AcademicYearID: job.ToYearID, MajorID: e.MajorID,
+			Grade: int16(grade + 1), ClassGroup: e.ClassGroup,
+			Name: classNameFor(int32(grade+1), codeByID[uuidStr(e.MajorID)], e.ClassGroup),
+		})
+		if cerr != nil {
+			return cerr
+		}
+		_ = qtx.DeactivateEnrollments(ctx, repo.DeactivateEnrollmentsParams{UserID: e.UserID, AcademicYearID: job.FromYearID})
+		_ = qtx.UpsertEnrollment(ctx, repo.UpsertEnrollmentParams{
+			UserID: e.UserID, ClassID: cid, AcademicYearID: job.ToYearID, Status: "promoted",
+		})
+		_, _ = qtx.EnqueueOutbox(ctx, repo.EnqueueOutboxParams{
+			Topic:   "notify.announcement",
+			Payload: notifPayload(map[string]string{"user_id": uid, "kind": "promotion_result", "message": "Kamu naik ke " + classNameFor(int32(grade+1), codeByID[uuidStr(e.MajorID)], e.ClassGroup) + "."}),
+		})
+	}
+	_ = qtx.SetActiveYear(ctx, job.ToYearID)
+	return tx.Commit(ctx)
 }
 
 func itoa(i int) string {

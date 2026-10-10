@@ -114,7 +114,7 @@ func (a *App) handleScoreAssessment(w http.ResponseWriter, r *http.Request) {
 			Score: int16(s.Score), Comment: s.Comment,
 		})
 	}
-	_ = a.Q.UpsertPortfolioStats(r.Context(), repo.UpsertPortfolioStatsParams{
+	_ = a.Q.SetPortfolioAssessmentAvg(r.Context(), repo.SetPortfolioAssessmentAvgParams{
 		PortfolioID: p.ID, AssessmentAvg: floatToNumeric(avg),
 	})
 	auditLog(r, a, "assessments.score", "portfolios", pid, "")
