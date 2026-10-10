@@ -17,7 +17,7 @@ export default function AdminUsersPage() {
   async function load() {
     try {
       const data = await apiGet<User[]>("v1/admin/users");
-      setUsers(Array.isArray(data) ? data : (data ?? []));
+      setUsers(Array.isArray(data) ? data : []);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Gagal memuat.");
     }

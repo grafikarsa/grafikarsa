@@ -26,8 +26,8 @@ export default function ModerationPage() {
 
   async function load() {
     try {
-      const data = await apiGet<{ data: Pending[] }>("v1/admin/portfolios/pending");
-      setItems(data.data);
+      const data = await apiGet<Pending[]>("v1/admin/portfolios/pending");
+      setItems(Array.isArray(data) ? data : []);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Gagal memuat.");
     }
@@ -38,6 +38,11 @@ export default function ModerationPage() {
   }, []);
 
   async function act(id: string, action: string) {
+    const needNote = action === "reject" || action === "request-changes";
+    if (needNote && note.trim().length < 5) {
+      toast.error("Catatan minimal 5 karakter untuk tolak/minta perbaikan.");
+      return;
+    }
     try {
       await apiSend(`v1/admin/portfolios/${id}/${action}`, "POST", { note });
       toast.success("Berhasil.");

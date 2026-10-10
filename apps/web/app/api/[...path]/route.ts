@@ -1,32 +1,62 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// BFF proxy tipis: meneruskan method/query/body ke API internal.
-// Tanpa logika bisnis. Kontrak error dari backend diteruskan apa adanya.
+// BFF proxy: meneruskan request/response header penting ke browser.
+// - request: cookie, authorization, content-type, csrf, range, if-none-match
+// - response: set-cookie (WAJIB untuk __Host-rt/__Host-csrf), etag,
+//   cache-control, content-range/accept-ranges (media Range), disposition
+// Tanpa logika bisnis; error code dari backend tidak diubah.
 const METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
+
+const FORWARD_REQ = [
+  "cookie",
+  "authorization",
+  "content-type",
+  "x-csrf-token",
+  "range",
+  "if-none-match",
+  "if-modified-since",
+  "accept-language",
+];
+
+const FORWARD_RES = [
+  "content-type",
+  "content-length",
+  "content-range",
+  "accept-ranges",
+  "content-disposition",
+  "cache-control",
+  "etag",
+  "last-modified",
+  "vary",
+];
+
+function allowedOrigin(req: NextRequest): boolean {
+  const origin = req.headers.get("origin");
+  if (!origin) return true; // same-origin fetch tanpa Origin (browser lama/SSR)
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3020";
+  try {
+    return new URL(origin).host === new URL(appUrl).host;
+  } catch {
+    return false;
+  }
+}
 
 async function proxy(req: NextRequest, path: string[]) {
   const base = process.env.INTERNAL_API_URL ?? "http://localhost:8080/v1";
   const url = `${base}/${path.join("/")}${req.nextUrl.search}`;
   const headers = new Headers();
-  const cookie = req.headers.get("cookie");
-  if (cookie) headers.set("cookie", cookie);
-  const auth = req.headers.get("authorization");
-  if (auth) headers.set("authorization", auth);
-  const ct = req.headers.get("content-type");
-  if (ct) headers.set("content-type", ct);
-  const csrf = req.headers.get("x-csrf-token");
-  if (csrf) headers.set("x-csrf-token", csrf);
+  for (const h of FORWARD_REQ) {
+    const v = req.headers.get(h);
+    if (v) headers.set(h, v);
+  }
   const reqId = req.headers.get("x-request-id") ?? crypto.randomUUID();
   headers.set("x-request-id", reqId);
-  if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
-    const origin = req.headers.get("origin");
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3020";
-    if (origin && !origin.startsWith(appUrl)) {
-      return NextResponse.json(
-        { success: false, error: { code: "CSRF_INVALID", message: "Origin tidak diizinkan." } },
-        { status: 403 },
-      );
-    }
+
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method) && !allowedOrigin(req)) {
+    return NextResponse.json(
+      { success: false, error: { code: "CSRF_INVALID", message: "Origin tidak diizinkan." } },
+      { status: 403 },
+    );
   }
 
   const hasBody = req.method !== "GET" && req.method !== "HEAD";
@@ -36,10 +66,17 @@ async function proxy(req: NextRequest, path: string[]) {
     body: hasBody ? req.body : undefined,
     // @ts-expect-error duplex wajib untuk streaming body di Node 18+
     duplex: hasBody ? "half" : undefined,
+    redirect: "manual",
   });
+
   const out = new Headers();
-  const resCt = res.headers.get("content-type");
-  if (resCt) out.set("content-type", resCt);
+  for (const h of FORWARD_RES) {
+    const v = res.headers.get(h);
+    if (v) out.set(h, v);
+  }
+  // Set-Cookie bisa lebih dari satu (rt + csrf) — pakai getSetCookie bila ada.
+  const setCookies = res.headers.getSetCookie?.() ?? [];
+  for (const c of setCookies) out.append("set-cookie", c);
   out.set("x-request-id", reqId);
   return new NextResponse(res.body, { status: res.status, headers: out });
 }
