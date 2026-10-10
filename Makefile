@@ -15,12 +15,13 @@ WEB_DIR := apps/web
 DATABASE_URL := postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable
 
 .PHONY: help dev dev-web dev-down dev-logs \
-	migrate-up migrate-down migrate-new sqlc seed verify-seed \
+	migrate-up migrate-down migrate-status migrate-new sqlc seed verify-seed \
+	openapi openapi-check \
 	backup restore test test-backend test-web lint lint-backend lint-web \
 	prod prod-down deploy-check status
 
 help: ## Tampilkan bantuan
-	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
+	@grep -h -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
 
 # ── DEV ───────────────────────────────────────
 dev: ## Up db + dragonfly + storage + api + worker (web native terpisah)
@@ -43,14 +44,16 @@ dev-logs: ## Tail log semua service dev
 	$(COMPOSE_DEV) logs -f --tail=100
 
 # ── DB ────────────────────────────────────────
-# Migrasi goose di-embed ke biner via internal/db/migrations (copy dari
-# db/migrations — Go embed tidak bisa baca di luar package).
-	@mkdir -p $(API_DIR)/internal/db/migrations
-	@cp $(API_DIR)/db/migrations/*.sql $(API_DIR)/internal/db/migrations/
-
+# Sumber migrasi = apps/api/db/migrations (ter-track git) dan di-embed
+# langsung lewat db/migrations/embed.go, jadi tidak ada langkah salin.
+migrate-up: ## goose up (via container api one-off)
 	$(COMPOSE_DEV) run --rm api go run ./cmd/tools/migrate up
 
+migrate-down: ## goose down 1 level (HATI-HATI di prod)
 	$(COMPOSE_DEV) run --rm api go run ./cmd/tools/migrate down
+
+migrate-status: ## Lihat versi migrasi saat ini
+	$(COMPOSE_DEV) run --rm api go run ./cmd/tools/migrate status
 
 migrate-new: ## Buat file migrasi baru: make migrate-new NAME=add_x
 	@test -n "$(NAME)" || (echo "Usage: make migrate-new NAME=add_x" && exit 1)
@@ -61,6 +64,15 @@ migrate-new: ## Buat file migrasi baru: make migrate-new NAME=add_x
 	echo "" >> $(API_DIR)/db/migrations/$${TS}_$(NAME).sql; \
 	echo "-- +goose Down" >> $(API_DIR)/db/migrations/$${TS}_$(NAME).sql; \
 	echo "created $(API_DIR)/db/migrations/$${TS}_$(NAME).sql"
+
+openapi: ## Regenerate kontrak OpenAPI dari routes.go (wajib setelah ubah route)
+	@cd $(API_DIR) && go run ./cmd/tools/gen-openapi > ../../packages/contracts/openapi.yaml
+	@echo "packages/contracts/openapi.yaml diperbarui"
+
+openapi-check: ## Cek drift kontrak OpenAPI (dipakai CI)
+	@cd $(API_DIR) && go run ./cmd/tools/gen-openapi | diff -q ../../packages/contracts/openapi.yaml - >/dev/null \
+	  && echo "openapi: sinkron" \
+	  || (echo "FATAL: openapi.yaml stale — jalankan make openapi" && exit 1)
 
 sqlc: ## Generate type-safe queries (butuh sqlc terinstall)
 	sqlc -f $(API_DIR)/sqlc.yaml generate
