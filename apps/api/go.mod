@@ -41,6 +41,7 @@ require (
 	github.com/mfridman/interpolate v0.0.2 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.27 // indirect
 	github.com/sethvargo/go-retry v0.4.0 // indirect
+	github.com/shopspring/decimal v1.5.0 // indirect
 	go.uber.org/atomic v1.12.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/net v0.60.0 // indirect
