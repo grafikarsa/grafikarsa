@@ -196,6 +196,24 @@ type Leaderboards struct {
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
+type LegacyIDMap struct {
+	SourceTable string             `json:"source_table"`
+	SourceID    string             `json:"source_id"`
+	TargetTable string             `json:"target_table"`
+	TargetID    pgtype.UUID        `json:"target_id"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type LegacyUrls struct {
+	ID        pgtype.UUID        `json:"id"`
+	OldUrl    string             `json:"old_url"`
+	MediaID   pgtype.UUID        `json:"media_id"`
+	ObjectKey pgtype.Text        `json:"object_key"`
+	HitCount  int64              `json:"hit_count"`
+	LastHitAt pgtype.Timestamptz `json:"last_hit_at"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
 // Master jurusan/program keahlian
 type Majors struct {
 	ID            pgtype.UUID        `json:"id"`
@@ -352,6 +370,16 @@ type PromotionJobs struct {
 	ExecutedBy   pgtype.UUID        `json:"executed_by"`
 	ExecutedAt   pgtype.Timestamptz `json:"executed_at"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
+type QuarantineBlocks struct {
+	ID            pgtype.UUID        `json:"id"`
+	PortfolioID   pgtype.UUID        `json:"portfolio_id"`
+	SourceBlockID pgtype.Text        `json:"source_block_id"`
+	BlockType     string             `json:"block_type"`
+	RawPayload    []byte             `json:"raw_payload"`
+	Reason        string             `json:"reason"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 }
 
 type RolePermissions struct {

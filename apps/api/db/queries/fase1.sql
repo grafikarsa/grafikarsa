@@ -240,3 +240,17 @@ WHERE status = 'processing' AND next_retry_at <= NOW();
 
 -- name: GetRolePermissions :many
 SELECT p.key FROM role_permissions rp JOIN permissions p ON p.id = rp.permission_id WHERE rp.role_id = $1;
+
+-- name: GetMediaByKey :one
+SELECT id, owner_id, purpose, object_key, mime, size_bytes, width, height, checksum_sha256, status, variants
+FROM media_assets WHERE object_key = $1 AND status <> 'deleted' LIMIT 1;
+
+-- name: GetLegacyURL :one
+SELECT id, old_url, media_id, object_key FROM legacy_urls WHERE old_url = $1 LIMIT 1;
+
+-- name: TouchLegacyURL :exec
+UPDATE legacy_urls SET hit_count = hit_count + 1, last_hit_at = NOW() WHERE id = $1;
+
+-- name: CreateLegacyURL :exec
+INSERT INTO legacy_urls (old_url, media_id, object_key) VALUES ($1, $2, $3)
+ON CONFLICT (old_url) DO UPDATE SET media_id = EXCLUDED.media_id, object_key = EXCLUDED.object_key;

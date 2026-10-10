@@ -139,6 +139,22 @@ func (q *Queries) CountUsersScoped(ctx context.Context, dollar_1 interface{}) (i
 	return count, err
 }
 
+const createLegacyURL = `-- name: CreateLegacyURL :exec
+INSERT INTO legacy_urls (old_url, media_id, object_key) VALUES ($1, $2, $3)
+ON CONFLICT (old_url) DO UPDATE SET media_id = EXCLUDED.media_id, object_key = EXCLUDED.object_key
+`
+
+type CreateLegacyURLParams struct {
+	OldUrl    string      `json:"old_url"`
+	MediaID   pgtype.UUID `json:"media_id"`
+	ObjectKey pgtype.Text `json:"object_key"`
+}
+
+func (q *Queries) CreateLegacyURL(ctx context.Context, arg CreateLegacyURLParams) error {
+	_, err := q.db.Exec(ctx, createLegacyURL, arg.OldUrl, arg.MediaID, arg.ObjectKey)
+	return err
+}
+
 const createMedia = `-- name: CreateMedia :one
 INSERT INTO media_assets (owner_id, purpose, object_key, mime, size_bytes, width, height, checksum_sha256, status, variants)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id
@@ -377,6 +393,29 @@ func (q *Queries) GetAuditLogs(ctx context.Context, arg GetAuditLogsParams) ([]G
 	return items, nil
 }
 
+const getLegacyURL = `-- name: GetLegacyURL :one
+SELECT id, old_url, media_id, object_key FROM legacy_urls WHERE old_url = $1 LIMIT 1
+`
+
+type GetLegacyURLRow struct {
+	ID        pgtype.UUID `json:"id"`
+	OldUrl    string      `json:"old_url"`
+	MediaID   pgtype.UUID `json:"media_id"`
+	ObjectKey pgtype.Text `json:"object_key"`
+}
+
+func (q *Queries) GetLegacyURL(ctx context.Context, oldUrl string) (GetLegacyURLRow, error) {
+	row := q.db.QueryRow(ctx, getLegacyURL, oldUrl)
+	var i GetLegacyURLRow
+	err := row.Scan(
+		&i.ID,
+		&i.OldUrl,
+		&i.MediaID,
+		&i.ObjectKey,
+	)
+	return i, err
+}
+
 const getMajorRequireSeries = `-- name: GetMajorRequireSeries :one
 SELECT require_series FROM majors WHERE id = $1 LIMIT 1
 `
@@ -426,6 +465,44 @@ func (q *Queries) GetMediaByID(ctx context.Context, id pgtype.UUID) (GetMediaByI
 		&i.Variants,
 		&i.CreatedAt,
 		&i.ConfirmedAt,
+	)
+	return i, err
+}
+
+const getMediaByKey = `-- name: GetMediaByKey :one
+SELECT id, owner_id, purpose, object_key, mime, size_bytes, width, height, checksum_sha256, status, variants
+FROM media_assets WHERE object_key = $1 AND status <> 'deleted' LIMIT 1
+`
+
+type GetMediaByKeyRow struct {
+	ID             pgtype.UUID `json:"id"`
+	OwnerID        pgtype.UUID `json:"owner_id"`
+	Purpose        string      `json:"purpose"`
+	ObjectKey      string      `json:"object_key"`
+	Mime           string      `json:"mime"`
+	SizeBytes      int64       `json:"size_bytes"`
+	Width          pgtype.Int4 `json:"width"`
+	Height         pgtype.Int4 `json:"height"`
+	ChecksumSha256 string      `json:"checksum_sha256"`
+	Status         string      `json:"status"`
+	Variants       []byte      `json:"variants"`
+}
+
+func (q *Queries) GetMediaByKey(ctx context.Context, objectKey string) (GetMediaByKeyRow, error) {
+	row := q.db.QueryRow(ctx, getMediaByKey, objectKey)
+	var i GetMediaByKeyRow
+	err := row.Scan(
+		&i.ID,
+		&i.OwnerID,
+		&i.Purpose,
+		&i.ObjectKey,
+		&i.Mime,
+		&i.SizeBytes,
+		&i.Width,
+		&i.Height,
+		&i.ChecksumSha256,
+		&i.Status,
+		&i.Variants,
 	)
 	return i, err
 }
@@ -1197,6 +1274,15 @@ UPDATE users SET last_login_at = NOW() WHERE id = $1
 
 func (q *Queries) TouchLastLogin(ctx context.Context, id pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, touchLastLogin, id)
+	return err
+}
+
+const touchLegacyURL = `-- name: TouchLegacyURL :exec
+UPDATE legacy_urls SET hit_count = hit_count + 1, last_hit_at = NOW() WHERE id = $1
+`
+
+func (q *Queries) TouchLegacyURL(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, touchLegacyURL, id)
 	return err
 }
 
