@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const metadata: Metadata = {
@@ -82,14 +82,14 @@ export default async function LandingPage() {
         <h1 className="text-4xl font-bold tracking-tight">Grafikarsa</h1>
         <p className="text-muted-foreground mt-2">Katalog portfolio warga SMKN 4 Malang.</p>
         <div className="mt-4 flex flex-wrap justify-center gap-2">
-          <Link href="/feed">
-            <Button>Lihat feed</Button>
+          <Link className={buttonVariants()} href="/feed">
+            Lihat feed
           </Link>
-          <Link href="/portfolios">
-            <Button variant="outline">Jelajahi karya</Button>
+          <Link className={buttonVariants({ variant: "outline" })} href="/portfolios">
+            Jelajahi karya
           </Link>
-          <Link href="/leaderboards">
-            <Button variant="ghost">Peringkat</Button>
+          <Link className={buttonVariants({ variant: "ghost" })} href="/leaderboards">
+            Peringkat
           </Link>
         </div>
       </section>

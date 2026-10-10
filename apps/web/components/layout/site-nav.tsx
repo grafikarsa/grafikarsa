@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { apiGet, logout } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 
@@ -90,8 +90,8 @@ export function SiteNav() {
               </Button>
             </>
           ) : (
-            <Link href="/login">
-              <Button size="sm">Masuk</Button>
+            <Link className={buttonVariants({ size: "sm" })} href="/login">
+              Masuk
             </Link>
           )}
         </div>

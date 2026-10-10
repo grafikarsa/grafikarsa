@@ -4,7 +4,7 @@ import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -158,11 +158,11 @@ export function FeedList() {
           <CardContent className="flex flex-col items-center gap-3 p-6 text-center">
             <p className="text-muted-foreground text-sm">{EMPTY[algo]}</p>
             <div className="flex gap-2">
-              <Link href="/users">
-                <Button variant="outline">Cari teman</Button>
+              <Link className={buttonVariants({ variant: "outline" })} href="/users">
+                Cari teman
               </Link>
-              <Link href="/me/portfolios">
-                <Button>Buat portfolio</Button>
+              <Link className={buttonVariants()} href="/me/portfolios">
+                Buat portfolio
               </Link>
             </div>
           </CardContent>
