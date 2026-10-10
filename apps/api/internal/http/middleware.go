@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
 	"grafikarsa/api/internal/auth"
@@ -62,6 +63,12 @@ func (a *App) authRequired(next http.Handler) http.Handler {
 		ctx = context.WithValue(ctx, ctxJTI, claims.ID)
 		ctx = context.WithValue(ctx, ctxScope, claims.ScopeMajorID)
 		ctx = context.WithValue(ctx, ctxPerms, perms)
+		ctx = context.WithValue(ctx, ctxMustChange, claims.MustChangePassword)
+		// Wajib ganti password: blokir endpoint lain sampai diganti.
+		if claims.MustChangePassword && !passwordChangeAllowlist[r.URL.Path] {
+			writeJSON(w, http.StatusForbidden, fail("PASSWORD_CHANGE_REQUIRED", "Ganti password dulu sebelum melanjutkan.", r))
+			return
+		}
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -146,12 +153,52 @@ func (a *App) csrf(next http.HandlerFunc) http.HandlerFunc {
 			writeJSON(w, http.StatusForbidden, fail("CSRF_INVALID", "Token keamanan tidak valid.", r))
 			return
 		}
-		if !verifyCSRFToken(a.Cfg.JWT.CSRFSecret(), header) {
+		if !verifyCSRFToken(a.Cfg.JWT.CSRFSecret(), UserID(r), header) {
 			writeJSON(w, http.StatusForbidden, fail("CSRF_INVALID", "Token keamanan kedaluwarsa.", r))
 			return
 		}
 		next(w, r.WithContext(context.WithValue(r.Context(), ctxCSRF, true)))
 	}
+}
+
+// rateLimit: batas request per IP per menit (default 100) via Dragonfly.
+// Degradasi aman: bila cache error, request dilewatkan.
+func (a *App) rateLimit(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		limit := a.Cfg.RateLimit.Requests
+		if limit <= 0 {
+			limit = 100
+		}
+		if r.Method == http.MethodOptions {
+			next.ServeHTTP(w, r)
+			return
+		}
+		key := "rl:" + clientIP(r) + ":" + time.Now().UTC().Format("2006-01-02T15:04")
+		if n, err := a.Cache.IncrWithExpire(r.Context(), key, time.Minute); err == nil && n > int64(limit) {
+			writeJSON(w, http.StatusTooManyRequests, fail("TOO_MANY_REQUESTS", "Terlalu banyak permintaan. Coba lagi sebentar.", r))
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// mustChangePassword: blokir semua endpoint kecuali yang diperlukan untuk
+// mengganti password sendiri.
+var passwordChangeAllowlist = map[string]bool{
+	"/v1/me": true, "/v1/me/password": true, "/v1/me/permissions": true,
+	"/v1/auth/logout": true, "/v1/auth/logout-all": true, "/v1/auth/sessions": true,
+}
+
+func (a *App) mustChangePassword(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if v, _ := r.Context().Value(ctxMustChange).(bool); v {
+			if !passwordChangeAllowlist[r.URL.Path] {
+				writeJSON(w, http.StatusForbidden, fail("PASSWORD_CHANGE_REQUIRED", "Ganti password dulu sebelum melanjutkan.", r))
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) bool {

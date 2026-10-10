@@ -19,11 +19,16 @@ const (
 
 type AccessClaims struct {
 	jwt.RegisteredClaims
-	RolePrimary  string `json:"role_primary"`
-	ScopeMajorID string `json:"scope_major_id,omitempty"`
+	RolePrimary        string `json:"role_primary"`
+	ScopeMajorID       string `json:"scope_major_id,omitempty"`
+	MustChangePassword bool   `json:"mcp,omitempty"`
 }
 
 func NewAccessToken(userID, rolePrimary, scopeMajorID, kid, secret, ttl string) (token, jti string, err error) {
+	return NewAccessTokenWithFlags(userID, rolePrimary, scopeMajorID, kid, secret, ttl, false)
+}
+
+func NewAccessTokenWithFlags(userID, rolePrimary, scopeMajorID, kid, secret, ttl string, mustChangePassword bool) (token, jti string, err error) {
 	jtiBytes := make([]byte, 16)
 	if _, err := rand.Read(jtiBytes); err != nil {
 		return "", "", err
@@ -43,8 +48,9 @@ func NewAccessToken(userID, rolePrimary, scopeMajorID, kid, secret, ttl string) 
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(dur)),
 		},
-		RolePrimary:  rolePrimary,
-		ScopeMajorID: scopeMajorID,
+		RolePrimary:        rolePrimary,
+		ScopeMajorID:       scopeMajorID,
+		MustChangePassword: mustChangePassword,
 	}
 	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	t.Header["kid"] = kid

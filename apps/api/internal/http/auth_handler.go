@@ -82,7 +82,7 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	_ = a.Cache.Del(ctx, failKey)
 	scope := a.effectiveScope(ctx, u.ID, u.RolePrimary)
-	access, jti, err := auth.NewAccessToken(uuidStr(u.ID), u.RolePrimary, scope, a.Cfg.JWT.KeyID(), a.Cfg.JWT.AccessSecret, a.Cfg.JWT.AccessTTL)
+	access, jti, err := auth.NewAccessTokenWithFlags(uuidStr(u.ID), u.RolePrimary, scope, a.Cfg.JWT.KeyID(), a.Cfg.JWT.AccessSecret, a.Cfg.JWT.AccessTTL, u.MustChangePassword)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal membuat sesi.", r))
 		return
@@ -93,15 +93,25 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	family := uuid.NewString()
-	expires := time.Now().Add(720 * time.Hour)
+	idle := a.Cfg.JWT.RefreshIdleTTL
+	if idle <= 0 {
+		idle = 168 * time.Hour
+	}
+	absolute := a.Cfg.JWT.RefreshAbsoluteTTL
+	if absolute <= 0 {
+		absolute = 720 * time.Hour
+	}
+	absoluteAt := time.Now().Add(absolute)
+	expires := time.Now().Add(idle)
 	_, err = a.Q.CreateSession(ctx, repo.CreateSessionParams{
-		UserID:      u.ID,
-		RefreshHash: hash,
-		FamilyID:    mustUUID(family),
-		DeviceLabel: toPgText(r.UserAgent()),
-		Ip:          toPgInet(ip),
-		UserAgent:   toPgText(r.UserAgent()),
-		ExpiresAt:   toPgTimestamptzTime(expires),
+		UserID:            u.ID,
+		RefreshHash:       hash,
+		FamilyID:          mustUUID(family),
+		DeviceLabel:       toPgText(r.UserAgent()),
+		Ip:                toPgInet(ip),
+		UserAgent:         toPgText(r.UserAgent()),
+		ExpiresAt:         toPgTimestamptzTime(expires),
+		AbsoluteExpiresAt: toPgTimestamptzTime(absoluteAt),
 	})
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal menyimpan sesi.", r))
@@ -110,7 +120,7 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 	_ = a.Q.TouchLastLogin(ctx, u.ID)
 	audit(ctx, a.Q, uuidStr(u.ID), "login_success", ip, r.UserAgent())
 
-	csrf := newCSRFToken(a.Cfg.JWT.CSRFSecret())
+	csrf := newCSRFToken(a.Cfg.JWT.CSRFSecret(), uuidStr(u.ID))
 	setCookie(w, "__Host-rt", plain, 30*24*3600, true, a.Secure)
 	setCookie(w, "__Host-csrf", csrf, 30*24*3600, false, a.Secure)
 	_ = jti
@@ -131,13 +141,26 @@ func (a *App) handleRefresh(w http.ResponseWriter, r *http.Request) {
 	ip := clientIP(r)
 	hash := auth.HashRefreshToken(c.Value)
 	s, err := a.Q.GetSessionByHash(ctx, hash)
-	if err != nil || s.RevokedAt.Valid || time.Now().After(s.ExpiresAt.Time) {
-		if err == nil {
-			_ = a.Q.RevokeFamily(ctx, s.FamilyID)
-			audit(ctx, a.Q, uuidStr(s.UserID), "reuse_detected", ip, r.UserAgent())
-		}
+	if err != nil {
+		clearCookie(w, "__Host-rt", a.Secure)
+		writeJSON(w, http.StatusUnauthorized, fail("UNAUTHORIZED", "Sesi tidak ditemukan.", r))
+		return
+	}
+	now := time.Now()
+	if s.RevokedAt.Valid {
+		// Token yang sudah dirotasi dipakai lagi -> indikasi pencurian.
+		_ = a.Q.RevokeFamily(ctx, s.FamilyID)
+		audit(ctx, a.Q, uuidStr(s.UserID), "reuse_detected", ip, r.UserAgent())
 		clearCookie(w, "__Host-rt", a.Secure)
 		writeJSON(w, http.StatusUnauthorized, fail("TOKEN_REUSE_DETECTED", "Sesi tidak valid. Silakan login ulang.", r))
+		return
+	}
+	if now.After(s.ExpiresAt.Time) || now.After(s.AbsoluteExpiresAt.Time) {
+		// Idle habis atau batas absolut tercapai; bukan reuse attack.
+		_ = a.Q.RevokeSession(ctx, s.ID)
+		audit(ctx, a.Q, uuidStr(s.UserID), "session_expired", ip, r.UserAgent())
+		clearCookie(w, "__Host-rt", a.Secure)
+		writeJSON(w, http.StatusUnauthorized, fail("SESSION_EXPIRED", "Sesi kedaluwarsa. Silakan login ulang.", r))
 		return
 	}
 	u, err := a.Q.GetUserByID(ctx, s.UserID)
@@ -158,17 +181,26 @@ func (a *App) handleRefresh(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback(ctx)
 	qtx := a.Q.WithTx(tx)
-	_ = qtx.RevokeSession(ctx, s.ID)
 	ipNet := toPgInet(ip)
-	_, err = qtx.CreateSession(ctx, repo.CreateSessionParams{
-		UserID:      u.ID,
-		RefreshHash: newHash,
-		FamilyID:    s.FamilyID,
-		DeviceLabel: toPgText(r.UserAgent()),
-		Ip:          ipNet,
-		UserAgent:   toPgText(r.UserAgent()),
-		ExpiresAt:   toPgTimestamptzTime(time.Now().Add(720 * time.Hour)),
+	idleTTL := a.Cfg.JWT.RefreshIdleTTL
+	if idleTTL <= 0 {
+		idleTTL = 168 * time.Hour
+	}
+	newID, err := qtx.CreateSession(ctx, repo.CreateSessionParams{
+		UserID:            u.ID,
+		RefreshHash:       newHash,
+		FamilyID:          s.FamilyID,
+		DeviceLabel:       toPgText(r.UserAgent()),
+		Ip:                ipNet,
+		UserAgent:         toPgText(r.UserAgent()),
+		ExpiresAt:         toPgTimestamptzTime(minTime(time.Now().Add(idleTTL), s.AbsoluteExpiresAt.Time)),
+		AbsoluteExpiresAt: s.AbsoluteExpiresAt,
 	})
+	if err != nil {
+		return
+	}
+	// Catat rotasi (audit trail token reuse).
+	_ = qtx.RotateSession(ctx, repo.RotateSessionParams{ID: s.ID, RotatedTo: newID})
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal refresh sesi.", r))
 		return
@@ -176,12 +208,12 @@ func (a *App) handleRefresh(w http.ResponseWriter, r *http.Request) {
 	_ = tx.Commit(ctx)
 
 	scope := a.effectiveScope(ctx, u.ID, u.RolePrimary)
-	access, _, err := auth.NewAccessToken(uuidStr(u.ID), u.RolePrimary, scope, a.Cfg.JWT.KeyID(), a.Cfg.JWT.AccessSecret, a.Cfg.JWT.AccessTTL)
+	access, _, err := auth.NewAccessTokenWithFlags(uuidStr(u.ID), u.RolePrimary, scope, a.Cfg.JWT.KeyID(), a.Cfg.JWT.AccessSecret, a.Cfg.JWT.AccessTTL, u.MustChangePassword)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal membuat sesi.", r))
 		return
 	}
-	csrf := newCSRFToken(a.Cfg.JWT.CSRFSecret())
+	csrf := newCSRFToken(a.Cfg.JWT.CSRFSecret(), uuidStr(u.ID))
 	setCookie(w, "__Host-rt", plain, 30*24*3600, true, a.Secure)
 	setCookie(w, "__Host-csrf", csrf, 30*24*3600, false, a.Secure)
 	audit(ctx, a.Q, uuidStr(u.ID), "refresh", ip, r.UserAgent())

@@ -15,15 +15,18 @@ UPDATE users SET password_hash = $2, updated_at = NOW() WHERE id = $1;
 UPDATE users SET last_login_at = NOW() WHERE id = $1;
 
 -- name: CreateSession :one
-INSERT INTO sessions (user_id, refresh_hash, family_id, device_label, ip, user_agent, expires_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id;
+INSERT INTO sessions (user_id, refresh_hash, family_id, device_label, ip, user_agent, expires_at, absolute_expires_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id;
 
 -- name: GetSessionByHash :one
-SELECT id, user_id, refresh_hash, family_id, device_label, ip, user_agent, expires_at, revoked_at, rotated_to
+SELECT id, user_id, refresh_hash, family_id, device_label, ip, user_agent, expires_at, absolute_expires_at, revoked_at, rotated_to
 FROM sessions WHERE refresh_hash = $1 LIMIT 1;
 
 -- name: RevokeSession :exec
 UPDATE sessions SET revoked_at = NOW() WHERE id = $1;
+
+-- name: RotateSession :exec
+UPDATE sessions SET revoked_at = NOW(), rotated_to = $2 WHERE id = $1;
 
 -- name: RevokeFamily :exec
 UPDATE sessions SET revoked_at = NOW() WHERE family_id = $1 AND revoked_at IS NULL;
@@ -32,7 +35,7 @@ UPDATE sessions SET revoked_at = NOW() WHERE family_id = $1 AND revoked_at IS NU
 UPDATE sessions SET revoked_at = NOW() WHERE user_id = $1 AND revoked_at IS NULL;
 
 -- name: ListUserSessions :many
-SELECT id, user_id, refresh_hash, family_id, device_label, ip, user_agent, expires_at, revoked_at, rotated_to, created_at
+SELECT id, user_id, refresh_hash, family_id, device_label, ip, user_agent, expires_at, absolute_expires_at, revoked_at, rotated_to, created_at
 FROM sessions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50;
 
 -- name: InsertAuthAudit :exec

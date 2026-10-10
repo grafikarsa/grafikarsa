@@ -21,13 +21,14 @@ import (
 type ctxKey string
 
 const (
-	ctxUserID   ctxKey = "user_id"
-	ctxRole     ctxKey = "role"
-	ctxJTI      ctxKey = "jti"
-	ctxPerms    ctxKey = "perms"
-	ctxScope    ctxKey = "scope"
-	ctxCSRF     ctxKey = "csrf_ok"
-	ctxDeviceID ctxKey = "device_id"
+	ctxUserID     ctxKey = "user_id"
+	ctxRole       ctxKey = "role"
+	ctxJTI        ctxKey = "jti"
+	ctxPerms      ctxKey = "perms"
+	ctxScope      ctxKey = "scope"
+	ctxCSRF       ctxKey = "csrf_ok"
+	ctxMustChange ctxKey = "must_change"
+	ctxDeviceID   ctxKey = "device_id"
 )
 
 func UserID(r *http.Request) string {
@@ -114,22 +115,19 @@ func clearCookie(w http.ResponseWriter, name string, secure bool) {
 	setCookie(w, name, "", -1, true, secure)
 }
 
-func newCSRFToken(secret string) string {
+// CSRF token = HMAC(secret, hari + user_id). Terikat ke user (bukan global),
+// tetap berotasi harian; terima H-1 agar sesi lintas tengah malam tetap jalan.
+func newCSRFToken(secret, userID string) string {
 	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write([]byte(time.Now().UTC().Format("2006-01-02")))
+	mac.Write([]byte(time.Now().UTC().Format("2006-01-02") + ":" + userID))
 	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 }
 
-func verifyCSRFToken(secret, token string) bool {
-	for _, day := range []string{"2006-01-02", yesterday()} {
+func verifyCSRFToken(secret, userID, token string) bool {
+	now := time.Now().UTC()
+	for _, day := range []time.Time{now, now.Add(-24 * time.Hour)} {
 		mac := hmac.New(sha256.New, []byte(secret))
-		var t time.Time
-		if day == "2006-01-02" {
-			t = time.Now().UTC()
-		} else {
-			t, _ = time.Parse("2006-01-02", day)
-		}
-		mac.Write([]byte(t.Format("2006-01-02")))
+		mac.Write([]byte(day.Format("2006-01-02") + ":" + userID))
 		if hmac.Equal([]byte(token), []byte(base64.RawURLEncoding.EncodeToString(mac.Sum(nil)))) {
 			return true
 		}

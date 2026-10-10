@@ -129,3 +129,10 @@ func twoDigits(n int) string {
 	}
 	return itoa(n)
 }
+
+func minTime(a, b time.Time) time.Time {
+	if a.Before(b) {
+		return a
+	}
+	return b
+}

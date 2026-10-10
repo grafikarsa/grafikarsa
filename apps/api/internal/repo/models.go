@@ -389,17 +389,18 @@ type SeriesBlocks struct {
 
 // Refresh token opaque (hash sha256), rotation + reuse-detection
 type Sessions struct {
-	ID          pgtype.UUID        `json:"id"`
-	UserID      pgtype.UUID        `json:"user_id"`
-	RefreshHash string             `json:"refresh_hash"`
-	FamilyID    pgtype.UUID        `json:"family_id"`
-	DeviceLabel pgtype.Text        `json:"device_label"`
-	Ip          *netip.Addr        `json:"ip"`
-	UserAgent   pgtype.Text        `json:"user_agent"`
-	ExpiresAt   pgtype.Timestamptz `json:"expires_at"`
-	RevokedAt   pgtype.Timestamptz `json:"revoked_at"`
-	RotatedTo   pgtype.UUID        `json:"rotated_to"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	ID                pgtype.UUID        `json:"id"`
+	UserID            pgtype.UUID        `json:"user_id"`
+	RefreshHash       string             `json:"refresh_hash"`
+	FamilyID          pgtype.UUID        `json:"family_id"`
+	DeviceLabel       pgtype.Text        `json:"device_label"`
+	Ip                *netip.Addr        `json:"ip"`
+	UserAgent         pgtype.Text        `json:"user_agent"`
+	ExpiresAt         pgtype.Timestamptz `json:"expires_at"`
+	RevokedAt         pgtype.Timestamptz `json:"revoked_at"`
+	RotatedTo         pgtype.UUID        `json:"rotated_to"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	AbsoluteExpiresAt pgtype.Timestamptz `json:"absolute_expires_at"`
 }
 
 type Tags struct {

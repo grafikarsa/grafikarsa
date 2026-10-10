@@ -140,7 +140,9 @@ func (a *App) handleImportStudents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	dryRun := r.URL.Query().Get("dry_run") == "true"
-	created, errors := 0, []string{}
+	created := 0
+	errors := []string{}
+	imported := []map[string]string{}
 	for i, row := range rows[1:] {
 		if len(row) < 4 {
 			errors = append(errors, "baris "+itoa(i+2)+": kolom kurang")
@@ -159,7 +161,7 @@ func (a *App) handleImportStudents(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		pw := randomPassword(12)
-		_, err := a.Q.CreateUser(r.Context(), repo.CreateUserParams{
+		uid, err := a.Q.CreateUser(r.Context(), repo.CreateUserParams{
 			Username: username, Email: email, PasswordHash: auth.HashPassword(pw),
 			Name: name, RolePrimary: role, Status: "aktif", MustChangePassword: true,
 		})
@@ -167,9 +169,22 @@ func (a *App) handleImportStudents(w http.ResponseWriter, r *http.Request) {
 			errors = append(errors, "baris "+itoa(i+2)+": duplikat/gagal")
 			continue
 		}
+		// Wajib: assign role sistem agar user punya permission dasar.
+		if rl, rerr := a.Q.GetRoleBySlug(r.Context(), role); rerr == nil && rl.Slug != "" {
+			_ = a.Q.AssignUserRole(r.Context(), repo.AssignUserRoleParams{
+				UserID: uid, RoleID: rl.ID, AssignedBy: mustUUID(UserID(r)),
+			})
+		}
+		imported = append(imported, map[string]string{"username": username, "password": pw})
 		created++
 	}
-	writeJSON(w, http.StatusOK, ok(map[string]any{"created": created, "errors": errors, "dry_run": dryRun}, r))
+	if imported == nil {
+		imported = []map[string]string{}
+	}
+	// Password awal dikembalikan SEKALI agar admin bisa membagikan ke siswa.
+	writeJSON(w, http.StatusOK, ok(map[string]any{
+		"created": created, "errors": errors, "dry_run": dryRun, "accounts": imported,
+	}, r))
 }
 
 // randomPassword: crypto/rand + pastikan ada huruf besar/kecil/angka

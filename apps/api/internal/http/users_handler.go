@@ -239,7 +239,10 @@ func (a *App) handleUpdatePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_ = a.Q.UpdatePasswordHash(r.Context(), updatePwParams(u.ID, auth.HashPassword(req.New)))
+	// Password sudah diganti: cabut flag wajib-ganti + semua sesi lain.
+	_ = a.Q.SetMustChangePassword(r.Context(), repo.SetMustChangePasswordParams{ID: u.ID, MustChangePassword: false})
 	_ = a.Q.RevokeAllUserSessions(r.Context(), u.ID)
+	auditLog(r, a, "profile.password_change", "users", uuidStr(u.ID), "")
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "ok"}, r))
 }
 

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -29,6 +30,11 @@ type JWTConfig struct {
 	AccessSecret, RefreshSecret, AccessTTL string
 	CSRFSalt                               string
 	KeyIDField, PreviousAccessSecret       string
+	RefreshAbsoluteTTL, RefreshIdleTTL     time.Duration
+}
+
+type RateLimitConfig struct {
+	Requests int
 }
 
 type TurnstileConfig struct {
@@ -40,14 +46,15 @@ type AdminSeed struct {
 }
 
 type Config struct {
-	AppEnv string
-	Domain string
-	DB     DBConfig
-	S3     S3Config
-	Cache  DragonflyConfig
-	JWT    JWTConfig
-	Turn   TurnstileConfig
-	Admin  AdminSeed
+	AppEnv    string
+	Domain    string
+	DB        DBConfig
+	S3        S3Config
+	Cache     DragonflyConfig
+	JWT       JWTConfig
+	Turn      TurnstileConfig
+	RateLimit RateLimitConfig
+	Admin     AdminSeed
 }
 
 func getEnv(key, def string) string {
@@ -104,10 +111,15 @@ func Load() (*Config, error) {
 			CSRFSalt:             getEnv("CSRF_SECRET", ""),
 			KeyIDField:           getEnv("JWT_KEY_ID", "v1"),
 			PreviousAccessSecret: getEnv("JWT_PREVIOUS_ACCESS_SECRET", ""),
+			RefreshAbsoluteTTL:   getEnvDuration("REFRESH_ABSOLUTE_TTL", 720*time.Hour),
+			RefreshIdleTTL:       getEnvDuration("REFRESH_IDLE_TTL", 168*time.Hour),
 		},
 		Admin: AdminSeed{
 			Email:    getEnv("ADMIN_SEED_EMAIL", "admin@grafikarsa.com"),
 			Password: getEnv("ADMIN_SEED_PASSWORD", ""),
+		},
+		RateLimit: RateLimitConfig{
+			Requests: getEnvInt("RATE_LIMIT_REQUESTS", 100),
 		},
 		Turn: TurnstileConfig{
 			SiteKey:   getEnv("TURNSTILE_SITE_KEY", ""),
@@ -159,4 +171,16 @@ func (c *JWTConfig) VerificationKeys() []string {
 		keys = append(keys, c.PreviousAccessSecret)
 	}
 	return keys
+}
+
+func getEnvDuration(key string, def time.Duration) time.Duration {
+	v := os.Getenv(key)
+	if v == "" {
+		return def
+	}
+	d, err := time.ParseDuration(v)
+	if err != nil {
+		return def
+	}
+	return d
 }

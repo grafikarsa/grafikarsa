@@ -25,6 +25,8 @@ func (a *App) routes() http.Handler {
 	})
 	r.Get("/ready", a.handleReady)
 	r.Route("/v1", func(r chi.Router) {
+		// Rate limit per IP (gate ganti-password ada di authRequired).
+		r.Use(a.rateLimit)
 		r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusOK, ok(map[string]string{"status": "ok"}, r))
 		})
@@ -33,10 +35,10 @@ func (a *App) routes() http.Handler {
 			r.Post("/refresh", a.handleRefresh)
 			r.Group(func(r chi.Router) {
 				r.Use(a.authRequired)
-				r.Post("/logout", a.handleLogout)
-				r.Post("/logout-all", a.handleLogoutAll)
+				r.Post("/logout", a.csrf(a.handleLogout))
+				r.Post("/logout-all", a.csrf(a.handleLogoutAll))
 				r.Get("/sessions", a.handleSessions)
-				r.Delete("/sessions/{id}", a.handleDeleteSession)
+				r.Delete("/sessions/{id}", a.csrf(a.handleDeleteSession))
 			})
 		})
 		r.Group(func(r chi.Router) {
@@ -166,10 +168,10 @@ func (a *App) routes() http.Handler {
 		r.Route("/portfolios", func(r chi.Router) {
 			r.With(a.authOptional).Get("/", a.handleListPublished)
 			r.With(a.authOptional).Get("/by-slug", a.handleGetPortfolioBySlug)
+			r.With(a.authOptional).Get("/id/{id}", a.handleGetPortfolio)
 			r.Group(func(r chi.Router) {
 				r.Use(a.authRequired)
 				r.With(a.requirePerm("portfolios.create")).Post("/", a.csrf(a.handleCreatePortfolio))
-				r.Get("/id/{id}", a.handleGetPortfolio)
 				r.Patch("/id/{id}", a.csrf(a.handleUpdatePortfolio))
 				r.Delete("/id/{id}", a.csrf(a.handleDeletePortfolio))
 				r.Post("/id/{id}/submit", a.csrf(a.handleSubmitPortfolio))
@@ -230,7 +232,7 @@ func (a *App) routes() http.Handler {
 			r.Get("/feedback/{id}", a.handleGetFeedback)
 			r.Post("/feedback/{id}/reply", a.csrf(a.handleReplyFeedback))
 			r.Post("/feedback/{id}/vote", a.csrf(a.handleVoteFeedback))
-			r.Post("/changelogs/{id}/read", a.handleReadChangelog)
+			r.Post("/changelogs/{id}/read", a.csrf(a.handleReadChangelog))
 		})
 		r.Group(func(r chi.Router) {
 			r.Use(a.authRequired)

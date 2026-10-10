@@ -182,18 +182,19 @@ func (q *Queries) CreateRole(ctx context.Context, arg CreateRoleParams) (pgtype.
 }
 
 const createSession = `-- name: CreateSession :one
-INSERT INTO sessions (user_id, refresh_hash, family_id, device_label, ip, user_agent, expires_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id
+INSERT INTO sessions (user_id, refresh_hash, family_id, device_label, ip, user_agent, expires_at, absolute_expires_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id
 `
 
 type CreateSessionParams struct {
-	UserID      pgtype.UUID        `json:"user_id"`
-	RefreshHash string             `json:"refresh_hash"`
-	FamilyID    pgtype.UUID        `json:"family_id"`
-	DeviceLabel pgtype.Text        `json:"device_label"`
-	Ip          *netip.Addr        `json:"ip"`
-	UserAgent   pgtype.Text        `json:"user_agent"`
-	ExpiresAt   pgtype.Timestamptz `json:"expires_at"`
+	UserID            pgtype.UUID        `json:"user_id"`
+	RefreshHash       string             `json:"refresh_hash"`
+	FamilyID          pgtype.UUID        `json:"family_id"`
+	DeviceLabel       pgtype.Text        `json:"device_label"`
+	Ip                *netip.Addr        `json:"ip"`
+	UserAgent         pgtype.Text        `json:"user_agent"`
+	ExpiresAt         pgtype.Timestamptz `json:"expires_at"`
+	AbsoluteExpiresAt pgtype.Timestamptz `json:"absolute_expires_at"`
 }
 
 func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (pgtype.UUID, error) {
@@ -205,6 +206,7 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (p
 		arg.Ip,
 		arg.UserAgent,
 		arg.ExpiresAt,
+		arg.AbsoluteExpiresAt,
 	)
 	var id pgtype.UUID
 	err := row.Scan(&id)
@@ -396,21 +398,22 @@ func (q *Queries) GetRoleBySlug(ctx context.Context, slug string) (GetRoleBySlug
 }
 
 const getSessionByHash = `-- name: GetSessionByHash :one
-SELECT id, user_id, refresh_hash, family_id, device_label, ip, user_agent, expires_at, revoked_at, rotated_to
+SELECT id, user_id, refresh_hash, family_id, device_label, ip, user_agent, expires_at, absolute_expires_at, revoked_at, rotated_to
 FROM sessions WHERE refresh_hash = $1 LIMIT 1
 `
 
 type GetSessionByHashRow struct {
-	ID          pgtype.UUID        `json:"id"`
-	UserID      pgtype.UUID        `json:"user_id"`
-	RefreshHash string             `json:"refresh_hash"`
-	FamilyID    pgtype.UUID        `json:"family_id"`
-	DeviceLabel pgtype.Text        `json:"device_label"`
-	Ip          *netip.Addr        `json:"ip"`
-	UserAgent   pgtype.Text        `json:"user_agent"`
-	ExpiresAt   pgtype.Timestamptz `json:"expires_at"`
-	RevokedAt   pgtype.Timestamptz `json:"revoked_at"`
-	RotatedTo   pgtype.UUID        `json:"rotated_to"`
+	ID                pgtype.UUID        `json:"id"`
+	UserID            pgtype.UUID        `json:"user_id"`
+	RefreshHash       string             `json:"refresh_hash"`
+	FamilyID          pgtype.UUID        `json:"family_id"`
+	DeviceLabel       pgtype.Text        `json:"device_label"`
+	Ip                *netip.Addr        `json:"ip"`
+	UserAgent         pgtype.Text        `json:"user_agent"`
+	ExpiresAt         pgtype.Timestamptz `json:"expires_at"`
+	AbsoluteExpiresAt pgtype.Timestamptz `json:"absolute_expires_at"`
+	RevokedAt         pgtype.Timestamptz `json:"revoked_at"`
+	RotatedTo         pgtype.UUID        `json:"rotated_to"`
 }
 
 func (q *Queries) GetSessionByHash(ctx context.Context, refreshHash string) (GetSessionByHashRow, error) {
@@ -425,6 +428,7 @@ func (q *Queries) GetSessionByHash(ctx context.Context, refreshHash string) (Get
 		&i.Ip,
 		&i.UserAgent,
 		&i.ExpiresAt,
+		&i.AbsoluteExpiresAt,
 		&i.RevokedAt,
 		&i.RotatedTo,
 	)
@@ -702,19 +706,34 @@ func (q *Queries) ListSocialLinks(ctx context.Context, userID pgtype.UUID) ([]Li
 }
 
 const listUserSessions = `-- name: ListUserSessions :many
-SELECT id, user_id, refresh_hash, family_id, device_label, ip, user_agent, expires_at, revoked_at, rotated_to, created_at
+SELECT id, user_id, refresh_hash, family_id, device_label, ip, user_agent, expires_at, absolute_expires_at, revoked_at, rotated_to, created_at
 FROM sessions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50
 `
 
-func (q *Queries) ListUserSessions(ctx context.Context, userID pgtype.UUID) ([]Sessions, error) {
+type ListUserSessionsRow struct {
+	ID                pgtype.UUID        `json:"id"`
+	UserID            pgtype.UUID        `json:"user_id"`
+	RefreshHash       string             `json:"refresh_hash"`
+	FamilyID          pgtype.UUID        `json:"family_id"`
+	DeviceLabel       pgtype.Text        `json:"device_label"`
+	Ip                *netip.Addr        `json:"ip"`
+	UserAgent         pgtype.Text        `json:"user_agent"`
+	ExpiresAt         pgtype.Timestamptz `json:"expires_at"`
+	AbsoluteExpiresAt pgtype.Timestamptz `json:"absolute_expires_at"`
+	RevokedAt         pgtype.Timestamptz `json:"revoked_at"`
+	RotatedTo         pgtype.UUID        `json:"rotated_to"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+}
+
+func (q *Queries) ListUserSessions(ctx context.Context, userID pgtype.UUID) ([]ListUserSessionsRow, error) {
 	rows, err := q.db.Query(ctx, listUserSessions, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Sessions{}
+	items := []ListUserSessionsRow{}
 	for rows.Next() {
-		var i Sessions
+		var i ListUserSessionsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
@@ -724,6 +743,7 @@ func (q *Queries) ListUserSessions(ctx context.Context, userID pgtype.UUID) ([]S
 			&i.Ip,
 			&i.UserAgent,
 			&i.ExpiresAt,
+			&i.AbsoluteExpiresAt,
 			&i.RevokedAt,
 			&i.RotatedTo,
 			&i.CreatedAt,
@@ -908,6 +928,20 @@ UPDATE sessions SET revoked_at = NOW() WHERE id = $1
 
 func (q *Queries) RevokeSession(ctx context.Context, id pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, revokeSession, id)
+	return err
+}
+
+const rotateSession = `-- name: RotateSession :exec
+UPDATE sessions SET revoked_at = NOW(), rotated_to = $2 WHERE id = $1
+`
+
+type RotateSessionParams struct {
+	ID        pgtype.UUID `json:"id"`
+	RotatedTo pgtype.UUID `json:"rotated_to"`
+}
+
+func (q *Queries) RotateSession(ctx context.Context, arg RotateSessionParams) error {
+	_, err := q.db.Exec(ctx, rotateSession, arg.ID, arg.RotatedTo)
 	return err
 }
 
