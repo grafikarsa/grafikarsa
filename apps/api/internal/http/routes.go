@@ -103,6 +103,7 @@ func (a *App) routes() http.Handler {
 				r.With(a.requirePerm("roles.assign")).Post("/assign", a.csrf(a.handleAssignRole))
 				r.With(a.requirePerm("roles.assign")).Delete("/assign", a.csrf(a.handleUnassignRole))
 			})
+			r.With(a.requirePerm("users.view")).Get("/audit-logs", a.handleAuditLogs)
 		})
 		r.Group(func(r chi.Router) {
 			r.Use(a.authRequired)
