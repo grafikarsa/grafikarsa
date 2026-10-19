@@ -11,6 +11,47 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+// Cache-Control untuk respons REDIRECT (bukan media). Respons 301 boleh
+// di-cache bersama supaya URL lama tidak lookup tiap permintaan; 410 (Gone)
+// lebih pendek supaya crawler cepat berhenti.
+const (
+	cacheControlRedirect     = "public, max-age=31536000, immutable"
+	cacheControlRedirectGone = "public, max-age=86400"
+)
+
+// isPublicPurpose: purpose media yang boleh diakses & di-cache publik.
+//
+// Avatar, banner, dan cover changelog memang publik. Sisanya (thumbnail,
+// block_image, document, feedback) privat: hanya boleh diambil owner,
+// moderator, atau bila sudah dipakai portfolio published.
+//
+// Helper dipakai di SEMUA jalur serve supaya daftar ini tidak berbeda antar
+// jalur — dulu Inline di dua tempat sehingga rawan melenceng.
+func isPublicPurpose(purpose string) bool {
+	switch purpose {
+	case "avatar", "banner", "changelog_cover":
+		return true
+	}
+	return false
+}
+
+// cacheControlFor: kebijakan cache respons media.
+//
+// Konten publik (avatar, banner, cover changelog) boleh di-cache lama karena
+// object key-nya content-addressed (sha256) — file di lokasi itu tidak pernah
+// berubah. Konten privat (block image, thumbnail, dokumen) WAJIB "private":
+// kalau header "public" bocor ke proxy/CDN/browser, file privat portfolio
+// bisa diambil pihak lain.
+//
+// Helper ini dipakai di SEMUA jalur serve (by-id, by-key, preview, redirect
+// URL lama) supaya politiknya identik — dulu jalur by-key selalu "public".
+func cacheControlFor(public bool) string {
+	if public {
+		return "public, max-age=31536000, immutable"
+	}
+	return "private, max-age=300"
+}
+
 // bodyReaderAt membungkus ReadCloser menjadi io.ReaderAt sehingga
 // http.ServeContent bisa memakai Range tanpa menahan seluruh file di memori.
 func bodyReaderAt(rc io.ReadCloser) io.ReaderAt {
@@ -66,7 +107,7 @@ func (a *App) handleServeMedia(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Media tidak ditemukan.", r))
 		return
 	}
-	publicPurpose := m.Purpose == "avatar" || m.Purpose == "banner" || m.Purpose == "changelog_cover"
+	publicPurpose := isPublicPurpose(m.Purpose)
 	if !publicPurpose {
 		used, _ := a.Q.MediaUsedInPublishedPortfolio(r.Context(), m.ID)
 		ownerView := UserID(r) != "" && (uuidStr(m.OwnerID) == UserID(r) || UserRole(r) == "admin" || UserPerms(r)["portfolios.moderate"])
@@ -97,28 +138,9 @@ func (a *App) handleServeMedia(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	body, err := a.Storage.Get(r.Context(), key)
-	if err != nil {
-		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "File tidak ditemukan.", r))
-		return
-	}
-	defer body.Close()
-	// Streaming: jangan membaca seluruh file ke memori (media bisa puluhan MB).
-	size, err := a.Storage.Size(r.Context(), key)
-	if err != nil || size <= 0 {
-		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "File tidak ditemukan.", r))
-		return
-	}
-	reader := io.NewSectionReader(bodyReaderAt(body), 0, size)
-	w.Header().Set("Content-Type", m.Mime)
-	w.Header().Set("ETag", `"`+m.ChecksumSha256+`"`)
-	if publicPurpose {
-		// Konten publik boleh di-cache lama; konten privat tidak.
-		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-	} else {
-		w.Header().Set("Cache-Control", "private, max-age=300")
-	}
-	http.ServeContent(w, r, key, time.Now(), reader)
+	// Satu jalur serve untuk semua media: cache policy, ETag, dan Range
+	// ditangani di serveObject supaya tidak bisa berbeda antar handler.
+	a.serveObject(w, r, key, m.Mime, m.ChecksumSha256, publicPurpose, "")
 }
 
 // handleServeMediaByKey melayani file via object key ( dipakai redirect 301
@@ -136,7 +158,7 @@ func (a *App) handleServeMediaByKey(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Media tidak ditemukan.", r))
 		return
 	}
-	publicPurpose := m.Purpose == "avatar" || m.Purpose == "banner" || m.Purpose == "changelog_cover"
+	publicPurpose := isPublicPurpose(m.Purpose)
 	if !publicPurpose {
 		used, _ := a.Q.MediaUsedInPublishedPortfolio(r.Context(), m.ID)
 		ownerView := UserID(r) != "" && (uuidStr(m.OwnerID) == UserID(r) || UserRole(r) == "admin" || UserPerms(r)["portfolios.moderate"])
@@ -149,22 +171,10 @@ func (a *App) handleServeMediaByKey(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	body, err := a.Storage.Get(r.Context(), m.ObjectKey)
-	if err != nil {
-		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "File tidak ditemukan.", r))
-		return
-	}
-	defer body.Close()
-	size, serr := a.Storage.Size(r.Context(), m.ObjectKey)
-	if serr != nil || size <= 0 {
-		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "File tidak ditemukan.", r))
-		return
-	}
-	reader := io.NewSectionReader(bodyReaderAt(body), 0, size)
-	w.Header().Set("Content-Type", m.Mime)
-	w.Header().Set("ETag", `"`+m.ChecksumSha256+`"`)
-	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-	http.ServeContent(w, r, m.ObjectKey, time.Now(), reader)
+	// Jalur by-key dipakai juga oleh redirect 301 URL lama, jadi media privat
+	// portfolio tidak boleh keluar dengan header cache publik. serveObject
+	// menerapkan cacheControlFor yang sama seperti jalur by-id.
+	a.serveObject(w, r, m.ObjectKey, m.Mime, m.ChecksumSha256, publicPurpose, "")
 }
 
 // handleLegacyStorageRedirect menerima URL lama /storage/* (PRD §16.1):
@@ -178,7 +188,7 @@ func (a *App) handleLegacyStorageRedirect(w http.ResponseWriter, r *http.Request
 		// Coba juga dengan host apa adanya (tanpa asumsi domain).
 		leg, err = a.Q.GetLegacyURL(r.Context(), r.URL.Path)
 		if err != nil {
-			w.Header().Set("Cache-Control", "public, max-age=86400")
+			w.Header().Set("Cache-Control", cacheControlRedirectGone)
 			writeJSON(w, http.StatusGone, fail("GONE", "File lama sudah tidak tersedia.", r))
 			return
 		}
@@ -196,12 +206,12 @@ func (a *App) handleLegacyStorageRedirect(w http.ResponseWriter, r *http.Request
 			}
 			objectKey = m.ObjectKey
 		}
-		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		w.Header().Set("Cache-Control", cacheControlRedirect)
 		http.Redirect(w, r, "/v1/media/by-key/"+objectKey, http.StatusMovedPermanently)
 		return
 	}
 	if leg.ObjectKey.Valid {
-		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		w.Header().Set("Cache-Control", cacheControlRedirect)
 		http.Redirect(w, r, "/v1/media/by-key/"+leg.ObjectKey.String, http.StatusMovedPermanently)
 		return
 	}
@@ -226,11 +236,7 @@ func (a *App) serveObject(w http.ResponseWriter, r *http.Request, key, mime, eta
 	if etag != "" {
 		w.Header().Set("ETag", `"`+etag+`"`)
 	}
-	if public {
-		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-	} else {
-		w.Header().Set("Cache-Control", "private, max-age=300")
-	}
+	w.Header().Set("Cache-Control", cacheControlFor(public))
 	if filename != "" {
 		w.Header().Set("Content-Disposition", "inline; filename=\"`+filename+`\"")
 	}
