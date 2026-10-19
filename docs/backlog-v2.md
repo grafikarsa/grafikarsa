@@ -271,7 +271,7 @@ di-edit manual dan diverifikasi **identik** dengan format output sqlc v1.31.1
 
 **Pelajaran (dari temuan CodeRabbit di PR #23):**
 - Config gitleaks yang disuplai **mengganti** default rules, bukan menyatuinya. Wajib `[extend] useDefault = true`.
-- Dalam satu blok `[[allowlists]]`, kondisi `paths`/`regexes` di-OR-kan → `paths` membebaskan seluruh file. Pakai regex saja.
+- Dalam satu blok `[[allowlists]]`, kondisi `paths`/`regexes` di-OR-kan → `paths` membebaskan seluruh file. **Set `condition = "AND"`** (gitleaks v8.30.1 mendukungnya) supaya hanya token spesifik di path spesifik yang dikecualikan.
 - **Setiap config scanner harus punya self-test** (sisipkan secret palsu → pastikan terdeteksi). Tanpa itu, config salah tetap hijau.
 - Gitleaks memindai **history**: string yang pernah masuk commit akan tetap terflag meski sudah dihapus dari working tree.
 - Kalau butuh string high-entropy di file CI, **generate saat runtime** — jangan tulis literal (self-referential).
