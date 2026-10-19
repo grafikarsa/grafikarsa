@@ -1,0 +1,49 @@
+title = "Grafikarsa — konfigurasi gitleaks"
+
+# Rules bawaan gitleaks WAJIB diaktifkan.
+#
+# Tanpa blok [extend] useDefault = true, file konfigurasi ini akan MENGGANTI
+# seluruh default rules — konfigurasi jadi tidak punya aturan sama sekali dan
+# gitleaks selalu melaporkan "no leaks found" apa pun isinya. Itu sempat
+# terjadi: config versi lama hanya berisi [[allowlists]] tanpa [extend], dan
+# scan di CI hijau padahal tidak memindai apa pun.
+#
+# Self-test di .github/workflows/ci.yml ("gitleaks self-test") menyisipkan
+# secret palsu lalu memastikan gitleaks MENEMUKANNYA, sehingga regresi ini
+# ketahuan otomatis.
+[extend]
+useDefault = true
+
+# Allowlist dibatasi SECARA GANDA: hanya token JWT contoh yang dipotong
+# literal dengan "...", DAN hanya di tiga file dokumentasi v1 tersebut.
+#
+# condition = "AND" itu wajib. Tanpa itu (default-nya "OR"), satu path yang
+# cocok sudah cukup membebaskan SELURUH secret di file itu — termasuk
+# secret asli yang kebetulan ada di file yang sama. Dengan "AND", secret
+# asli di ketiga path itu tetap terdeteksi.
+#
+# Asal temuan: dokumentasi v1 memuat contoh access_token berbentuk JWT yang
+# dipotong jadi "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...". Nilai itu bukan
+# kredensial nyata, tapi aturan generic-api-key menandainya karena entropy
+# header JWT tinggi. Ketiga file sudah dihapus di v2, jadi allowlist ini
+# praktis hanya berlaku untuk versi historis file-file tersebut.
+#
+# Regex hanya cocok untuk nilai yang PERSIS berakhiran "..."; token JWT
+# asli tidak pernah berakhir seperti itu.
+[[allowlists]]
+description = """
+Contoh access_token pada dokumentasi v1: nilai JWT yang dipotong literal
+dengan "...", bukan kredensial nyata (false positive aturan generic-api-key
+karena entropy header JWT tinggi). Hanya dikecualikan di file-file yang
+tertentu (condition AND), bukan untuk seluruh secret di file itu.
+"""
+paths = [
+  '''^docs/api\.md$''',
+  '''^docs/api/api\.md$''',
+  '''^docs/jwt/jwt-implementation\.md$''',
+]
+regexes = [
+  '''^eyJhbGciOiJIUzI1NiIs(InR5cCI6IkpXVCJ9)?\.\.\.$''',
+]
+regexTarget = "secret"
+condition = "AND"

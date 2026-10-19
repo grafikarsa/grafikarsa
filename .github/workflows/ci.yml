@@ -45,6 +45,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
+        with:
+          # Tidak ada package.json di root repo, jadi pnpm/action-setup tidak
+          # bisa membaca field "packageManager". Versi dictate eksplisit (pnpm
+          # 10, sama dengan apps/web/Dockerfile).
+          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -75,10 +80,76 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      # gitleaks-action@v2 mewajibkan GITLEAKS_LICENSE untuk repositori
+      # organisasi, jadi binary resmi dipasang langsung (tanpa license).
+      # Allowlist sempit ada di .gitleaks.toml.
+      - name: Install gitleaks
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz \
+            | tar -xz -C /usr/local/bin gitleaks
+          gitleaks version
       - name: gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gitleaks detect --source . --redact --verbose --exit-code 1
+      # Self-test: buktikan bahwa scan di atas benar-benar aktif.
+      #
+      # Tanpa langkah ini, konfigurasi gitleaks yang salah (mis. [[allowlists]]
+      # tanpa [extend] useDefault, sehingga tidak ada rules yang aktif) akan
+      # selalu melaporkan "no leaks found" dan job tetap hijau — persis yang
+      # pernah terjadi. Self-test menyisipkan secret palsu ke repo sementara
+      # memakai .gitleaks.toml yang SAMA dengan yang dipakai scan utama, lalu
+      # mewajibkan gitleaks MENEMUKAN secret itu.
+      - name: gitleaks self-test (pastikan rules aktif)
+        run: |
+          set -euo pipefail
+          T=$(mktemp -d)
+          cp "$GITHUB_WORKSPACE/.gitleaks.toml" "$T/.gitleaks.toml"
+          cd "$T"
+          git init -q .
+          # Secret di-generate saat runtime. Kalau literal-nya ditulis di file
+          # ini, gitleaks akan menandainya sebagai temuan (self-referential) dan
+          # repo sendiri tidak akan pernah bisa hijau.
+          #
+          # PENTING: jangan pakai `head -c N` di ujung pipeline — head menutup
+          # pipe duluan, producer-nya dapat SIGPIPE dan hasilnya bisa kosong.
+          # Nilai kosong TIDAK dipindai gitleaks, jadi self-test akan gagal
+          # secara acak. Karena itu pipe-nya ditutup di ujung (tr), bukan di head,
+          # dan panjang secret-nya diverifikasi sebelum dipakai.
+          if command -v openssl >/dev/null 2>&1; then
+            SECRET="$(openssl rand -base64 32 | tr -dc 'A-Za-z0-9')"
+          else
+            SECRET="$(cat /dev/urandom | base64 | tr -dc 'A-Za-z0-9')"
+          fi
+          if [ "${#SECRET}" -lt 32 ]; then
+            echo "FATAL: gagal membuat secret self-test (panjang=${#SECRET})"
+            exit 1
+          fi
+          printf 'api_key = "%s"\n' "$SECRET" > planted-secret.txt
+          # Pastikan secret benar-benar tertulis sebelum dipindai.
+          grep -qF "$SECRET" planted-secret.txt || {
+            echo "FATAL: secret self-test tidak tertulis ke file"; exit 1; }
+          git add -A
+          git -c user.email=ci@local -c user.name=ci commit -qm "self-test"
+          # Exit code gitleaks dipakai sebagai pembuktian, bukan sekadar
+          # "tidak nol = sukses". Ada tiga kemungkinan:
+          #   0  -> tidak ada temuan  -> rules TIDAK aktif (gagal)
+          #   99 -> ada temuan        -> inilah yang harus dibuktikan (sukses)
+          #   >1 -> gitleaks error    -> config rusak/git error/flag salah (gagal)
+          # Kalau hanya "exit != 0 berarti sukses", error gitleaks ikut lolos
+          # dan self-testfirmasi tanpa membuktikan apa pun.
+          set +e
+          gitleaks detect --source . --no-banner --redact --exit-code 99 >"$T/gitleaks.log" 2>&1
+          rc=$?
+          set -e
+          if [ "$rc" -eq 0 ]; then
+            echo "FATAL: gitleaks TIDAK menemukan secret yang disisipkan."
+            echo "       Rules kemungkinan tidak aktif — cek [extend] useDefault di .gitleaks.toml"
+            exit 1
+          elif [ "$rc" -ne 99 ]; then
+            echo "FATAL: gitleaks error (exit=$rc), bukan temuan:"
+            cat "$T/gitleaks.log"
+            exit 1
+          fi
+          echo "gitleaks self-test OK: rules aktif dan secret terdeteksi"
 
   compose-validate:
     runs-on: ubuntu-latest

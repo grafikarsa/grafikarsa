@@ -62,7 +62,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Trivy scan (blocking on HIGH/CRITICAL fixable)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.28.0
         with:
           image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-api:sha-${{ github.sha }}
           severity: HIGH,CRITICAL
