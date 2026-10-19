@@ -155,6 +155,11 @@
 - [ ] **P2-14** Sliding-window rate limit tidak ada (fixed window `IncrWithExpire`) — PRD §6.2
   - Status: ⬜
 - [ ] **P2-15** `clock` injectable tidak ada (`time.Now()` langsung di 7 file handler) — PRD §13.2
+- [ ] **P2-16** Empat check schemathesis dikecualikan dari contract test: `status_code_conformance`, `missing_required_header`, `unsupported_method`, `content_type_conformance`
+  - Semua complained **kelengkapan dokumentasi spec**, bukan pelanggaran kontrak: 404 untuk resource yang belum ada, 405 untuk method yang tidak di-deklarasikan, 401-vs-404 untuk endpoint publik berpath param
+  - Menutupnya butuh dokumentasi status per-endpoint (generator tidak tahu perilaku tiap handler)
+  - Check yang **tetap diuji** (semua lulus): `response_schema_conformance`, `response_headers_conformance`, `not_a_server_error`, `negative_data_rejection`, `use_after_free`
+  - Ditemukan saat menyiapkan job CI contract test (Sprint 3)
   - Status: ⬜
 
 ---
