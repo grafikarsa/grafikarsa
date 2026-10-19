@@ -193,6 +193,15 @@ func (a *App) handleReplyFeedback(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Thread tidak ditemukan.", r))
 		return
 	}
+	// Anti-abuse: balasan guest dibatasi 10/jam per thread+IP. Tanpa ini
+	// thread publik bisa dispambalas tanpa perlu akun.
+	if UserID(r) == "" && hasGuestToken {
+		key := "feedback:reply:" + uuidStr(t.ID) + ":" + clientIP(r)
+		if n, _ := a.Cache.IncrWithExpire(r.Context(), key, time.Hour); n > 10 {
+			writeJSON(w, http.StatusTooManyRequests, fail("TOO_MANY_REQUESTS", "Terlalu banyak balasan. Coba lagi nanti.", r))
+			return
+		}
+	}
 	var req struct {
 		Body       string `json:"body"`
 		IsInternal bool   `json:"is_internal"`
