@@ -184,6 +184,7 @@
   - 🔴 **KOREKSI (temuan CodeRabbit):** config `.gitleaks.toml` versi awal **tidak memuat default rules** (butuh `[extend] useDefault = true`) → job selalu hijau tanpa memindai apa pun. Diperbaiki di `061ab00` + **self-test CI** yang menyisipkan secret palsu dan mewajibkan gitleaks menemukannya
   - 🔴 **KOREKSI 2 (komentar inline CodeRabbit):** dalam satu blok `[[allowlists]]` kondisi `paths`/`regexes` di-OR-kan → `paths` membebaskan seluruh file. Diperbaiki di `dc47a5d` dengan `condition = "AND"` (paths + regex harus dua-duanya cocok)
   - 🔴 **KOREKSI 3:** self-test sempat flaky (secret kosong akibat SIGPIPE di `head -c N` ujung pipeline). Diperbaiki di `bb8cadc` → 30x berturut-turut tanpa kegagalan
+  - 🔴 **KOREKSI 4 (komentar inline CodeRabbit):** logika lama menganggap *exit non-nol apa pun* = "berhasil", padahal gitleaks juga exit non-nol karena **error** (config parse, flag salah, git error) → guard bisa false-pass. Diperbaiki di `6fd14d7` dengan `--exit-code 99`: 0 = rules mati (gagal), 99 = temuan (sukses), >1 = error (gagal + diagnosa)
   - Catatan: config yang benar → 243 commit → 0 temuan, rules terbukti aktif lewat self-test (positive & negative test)
 
 ---
@@ -274,7 +275,7 @@ di-edit manual dan diverifikasi **identik** dengan format output sqlc v1.31.1
 **Pelajaran (dari temuan CodeRabbit di PR #23):**
 - Config gitleaks yang disuplai **mengganti** default rules, bukan menyatuinya. Wajib `[extend] useDefault = true`.
 - Dalam satu blok `[[allowlists]]`, kondisi `paths`/`regexes` di-OR-kan → `paths` membebaskan seluruh file. **Set `condition = "AND"`** (gitleaks v8.30.1 mendukungnya) supaya hanya token spesifik di path spesifik yang dikecualikan.
-- **Setiap config scanner harus punya self-test** (sisipkan secret palsu → pastikan terdeteksi). Tanpa itu, config salah tetap hijau. Self-test juga harus **deterministik**: jangan pakai `head -c N` di ujung pipeline (head menutup pipe duluan → producer dapat SIGPIPE → secret bisa kosong → tidak dipindai → self-test gagal acak). Tutup pipeline di ujung (`tr`), verifikasi panjang secret, dan pastikan isinya benar-benar tertulis. Guard yang flaky ≈ tidak ada guard.
+- **Setiap config scanner harus punya self-test** (sisipkan secret palsu → pastikan terdeteksi). Tanpa itu, config salah tetap hijau. Dan self-test harus **membedakan "temuan" dari "error"** — pakai `--exit-code <kode_khusus>` dan terima HANYA kode itu; "exit != 0 berarti sukses" membuat guard false-pass saat tool-nya error. Self-test juga harus **deterministik**: jangan pakai `head -c N` di ujung pipeline (head menutup pipe duluan → producer dapat SIGPIPE → secret bisa kosong → tidak dipindai → self-test gagal acak). Tutup pipeline di ujung (`tr`), verifikasi panjang secret, dan pastikan isinya benar-benar tertulis. Guard yang flaky ≈ tidak ada guard.
 - Gitleaks memindai **history**: string yang pernah masuk commit akan tetap terflag meski sudah dihapus dari working tree. Kalau string sintetis sempat masuk history branch yang belum ter-merge, rewrite history-nya (`--force-with-lease`).
 - Kalau butuh string high-entropy di file CI, **generate saat runtime** — jangan tulis literal (self-referential).
 
