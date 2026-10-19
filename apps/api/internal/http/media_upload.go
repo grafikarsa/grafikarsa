@@ -154,7 +154,7 @@ func (a *App) handleUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	defer f.Close()
 	if hdr.Size > limit {
-		writeJSON(w, http.StatusUnprocessableEntity, fail("FILE_TOO_LARGE", fmt.Sprintf("Maksimal %dMB.", limit>>20), r))
+		writeJSON(w, http.StatusUnprocessableEntity, fail("FILE_TOO_LARGE", fmt.Sprintf("Maksimal %dMB.", limit/(1<<20)), r))
 		return
 	}
 	head := make([]byte, 512)

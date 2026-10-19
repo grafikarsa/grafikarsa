@@ -52,7 +52,7 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 	failKey := "login:fail:" + req.Username + ":" + ip
 	lockKey := "login:lock:" + req.Username + ":" + ip
 	if locked, _ := a.Cache.Exists(ctx, lockKey); locked {
-		writeJSON(w, http.StatusTooManyRequests, fail("ACCOUNT_LOCKED", "Terkunci 30 menit karena terlalu banyak percobaan.", r))
+		writeJSON(w, http.StatusTooManyRequests, fail("ACCOUNT_LOCKED", "Terkunci 15 menit karena terlalu banyak percobaan.", r))
 		return
 	}
 	// Hitung percobaan yang ada (jangan menambah dulu: penambahan hanya saat
