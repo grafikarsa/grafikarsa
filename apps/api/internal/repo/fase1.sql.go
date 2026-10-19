@@ -44,7 +44,9 @@ func (q *Queries) AddSocialLink(ctx context.Context, arg AddSocialLinkParams) er
 
 const assignUserRole = `-- name: AssignUserRole :exec
 INSERT INTO user_roles (user_id, role_id, scope_major_id, assigned_by, expires_at)
-VALUES ($1, $2, $3, $4, $5) ON CONFLICT (user_id, role_id) DO UPDATE SET scope_major_id = EXCLUDED.scope_major_id, expires_at = EXCLUDED.expires_at
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (user_id, role_id, scope_major_id) DO UPDATE
+  SET assigned_by = EXCLUDED.assigned_by, expires_at = EXCLUDED.expires_at
 `
 
 type AssignUserRoleParams struct {
@@ -55,6 +57,9 @@ type AssignUserRoleParams struct {
 	ExpiresAt    pgtype.Timestamptz `json:"expires_at"`
 }
 
+// Upsert pada (user_id, role_id, scope_major_id). Assignment dengan scope
+// yang sama diperpanjang (assigned_by + expires_at diperbarui); assignment
+// dengan scope berbeda menjadi baris baru, bukan menimpa scope lama diam-diam.
 func (q *Queries) AssignUserRole(ctx context.Context, arg AssignUserRoleParams) error {
 	_, err := q.db.Exec(ctx, assignUserRole,
 		arg.UserID,
@@ -367,6 +372,26 @@ func (q *Queries) DeleteTagIfUnused(ctx context.Context, id pgtype.UUID) (pgtype
 	var id_2 pgtype.UUID
 	err := row.Scan(&id_2)
 	return id_2, err
+}
+
+const deleteUserRoleOtherScope = `-- name: DeleteUserRoleOtherScope :exec
+DELETE FROM user_roles
+WHERE user_id = $1 AND role_id = $2 AND scope_major_id IS DISTINCT FROM $3
+`
+
+type DeleteUserRoleOtherScopeParams struct {
+	UserID       pgtype.UUID `json:"user_id"`
+	RoleID       pgtype.UUID `json:"role_id"`
+	ScopeMajorID pgtype.UUID `json:"scope_major_id"`
+}
+
+// Assignment role yang sama dengan scope lain dibuang. Satu user hanya boleh
+// punya satu scope per role: users.major_id juga kolom tunggal, jadi dua
+// scope untuk role yang sama akan saling bertentangan (hanya satu yang bisa
+// dipakai untuk row-level filtering).
+func (q *Queries) DeleteUserRoleOtherScope(ctx context.Context, arg DeleteUserRoleOtherScopeParams) error {
+	_, err := q.db.Exec(ctx, deleteUserRoleOtherScope, arg.UserID, arg.RoleID, arg.ScopeMajorID)
+	return err
 }
 
 const findMediaByChecksum = `-- name: FindMediaByChecksum :one
@@ -874,12 +899,17 @@ SELECT COALESCE(
    JOIN roles r ON r.id = ur.role_id
    WHERE ur.user_id = u.id AND ur.scope_major_id IS NOT NULL
      AND (ur.expires_at IS NULL OR ur.expires_at > NOW())
+   ORDER BY (r.slug = 'admin_jurusan') DESC, ur.created_at ASC, ur.scope_major_id ASC
    LIMIT 1),
   CASE WHEN u.role_primary = 'admin_jurusan' THEN u.major_id ELSE NULL END
 )::uuid AS scope_major_id
 FROM users u WHERE u.id = $1
 `
 
+// Scope jurusan efektif. Kalau user punya lebih dari satu assignment, yang
+// dipakai adalah assignment role admin_jurusan dulu, lalu yang paling lama
+// (created_at) — supaya hasilnya deterministik dan tidak berganti-ganti
+// antar request.
 func (q *Queries) GetUserScope(ctx context.Context, id pgtype.UUID) (pgtype.UUID, error) {
 	row := q.db.QueryRow(ctx, getUserScope, id)
 	var scope_major_id pgtype.UUID

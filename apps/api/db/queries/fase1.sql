@@ -106,8 +106,21 @@ INSERT INTO role_permissions (role_id, permission_id)
 SELECT $1, id FROM permissions WHERE key = $2 ON CONFLICT DO NOTHING;
 
 -- name: AssignUserRole :exec
+-- Upsert pada (user_id, role_id, scope_major_id). Assignment dengan scope
+-- yang sama diperpanjang (assigned_by + expires_at diperbarui); assignment
+-- dengan scope berbeda menjadi baris baru, bukan menimpa scope lama diam-diam.
 INSERT INTO user_roles (user_id, role_id, scope_major_id, assigned_by, expires_at)
-VALUES ($1, $2, $3, $4, $5) ON CONFLICT (user_id, role_id) DO UPDATE SET scope_major_id = EXCLUDED.scope_major_id, expires_at = EXCLUDED.expires_at;
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (user_id, role_id, scope_major_id) DO UPDATE
+  SET assigned_by = EXCLUDED.assigned_by, expires_at = EXCLUDED.expires_at;
+
+-- name: DeleteUserRoleOtherScope :exec
+-- Assignment role yang sama dengan scope lain dibuang. Satu user hanya boleh
+-- punya satu scope per role: users.major_id juga kolom tunggal, jadi dua
+-- scope untuk role yang sama akan saling bertentangan (hanya satu yang bisa
+-- dipakai untuk row-level filtering).
+DELETE FROM user_roles
+WHERE user_id = $1 AND role_id = $2 AND scope_major_id IS DISTINCT FROM $3;
 
 -- name: UnassignUserRole :exec
 DELETE FROM user_roles WHERE user_id = $1 AND role_id = $2;
@@ -232,11 +245,16 @@ SELECT id, actor_id, action, entity, entity_id, created_at FROM audit_logs ORDER
 
 
 -- name: GetUserScope :one
+-- Scope jurusan efektif. Kalau user punya lebih dari satu assignment, yang
+-- dipakai adalah assignment role admin_jurusan dulu, lalu yang paling lama
+-- (created_at) — supaya hasilnya deterministik dan tidak berganti-ganti
+-- antar request.
 SELECT COALESCE(
   (SELECT ur.scope_major_id FROM user_roles ur
    JOIN roles r ON r.id = ur.role_id
    WHERE ur.user_id = u.id AND ur.scope_major_id IS NOT NULL
      AND (ur.expires_at IS NULL OR ur.expires_at > NOW())
+   ORDER BY (r.slug = 'admin_jurusan') DESC, ur.created_at ASC, ur.scope_major_id ASC
    LIMIT 1),
   CASE WHEN u.role_primary = 'admin_jurusan' THEN u.major_id ELSE NULL END
 )::uuid AS scope_major_id
