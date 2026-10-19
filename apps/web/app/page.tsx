@@ -76,7 +76,10 @@ export default async function LandingPage() {
 
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-8 p-8">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
 
       <section className="text-center">
         <h1 className="text-4xl font-bold tracking-tight">Grafikarsa</h1>
@@ -100,7 +103,9 @@ export default async function LandingPage() {
             <CardTitle className="text-base">Siswa terbaik minggu ini</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-1">
-            {students.length === 0 && <p className="text-muted-foreground text-sm">Belum ada data.</p>}
+            {students.length === 0 && (
+              <p className="text-muted-foreground text-sm">Belum ada data.</p>
+            )}
             {students.map((s) => (
               <p key={s.rank} className="text-sm">
                 <span className="mr-2 font-semibold">#{s.rank}</span>
@@ -111,7 +116,9 @@ export default async function LandingPage() {
                 ) : (
                   <span className="text-muted-foreground">(data belum lengkap)</span>
                 )}
-                <span className="text-muted-foreground ml-2 text-xs">skor {Number(s.score).toFixed(1)}</span>
+                <span className="text-muted-foreground ml-2 text-xs">
+                  skor {Number(s.score).toFixed(1)}
+                </span>
               </p>
             ))}
           </CardContent>
@@ -122,7 +129,9 @@ export default async function LandingPage() {
             <CardTitle className="text-base">Karya terbaik minggu ini</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-1">
-            {projects.length === 0 && <p className="text-muted-foreground text-sm">Belum ada data.</p>}
+            {projects.length === 0 && (
+              <p className="text-muted-foreground text-sm">Belum ada data.</p>
+            )}
             {projects.map((p) => (
               <p key={p.rank} className="text-sm">
                 <span className="mr-2 font-semibold">#{p.rank}</span>
@@ -133,7 +142,9 @@ export default async function LandingPage() {
                 ) : (
                   <span className="text-muted-foreground">(data belum lengkap)</span>
                 )}
-                <span className="text-muted-foreground ml-2 text-xs">skor {Number(p.score).toFixed(1)}</span>
+                <span className="text-muted-foreground ml-2 text-xs">
+                  skor {Number(p.score).toFixed(1)}
+                </span>
               </p>
             ))}
           </CardContent>
@@ -173,13 +184,27 @@ export default async function LandingPage() {
       </section>
 
       <footer className="text-muted-foreground flex flex-wrap gap-3 border-t pt-4 text-xs">
-        <Link href="/feed" className="hover:underline">Feed</Link>
-        <Link href="/leaderboards" className="hover:underline">Peringkat</Link>
-        <Link href="/portfolios" className="hover:underline">Karya</Link>
-        <Link href="/users" className="hover:underline">Warga</Link>
-        <Link href="/changelog" className="hover:underline">Changelog</Link>
-        <Link href="/feedback" className="hover:underline">Masukan</Link>
-        <a href="/changelogs/rss.xml" className="hover:underline">RSS</a>
+        <Link href="/feed" className="hover:underline">
+          Feed
+        </Link>
+        <Link href="/leaderboards" className="hover:underline">
+          Peringkat
+        </Link>
+        <Link href="/portfolios" className="hover:underline">
+          Karya
+        </Link>
+        <Link href="/users" className="hover:underline">
+          Warga
+        </Link>
+        <Link href="/changelog" className="hover:underline">
+          Changelog
+        </Link>
+        <Link href="/feedback" className="hover:underline">
+          Masukan
+        </Link>
+        <a href="/changelogs/rss.xml" className="hover:underline">
+          RSS
+        </a>
       </footer>
     </main>
   );

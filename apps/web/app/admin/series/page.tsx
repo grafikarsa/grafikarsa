@@ -8,12 +8,30 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectField } from "@/components/ui/select-field";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { apiGet, apiSend } from "@/lib/api";
 
 type Series = { id: string; slug: string; name: string; description: string };
-type BlockType = "text" | "image" | "table" | "youtube" | "button" | "embed" | "figma" | "canva" | "ppt" | "pdf" | "doc";
+type BlockType =
+  | "text"
+  | "image"
+  | "table"
+  | "youtube"
+  | "button"
+  | "embed"
+  | "figma"
+  | "canva"
+  | "ppt"
+  | "pdf"
+  | "doc";
 
 export default function SeriesPage() {
   const qc = useQueryClient();
@@ -31,7 +49,8 @@ export default function SeriesPage() {
 
   const detail = useQuery({
     queryKey: ["series-detail", selected],
-    queryFn: () => apiGet<{ blocks: { block_type: string; instruction: string }[] }>(`v1/series/${selected}`),
+    queryFn: () =>
+      apiGet<{ blocks: { block_type: string; instruction: string }[] }>(`v1/series/${selected}`),
     enabled: Boolean(selected),
   });
 
@@ -68,16 +87,30 @@ export default function SeriesPage() {
           <div className="grid gap-2 md:grid-cols-2">
             <div className="grid gap-1">
               <Label htmlFor="sname">Nama</Label>
-              <Input id="sname" value={name} onChange={(e) => setName(e.target.value)} placeholder="PJBL Semester 1" />
+              <Input
+                id="sname"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="PJBL Semester 1"
+              />
             </div>
             <div className="grid gap-1">
               <Label htmlFor="sslug">Slug</Label>
-              <Input id="sslug" value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="pjbl-s1" />
+              <Input
+                id="sslug"
+                value={slug}
+                onChange={(e) => setSlug(e.target.value)}
+                placeholder="pjbl-s1"
+              />
             </div>
           </div>
           <div className="grid gap-1">
             <Label htmlFor="sdesc">Deskripsi</Label>
-            <Textarea id="sdesc" value={description} onChange={(e) => setDescription(e.target.value)} />
+            <Textarea
+              id="sdesc"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
           </div>
           <div className="grid gap-2 md:grid-cols-[180px_1fr_auto] md:items-end">
             <div className="grid gap-1">
@@ -85,12 +118,29 @@ export default function SeriesPage() {
               <SelectField
                 value={blockType}
                 onValueChange={(v) => setBlockType(v as BlockType)}
-                options={["text", "image", "table", "youtube", "button", "embed", "figma", "canva", "ppt", "pdf", "doc"].map((t) => ({ value: t, label: t }))}
+                options={[
+                  "text",
+                  "image",
+                  "table",
+                  "youtube",
+                  "button",
+                  "embed",
+                  "figma",
+                  "canva",
+                  "ppt",
+                  "pdf",
+                  "doc",
+                ].map((t) => ({ value: t, label: t }))}
               />
             </div>
             <div className="grid gap-1">
               <Label htmlFor="sinstr">Instruksi</Label>
-              <Input id="sinstr" value={instruction} onChange={(e) => setInstruction(e.target.value)} placeholder="Slide 1: latar belakang masalah" />
+              <Input
+                id="sinstr"
+                value={instruction}
+                onChange={(e) => setInstruction(e.target.value)}
+                placeholder="Slide 1: latar belakang masalah"
+              />
             </div>
             <Button onClick={() => create.mutate()} disabled={!name || !slug || create.isPending}>
               Buat series
@@ -143,7 +193,9 @@ export default function SeriesPage() {
                 </p>
               ))}
               {(detail.data?.blocks ?? []).length === 0 && (
-                <p className="text-muted-foreground text-xs">{detail.isLoading ? "Memuat..." : "Tanpa block."}</p>
+                <p className="text-muted-foreground text-xs">
+                  {detail.isLoading ? "Memuat..." : "Tanpa block."}
+                </p>
               )}
             </div>
           )}

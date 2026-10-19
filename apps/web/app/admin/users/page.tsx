@@ -5,7 +5,14 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { apiGet, apiSend } from "@/lib/api";
 
 type User = { id: string; username: string; name: string; role_primary: string; status: string };
@@ -27,7 +34,9 @@ export default function AdminUsersPage() {
     load();
   }, []);
 
-  const filtered = users.filter((u) => u.username.includes(search) || u.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = users.filter(
+    (u) => u.username.includes(search) || u.name.toLowerCase().includes(search.toLowerCase()),
+  );
 
   return (
     <main className="mx-auto max-w-4xl p-8">
@@ -36,7 +45,11 @@ export default function AdminUsersPage() {
           <CardTitle>Pengguna</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <Input placeholder="Cari username/nama..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input
+            placeholder="Cari username/nama..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
           <Table>
             <TableHeader>
               <TableRow>
@@ -60,7 +73,10 @@ export default function AdminUsersPage() {
                       size="sm"
                       onClick={async () => {
                         try {
-                          const r = await apiSend<{ password: string }>(`v1/admin/users/${u.id}/reset-password`, "POST");
+                          const r = await apiSend<{ password: string }>(
+                            `v1/admin/users/${u.id}/reset-password`,
+                            "POST",
+                          );
                           toast.success(`Password baru: ${r.password}`);
                         } catch (err) {
                           toast.error(err instanceof Error ? err.message : "Gagal.");

@@ -7,7 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SelectField } from "@/components/ui/select-field";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { apiGet, apiSend } from "@/lib/api";
 
 type Item = {
@@ -62,7 +69,14 @@ export default function AdminPortfoliosPage() {
             onValueChange={setStatus}
             placeholder="Semua status"
             className="w-52"
-            options={["draft", "pending_review", "published", "rejected", "changes_requested", "archived"].map((s) => ({ value: s, label: s }))}
+            options={[
+              "draft",
+              "pending_review",
+              "published",
+              "rejected",
+              "changes_requested",
+              "archived",
+            ].map((s) => ({ value: s, label: s }))}
           />
           <input
             className="rounded border px-2 py-1 text-sm"
@@ -87,10 +101,15 @@ export default function AdminPortfoliosPage() {
                 <TableCell>{p.title}</TableCell>
                 <TableCell className="text-xs">@{p.username}</TableCell>
                 <TableCell>
-                  <Badge variant={p.status === "published" ? "default" : "secondary"}>{p.status}</Badge>
+                  <Badge variant={p.status === "published" ? "default" : "secondary"}>
+                    {p.status}
+                  </Badge>
                 </TableCell>
                 <TableCell className="flex flex-wrap items-center gap-1">
-                  <a className="rounded border px-2 py-1 text-xs" href={`/admin/assessments/${p.id}`}>
+                  <a
+                    className="rounded border px-2 py-1 text-xs"
+                    href={`/admin/assessments/${p.id}`}
+                  >
                     Nilai
                   </a>
                   {ACTIONS.filter(([a]) => {
@@ -102,7 +121,9 @@ export default function AdminPortfoliosPage() {
                       key={a}
                       size="sm"
                       variant={a === "reject" ? "destructive" : "outline"}
-                      disabled={(a === "reject" || a === "request-changes") && note.trim().length < 5}
+                      disabled={
+                        (a === "reject" || a === "request-changes") && note.trim().length < 5
+                      }
                       onClick={() => act.mutate({ id: p.id, action: a })}
                     >
                       {label}

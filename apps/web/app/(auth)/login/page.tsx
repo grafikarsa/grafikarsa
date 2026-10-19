@@ -51,14 +51,25 @@ function LoginInner() {
           <form onSubmit={submit} className="flex flex-col gap-4">
             <div className="grid gap-2">
               <Label htmlFor="username">Username</Label>
-              <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" />
+              <Input
+                id="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
+              />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+              />
             </div>
             <Turnstile onToken={setCaptcha} />
-        <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading}>
               {loading ? "Masuk..." : "Masuk"}
             </Button>
           </form>

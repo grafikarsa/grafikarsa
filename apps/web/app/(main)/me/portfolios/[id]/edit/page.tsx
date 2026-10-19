@@ -62,7 +62,12 @@ function SortableBlock({
         </button>
         <Badge variant="secondary">{b.block_type}</Badge>
         <span className="text-muted-foreground flex-1 truncate text-sm">{previewText(b)}</span>
-        <Button variant="ghost" size="sm" onClick={() => setEditing((v) => !v)} disabled={disabled || busy}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setEditing((v) => !v)}
+          disabled={disabled || busy}
+        >
           {editing ? "Tutup" : "Edit"}
         </Button>
         <Button variant="ghost" size="sm" onClick={onDelete} disabled={disabled}>
@@ -270,14 +275,25 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
         <CardHeader>
           <CardTitle>
             Edit portfolio{" "}
-            {savedAt && <span className="text-muted-foreground text-xs font-normal">· Tersimpan {savedAt}</span>}
+            {savedAt && (
+              <span className="text-muted-foreground text-xs font-normal">
+                · Tersimpan {savedAt}
+              </span>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="grid gap-2">
             <Label htmlFor="title">Judul (autosave 10 dtk)</Label>
-            <Input id="title" value={title} onChange={(e) => onTitleChange(e.target.value)} disabled={readOnly} />
-            <p className="text-muted-foreground text-xs">Minimal 10 karakter saat dikirim review.</p>
+            <Input
+              id="title"
+              value={title}
+              onChange={(e) => onTitleChange(e.target.value)}
+              disabled={readOnly}
+            />
+            <p className="text-muted-foreground text-xs">
+              Minimal 10 karakter saat dikirim review.
+            </p>
           </div>
 
           <div className="grid gap-2">
@@ -300,7 +316,10 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
               <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-                <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+                <SortableContext
+                  items={blocks.map((b) => b.id)}
+                  strategy={verticalListSortingStrategy}
+                >
                   {blocks.map((b) => (
                     <SortableBlock
                       key={b.id}
@@ -341,17 +360,26 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
             <CardContent className="flex flex-col gap-3">
               <div className="flex flex-wrap gap-2">
                 {(tags.data ?? []).map((t) => (
-                  <label key={t.id} className="flex items-center gap-1 rounded border px-2 py-1 text-xs">
+                  <label
+                    key={t.id}
+                    className="flex items-center gap-1 rounded border px-2 py-1 text-xs"
+                  >
                     <input
                       type="checkbox"
                       checked={tagIDs.includes(t.id)}
                       disabled={readOnly}
-                      onChange={(e) => setTagIDs(e.target.checked ? [...tagIDs, t.id] : tagIDs.filter((x) => x !== t.id))}
+                      onChange={(e) =>
+                        setTagIDs(
+                          e.target.checked ? [...tagIDs, t.id] : tagIDs.filter((x) => x !== t.id),
+                        )
+                      }
                     />
                     {t.name}
                   </label>
                 ))}
-                {(tags.data ?? []).length === 0 && <p className="text-muted-foreground text-xs">Belum ada tag.</p>}
+                {(tags.data ?? []).length === 0 && (
+                  <p className="text-muted-foreground text-xs">Belum ada tag.</p>
+                )}
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <SelectField
@@ -367,13 +395,18 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
                 <Button variant="outline" size="sm" onClick={saveMeta} disabled={readOnly}>
                   Simpan tag & series
                 </Button>
-                <Button variant="ghost" size="sm" onClick={applySeries} disabled={readOnly || !seriesID}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={applySeries}
+                  disabled={readOnly || !seriesID}
+                >
                   Terapkan template series
                 </Button>
               </div>
               <p className="text-muted-foreground text-xs">
-                Minimal 1 tag wajib sebelum kirim review. Template series hanya bisa diterapkan saat portfolio belum
-                punya block.
+                Minimal 1 tag wajib sebelum kirim review. Template series hanya bisa diterapkan saat
+                portfolio belum punya block.
               </p>
             </CardContent>
           </Card>

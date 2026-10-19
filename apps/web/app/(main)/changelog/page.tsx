@@ -86,7 +86,9 @@ export default function ChangelogPage() {
         </Card>
       )}
 
-      {!list.isLoading && items.length === 0 && <p className="text-muted-foreground">Belum ada rilis.</p>}
+      {!list.isLoading && items.length === 0 && (
+        <p className="text-muted-foreground">Belum ada rilis.</p>
+      )}
 
       {items.map((c) => (
         <Card key={c.id} className="mb-3">
@@ -103,9 +105,13 @@ export default function ChangelogPage() {
               detailed[c.id].length > 0 ? (
                 detailed[c.id].map((s, i) => (
                   <div key={i} className="text-sm">
-                    <Badge variant="secondary" className="mr-2">{KIND_LABEL[s.kind] ?? s.kind}</Badge>
+                    <Badge variant="secondary" className="mr-2">
+                      {KIND_LABEL[s.kind] ?? s.kind}
+                    </Badge>
                     <span className="font-medium">{s.title}</span>
-                    {s.body_md && <p className="text-muted-foreground mt-1 whitespace-pre-wrap">{s.body_md}</p>}
+                    {s.body_md && (
+                      <p className="text-muted-foreground mt-1 whitespace-pre-wrap">{s.body_md}</p>
+                    )}
                   </div>
                 ))
               ) : (

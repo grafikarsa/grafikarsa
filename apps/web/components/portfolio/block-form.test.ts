@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { cleanPayload, isHttps, parseTable, validateDraft, ytId } from "@/components/portfolio/block-logic";
+import {
+  cleanPayload,
+  isHttps,
+  parseTable,
+  validateDraft,
+  ytId,
+} from "@/components/portfolio/block-logic";
 
 // Test ini menjaga aturan validasi klien tetap sinkron dengan validator Go
 // (validateBlockPayload) — payload yang lolos di sini harus lolos di server.

@@ -93,8 +93,14 @@ export default function ProfilePage() {
 
           <div className="grid gap-2">
             <Label htmlFor="username">Username</Label>
-            <Input id="username" value={username} onChange={(e) => setUsername(e.target.value.toLowerCase())} />
-            <p className="text-muted-foreground text-xs">Mengubah username mengubah URL profilmu.</p>
+            <Input
+              id="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value.toLowerCase())}
+            />
+            <p className="text-muted-foreground text-xs">
+              Mengubah username mengubah URL profilmu.
+            </p>
           </div>
 
           <div className="grid gap-2">

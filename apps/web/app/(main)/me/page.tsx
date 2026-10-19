@@ -6,7 +6,10 @@ export default async function MePage() {
   const jar = await cookies();
   const base = process.env.INTERNAL_API_URL ?? "http://localhost:8080/v1";
   try {
-    const res = await fetch(`${base}/me`, { headers: { cookie: jar.toString() }, cache: "no-store" });
+    const res = await fetch(`${base}/me`, {
+      headers: { cookie: jar.toString() },
+      cache: "no-store",
+    });
     if (res.ok) {
       const json = await res.json();
       if (json?.data?.username) redirect(`/${json.data.username}`);

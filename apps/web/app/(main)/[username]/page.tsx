@@ -42,7 +42,8 @@ export default function ProfileByUsername() {
 
   const works = useQuery({
     queryKey: ["profile-works", username],
-    queryFn: () => apiGet<Portfolio[]>(`v1/portfolios?user=${encodeURIComponent(username)}&per_page=12`),
+    queryFn: () =>
+      apiGet<Portfolio[]>(`v1/portfolios?user=${encodeURIComponent(username)}&per_page=12`),
     enabled: Boolean(username),
   });
 
@@ -72,7 +73,10 @@ export default function ProfileByUsername() {
         <Card>
           <CardHeader className="flex-row items-center gap-3">
             <Avatar className="size-14">
-              <AvatarImage src={p.avatar_media_id ? `/api/v1/media/${p.avatar_media_id}?w=320` : ""} alt="" />
+              <AvatarImage
+                src={p.avatar_media_id ? `/api/v1/media/${p.avatar_media_id}?w=320` : ""}
+                alt=""
+              />
               <AvatarFallback>{p.name?.slice(0, 1).toUpperCase()}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col gap-1">
@@ -108,10 +112,7 @@ export default function ProfileByUsername() {
                   Masuk untuk mengikuti
                 </Link>
               )}
-              <Link
-                className="text-sm underline"
-                href={`/users/${p.username}/followers`}
-              >
+              <Link className="text-sm underline" href={`/users/${p.username}/followers`}>
                 Pengikut
               </Link>
               <Link className="text-sm underline" href={`/users/${p.username}/following`}>

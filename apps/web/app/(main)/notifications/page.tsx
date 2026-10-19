@@ -78,14 +78,19 @@ export default function NotificationsPage() {
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
           {loading && <p className="text-muted-foreground text-sm">Memuat...</p>}
-          {!loading && items.length === 0 && <p className="text-muted-foreground text-sm">Tidak ada notifikasi.</p>}
+          {!loading && items.length === 0 && (
+            <p className="text-muted-foreground text-sm">Tidak ada notifikasi.</p>
+          )}
           {items.map((n) => {
             const href = deepLink(n);
             return (
               <div key={n.id} className="flex flex-col gap-1 border-b py-2">
                 <div className="flex items-center gap-2">
                   {!n.is_read && (
-                    <span className="bg-primary inline-block size-2 rounded-full" aria-label="Belum dibaca" />
+                    <span
+                      className="bg-primary inline-block size-2 rounded-full"
+                      aria-label="Belum dibaca"
+                    />
                   )}
                   <p className="font-semibold">{n.title}</p>
                   <Badge variant="secondary">{n.type}</Badge>

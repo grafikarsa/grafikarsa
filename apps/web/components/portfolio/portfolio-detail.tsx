@@ -3,7 +3,14 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,24 +20,59 @@ import { useAuthStore } from "@/lib/auth-store";
 
 type Block = { id: string; block_type: string; position: number; payload: Record<string, unknown> };
 type Portfolio = {
-  id: string; title: string; slug: string; status: string;
-  blocks: Block[]; like_count: number; comment_count: number; is_liked: boolean;
+  id: string;
+  title: string;
+  slug: string;
+  status: string;
+  blocks: Block[];
+  like_count: number;
+  comment_count: number;
+  is_liked: boolean;
 };
 
-type Comment = { id: string; body_md: string; username: string; author_name: string; children: Comment[] };
+type Comment = {
+  id: string;
+  body_md: string;
+  username: string;
+  author_name: string;
+  children: Comment[];
+};
 
-function CommentNode({ c, onReply }: { c: Comment; onReply: (parent: string, text: string) => void }) {
+function CommentNode({
+  c,
+  onReply,
+}: {
+  c: Comment;
+  onReply: (parent: string, text: string) => void;
+}) {
   const [text, setText] = useState("");
   const [open, setOpen] = useState(false);
   return (
     <div className="border-l pl-3">
-      <p className="text-sm font-semibold">{c.author_name} <span className="text-muted-foreground font-normal">@{c.username}</span></p>
+      <p className="text-sm font-semibold">
+        {c.author_name} <span className="text-muted-foreground font-normal">@{c.username}</span>
+      </p>
       <p className="text-sm">{c.body_md}</p>
-      <Button variant="ghost" size="sm" onClick={() => setOpen(!open)}>Balas</Button>
+      <Button variant="ghost" size="sm" onClick={() => setOpen(!open)}>
+        Balas
+      </Button>
       {open && (
         <div className="flex gap-2">
-          <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="Tulis balasan..." />
-          <Button size="sm" onClick={() => { onReply(c.id, text); setText(""); setOpen(false); }}>Kirim</Button>
+          <Input
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Tulis balasan..."
+          />
+          <Button
+            size="sm"
+            onClick={() => {
+              onReply(c.id, text);
+              setText("");
+              setOpen(false);
+            }}
+          >
+            Kirim
+          </Button>
         </div>
       )}
       {c.children.map((ch) => (
@@ -55,7 +97,10 @@ export function PortfolioDetail({ initial }: { initial: Portfolio }) {
 
   async function like() {
     try {
-      await apiSend(`v1/portfolios/id/${p.id}/${p.is_liked ? "like" : "like"}`, p.is_liked ? "DELETE" : "POST");
+      await apiSend(
+        `v1/portfolios/id/${p.id}/${p.is_liked ? "like" : "like"}`,
+        p.is_liked ? "DELETE" : "POST",
+      );
       reload();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Gagal.");
@@ -84,13 +129,21 @@ export function PortfolioDetail({ initial }: { initial: Portfolio }) {
       {p.blocks.map((b) => (
         <BlockView key={b.id} b={b} />
       ))}
-      {user && <Button variant="outline" onClick={like}>{p.is_liked ? "Batal suka" : "Suka"}</Button>}
+      {user && (
+        <Button variant="outline" onClick={like}>
+          {p.is_liked ? "Batal suka" : "Suka"}
+        </Button>
+      )}
       <Card>
         <CardContent className="flex flex-col gap-3 p-4">
           <h2 className="font-semibold">Komentar</h2>
           {user && (
             <div className="flex gap-2">
-              <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="Tulis komentar..." />
+              <Input
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Tulis komentar..."
+              />
               <Button onClick={() => comment()}>Kirim</Button>
             </div>
           )}
@@ -119,7 +172,9 @@ function BlockView({ b }: { b: Block }) {
       return (
         <figure className="flex flex-col gap-1">
           <img src={src} alt={p.alt ?? ""} className="rounded" loading="lazy" />
-          {p.caption && <figcaption className="text-muted-foreground text-xs">{p.caption}</figcaption>}
+          {p.caption && (
+            <figcaption className="text-muted-foreground text-xs">{p.caption}</figcaption>
+          )}
         </figure>
       );
     }
@@ -158,7 +213,14 @@ function BlockView({ b }: { b: Block }) {
       );
     case "button":
       return (
-        <a href={p.url} target="_blank" rel="noreferrer" className={buttonVariants({ variant: p.variant === "secondary" ? "secondary" : "default" })}>
+        <a
+          href={p.url}
+          target="_blank"
+          rel="noreferrer"
+          className={buttonVariants({
+            variant: p.variant === "secondary" ? "secondary" : "default",
+          })}
+        >
           {p.label ?? "Buka"}
         </a>
       );
@@ -177,7 +239,12 @@ function BlockView({ b }: { b: Block }) {
         <div className="flex flex-col gap-2">
           {previewSrc && (
             <a href={fileHref} target="_blank" rel="noreferrer">
-              <img src={previewSrc} alt="Pratinjau dokumen PDF" className="max-h-96 rounded border object-contain" loading="lazy" />
+              <img
+                src={previewSrc}
+                alt="Pratinjau dokumen PDF"
+                className="max-h-96 rounded border object-contain"
+                loading="lazy"
+              />
             </a>
           )}
           <a href={fileHref} target="_blank" rel="noreferrer" className="text-sm underline">

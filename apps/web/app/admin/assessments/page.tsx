@@ -7,7 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SelectField } from "@/components/ui/select-field";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { apiGet } from "@/lib/api";
 
 type Row = {
@@ -24,7 +31,8 @@ export default function AssessmentQueuePage() {
   const [filter, setFilter] = useState("");
   const q = useQuery({
     queryKey: ["assessment-queue", filter],
-    queryFn: () => apiGet<Row[]>(`v1/admin/assessments?per_page=50${filter ? `&filter=${filter}` : ""}`),
+    queryFn: () =>
+      apiGet<Row[]>(`v1/admin/assessments?per_page=50${filter ? `&filter=${filter}` : ""}`),
   });
   const items = Array.isArray(q.data) ? q.data : [];
 
@@ -46,7 +54,8 @@ export default function AssessmentQueuePage() {
             ]}
           />
           <p className="text-muted-foreground text-xs">
-            Hanya karya yang sudah terbit. Penilaian dibatasi ke jurusanmu (admin global melihat semua).
+            Hanya karya yang sudah terbit. Penilaian dibatasi ke jurusanmu (admin global melihat
+            semua).
           </p>
         </div>
 
@@ -78,7 +87,10 @@ export default function AssessmentQueuePage() {
                 </TableCell>
                 <TableCell>{Number(r.total_score ?? 0).toFixed(1)}</TableCell>
                 <TableCell className="text-right">
-                  <Link className={buttonVariants({ size: "sm", variant: "outline" })} href={`/admin/assessments/${r.id}`}>
+                  <Link
+                    className={buttonVariants({ size: "sm", variant: "outline" })}
+                    href={`/admin/assessments/${r.id}`}
+                  >
                     {r.assessed ? "Ubah nilai" : "Nilai"}
                   </Link>
                 </TableCell>

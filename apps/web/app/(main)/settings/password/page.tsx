@@ -62,16 +62,37 @@ export default function ChangePasswordPage() {
           <form onSubmit={submit} className="flex flex-col gap-3">
             <div className="grid gap-1">
               <Label htmlFor="current">Password saat ini</Label>
-              <Input id="current" type="password" value={current} onChange={(e) => setCurrent(e.target.value)} required />
+              <Input
+                id="current"
+                type="password"
+                value={current}
+                onChange={(e) => setCurrent(e.target.value)}
+                required
+              />
             </div>
             <div className="grid gap-1">
               <Label htmlFor="next">Password baru</Label>
-              <Input id="next" type="password" value={next} onChange={(e) => setNext(e.target.value)} required minLength={10} />
-              <p className="text-muted-foreground text-xs">Minimal 10 karakter, kombinasi huruf besar/kecil dan angka.</p>
+              <Input
+                id="next"
+                type="password"
+                value={next}
+                onChange={(e) => setNext(e.target.value)}
+                required
+                minLength={10}
+              />
+              <p className="text-muted-foreground text-xs">
+                Minimal 10 karakter, kombinasi huruf besar/kecil dan angka.
+              </p>
             </div>
             <div className="grid gap-1">
               <Label htmlFor="confirm">Ulangi password baru</Label>
-              <Input id="confirm" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
+              <Input
+                id="confirm"
+                type="password"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                required
+              />
             </div>
             <Button type="submit" disabled={busy || !current || !next}>
               {busy ? "Menyimpan..." : "Ganti password"}

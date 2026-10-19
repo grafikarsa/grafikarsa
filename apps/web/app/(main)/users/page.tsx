@@ -19,7 +19,9 @@ export default function UsersPage() {
       .catch((err: unknown) => toast.error(err instanceof Error ? err.message : "Gagal."));
   }, []);
 
-  const filtered = users.filter((u) => u.username.includes(q) || u.name.toLowerCase().includes(q.toLowerCase()));
+  const filtered = users.filter(
+    (u) => u.username.includes(q) || u.name.toLowerCase().includes(q.toLowerCase()),
+  );
 
   return (
     <main className="mx-auto max-w-2xl p-4">

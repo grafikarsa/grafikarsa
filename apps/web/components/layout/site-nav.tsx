@@ -28,7 +28,9 @@ export function SiteNav() {
     queryFn: () => apiGet<string[]>("v1/me/permissions"),
     enabled: Boolean(user),
   });
-  const isStaff = (perms.data ?? []).some((p) => p.startsWith("portfolios.moderate") || p === "academic.view");
+  const isStaff = (perms.data ?? []).some(
+    (p) => p.startsWith("portfolios.moderate") || p === "academic.view",
+  );
 
   const notif = useQuery({
     queryKey: ["notif-count"],
@@ -66,7 +68,9 @@ export function SiteNav() {
                   Notifikasi
                 </Button>
                 {(notif.data?.unread ?? 0) > 0 && (
-                  <Badge className="absolute -top-1 -right-1 px-1 text-[10px]">{notif.data?.unread}</Badge>
+                  <Badge className="absolute -top-1 -right-1 px-1 text-[10px]">
+                    {notif.data?.unread}
+                  </Badge>
                 )}
               </Link>
               <Link href="/me/portfolios" className="text-sm">
@@ -82,7 +86,10 @@ export function SiteNav() {
               )}
               <Link href={`/${user.username}`}>
                 <Avatar className="size-7">
-                  <AvatarImage src={user.avatar_media_id ? `/api/v1/media/${user.avatar_media_id}?w=320` : ""} alt="" />
+                  <AvatarImage
+                    src={user.avatar_media_id ? `/api/v1/media/${user.avatar_media_id}?w=320` : ""}
+                    alt=""
+                  />
                   <AvatarFallback>{user.name?.slice(0, 1).toUpperCase()}</AvatarFallback>
                 </Avatar>
               </Link>

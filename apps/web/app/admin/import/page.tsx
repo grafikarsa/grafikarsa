@@ -7,7 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { apiUpload } from "@/lib/api";
 
 type Row = { username: string; password: string };
@@ -24,7 +31,10 @@ export default function ImportPage() {
       if (!file) throw new Error("Pilih file CSV dulu.");
       const form = new FormData();
       form.append("file", file);
-      return apiUpload<Result>(`v1/admin/import/students?dry_run=${dryRun ? "true" : "false"}`, form);
+      return apiUpload<Result>(
+        `v1/admin/import/students?dry_run=${dryRun ? "true" : "false"}`,
+        form,
+      );
     },
     onSuccess: (data, dryRun) => {
       setResult(data);
@@ -50,12 +60,17 @@ export default function ImportPage() {
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             />
             <p className="text-muted-foreground text-xs">
-              Format: <span className="font-mono">username,email,name,role</span> — role siswa/guru. Password dibuat acak
-              dan ditampilkan sekali; user wajib menggantinya saat login pertama.
+              Format: <span className="font-mono">username,email,name,role</span> — role siswa/guru.
+              Password dibuat acak dan ditampilkan sekali; user wajib menggantinya saat login
+              pertama.
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => run.mutate(true)} disabled={!file || run.isPending}>
+            <Button
+              variant="outline"
+              onClick={() => run.mutate(true)}
+              disabled={!file || run.isPending}
+            >
               Dry-run
             </Button>
             <Button onClick={() => run.mutate(false)} disabled={!file || run.isPending}>

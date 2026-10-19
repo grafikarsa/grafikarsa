@@ -1,0 +1,10 @@
+# File yang di-generate — jangan diformat (hasil generate ulang akan menimpa).
+lib/api-types.ts
+lib/api-contract.ts
+
+# dependensi & build
+node_modules
+.next
+out
+coverage
+pnpm-lock.yaml

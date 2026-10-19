@@ -17,7 +17,10 @@ type Settings = {
 };
 
 export default function AdminSettingsPage() {
-  const q = useQuery({ queryKey: ["admin-settings"], queryFn: () => apiGet<Settings>("v1/admin/settings") });
+  const q = useQuery({
+    queryKey: ["admin-settings"],
+    queryFn: () => apiGet<Settings>("v1/admin/settings"),
+  });
   const perms = useQuery({
     queryKey: ["me-permissions"],
     queryFn: () => apiGet<string[]>("v1/me/permissions"),
@@ -78,8 +81,8 @@ export default function AdminSettingsPage() {
         <CardContent className="flex flex-col gap-3">
           {q.isLoading && <Skeleton className="h-32 w-full" />}
           <p className="text-muted-foreground text-xs">
-            Total bobot harus 1.0 (server menolak selain itu). Perubahan langsung dipakai feed
-            smart tanpa deploy.
+            Total bobot harus 1.0 (server menolak selain itu). Perubahan langsung dipakai feed smart
+            tanpa deploy.
           </p>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {Object.keys(weights).map((k) => (
@@ -101,7 +104,10 @@ export default function AdminSettingsPage() {
             <Badge variant={Math.abs(total - 1) < 0.011 ? "secondary" : "destructive"}>
               total {total.toFixed(2)}
             </Badge>
-            <Button onClick={() => save("feed_weights")} disabled={busy || Math.abs(total - 1) >= 0.011}>
+            <Button
+              onClick={() => save("feed_weights")}
+              disabled={busy || Math.abs(total - 1) >= 0.011}
+            >
               Simpan bobot
             </Button>
           </div>
