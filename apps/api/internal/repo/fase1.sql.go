@@ -818,6 +818,7 @@ SELECT DISTINCT p.key FROM permissions p
 JOIN role_permissions rp ON rp.permission_id = p.id
 JOIN user_roles ur ON ur.role_id = rp.role_id
 WHERE ur.user_id = $1
+  AND (ur.expires_at IS NULL OR ur.expires_at > NOW())
 `
 
 func (q *Queries) GetUserPermissions(ctx context.Context, userID pgtype.UUID) ([]string, error) {

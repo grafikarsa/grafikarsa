@@ -45,7 +45,8 @@ INSERT INTO auth_audit (user_id, event, ip, user_agent) VALUES ($1, $2, $3, $4);
 SELECT DISTINCT p.key FROM permissions p
 JOIN role_permissions rp ON rp.permission_id = p.id
 JOIN user_roles ur ON ur.role_id = rp.role_id
-WHERE ur.user_id = $1;
+WHERE ur.user_id = $1
+  AND (ur.expires_at IS NULL OR ur.expires_at > NOW());
 
 -- name: CreateMedia :one
 INSERT INTO media_assets (owner_id, purpose, object_key, mime, size_bytes, width, height, checksum_sha256, status, variants)
