@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { apiGet, apiSend } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
+import { firstIssueMessage, profileSchema } from "@/lib/validation";
 
 type Me = {
   id: string;
@@ -24,12 +25,11 @@ type Me = {
   show_email?: boolean;
 };
 
-// Skema sederhana untuk validasi klien (mencerminkan validator backend).
+// Validasi klien memakai skema zod di lib/validation.ts, yang mencerminkan
+// validator backend. Server tetap menolak kalau aturan tidak cocok.
 function validateProfile(name: string, bio: string, username: string): string | null {
-  if (name.trim().length < 2 || name.trim().length > 100) return "Nama 2-100 karakter.";
-  if (bio.length > 500) return "Bio maksimal 500 karakter.";
-  if (!/^[a-z0-9._-]{3,30}$/.test(username)) return "Username 3-30 karakter (huruf kecil, angka, . _ -).";
-  return null;
+  const parsed = profileSchema.safeParse({ name, bio, username });
+  return parsed.success ? null : firstIssueMessage(parsed.error);
 }
 
 export default function ProfilePage() {
