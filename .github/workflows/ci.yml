@@ -6,6 +6,23 @@ on:
 jobs:
   api:
     runs-on: ubuntu-latest
+    # Postgres untuk integration test. Skema v2 memakai citext, pg_trgm,
+    # generated column tsvector, dan unique partial index — SQLite tidak
+    # bisa merepresentasikan perilakunya, jadi test butuh Postgres asli.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: grafikarsa
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: grafikarsa_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U grafikarsa"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -22,8 +39,19 @@ jobs:
       - name: go vet
         working-directory: apps/api
         run: go vet ./...
+      - name: Siapkan skema database test
+        working-directory: apps/api
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: "5432"
+          DB_USER: grafikarsa
+          DB_PASSWORD: test
+          DB_NAME: grafikarsa_test
+        run: go run ./cmd/tools/migrate up
       - name: go test (race)
         working-directory: apps/api
+        env:
+          TEST_DATABASE_URL: postgres://grafikarsa:test@127.0.0.1:5432/grafikarsa_test?sslmode=disable
         run: go test -race ./...
       - name: go build
         working-directory: apps/api
