@@ -60,11 +60,15 @@ services:
     image: ghcr.io/dragonflydb/dragonfly:latest
     container_name: grafikarsa-dragonfly
     restart: unless-stopped
+    # snapshot_cron: simpan snapshot cache tiap 5 menit. Tanpa ini snapshot
+    # hanya terjadi saat shutdown, jadi crash = semua counter rate-limit,
+    # blacklist JTI, dan agregat view counter hilang sekaligus.
     command: >-
       --maxmemory=256mb --proactor_threads=1
       --cache_mode
       --dir=/data
       --dbfilename=dump
+      --snapshot_cron=*/5 * * * *
     volumes:
       - dragonfly_data:/data
     healthcheck:
