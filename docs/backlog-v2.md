@@ -66,11 +66,9 @@
   - Fix: tentukan semantik (append vs upsert eksplisit)
   - Status: ⬜
 
-- [ ] **P0-09** Media retire tidak ada — objek lama tidak dihapus saat avatar/banner/thumbnail diganti
-  - Evidence: `internal/http/media_upload.go` `handleConfirmMedia`; `db/queries/fase1.sql` `UpdateUserAvatar` (cuma update FK)
-  - Dampak: storage membengkak; kuota 200MB ikut terinflasi. PRD §7.2 step 7 + Runbook "Media retire"
-  - Fix: hapus objek + varian media lama (pola sudah ada di `handleDeleteMedia`)
-  - Status: ⬜
+- [x] **P0-09** Media retire — audit ulang: **sebagian sudah ada** (retire untuk avatar/banner/thumbnail sudah di handler). Yang bocor: jalur `link_to=block` + tidak ada safety net untuk media `confirmed` yang tak terpakai
+  - Fix: retire asset lama blok · `retireMedia` melepas semua FK (avatar/banner/thumbnail/asset block) · query `ListOrphanedConfirmedMedia` + job `cleanup-media` membersihkan orphan confirmed (konservatif: confirmed, umur > 1 jam, purpose dibatasi)
+  - ✅ Sprint 2 (commit `9f40b1e`) — 9 kasus diuji dengan integration test vs Postgres nyata
 
 - [x] **P0-10** Komentar `rateLimit` stale ("default 100" vs config 300)
   - Evidence: `apps/api/internal/http/middleware.go:172` vs `internal/config/config.go:123`
@@ -165,7 +163,9 @@
 
 - [ ] **P3-01** `golangci-lint` tidak ada (cuma gofmt + go vet) — PRD §2.2, §13.3
 - [ ] **P3-02** `prettier` tidak ada — PRD §2.2
-- [ ] **P3-03** Integration test `pgxmock`/`testcontainers` tidak ada — PRD §13.3
+- [x] **P3-03** Integration test dengan Postgres asli (bukan SQLite — skema v2 pakai citext/pg_trgm/tsvector/partial unique index)
+  - Helper `internal/dbtest` (skip graceful tanpa `TEST_DATABASE_URL`) + test query media & permission expiry
+  - ✅ Sprint 2 (commit `9f40b1e`) · CI: job `api` menyalakan service postgres + jalankan migrasi (commit `ci(api): jalankan integration test dengan Postgres service`)
 - [ ] **P3-04** E2E Playwright tidak dikonfigurasi (hanya transitif di lockfile) — PRD §14.3
 - [ ] **P3-05** A11y test (axe, WCAG AA) tidak ada — PRD §14.3
 - [ ] **P3-06** Contract test (schemathesis) tidak masuk CI — PRD §14.3
