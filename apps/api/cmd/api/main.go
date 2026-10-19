@@ -58,11 +58,10 @@ func main() {
 
 	srv := &http.Server{
 		Addr:         ":8080",
-		Handler:      apiphttp.NewRouter(apiphttp.Deps{Pool: pool, Cache: c, Storage: st}),
+		Handler:      apiphttp.NewRouterFromApp(app),
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 30 * time.Second,
 	}
-	_ = app
 
 	go func() {
 		slog.Info("api listen", "addr", ":8080", "env", cfg.AppEnv)

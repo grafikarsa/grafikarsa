@@ -306,6 +306,14 @@ func (a *App) handleReady(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, status, ok(checks, r))
 }
 
+// NewRouterFromApp: bangun handler dari App yang sudah di-wire di cmd/api.
+// Dipakai supaya App, config, dan pool hanya dibuat SATU kali (sebelumnya
+// cmd/api membuat App lalu membuangnya, dan NewRouter membuat App kedua).
+func NewRouterFromApp(app *App) http.Handler {
+	return withBase(app.routes())
+}
+
+// NewRouter: convenience untuk caller yang hanya punya Deps (test, embed).
 func NewRouter(d Deps) http.Handler {
 	cfg, err := config.Load()
 	if err != nil {
@@ -313,7 +321,7 @@ func NewRouter(d Deps) http.Handler {
 	}
 	app := NewApp(cfg, repo.New(d.Pool), d.Cache, d.Storage)
 	app.Tx = newTxRunner(d.Pool)
-	return withBase(app.routes())
+	return NewRouterFromApp(app)
 }
 
 func withBase(h http.Handler) http.Handler {
