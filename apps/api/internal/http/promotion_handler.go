@@ -134,18 +134,6 @@ func (a *App) handlePromotionExecute(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "done"}, r))
 }
 
-func isNumeric(s string) bool {
-	if s == "" {
-		return false
-	}
-	for _, c := range s {
-		if c < '0' || c > '9' {
-			return false
-		}
-	}
-	return true
-}
-
 func (a *App) executePromotion(r *http.Request, job repo.GetPromotionJobRow, _ string) error {
 	ctx := r.Context()
 	pool := a.Tx.pool
@@ -153,7 +141,7 @@ func (a *App) executePromotion(r *http.Request, job repo.GetPromotionJobRow, _ s
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 	qtx := a.Q.WithTx(tx)
 
 	enrolls, err := qtx.ListEnrollmentsByYear(ctx, job.FromYearID)

@@ -190,7 +190,7 @@ func (a *App) handleRefresh(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal refresh sesi.", r))
 		return
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 	qtx := a.Q.WithTx(tx)
 	ipNet := toPgInet(ip)
 	idleTTL := a.Cfg.JWT.RefreshIdleTTL
@@ -334,8 +334,6 @@ func verifyTurnstile(ctx context.Context, cfg *config.Config, token string) bool
 	}
 	return out.Success
 }
-
-func verifyBcrypt(pw, hash string) bool { return checkBcrypt(pw, hash) }
 
 // effectiveScope: scope jurusan efektif (user_roles berscope, atau major user
 // untuk admin_jurusan) — dipakai untuk row-level filtering, bukan otoritas.

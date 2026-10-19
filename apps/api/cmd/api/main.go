@@ -24,7 +24,11 @@ func main() {
 	if len(os.Args) > 1 && os.Args[1] == "-healthcheck" {
 		client := &http.Client{Timeout: 3 * time.Second}
 		res, err := client.Get("http://127.0.0.1:8080/health")
-		if err != nil || res.StatusCode != http.StatusOK {
+		if err != nil {
+			os.Exit(1)
+		}
+		defer res.Body.Close()
+		if res.StatusCode != http.StatusOK {
 			os.Exit(1)
 		}
 		os.Exit(0)

@@ -14,6 +14,8 @@ import (
 
 // Storage adalah satu-satunya pintu ke object storage.
 // Implementasi: AWS SDK S3 standar — agnostik vendor (RustFS/MinIO/R2/S3).
+//
+//nolint:misspell // "Implementasi" adalah kata Indonesia, bukan salah ketik.
 type Storage struct {
 	client *s3.Client
 	bucket string

@@ -120,10 +120,10 @@ func (w *walker) Visit(n ast.Node) ast.Visitor {
 		if mw := middlewareUse(x); mw != "" {
 			if len(w.stack) > 0 {
 				top := &w.stack[len(w.stack)-1]
-				switch {
-				case mw == "authRequired":
+				switch mw {
+				case "authRequired":
 					top.auth = "bearer"
-				case mw == "authOptional":
+				case "authOptional":
 					if top.auth != "bearer" {
 						top.auth = "optional"
 					}

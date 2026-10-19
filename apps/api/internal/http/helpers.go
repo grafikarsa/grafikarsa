@@ -148,8 +148,6 @@ func verifyCSRFToken(secret, userID, token string) bool {
 	return false
 }
 
-func yesterday() string { return time.Now().UTC().Add(-24 * time.Hour).Format("2006-01-02") }
-
 func toPgText(s string) pgtype.Text {
 	if s == "" {
 		return pgtype.Text{Valid: false}

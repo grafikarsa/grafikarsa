@@ -15,7 +15,16 @@ import (
 	"grafikarsa/api/internal/repo"
 )
 
-func recencyScore(publishedAt interface{ GetTime() bool }) float64 { return 0 }
+// recencyScore: skor keragaman waktu (PRD §9.1).
+//
+// exp(-umur_jam / 168) -> half-life 7 hari, kontinu (bukan bucket <24h/<7d).
+// Dipisah jadi fungsi supaya rumusnya bisa diuji langsung.
+func recencyScore(ageHours float64) float64 {
+	if ageHours < 0 {
+		ageHours = 0
+	}
+	return math.Exp(-ageHours / 168)
+}
 
 // feedWeightsDefault dipakai bila system_settings belum ada / cache gagal.
 func feedWeightsDefault() map[string]float64 {
@@ -240,11 +249,7 @@ func (a *App) handleFeed(w http.ResponseWriter, r *http.Request) {
 					fScore = 0.8
 				}
 			}
-			ageH := time.Since(c.PublishedAt.Time).Hours()
-			if ageH < 0 {
-				ageH = 0
-			}
-			recency := math.Exp(-ageH / 168)
+			recency := recencyScore(time.Since(c.PublishedAt.Time).Hours())
 			eng := numericToFloat(c.Engagement)
 			qual := numericToFloat(c.Quality)
 			pTagVec := map[string]float64{}
