@@ -46,6 +46,15 @@ type AdminSeed struct {
 	Email, Password string
 }
 
+// BackupConfig: konfigurasi backup manual (endpoint POST /admin/backup).
+type BackupConfig struct {
+	// Dir adalah direktori tujuan file dump. Harus berupa volume persisten,
+	// kalau tidak file hilang saat container di-recreate.
+	Dir string
+	// TimeoutPgDump membatasi durasi satu proses pg_dump.
+	TimeoutPgDump time.Duration
+}
+
 type Config struct {
 	AppEnv    string
 	Domain    string
@@ -56,6 +65,7 @@ type Config struct {
 	Turn      TurnstileConfig
 	RateLimit RateLimitConfig
 	Admin     AdminSeed
+	Backup    BackupConfig
 }
 
 func getEnv(key, def string) string {
@@ -118,6 +128,10 @@ func Load() (*Config, error) {
 		Admin: AdminSeed{
 			Email:    getEnv("ADMIN_SEED_EMAIL", "admin@grafikarsa.com"),
 			Password: getEnv("ADMIN_SEED_PASSWORD", ""),
+		},
+		Backup: BackupConfig{
+			Dir:           getEnv("BACKUP_DIR", "/var/backups/grafikarsa"),
+			TimeoutPgDump: getEnvDuration("BACKUP_TIMEOUT", 10*time.Minute),
 		},
 		RateLimit: RateLimitConfig{
 			Requests: getEnvInt("RATE_LIMIT_REQUESTS", 300),

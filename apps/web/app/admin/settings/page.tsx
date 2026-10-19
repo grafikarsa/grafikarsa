@@ -18,9 +18,28 @@ type Settings = {
 
 export default function AdminSettingsPage() {
   const q = useQuery({ queryKey: ["admin-settings"], queryFn: () => apiGet<Settings>("v1/admin/settings") });
+  const perms = useQuery({
+    queryKey: ["me-permissions"],
+    queryFn: () => apiGet<string[]>("v1/me/permissions"),
+    retry: false,
+  });
   const [weights, setWeights] = useState<Record<string, string>>({});
   const [limits, setLimits] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [backupBusy, setBackupBusy] = useState(false);
+  const canBackup = (perms.data ?? []).includes("system.backup");
+
+  async function runBackup() {
+    setBackupBusy(true);
+    try {
+      const res = await apiSend<{ file: string; bytes: number }>("v1/admin/backup", "POST", {});
+      toast.success(`Backup selesai: ${res.file} (${Math.round(res.bytes / 1024)} KB).`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal membuat backup.");
+    } finally {
+      setBackupBusy(false);
+    }
+  }
 
   useEffect(() => {
     if (!q.data) return;
@@ -118,6 +137,24 @@ export default function AdminSettingsPage() {
           </Button>
         </CardContent>
       </Card>
+
+      {canBackup && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Backup database</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <p className="text-muted-foreground text-xs">
+              Membuat dump PostgreSQL manual (custom format) di direktori backup server. Backup
+              harian otomatis berjalan terpisah lewat cron; tombol ini untuk titik restore tambahan
+              saat dibutuhkan. Object storage ikut dicadangkan oleh skrip backup di host.
+            </p>
+            <Button className="self-start" onClick={runBackup} disabled={backupBusy}>
+              {backupBusy ? "Membuat backup..." : "Backup sekarang"}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

@@ -110,6 +110,10 @@ services:
       - DB_HOST=db
       - DRAGONFLY_HOST=dragonfly
       - S3_ENDPOINT=http://storage:9000
+      # Backup manual (permission system.backup) menulis ke volume persisten.
+      - BACKUP_DIR=/var/backups/grafikarsa
+    volumes:
+      - backup_data:/var/backups/grafikarsa
     depends_on:
       db:
         condition: service_healthy
@@ -171,6 +175,7 @@ services:
       - grafikarsa-network
 
 volumes:
+  backup_data:
   postgres_data:
   dragonfly_data:
   storage_data:

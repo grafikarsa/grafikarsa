@@ -173,6 +173,8 @@ func (a *App) routes() http.Handler {
 			r.With(a.requirePerm("system.jobs")).Get("/media/quarantine", a.handleListQuarantinedMedia)
 			r.With(a.requirePerm("media.delete_any")).Post("/media/{id}/unquarantine", a.csrf(a.handleUnquarantineMedia))
 			r.With(a.requirePerm("system.jobs")).Post("/leaderboards/recompute", a.csrf(a.handleRecomputeLeaderboard))
+			// Backup database manual (titik restore tambahan di luar jadwal cron).
+			r.With(a.requirePerm("system.backup")).Post("/backup", a.csrf(a.handleBackupDump))
 		})
 		r.Group(func(r chi.Router) {
 			r.Use(a.authRequired)
