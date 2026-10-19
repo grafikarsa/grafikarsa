@@ -245,7 +245,7 @@ func (a *App) handleUpload(w http.ResponseWriter, r *http.Request) {
 		}
 		variantKeys[strconv.Itoa(wpx)] = vkey
 	}
-	vb, _ := json.Marshal(variantKeys)
+	vb := toJSONBytes(variantKeys)
 
 	mediaID, err := a.Q.CreateMedia(ctx, repo.CreateMediaParams{
 		OwnerID:        mustUUID(uid),

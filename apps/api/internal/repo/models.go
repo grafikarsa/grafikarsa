@@ -469,6 +469,7 @@ type UserRoles struct {
 	AssignedBy   pgtype.UUID        `json:"assigned_by"`
 	ExpiresAt    pgtype.Timestamptz `json:"expires_at"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	ID           pgtype.UUID        `json:"id"`
 }
 
 type UserSocialLinks struct {

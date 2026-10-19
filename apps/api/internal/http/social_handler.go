@@ -1,7 +1,6 @@
 package http
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -202,6 +201,6 @@ func (a *App) handleDeleteComment(w http.ResponseWriter, r *http.Request) {
 }
 
 func notifPayload(m map[string]string) []byte {
-	b, _ := json.Marshal(m)
+	b := toJSONBytes(m)
 	return b
 }

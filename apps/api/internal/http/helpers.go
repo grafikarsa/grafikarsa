@@ -53,6 +53,20 @@ func UserScope(r *http.Request) string {
 	return v
 }
 
+// toJSONBytes marshal nilai ke JSON untuk disimpan di kolom JSONB.
+//
+// Error marshal sengaja tidak dipropagasi: JSONB tidak boleh kosong diam-diam
+// tanpa jejak, jadi kalau gagal disimpan objek kosong yang valid ({} / [])
+// supaya baris tetap terbaca dan bisa dibenerin. Caller yang butuh tahu
+// status marshal harus memanggil json.Marshal langsung.
+func toJSONBytes(v any) []byte {
+	b, err := json.Marshal(v)
+	if err != nil || len(b) == 0 {
+		return []byte("{}")
+	}
+	return b
+}
+
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
