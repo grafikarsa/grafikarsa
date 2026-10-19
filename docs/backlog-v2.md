@@ -181,6 +181,8 @@
   - Fix: binary resmi gitleaks v8.30.1 dipasang langsung (tanpa license) + `.gitleaks.toml` allowlist sempit untuk 6 false positive token JWT terpotong di dokumentasi v1 yang sudah dihapus
   - ⚠️ Alternatif: tambah secret `GITLEAKS_LICENSE` lalu kembali ke action resmi
   - ✅ Sprint 1 (commit `e027ca7`) — diverifikasi lokal: 230 commit → "no leaks found", exit 0
+  - 🔴 **KOREKSI (commit `f67237d`, temuan CodeRabbit):** config `.gitleaks.toml` versi awal **tidak memuat default rules** (butuh `[extend] useDefault = true`) → job selalu hijau tanpa memindai apa pun. Diperbaiki + allowlist diperketat (tanpa `paths`) + **self-test CI** yang menyisipkan secret palsu dan mewajibkan gitleaks menemukannya
+  - Catatan: config yang benar → 233 commit → 0 temuan, rules terbukti aktif lewat self-test
 
 ---
 
