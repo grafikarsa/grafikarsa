@@ -1,0 +1,23 @@
+title = "Grafikarsa — konfigurasi gitleaks"
+
+# Rules bawaan gitleaks dipakai seluruhnya. Allowlist di bawah SANGAT sempit:
+# hanya file dokumentasi v1 yang sudah dihapus + pola token JWT terpotong
+# literal. Secret asli di file lain tetap terdeteksi.
+
+[[allowlists]]
+description = """
+Contoh access_token pada dokumentasi v1: docs/api.md, docs/api/api.md, dan
+docs/jwt/jwt-implementation.md. Nilainya token JWT yang dipotong literal
+dengan "...", bukan kredensial nyata — false positive aturan generic-api-key
+karena entropy header JWT tinggi. Ketiga file sudah dihapus di v2, jadi
+allowlist ini tidak menutupi kode yang aktif.
+"""
+paths = [
+  '''^docs/api\.md$''',
+  '''^docs/api/api\.md$''',
+  '''^docs/jwt/jwt-implementation\.md$''',
+]
+regexes = [
+  '''^eyJhbGciOiJIUzI1NiIs(InR5cCI6IkpXVCJ9)?\.\.\.$''',
+]
+regexTarget = "secret"
