@@ -1,182 +1,149 @@
 # ==============================================
-# Grafikarsa Monorepo - Makefile
+# GRAFIKARSA v2 — Makefile (DX)
 # ==============================================
-# Usage: make help
+# Semua target baca .env root. Jalankan dari root repo.
+#   cp .env.example .env && make dev
 
-.PHONY: help dev dev-down dev-web dev-logs prod prod-down prod-logs \
-        db-import db-backup db-shell db-reset \
-        build push deploy deploy-config \
-        test-backend test-web \
-        clean restart status
-
-.DEFAULT_GOAL := help
-
-# Load .env if exists (suppress error if not)
 -include .env
 export
 
-# ========================================
-# Help
-# ========================================
-help: ## Show this help message
-	@echo ""
-	@echo "  Grafikarsa Monorepo"
-	@echo "  ==================="
-	@echo ""
-	@echo "  Development:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "    \033[36m%-20s\033[0m %s\n", $$1, $$2}'
-	@echo ""
+COMPOSE_DEV := docker compose -f docker-compose.yml
+COMPOSE_PROD := docker compose -f docker-compose.prod.yml
+API_DIR := apps/api
+WEB_DIR := apps/web
 
-# ========================================
-# Development (recommended workflow)
-# ========================================
-dev: ## Start dev: backend (Docker + hot reload) + web (npm run dev)
-	@echo ""
-	@echo "🚀 Starting development environment..."
-	@echo ""
-	@echo "📦 Starting backend services (db + minio + backend)..."
-	docker compose up -d --build
-	@echo ""
-	@echo "✅ Backend services started!"
-	@echo ""
-	@echo "📍 Services:"
-	@echo "   Backend API:   http://localhost:8080"
-	@echo "   MinIO Console: http://localhost:9001"
-	@echo "   Database:      localhost:5432"
-	@echo ""
-	@echo "🌐 Now start the web frontend in a NEW terminal:"
-	@echo ""
-	@echo "   cd apps/web && npm install && npm run dev"
-	@echo ""
-	@echo "   Frontend:      http://localhost:3000"
-	@echo ""
+# DSN untuk tooling host. Password di-escape agar karakter seperti '/', '@',
+# atau ':' (umum pada `openssl rand -base64`) tidak merusak URL.
+ENCODED_DB_PASSWORD := $(shell printf '%s' '$(DB_PASSWORD)' | sed -e 's/%/%25/g' -e 's/ /%20/g' -e 's/@/%40/g' -e 's|/|%2F|g' -e 's/:/%3A/g' -e 's/#/%23/g' -e 's/?/%3F/g')
+DATABASE_URL := postgres://$(DB_USER):$(ENCODED_DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable
 
-dev-web: ## Start web frontend (run in separate terminal)
-	@if not exist apps\web\.env.local copy .env apps\web\.env.local
-	cd apps/web && npm install && npm run dev
+.PHONY: help dev dev-web dev-down dev-logs \
+	migrate-up migrate-down migrate-status migrate-new sqlc seed verify-seed \
+	openapi openapi-check types-web types-web-check \
+	backup restore test test-backend test-web test-load test-contract \
+	lint lint-backend lint-web \
+	prod prod-down deploy-check status
 
-dev-down: ## Stop dev backend services
-	@echo "🛑 Stopping development services..."
-	docker compose down
-	@echo "✅ Development services stopped!"
+help: ## Tampilkan bantuan
+	@grep -h -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
 
-dev-logs: ## View dev backend logs
-	docker compose logs -f
-
-logs-backend: ## View backend container logs only
-	docker logs grafikarsa-backend-dev -f
-
-logs-db: ## View database logs only
-	docker logs grafikarsa-db-dev -f
-
-# ========================================
-# Production simulation (local)
-# ========================================
-prod: ## Simulate production locally (builds & runs all containers)
+# ── DEV ───────────────────────────────────────
+dev: ## Up db + dragonfly + storage + api + worker (web native terpisah)
+	$(COMPOSE_DEV) up -d --build db dragonfly storage api worker
 	@echo ""
-	@echo "🏗️  Building and starting production simulation..."
-	@echo ""
+	@echo "  API      http://localhost:$${API_PORT:-8091}/health"
+	@echo "  DB       localhost:$${DB_PORT:-5439}"
+	@echo "  Cache    localhost:$${DRAGONFLY_PORT:-6390}"
+	@echo "  Storage  http://localhost:$${S3_PORT:-9020} (S3)  http://localhost:$${S3_CONSOLE_PORT:-9021} (console)"
+	@echo "  Web      jalankan: make dev-web  ->  http://localhost:$${WEB_PORT:-3020}"
+	@echo "  Worker   scheduler aktif (outbox 30s, stats 5m, leaderboard 02:05 WIB)"
+
+dev-web: ## Jalankan Next.js native (HMR)
+	WEB_PORT=$${WEB_PORT:-3020} pnpm --dir $(WEB_DIR) dev --port $${WEB_PORT:-3020}
+
+dev-down: ## Matikan stack dev (volume dipertahankan)
+	$(COMPOSE_DEV) down
+
+dev-logs: ## Tail log semua service dev
+	$(COMPOSE_DEV) logs -f --tail=100
+
+# ── DB ────────────────────────────────────────
+# Sumber migrasi = apps/api/db/migrations (ter-track git) dan di-embed
+# langsung lewat db/migrations/embed.go, jadi tidak ada langkah salin.
+migrate-up: ## goose up (via container api one-off)
+	$(COMPOSE_DEV) run --rm api go run ./cmd/tools/migrate up
+
+migrate-down: ## goose down 1 level (HATI-HATI di prod)
+	$(COMPOSE_DEV) run --rm api go run ./cmd/tools/migrate down
+
+migrate-status: ## Lihat versi migrasi saat ini
+	$(COMPOSE_DEV) run --rm api go run ./cmd/tools/migrate status
+
+migrate-new: ## Buat file migrasi baru: make migrate-new NAME=add_x
+	@test -n "$(NAME)" || (echo "Usage: make migrate-new NAME=add_x" && exit 1)
+	@mkdir -p $(API_DIR)/db/migrations
+	@TS=$$(date +%Y%m%d%H%M%S); \
+	touch $(API_DIR)/db/migrations/$${TS}_$(NAME).sql; \
+	echo "-- +goose Up" > $(API_DIR)/db/migrations/$${TS}_$(NAME).sql; \
+	echo "" >> $(API_DIR)/db/migrations/$${TS}_$(NAME).sql; \
+	echo "-- +goose Down" >> $(API_DIR)/db/migrations/$${TS}_$(NAME).sql; \
+	echo "created $(API_DIR)/db/migrations/$${TS}_$(NAME).sql"
+
+openapi: ## Regenerate kontrak OpenAPI dari routes.go (wajib setelah ubah route)
+	@cd $(API_DIR) && go run ./cmd/tools/gen-openapi > ../../packages/contracts/openapi.yaml
+	@echo "packages/contracts/openapi.yaml diperbarui"
+
+openapi-check: ## Cek drift kontrak OpenAPI (dipakai CI)
+	@cd $(API_DIR) && go run ./cmd/tools/gen-openapi | diff -q ../../packages/contracts/openapi.yaml - >/dev/null \
+	  && echo "openapi: sinkron" \
+	  || (echo "FATAL: openapi.yaml stale — jalankan make openapi" && exit 1)
+
+types-web: ## Generate tipe TS dari kontrak OpenAPI untuk FE
+	@pnpm --dir $(WEB_DIR) exec openapi-typescript ../../packages/contracts/openapi.yaml -o lib/api-types.ts
+	@echo "apps/web/lib/api-types.ts diperbarui"
+
+types-web-check: ## Cek drift tipe TS FE (dipakai CI)
+	@pnpm --dir $(WEB_DIR) exec openapi-typescript ../../packages/contracts/openapi.yaml -o /tmp/api-types.gen.ts >/dev/null 2>&1
+	@diff -q $(WEB_DIR)/lib/api-types.ts /tmp/api-types.gen.ts >/dev/null \
+	  && echo "types-web: sinkron" \
+	  || (echo "FATAL: lib/api-types.ts stale — jalankan make types-web" && exit 1)
+
+sqlc: ## Generate type-safe queries (butuh sqlc terinstall)
+	sqlc -f $(API_DIR)/sqlc.yaml generate
+
+seed: ## Seed majors/years/admin/roles (idempoten)
+	$(COMPOSE_DEV) run --rm api go run ./cmd/tools/seed
+
+verify-seed: ## Verifikasi seed (counts + admin)
+	$(COMPOSE_DEV) run --rm api go run ./cmd/tools/verify-seed
+
+# ── BACKUP (stub Fase 0: pg_dump saja) ─────────
+backup: ## Backup DB dev ke ./backup/<date>.dump (+ storage bila rclone ada)
+	@mkdir -p backup
+	docker exec grafikarsa-db-dev pg_dump -Fc -U $(DB_USER) $(DB_NAME) > backup/db-$$(date +%F).dump
+	@echo "backup/db-$$(date +%F).dump"
+
+restore: ## Restore DB: make restore FILE=backup/2026-10-09.dump
+	@test -n "$(FILE)" || (echo "Usage: make restore FILE=..." && exit 1)
+	docker exec -i grafikarsa-db-dev pg_restore -c -U $(DB_USER) -d $(DB_NAME) < $(FILE)
+
+# ── TEST & LINT ───────────────────────────────
+test: test-backend test-web ## Semua test (backend + web)
+
+test-backend:
+	$(COMPOSE_DEV) run --rm api go test ./...
+
+test-web:
+	pnpm --dir $(WEB_DIR) test
+
+test-load: ## Smoke test beban (k6) terhadap API yang hidup
+	@command -v k6 >/dev/null 2>&1 && k6 run -e BASE=$${API_URL:-http://localhost:8091} tools/k6/smoke.js \
+	  || echo "SKIP: k6 belum terpasang (https://k6.io/docs/get-started/installation/)"
+
+test-contract: ## Uji kontrak OpenAPI terhadap API hidup (schemathesis)
+	@./tools/schemathesis.sh $${API_URL:-http://localhost:8091}
+
+test-e2e: ## E2E Playwright (jalankan bila sudah terpasang)
+	@pnpm --dir $(WEB_DIR) exec playwright test || echo "SKIP: playwright belum dikonfigurasi"
+
+lint: lint-backend ## Semua lint
+
+lint-backend:
+	$(COMPOSE_DEV) run --rm api sh -c "gofmt -l . && go vet ./..."
+
+lint-web:
+	pnpm --dir $(WEB_DIR) exec tsc --noEmit
+
+# ── PROD SIM ──────────────────────────────────
+prod: ## Simulasi prod lokal (api + web built)
 	docker compose -f docker-compose.prod.yml up -d --build
-	@echo ""
-	@echo "✅ Production simulation started!"
-	@echo ""
-	@echo "📍 Services:"
-	@echo "   Frontend:      http://localhost:3000"
-	@echo "   Backend API:   http://localhost:8080"
-	@echo "   MinIO Console: http://localhost:9001"
-	@echo ""
+	@echo "  Web  http://localhost:$${WEB_PORT:-3020}"
 
-prod-down: ## Stop production simulation
-	@echo "🛑 Stopping production simulation..."
+prod-down:
 	docker compose -f docker-compose.prod.yml down
-	@echo "✅ Production simulation stopped!"
 
-prod-logs: ## View production simulation logs
-	docker compose -f docker-compose.prod.yml logs -f
+deploy-check: ## Validasi secret tidak default sebelum deploy
+	@./tools/deploy-check.sh
 
-prod-status: ## Show production simulation status
-	docker compose -f docker-compose.prod.yml ps
-
-# ========================================
-# Database
-# ========================================
-db-import: ## Import database schema from db/db.sql
-	@echo "📥 Importing database schema..."
-	docker exec -i grafikarsa-db-dev psql -U $(DB_USER) -d $(DB_NAME) < db/db.sql
-	@echo "✅ Database schema imported!"
-
-db-backup: ## Backup database to backup_YYYYMMDD.sql
-	@echo "💾 Backing up database..."
-	docker exec grafikarsa-db-dev pg_dump -U $(DB_USER) $(DB_NAME) > backup_$$(date +%Y%m%d_%H%M%S).sql
-	@echo "✅ Database backed up!"
-
-db-shell: ## Open database shell (psql)
-	docker exec -it grafikarsa-db-dev psql -U $(DB_USER) -d $(DB_NAME)
-
-db-reset: ## Reset database (WARNING: deletes all data)
-	@echo "⚠️  Resetting database..."
-	docker exec -it grafikarsa-db-dev psql -U $(DB_USER) -d postgres -c "DROP DATABASE IF EXISTS $(DB_NAME);"
-	docker exec -it grafikarsa-db-dev psql -U $(DB_USER) -d postgres -c "CREATE DATABASE $(DB_NAME);"
-	@make db-import
-	@echo "✅ Database reset complete!"
-
-# ========================================
-# Build & Deploy (CI/CD)
-# ========================================
-build: ## Build production Docker images
-	@echo "🏗️  Building production images..."
-	docker build -t $(DOCKERHUB_USERNAME)/grafikarsa-backend:latest --target production ./apps/backend
-	docker build -t $(DOCKERHUB_USERNAME)/grafikarsa-web:latest --target production \
-		--build-arg NEXT_PUBLIC_API_URL=$(NEXT_PUBLIC_API_URL) \
-		--build-arg NEXT_PUBLIC_APP_URL=$(NEXT_PUBLIC_APP_URL) \
-		--build-arg INTERNAL_API_URL=$(INTERNAL_API_URL) \
-		./apps/web
-	@echo "✅ Images built!"
-
-push: ## Push images to Docker Hub
-	@echo "📤 Pushing images..."
-	docker push $(DOCKERHUB_USERNAME)/grafikarsa-backend:latest
-	docker push $(DOCKERHUB_USERNAME)/grafikarsa-web:latest
-	@echo "✅ Images pushed!"
-
-deploy-config: ## Validate deploy compose (single-domain, needs DOMAIN)
-	@if [ -z "$(DOMAIN)" ]; then echo "❌ Set DOMAIN dulu: DOMAIN=grafikarsa.com make deploy-config"; exit 1; fi
-	@echo "🔍 Validating single-domain deploy config for DOMAIN=$(DOMAIN)..."
-	docker compose -f docker-compose.deploy.yml config > /dev/null
-	@echo "✅ Compose valid. Proxy: https://$(DOMAIN)/ + /api/* + /storage/*"
-
-# ========================================
-# Testing
-# ========================================
-test-backend: ## Run backend tests (inside container)
-	docker exec grafikarsa-backend-dev go test ./...
-
-test-backend-cover: ## Run backend tests with coverage
-	docker exec grafikarsa-backend-dev go test -cover ./...
-
-# ========================================
-# Maintenance
-# ========================================
-clean: ## Clean up ALL Docker resources (volumes included!)
-	@echo "🧹 Cleaning up..."
-	-@docker compose down -v 2>nul
-	-@docker compose -f docker-compose.prod.yml down -v 2>nul
-	@docker system prune -f
-	@echo "✅ Cleanup complete!"
-
-restart: ## Restart dev backend services
-	@echo "🔄 Restarting services..."
-	docker compose restart
-	@echo "✅ Services restarted!"
-
-restart-backend: ## Restart only the backend container
-	docker compose restart backend
-
-status: ## Show status of dev services
-	@echo "📊 Service Status:"
-	@docker compose ps
-
-shell-backend: ## Open shell in backend container
-	docker exec -it grafikarsa-backend-dev sh
-
-ps: status ## Alias for status
+status:
+	$(COMPOSE_DEV) ps

@@ -1,167 +1,129 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { History } from 'lucide-react';
-import { Card } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import { getChangelogs, markAllChangelogsAsRead } from '@/lib/api/changelog';
-import { ChangelogTimelineItem } from '@/components/changelog/changelog-timeline-item';
-import { useAuthStore } from '@/lib/stores/auth-store';
-import type { Changelog } from '@/lib/types/changelog';
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { apiGet, apiSend } from "@/lib/api";
+import { useAuthStore } from "@/lib/auth-store";
+
+type Section = { kind: string; title: string; body_md: string };
+type Item = { id: string; version: string; title: string; summary: string };
+
+const KIND_LABEL: Record<string, string> = {
+  added: "Baru",
+  improved: "Peningkatan",
+  fixed: "Perbaikan",
+  removed: "Dihapus",
+};
 
 export default function ChangelogPage() {
-  const queryClient = useQueryClient();
-  const { user } = useAuthStore();
-  const [page, setPage] = useState(1);
+  const user = useAuthStore((s) => s.user);
+  const [detailed, setDetailed] = useState<Record<string, Section[]>>({});
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['changelogs', page],
-    queryFn: () => getChangelogs(page, 10),
+  const list = useQuery({
+    queryKey: ["changelogs"],
+    queryFn: () => apiGet<Item[]>("v1/changelogs"),
   });
 
-  // Mark all as read when user visits the page
-  const markReadMutation = useMutation({
-    mutationFn: () => markAllChangelogsAsRead(),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['changelog-unread-count'] });
-    },
+  const unread = useQuery({
+    queryKey: ["changelogs-unread"],
+    queryFn: () => apiGet<{ unread: number }>("v1/changelogs/unread-count"),
+    enabled: Boolean(user),
   });
 
+  // Tandai sudah dibaca saat halaman dibuka (sekali per kunjungan).
   useEffect(() => {
-    if (user) {
-      markReadMutation.mutate();
-    }
+    if (!user) return;
+    apiSend("v1/changelogs/mark-all-read", "POST")
+      .then(() => unread.refetch())
+      .catch(() => null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  // axios wraps response in .data, then our API wraps in .data again
-  const changelogs = data?.data?.data || [];
-  const pagination = data?.data?.meta;
-
-  // Group changelogs by date
-  const groupedChangelogs = changelogs.reduce(
-    (acc: Record<string, Changelog[]>, changelog: Changelog) => {
-      const date = changelog.release_date;
-      if (!acc[date]) {
-        acc[date] = [];
-      }
-      acc[date].push(changelog);
-      return acc;
-    },
-    {}
-  );
-
-  if (isLoading) {
-    return (
-      <div className="mx-auto max-w-4xl px-4 pb-12 pt-20 sm:px-6 lg:px-8">
-        <div className="mb-12 text-center">
-          <Skeleton className="mx-auto h-10 w-48" />
-          <Skeleton className="mx-auto mt-3 h-5 w-80" />
-        </div>
-        <div className="space-y-8">
-          {[...Array(3)].map((_, i) => (
-            <Skeleton key={i} className="h-64" />
-          ))}
-        </div>
-      </div>
-    );
+  async function loadSections(id: string) {
+    if (detailed[id]) return;
+    try {
+      const d = await apiGet<{ sections: Section[] }>(`v1/changelogs/${id}`);
+      setDetailed((prev) => ({ ...prev, [id]: d.sections }));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal memuat detail.");
+    }
   }
 
+  const items = list.data ?? [];
+
   return (
-    <div className="mx-auto max-w-4xl px-4 pb-12 pt-20 sm:px-6 lg:px-8">
-      {/* Header */}
-      <div className="mb-12 text-center">
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Changelog</h1>
-        <p className="mt-3 text-lg text-muted-foreground">
-          Lihat update dan perubahan terbaru di Grafikarsa
-        </p>
+    <main className="mx-auto max-w-2xl p-4">
+      <div className="mb-4 flex items-center gap-3">
+        <h1 className="text-2xl font-bold">Changelog</h1>
+        {user && (unread.data?.unread ?? 0) > 0 && <Badge>{unread.data?.unread} baru</Badge>}
+        <a href="/changelogs/rss.xml" className="ml-auto text-sm underline">
+          RSS
+        </a>
       </div>
 
-      {/* Timeline */}
-      {changelogs.length === 0 ? (
-        <Card className="border-dashed py-16">
-          <div className="flex flex-col items-center justify-center">
-            <History className="h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-lg font-semibold">Belum ada changelog</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Changelog akan muncul di sini saat ada update baru
-            </p>
-          </div>
+      {list.isLoading &&
+        [0, 1].map((i) => (
+          <Card key={i} className="mb-3">
+            <CardContent className="p-4">
+              <Skeleton className="h-5 w-1/2" />
+            </CardContent>
+          </Card>
+        ))}
+
+      {list.isError && (
+        <Card>
+          <CardContent className="p-4 text-sm">
+            Gagal memuat changelog.{" "}
+            <Button variant="link" className="p-0" onClick={() => list.refetch()}>
+              Coba lagi
+            </Button>
+          </CardContent>
         </Card>
-      ) : (
-        <div className="relative">
-          {/* Timeline */}
-          {Object.entries(groupedChangelogs).map(([date, items]) => {
-            const releaseDate = new Date(date);
-            const formattedDate = releaseDate.toLocaleDateString('id-ID', {
-              day: 'numeric',
-              month: 'long',
-              year: 'numeric',
-            });
-
-            return (
-              <div key={date} className="relative flex gap-6 pb-10 last:pb-0">
-                {/* Left side - Date (sticky) */}
-                <div className="hidden w-32 shrink-0 md:block">
-                  <div className="sticky top-24 text-right">
-                    <span className="text-sm font-medium text-muted-foreground">
-                      {formattedDate}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Timeline line and dot */}
-                <div className="relative flex flex-col items-center">
-                  <div className="h-3 w-3 shrink-0 rounded-full border-2 border-primary bg-background" />
-                  <div className="w-0.5 grow bg-border" />
-                </div>
-
-                {/* Right side - Content */}
-                <div className="flex-1 pb-2">
-                  {/* Mobile date */}
-                  <div className="mb-3 text-sm font-medium text-muted-foreground md:hidden">
-                    {formattedDate}
-                  </div>
-
-                  {/* Changelog items for this date */}
-                  <div className="space-y-6">
-                    {(items as Changelog[]).map((changelog: Changelog) => (
-                      <ChangelogTimelineItem key={changelog.id} changelog={changelog} />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Pagination */}
-          {pagination && pagination.total_pages > 1 && (
-            <div className="mt-8 flex items-center justify-center gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-              >
-                Sebelumnya
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                Halaman {page} dari {pagination.total_pages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.min(pagination.total_pages, p + 1))}
-                disabled={page === pagination.total_pages}
-              >
-                Selanjutnya
-              </Button>
-            </div>
-          )}
-        </div>
       )}
-    </div>
+
+      {!list.isLoading && items.length === 0 && <p className="text-muted-foreground">Belum ada rilis.</p>}
+
+      {items.map((c) => (
+        <Card key={c.id} className="mb-3">
+          <CardHeader>
+            <CardTitle>
+              <a className="hover:underline" href={`/changelog/${c.version}`}>
+                v{c.version} — {c.title}
+              </a>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            {c.summary && <p className="text-sm">{c.summary}</p>}
+            {detailed[c.id] ? (
+              detailed[c.id].length > 0 ? (
+                detailed[c.id].map((s, i) => (
+                  <div key={i} className="text-sm">
+                    <Badge variant="secondary" className="mr-2">{KIND_LABEL[s.kind] ?? s.kind}</Badge>
+                    <span className="font-medium">{s.title}</span>
+                    {s.body_md && <p className="text-muted-foreground mt-1 whitespace-pre-wrap">{s.body_md}</p>}
+                  </div>
+                ))
+              ) : (
+                <p className="text-muted-foreground text-sm">Tanpa detail section.</p>
+              )
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="self-start"
+                onClick={() => loadSections(c.id)}
+              >
+                Lihat detail
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      ))}
+    </main>
   );
 }

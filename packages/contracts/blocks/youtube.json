@@ -1,0 +1,16 @@
+{
+  "title": "Block youtube",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "video_id"
+  ],
+  "properties": {
+    "video_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{11}$"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://grafikarsa.com/contracts/blocks/youtube.json"
+}

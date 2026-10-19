@@ -1,0 +1,29 @@
+{
+  "title": "Block button",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "label",
+    "url"
+  ],
+  "properties": {
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "url": {
+      "type": "string",
+      "pattern": "^https://"
+    },
+    "variant": {
+      "type": "string",
+      "enum": [
+        "primary",
+        "secondary"
+      ]
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://grafikarsa.com/contracts/blocks/button.json"
+}

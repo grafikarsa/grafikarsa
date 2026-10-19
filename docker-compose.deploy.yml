@@ -1,55 +1,44 @@
 # ==============================================
-# GRAFIKARSA MONOREPO - SERVER DEPLOYMENT (single-domain)
+# GRAFIKARSA v2 — SERVER DEPLOYMENT (single-domain)
 # ==============================================
-# Satu-satunya yang butuh: file ini + Caddyfile + .env
-# Tidak perlu Nginx host / certbot / subdomain api.* & storage.*.
-#
 # Setup awal server baru:
-#   1. Copy 3 file ini ke /opt/grafikarsa (lihat scripts/server-init.sh)
-#   2. Isi .env (cukup DOMAIN + password + JWT secret)
+#   1. Copy file ini + Caddyfile + tools/server-init.sh ke /opt/grafikarsa
+#   2. ./tools/server-init.sh  (generate secret + validasi DOMAIN)
 #   3. docker compose -f docker-compose.deploy.yml up -d
 #
 # Arsitektur:
 #   internet --80/443--> proxy (Caddy, auto HTTPS)
-#     /          -> web:3100
-#     /api/*     -> backend:8080   (internal only, tanpa URL publik)
-#     /storage/* -> minio:9000     (strip /storage, publik read)
+#     / -> web:3000 (Next SSR + BFF /api/*, satu-satunya upstream publik)
 #
-# Catatan multi-tenant: TIDAK ada port host yang dipublish kecuali 80/443,
-# jadi tidak akan tabrakan dengan aplikasi lain (dulu SIPODI makan :3001).
+# HANYA proxy yang punya port host. api/db/dragonfly/storage
+# komunikasi via network internal. Browser tidak pernah kontak
+# backend/storage langsung.
 #
 # Usage: docker compose -f docker-compose.deploy.yml up -d
 
 services:
   # Reverse proxy — SATU-SATUNYA service dengan port host.
-  # Dedicated server: 80/443 langsung (default).
-  # Shared host (port 80/443 dipakai Nginx host untuk app lain):
-  #   CADDYFILE=./Caddyfile.http-only, PROXY_HTTP_PORT=8081, PROXY_HTTPS_PORT=8443
-  #   + vhost Nginx host proxy ke 127.0.0.1:8081 (lihat docs/deploy).
   proxy:
     image: caddy:2-alpine
     container_name: grafikarsa-proxy
     restart: unless-stopped
     ports:
-      - "${PROXY_HTTP_PORT:-80}:80"
-      - "${PROXY_HTTPS_PORT:-443}:443"
-      - "${PROXY_HTTPS_PORT:-443}:443/udp" # HTTP/3 (opsional, diabaikan jika diblokir firewall)
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3 (opsional, diabaikan jika diblokir firewall)
     volumes:
-      - ${CADDYFILE:-./Caddyfile}:/etc/caddy/Caddyfile:ro
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     environment:
       - DOMAIN=${DOMAIN}
     depends_on:
       - web
-      - backend
-      - minio
     networks:
       - grafikarsa-network
 
-  # PostgreSQL Database (internal only)
   db:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     container_name: grafikarsa-db
     restart: unless-stopped
     environment:
@@ -58,7 +47,7 @@ services:
       POSTGRES_DB: ${DB_NAME}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./db:/docker-entrypoint-initdb.d
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
@@ -67,38 +56,17 @@ services:
     networks:
       - grafikarsa-network
 
-  # MinIO Object Storage (internal only, publik via /storage/*)
-  # NOTE: pakai pgsty/minio (fork komunitas) karena minio/minio DIHAPUS
-  # dari Docker Hub pada Sep 2026 ("pull access denied"). Jangan kembalikan
-  # ke minio/minio tanpa verifikasi `docker pull` di server.
-  minio:
-    image: pgsty/minio:latest
-    container_name: grafikarsa-minio
+  dragonfly:
+    image: ghcr.io/dragonflydb/dragonfly:latest
+    container_name: grafikarsa-dragonfly
     restart: unless-stopped
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
-      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    command: >-
+      --maxmemory=256mb --proactor_threads=1
+      --cache_mode
+      --dir=/data
+      --dbfilename=dump
     volumes:
-      - minio_data:/data
-    command: server /data --console-address ":9001"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-    networks:
-      - grafikarsa-network
-
-  # Redis Cache (internal only)
-  # NOTE: redis_data hanya cache (feed, captcha, rate-limit). Aman dihapus
-  # (`docker volume rm grafikarsa_redis_data`) jika crash-loop / corrupt AOF.
-  redis:
-    image: redis:7-alpine
-    container_name: grafikarsa-redis
-    restart: unless-stopped
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
-    volumes:
-      - redis_data:/data
+      - dragonfly_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -107,54 +75,101 @@ services:
     networks:
       - grafikarsa-network
 
-  # Go Backend API (internal only — TANPA url publik / subdomain)
-  backend:
-    image: ${DOCKERHUB_USERNAME}/grafikarsa-backend:${IMAGE_TAG:-latest}
-    container_name: grafikarsa-backend
+  # Default: RustFS self-host. Ganti vendor = ganti image + S3_* env.
+  storage:
+    image: rustfs/rustfs:latest
+    container_name: grafikarsa-storage
+    restart: unless-stopped
+    environment:
+      # Vendor container membaca RUSTFS_*; aplikasi (api/worker) TIDAK pernah
+      # membaca RUSTFS_*, hanya S3_* sehingga ganti vendor = ganti service ini.
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY}
+    volumes:
+      - storage_data:/data
+    command: ["/data"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - grafikarsa-network
+
+  api:
+    image: ${DOCKERHUB_USERNAME}/grafikarsa-api:${IMAGE_TAG:-latest}
+    container_name: grafikarsa-api
     restart: unless-stopped
     env_file: .env
     environment:
       - APP_ENV=production
       - DB_HOST=db
-      - MINIO_ENDPOINT=minio:9000
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - GOOGLE_GEMINI_API_KEY=${GOOGLE_GEMINI_API_KEY}
-      # Upload presigned harus lewat path /storage (lihat Caddyfile).
-      # Default /storage agar tetap benar walau .env lama tidak punya var ini.
-      - MINIO_PRESIGN_PATH_PREFIX=${MINIO_PRESIGN_PATH_PREFIX:-/storage}
+      - DRAGONFLY_HOST=dragonfly
+      - S3_ENDPOINT=http://storage:9000
     depends_on:
       db:
         condition: service_healthy
-      minio:
+      dragonfly:
         condition: service_healthy
-      redis:
+      storage:
         condition: service_healthy
     networks:
       - grafikarsa-network
 
-  # Next.js Frontend (internal only, diserve proxy di /)
+  worker:
+    image: ${DOCKERHUB_USERNAME}/grafikarsa-api:${IMAGE_TAG:-latest}
+    container_name: grafikarsa-worker
+    restart: unless-stopped
+    entrypoint: ["/worker"]
+    command: ["serve"]
+    env_file: .env
+    environment:
+      - APP_ENV=production
+      - DB_HOST=db
+      - DRAGONFLY_HOST=dragonfly
+      - S3_ENDPOINT=http://storage:9000
+    depends_on:
+      db:
+        condition: service_healthy
+      dragonfly:
+        condition: service_healthy
+      storage:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/worker", "-healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - grafikarsa-network
+
   web:
     image: ${DOCKERHUB_USERNAME}/grafikarsa-web:${IMAGE_TAG:-latest}
     container_name: grafikarsa-web
     restart: unless-stopped
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+      # SSR di dalam Docker harus pakai hostname internal (mencegah EAI_AGAIN).
+      - INTERNAL_API_URL=http://api:8080/v1
+      # Dipakai BFF untuk origin check mutasi.
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
-      - NEXT_PUBLIC_AI_FEATURES_ENABLED=${NEXT_PUBLIC_AI_FEATURES_ENABLED}
-      # SSR di dalam Docker harus pakai hostname internal, bukan hostname publik
-      # (mencegah EAI_AGAIN). Default aman jika kosong.
-      - INTERNAL_API_URL=${INTERNAL_API_URL:-http://backend:8080/api/v1}
     depends_on:
-      - backend
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     networks:
       - grafikarsa-network
 
 volumes:
   postgres_data:
-  minio_data:
-  redis_data:
+  dragonfly_data:
+  storage_data:
   caddy_data:
   caddy_config:
 

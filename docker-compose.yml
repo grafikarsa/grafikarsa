@@ -1,27 +1,32 @@
 # ==============================================
-# GRAFIKARSA MONOREPO - DEVELOPMENT
+# GRAFIKARSA v2 — DEVELOPMENT
 # ==============================================
-# Backend services: DB + MinIO + Backend (hot reload)
-# Web: run separately with `npm run dev` (see Makefile)
+# Usage: make dev   (baca .env root)
 #
-# Usage: make dev
+# Web jalan NATIVE (pnpm dev) untuk HMR cepat, bukan container.
+# API jalan di container (Air hot-reload) agar parity env S3/DB.
+#
+# URLs:
+#   API      http://localhost:8080/health
+#   Web      http://localhost:3000  (make dev-web, terminal terpisah)
+#   Storage  http://localhost:9000  (S3 API) / :9001 (console)
+#   DB       localhost:5432
+#   Cache    localhost:6379
 
 services:
-  # PostgreSQL Database
   db:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     container_name: grafikarsa-db-dev
     restart: unless-stopped
-    env_file: .env
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5439}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./db:/docker-entrypoint-initdb.d
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
@@ -30,38 +35,19 @@ services:
     networks:
       - grafikarsa-network
 
-  # MinIO Object Storage (pgsty fork: minio/minio dihapus dari Hub Sep 2026)
-  minio:
-    image: pgsty/minio:latest
-    container_name: grafikarsa-minio-dev
+  dragonfly:
+    image: ghcr.io/dragonflydb/dragonfly:latest
+    container_name: grafikarsa-dragonfly-dev
     restart: unless-stopped
+    command: >-
+      --maxmemory=256mb --proactor_threads=1
+      --cache_mode
+      --dir=/data
+      --dbfilename=dump
     ports:
-      - "9000:9000"
-      - "9001:9001"
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
-      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+      - "${DRAGONFLY_PORT:-6390}:6379"
     volumes:
-      - minio_data:/data
-    command: server /data --console-address ":9001"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-    networks:
-      - grafikarsa-network
-
-  # Redis Cache
-  redis:
-    image: redis:7-alpine
-    container_name: grafikarsa-redis-dev
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
-    volumes:
-      - redis_data:/data
+      - dragonfly_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -70,40 +56,96 @@ services:
     networks:
       - grafikarsa-network
 
-  # Go Backend API (with Air hot-reload)
-  backend:
-    build:
-      context: ./apps/backend
-      dockerfile: Dockerfile
-      target: development
-    container_name: grafikarsa-backend-dev
+  # S3-compatible storage. Default: RustFS self-host.
+  # Ganti vendor = ganti image + S3_* env, tanpa ubah kode API.
+  storage:
+    image: rustfs/rustfs:latest
+    container_name: grafikarsa-storage-dev
     restart: unless-stopped
+    environment:
+      # Vendor container membaca RUSTFS_*; aplikasi (api/worker) TIDAK pernah
+      # membaca RUSTFS_*, hanya S3_* sehingga ganti vendor = ganti service ini.
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY}
+      RUSTFS_CONSOLE_ENABLE: "true"
+    volumes:
+      - storage_data:/data
+    command: ["/data"]
     ports:
-      - "8080:8080"
+      - "${S3_PORT:-9020}:9000"
+      - "${S3_CONSOLE_PORT:-9021}:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - grafikarsa-network
+
+  api:
+    build:
+      context: ./apps/api
+      target: development
+    container_name: grafikarsa-api-dev
+    restart: unless-stopped
     env_file: .env
     environment:
-      # Override DB_HOST to use Docker network hostname
+      - APP_ENV=development
       - DB_HOST=db
-      - MINIO_ENDPOINT=minio:9000
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - GOOGLE_GEMINI_API_KEY=${GOOGLE_GEMINI_API_KEY}
+      - DB_PORT=5432
+      - DRAGONFLY_HOST=dragonfly
+      - DRAGONFLY_PORT=6379
+      - S3_ENDPOINT=http://storage:9000
+      - INTERNAL_API_URL=http://api:8080/v1
+    ports:
+      - "${API_PORT:-8091}:8080"
     volumes:
-      - ./apps/backend:/app
+      - ./apps/api:/app
+      - /app/tmp
     depends_on:
       db:
         condition: service_healthy
-      minio:
+      dragonfly:
         condition: service_healthy
-      redis:
+      storage:
+        condition: service_healthy
+    networks:
+      - grafikarsa-network
+
+  # Worker: scheduler job berkala (outbox 30 dtk, stats 5 mnt, leaderboard
+  # harian 02:05 WIB, promotion draft harian, cleanup, retention).
+  # Fase 3: satu proses scheduler, tanpa port host.
+  worker:
+    build:
+      context: ./apps/api
+      target: development
+    container_name: grafikarsa-worker-dev
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - APP_ENV=development
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DRAGONFLY_HOST=dragonfly
+      - DRAGONFLY_PORT=6379
+      - S3_ENDPOINT=http://storage:9000
+    command: ["go", "run", "./cmd/worker", "serve"]
+    volumes:
+      - ./apps/api:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      dragonfly:
+        condition: service_healthy
+      storage:
         condition: service_healthy
     networks:
       - grafikarsa-network
 
 volumes:
   postgres_data:
-  minio_data:
-  redis_data:
+  dragonfly_data:
+  storage_data:
 
 networks:
   grafikarsa-network:

@@ -1,0 +1,38 @@
+{
+  "title": "Block image",
+  "type": "object",
+  "additionalProperties": false,
+  "anyOf": [
+    {
+      "required": [
+        "media_id"
+      ]
+    },
+    {
+      "required": [
+        "url"
+      ]
+    }
+  ],
+  "properties": {
+    "media_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "url": {
+      "type": "string",
+      "pattern": "^https://"
+    },
+    "alt": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 200
+    },
+    "caption": {
+      "type": "string",
+      "maxLength": 300
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://grafikarsa.com/contracts/blocks/image.json"
+}

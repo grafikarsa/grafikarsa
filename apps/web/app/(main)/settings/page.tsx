@@ -1,91 +1,102 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/hooks/use-auth';
-import { Button } from '@/components/ui/button';
-import { ThemeToggle } from '@/components/layout/theme-toggle';
-import { MessageSquareText, LogOut, ChevronLeft, Loader2 } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
-import {
-    Drawer,
-    DrawerContent,
-    DrawerDescription,
-    DrawerHeader,
-    DrawerTitle,
-    DrawerTrigger,
-} from '@/components/ui/drawer';
-import { FeedbackForm } from '@/components/shared/feedback-form';
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { useAuthStore } from "@/lib/auth-store";
+import { apiGet, apiSend } from "@/lib/api";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+
+type Prefs = {
+  portfolio_liked: boolean;
+  new_comment: boolean;
+  new_follower: boolean;
+  digest_daily: boolean;
+};
+
+const LINKS = [
+  { href: "/settings/profile", label: "Profil & foto" },
+  { href: "/settings/password", label: "Ganti password" },
+  { href: "/me/portfolios", label: "Portfolio saya" },
+  { href: "/settings/sessions", label: "Perangkat & sesi" },
+  { href: "/notifications", label: "Notifikasi" },
+  { href: "/feedback", label: "Masukan & laporan" },
+];
 
 export default function SettingsPage() {
-    const router = useRouter();
-    const { logout, isLogoutPending } = useAuth();
-    const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const user = useAuthStore((s) => s.user);
+  const qc = useQueryClient();
+  const pathname = usePathname();
 
-    return (
-        <div className="min-h-screen bg-background">
-            {/* Header */}
-            <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4">
-                <Button variant="ghost" size="icon" onClick={() => router.back()}>
-                    <ChevronLeft className="h-5 w-5" />
-                </Button>
-                <h1 className="text-lg font-semibold">Pengaturan</h1>
-            </header>
+  const prefs = useQuery({
+    queryKey: ["notif-prefs"],
+    queryFn: () => apiGet<Prefs>("v1/me/notification-prefs"),
+    enabled: Boolean(user),
+  });
 
-            {/* Content */}
-            <div className="p-4 space-y-2">
-                {/* Theme */}
-                <div className="flex items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                        <p className="font-medium">Tema</p>
-                        <p className="text-sm text-muted-foreground">Ubah tampilan terang/gelap</p>
-                    </div>
-                    <ThemeToggle />
-                </div>
+  const save = useMutation({
+    mutationFn: (next: Prefs) => apiSend("v1/me/notification-prefs", "PUT", next),
+    onSuccess: () => {
+      toast.success("Preferensi disimpan.");
+      qc.invalidateQueries({ queryKey: ["notif-prefs"] });
+    },
+    onError: () => toast.error("Gagal menyimpan preferensi."),
+  });
 
-                {/* Feedback */}
-                <Drawer open={feedbackOpen} onOpenChange={setFeedbackOpen}>
-                    <DrawerTrigger asChild>
-                        <button
-                            className="flex w-full items-center gap-4 rounded-lg border p-4 text-left transition-colors hover:bg-muted"
-                        >
-                            <MessageSquareText className="h-5 w-5 text-muted-foreground" />
-                            <div className="space-y-0.5">
-                                <p className="font-medium">Kirim Feedback</p>
-                                <p className="text-sm text-muted-foreground">Sampaikan saran atau laporkan bug</p>
-                            </div>
-                        </button>
-                    </DrawerTrigger>
-                    <DrawerContent>
-                        <DrawerHeader className="text-left">
-                            <DrawerTitle>Kirim Masukan</DrawerTitle>
-                            <DrawerDescription>
-                                Bantu kami meningkatkan Grafikarsa.
-                            </DrawerDescription>
-                        </DrawerHeader>
-                        <div className="px-4 pb-24">
-                            <FeedbackForm onSuccess={() => setFeedbackOpen(false)} onCancel={() => setFeedbackOpen(false)} />
-                        </div>
-                    </DrawerContent>
-                </Drawer>
+  function toggle(key: keyof Prefs, value: boolean) {
+    if (!prefs.data) return;
+    save.mutate({ ...prefs.data, [key]: value });
+  }
 
-                <Separator className="my-4" />
+  return (
+    <main className="mx-auto flex max-w-xl flex-col gap-4 p-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Pengaturan</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2">
+          <p className="text-sm">
+            Masuk sebagai <span className="font-semibold">{user?.name ?? "tamu"}</span>
+            {user && <span className="text-muted-foreground"> (@{user.username})</span>}
+          </p>
+          {LINKS.map((l) => (
+            <Link key={l.href} href={l.href} className={`text-sm hover:underline ${pathname === l.href ? "font-semibold" : ""}`}>
+              {l.label}
+            </Link>
+          ))}
+        </CardContent>
+      </Card>
 
-                {/* Logout */}
-                <Button
-                    variant="destructive"
-                    className="w-full justify-start gap-4"
-                    onClick={() => logout()}
-                    disabled={isLogoutPending}
-                >
-                    {isLogoutPending ? (
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                        <LogOut className="h-5 w-5" />
-                    )}
-                    <span>Keluar dari Akun</span>
-                </Button>
-            </div>
-        </div>
-    );
+      {user && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Preferensi notifikasi</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            {(
+              [
+                ["portfolio_liked", "Saat karya disukai"],
+                ["new_comment", "Saat ada komentar"],
+                ["new_follower", "Saat ada pengikut baru"],
+                ["digest_daily", "Ringkasan harian"],
+              ] as [keyof Prefs, string][]
+            ).map(([key, label]) => (
+              <div key={key} className="flex items-center justify-between">
+                <Label htmlFor={key}>{label}</Label>
+                <Switch
+                  id={key}
+                  checked={prefs.data?.[key] ?? false}
+                  onCheckedChange={(v) => toggle(key, Boolean(v))}
+                  disabled={prefs.isLoading || save.isPending}
+                />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+    </main>
+  );
 }

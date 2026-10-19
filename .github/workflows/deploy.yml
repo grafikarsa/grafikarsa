@@ -1,187 +1,145 @@
-name: Deploy to Production
-
+name: deploy
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
-# Single-domain deploy. Secrets utama:
-#   DOCKERHUB_USERNAME, DOCKERHUB_TOKEN, DOMAIN,
-#   SSH_HOST, SSH_PORT, SSH_USERNAME, SSH_PRIVATE_KEY
-# URL publik diturunkan otomatis dari DOMAIN (atau pakai secret
-# NEXT_PUBLIC_* lama jika masih diset) — tidak ada secret api.* /
-# storage.* terpisah yang wajib.
-
 env:
-  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-  DOMAIN: ${{ secrets.DOMAIN }}
+  REGISTRY: docker.io
 
 jobs:
-  build-and-deploy:
+  derive-urls:
     runs-on: ubuntu-latest
-
+    outputs:
+      scheme: ${{ steps.d.outputs.scheme }}
+      app_url: ${{ steps.d.outputs.app_url }}
+      api_url: ${{ steps.d.outputs.api_url }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Derive public URLs from DOMAIN
-        id: urls
+      - id: d
+        env:
+          DOMAIN: ${{ secrets.DOMAIN }}
         run: |
-          # Back-compat: pakai secret URL lama jika masih diset,
-          # jika tidak turunkan dari DOMAIN (default: grafikarsa.com).
-          DOM="${DOMAIN:-grafikarsa.com}"
-          if [[ "$DOM" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            SCHEME="http"   # IP tanpa domain
-          else
-            SCHEME="https"  # domain valid (Caddy auto HTTPS)
-          fi
-          API_URL="${{ secrets.NEXT_PUBLIC_API_URL }}"
-          APP_URL="${{ secrets.NEXT_PUBLIC_APP_URL }}"
-          STORAGE_URL="${{ secrets.NEXT_PUBLIC_STORAGE_URL }}"
-          [ -z "$API_URL" ] && API_URL="$SCHEME://$DOM/api/v1"
-          [ -z "$APP_URL" ] && APP_URL="$SCHEME://$DOM"
-          [ -z "$STORAGE_URL" ] && STORAGE_URL="$SCHEME://$DOM/storage/grafikarsa"
-          echo "api_url=$API_URL" >> "$GITHUB_OUTPUT"
-          echo "app_url=$APP_URL" >> "$GITHUB_OUTPUT"
-          echo "storage_url=$STORAGE_URL" >> "$GITHUB_OUTPUT"
-          echo "Derived: $APP_URL"
+          if [[ "$DOMAIN" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then SCHEME=http; else SCHEME=https; fi
+          echo "scheme=$SCHEME" >> "$GITHUB_OUTPUT"
+          echo "app_url=$SCHEME://$DOMAIN" >> "$GITHUB_OUTPUT"
+          echo "api_url=$SCHEME://$DOMAIN/api/v1" >> "$GITHUB_OUTPUT"
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+  build-push:
+    needs: derive-urls
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push backend
+      - name: Build & push api + worker
         uses: docker/build-push-action@v6
         with:
-          context: ./apps/backend
+          context: ./apps/api
+          target: production
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-backend:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-backend:${{ github.sha }}
-          target: production
-          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-backend:latest
-          cache-to: type=inline
+            ${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-api:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-api:sha-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Build and push frontend
+      - name: Build & push web
         uses: docker/build-push-action@v6
         with:
           context: ./apps/web
           push: true
+          build-args: |
+            NEXT_PUBLIC_APP_URL=${{ needs.derive-urls.outputs.app_url }}
+            NEXT_PUBLIC_TURNSTILE_SITE_KEY=${{ secrets.TURNSTILE_SITE_KEY }}
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-web:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-web:${{ github.sha }}
-          target: production
-          build-args: |
-            NEXT_PUBLIC_API_URL=${{ steps.urls.outputs.api_url }}
-            NEXT_PUBLIC_APP_URL=${{ steps.urls.outputs.app_url }}
-            NEXT_PUBLIC_STORAGE_URL=${{ steps.urls.outputs.storage_url }}
-            NEXT_PUBLIC_MAINTENANCE_MODE=false
-            NEXT_PUBLIC_AI_FEATURES_ENABLED=true
-            INTERNAL_API_URL=http://backend:8080/api/v1
-          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-web:latest
-          cache-to: type=inline
+            ${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-web:sha-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Prepare server directories
-        uses: appleboy/ssh-action@v1.2.0
+      - name: Trivy scan (blocking on HIGH/CRITICAL fixable)
+        uses: aquasecurity/trivy-action@0.28.0
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT }}
-          script: |
-            # Ensure the deploy directory exists
-            mkdir -p /opt/grafikarsa
+          image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-api:sha-${{ github.sha }}
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
 
-            # Automated Cleanup: Use Docker to handle root-owned files (avoiding sudo)
-            # This works because the deploy user has permission to run Docker
-            docker run --rm -v /opt/grafikarsa:/app busybox sh -c "rm -f /app/docker-compose.deploy.yml /app/Caddyfile /app/Caddyfile.http-only && rm -rf /app/db"
-
-            # Reset ownership to ensure scp-action can write new files
-            docker run --rm -v /opt:/mnt busybox chown -R $(id -u):$(id -g) /mnt/grafikarsa
-
-      - name: Copy config files to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT }}
-          source: "docker-compose.deploy.yml,Caddyfile,Caddyfile.http-only,db/"
-          target: "/opt/grafikarsa"
-
-      - name: Deploy to server
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT }}
-          script: |
-            cd /opt/grafikarsa
-            echo "Starting deployment of version ${{ github.sha }}..."
-
-            # .env di server adalah sumber utama. Export di sini hanya
-            # menimpa jika secret terisi (export kosong akan MERUSAK
-            # interpolasi compose karena mengalahkan nilai .env).
-            [ -n "${{ secrets.DOCKERHUB_USERNAME }}" ] && export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
-            export IMAGE_TAG=${{ github.sha }}
-            [ -n "${{ secrets.DOMAIN }}" ] && export DOMAIN=${{ secrets.DOMAIN }}
-            # Host untuk healthcheck: secret > .env > default
-            HEALTH_HOST="${{ secrets.DOMAIN }}"
-            [ -z "$HEALTH_HOST" ] && HEALTH_HOST=$(grep -E '^DOMAIN=' .env 2>/dev/null | cut -d= -f2- | tr -d '\r\n ')
-            [ -z "$HEALTH_HOST" ] && HEALTH_HOST="grafikarsa.com"
-
-            # Pull specific version and update
-            docker compose -f docker-compose.deploy.yml pull
-            docker compose -f docker-compose.deploy.yml up -d
-
-            # Health checks — via proxy container (internal network),
-            # karena backend/minio TIDAK expose port ke host lagi.
-            # Retry hingga 5 menit agar cold start (first pull) tidak flaky.
-            echo "Checking health (Host: $HEALTH_HOST)..."
-            fail=0
-            for i in $(seq 1 30); do
-              if docker exec grafikarsa-proxy wget -q -O /dev/null http://backend:8080/api/v1/health 2>/dev/null; then
-                echo "✅ Backend is UP"
-                break
-              fi
-              if [ "$i" = "30" ]; then fail=1; fi
-              sleep 10
-            done
-            for i in $(seq 1 30); do
-              if docker exec grafikarsa-proxy wget -q -O /dev/null --header "Host: $HEALTH_HOST" http://127.0.0.1/ 2>/dev/null; then
-                echo "✅ Frontend is UP"
-                break
-              fi
-              if [ "$i" = "30" ]; then fail=1; fi
-              sleep 10
-            done
-
-            if [ "$fail" = "1" ]; then
-              echo "❌ HEALTH CHECK FAILED — diagnostics:"
-              docker compose -f docker-compose.deploy.yml ps
-              docker logs grafikarsa-proxy --tail=30
-              docker logs grafikarsa-backend --tail=30
-              docker logs grafikarsa-web --tail=30
-              exit 1
-            fi
-
-            # Cleanup old images — HANYA setelah healthcheck hijau
-            # agar image lama tetap ada untuk rollback jika deploy rusak.
-            docker image prune -f
-
-            echo "✅ Deployment version ${{ github.sha }} complete!"
-
-      - name: Notify deployment status
-        if: always()
+  deploy:
+    needs: [derive-urls, build-push]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup SSH
         run: |
-          if [ "${{ job.status }}" == "success" ]; then
-            echo "✅ Deployment successful!"
-          else
-            echo "❌ Deployment failed!"
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${{ secrets.SSH_PORT }}" -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+      - name: Copy deploy files
+        run: |
+          ssh -p "${{ secrets.SSH_PORT }}" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "mkdir -p /opt/grafikarsa && chmod 700 /opt/grafikarsa"
+          scp -P "${{ secrets.SSH_PORT }}" docker-compose.deploy.yml Caddyfile tools/backup.sh \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/grafikarsa/"
+          ssh -p "${{ secrets.SSH_PORT }}" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "mkdir -p /opt/grafikarsa/infra/postgres/init"
+          scp -P "${{ secrets.SSH_PORT }}" -r infra/postgres/init/. \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/grafikarsa/infra/postgres/init/"
+      - name: Backup + migrate + deploy (dengan rollback)
+        run: |
+          ssh -p "${{ secrets.SSH_PORT }}" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            'bash -s' <<'REMOTE'
+          set -euo pipefail
+          cd /opt/grafikarsa
+          DC="docker compose -f docker-compose.deploy.yml"
+          PREV_TAG=$(grep -E '^IMAGE_TAG=' .env | cut -d= -f2 || echo latest)
+          NEW_TAG="sha-${{ github.sha }}"
+
+          # 1. Backup sebelum menyentuh apa pun (DB + storage listing).
+          mkdir -p backup
+          if $DC ps --status running db >/dev/null 2>&1; then
+            $DC exec -T db pg_dump -Fc -U "${DB_USER:-grafikarsa}" "${DB_NAME:-grafikarsa}" \
+              > "backup/pre-deploy-$(date +%F-%H%M).dump" || echo "WARN: backup gagal, lanjut"
           fi
+
+          # 2. Pin tag image di .env (file yang benar-benar dibaca compose).
+          if grep -qE '^IMAGE_TAG=' .env; then
+            sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=$NEW_TAG|" .env
+          else
+            echo "IMAGE_TAG=$NEW_TAG" >> .env
+          fi
+          $DC pull || { echo "FAIL: pull"; exit 1; }
+
+          # 3. Migrasi goose (one-off container, idempoten).
+          $DC run --rm --entrypoint /migrate api up || { echo "FAIL: migrate"; exit 1; }
+
+          # 4. Naikkan service.
+          $DC up -d || { echo "FAIL: up"; exit 1; }
+
+          # 5. Healthcheck 30x10s.
+          ok=0
+          for i in $(seq 1 30); do
+            if $DC exec -T api /api -healthcheck >/dev/null 2>&1; then ok=1; break; fi
+            sleep 10
+          done
+
+          # 6. Rollback bila gagal.
+          if [ "$ok" != "1" ]; then
+            echo "FAIL: healthcheck; rollback ke $PREV_TAG"
+            sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=$PREV_TAG|" .env
+            $DC up -d
+            exit 1
+          fi
+
+          # 6b. Seed idempoten (admin awal + role + permission) di server baru.
+          $DC run --rm --entrypoint /seed api || echo "WARN: seed gagal/dilewati"
+
+          # 7. Bersihkan image lama hanya bila deploy hijau.
+          docker image prune -f --filter "until=168h" >/dev/null 2>&1 || true
+          echo "DEPLOY OK"
+          REMOTE

@@ -1,13 +1,13 @@
 # ==============================================
-# GRAFIKARSA MONOREPO - PRODUCTION SIMULATION
+# GRAFIKARSA v2 — PROD SIMULATION (lokal)
 # ==============================================
-# Simulates real production with built images.
 # Usage: make prod
+# Simulasi prod di laptop: api + web built, tanpa proxy.
+# Deploy server asli pakai docker-compose.deploy.yml.
 
 services:
-  # PostgreSQL Database
   db:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     container_name: grafikarsa-db-prod
     restart: unless-stopped
     environment:
@@ -16,7 +16,7 @@ services:
       POSTGRES_DB: ${DB_NAME}
     volumes:
       - postgres_data_prod:/var/lib/postgresql/data
-      - ./db:/docker-entrypoint-initdb.d
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
@@ -25,38 +25,17 @@ services:
     networks:
       - grafikarsa-network
 
-  # MinIO Object Storage (pgsty fork: minio/minio dihapus dari Hub Sep 2026)
-  minio:
-    image: pgsty/minio:latest
-    container_name: grafikarsa-minio-prod
+  dragonfly:
+    image: ghcr.io/dragonflydb/dragonfly:latest
+    container_name: grafikarsa-dragonfly-prod
     restart: unless-stopped
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
-      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    command: >-
+      --maxmemory=256mb --proactor_threads=1
+      --cache_mode
+      --dir=/data
+      --dbfilename=dump
     volumes:
-      - minio_data_prod:/data
-    command: server /data --console-address ":9001"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-    networks:
-      - grafikarsa-network
-
-  # Redis Cache
-  redis:
-    image: redis:7-alpine
-    container_name: grafikarsa-redis-prod
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-    command: redis-server --appendonly yes
-    volumes:
-      - redis_data_prod:/data
+      - dragonfly_data_prod:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -65,62 +44,94 @@ services:
     networks:
       - grafikarsa-network
 
-  # Go Backend API (production build)
-  backend:
-    build:
-      context: ./apps/backend
-      dockerfile: Dockerfile
-      target: production
-    container_name: grafikarsa-backend-prod
+  storage:
+    image: rustfs/rustfs:latest
+    container_name: grafikarsa-storage-prod
     restart: unless-stopped
-    ports:
-      - "8080:8080"
+    environment:
+      # Vendor container membaca RUSTFS_*; aplikasi (api/worker) TIDAK pernah
+      # membaca RUSTFS_*, hanya S3_* sehingga ganti vendor = ganti service ini.
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY}
+    volumes:
+      - storage_data_prod:/data
+    command: ["/data"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - grafikarsa-network
+
+  api:
+    build:
+      context: ./apps/api
+      target: production
+    container_name: grafikarsa-api-prod
+    restart: unless-stopped
     env_file: .env
     environment:
       - APP_ENV=production
       - DB_HOST=db
-      - MINIO_ENDPOINT=minio:9000
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - GOOGLE_GEMINI_API_KEY=${GOOGLE_GEMINI_API_KEY}
+      - DRAGONFLY_HOST=dragonfly
+      - S3_ENDPOINT=http://storage:9000
     depends_on:
       db:
         condition: service_healthy
-      minio:
+      dragonfly:
         condition: service_healthy
-      redis:
+      storage:
         condition: service_healthy
     networks:
       - grafikarsa-network
 
-  # Next.js Frontend (production build)
+  worker:
+    build:
+      context: ./apps/api
+      target: production
+    container_name: grafikarsa-worker-prod
+    restart: unless-stopped
+    entrypoint: ["/worker"]
+    command: ["serve"]
+    env_file: .env
+    environment:
+      - APP_ENV=production
+      - DB_HOST=db
+      - DRAGONFLY_HOST=dragonfly
+      - S3_ENDPOINT=http://storage:9000
+    depends_on:
+      db:
+        condition: service_healthy
+      dragonfly:
+        condition: service_healthy
+      storage:
+        condition: service_healthy
+    networks:
+      - grafikarsa-network
+
   web:
     build:
       context: ./apps/web
-      dockerfile: Dockerfile
-      target: production
       args:
-        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-        - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
-        - NEXT_PUBLIC_AI_FEATURES_ENABLED=${NEXT_PUBLIC_AI_FEATURES_ENABLED}
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+        NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY}
     container_name: grafikarsa-web-prod
     restart: unless-stopped
-    ports:
-      - "3000:3000"
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
-      - NEXT_PUBLIC_AI_FEATURES_ENABLED=${NEXT_PUBLIC_AI_FEATURES_ENABLED}
+      - INTERNAL_API_URL=http://api:8080/v1
+    ports:
+      - "${WEB_PORT:-3020}:3000"
     depends_on:
-      - backend
+      - api
     networks:
       - grafikarsa-network
 
 volumes:
   postgres_data_prod:
-  minio_data_prod:
-  redis_data_prod:
+  dragonfly_data_prod:
+  storage_data_prod:
 
 networks:
   grafikarsa-network:

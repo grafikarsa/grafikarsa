@@ -1,87 +1,22 @@
-# ==============================================
-# GRAFIKARSA WEB - Multi-stage Dockerfile
-# ==============================================
-# Stages: development, builder, production
-
-# ---- Development stage ----
-FROM node:20-alpine AS development
-
-WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-
-# Install dependencies
-RUN npm ci
-
-# Copy source code
-COPY . .
-
-# Expose port
-EXPOSE 3000
-
-# Run Next.js dev server
-CMD ["npm", "run", "dev"]
-
-# ---- Builder stage ----
+# ---------- builder ----------
 FROM node:20-alpine AS builder
-
+RUN corepack enable && corepack prepare pnpm@10 --activate
 WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-
-# Install dependencies
-RUN npm ci
-
-# Copy source code
+COPY package.json pnpm-lock.yaml* ./
+RUN pnpm install --frozen-lockfile || pnpm install
 COPY . .
-
-# Build arguments for environment variables
-ARG NEXT_PUBLIC_API_URL
-ARG NEXT_PUBLIC_APP_URL
-ARG NEXT_PUBLIC_STORAGE_URL
-ARG NEXT_PUBLIC_MAINTENANCE_MODE
-ARG NEXT_PUBLIC_AI_FEATURES_ENABLED
-# Server-side only: reachable from inside Docker network (avoids EAI_AGAIN on public hostname)
-ARG INTERNAL_API_URL
-
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_APP_URL=http://localhost:3000
+ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY=
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
-ENV NEXT_PUBLIC_STORAGE_URL=$NEXT_PUBLIC_STORAGE_URL
-ENV NEXT_PUBLIC_MAINTENANCE_MODE=$NEXT_PUBLIC_MAINTENANCE_MODE
-ENV NEXT_PUBLIC_AI_FEATURES_ENABLED=$NEXT_PUBLIC_AI_FEATURES_ENABLED
-ENV INTERNAL_API_URL=$INTERNAL_API_URL
+ENV NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY
+RUN pnpm build
 
-# Build the application
-RUN npm run build
-
-# ---- Production stage ----
-FROM node:20-alpine AS production
-
+# ---------- runner ----------
+FROM node:20-alpine AS runner
 WORKDIR /app
-
 ENV NODE_ENV=production
-
-# Create non-root user
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-
-# Copy built application with correct ownership
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-# Ensure .next folder exists and has correct permissions
-RUN mkdir -p .next/cache && chown -R nextjs:nodejs .next
-
-USER nextjs
-
-# NOTE: 3100 dipilih agar tidak tabrakan dengan SIPODI (3000/3001) di VPS multi-tenant.
-# Jangan kembalikan ke 3000/3001 tanpa cek `ss -tlnp` di server.
-EXPOSE 3100
-
-ENV PORT=3100
-ENV HOSTNAME="0.0.0.0"
-
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+EXPOSE 3000
 CMD ["node", "server.js"]
