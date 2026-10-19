@@ -532,17 +532,41 @@ func recomputeProjects(ctx context.Context, q *repo.Queries, period, scope strin
 }
 
 func cleanupMedia(ctx context.Context, q *repo.Queries, cfg *config.Config) error {
+	st := newStorage(cfg)
+	n := 0
+
+	// 1. Media 'pending' yang tidak direferensikan siapa pun (upload dibatalkan
+	//    atau user tidak pernah menyimpan bloknya).
 	rows, err := q.ListPendingMedia(ctx)
 	if err != nil {
 		return err
 	}
-	st := newStorage(cfg)
-	n := 0
 	for _, m := range rows {
 		_ = st.Delete(ctx, m.ObjectKey)
 		_ = q.DeleteMediaRow(ctx, m.ID)
 		n++
 	}
+
+	// 2. Media 'confirmed' yang sudah tidak direferensikan (avatar/banner/
+	//    thumbnail diganti, atau blok pemakainya dihapus). Job pending tidak
+	//    pernah menyentuh media confirmed, jadi tanpa langkah ini objeknya
+	//    menumpuk di storage selamanya.
+	orphans, err := q.ListOrphanedConfirmedMedia(ctx)
+	if err != nil {
+		return err
+	}
+	for _, m := range orphans {
+		_ = st.Delete(ctx, m.ObjectKey)
+		var vs map[string]string
+		if json.Unmarshal(m.Variants, &vs) == nil {
+			for _, vkey := range vs {
+				_ = st.Delete(ctx, vkey)
+			}
+		}
+		_ = q.MarkMediaDeleted(ctx, m.ID)
+		n++
+	}
+
 	slog.Info("cleanup-media done", "count", n)
 	return nil
 }
