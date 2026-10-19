@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"grafikarsa/api/internal/config"
 )
 
@@ -28,14 +29,28 @@ func New(cfg *config.Config) *Storage {
 	return &Storage{client: client, bucket: cfg.S3.Bucket}
 }
 
-// EnsureBucket membuat bucket bila belum ada. Idempoten, aman dipanggil boot.
+// EnsureBucket membuat bucket bila belum ada dan mengaktifkan versioning.
+//
+// Versioning penting untuk object storage: tanpa itu, satu file yang salah
+// hapus (atau tertimpa) hilang permanen. Media di bucket ini bisa diganti
+// user kapan saja (avatar, banner, thumbnail), jadi versioning adalah jaring
+// pengaman terakhir, bukan sekadar nicety.
+//
+// Idempoten: aman dipanggil setiap boot.
 func (s *Storage) EnsureBucket(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	if _, err := s.client.HeadBucket(ctx, &s3.HeadBucketInput{Bucket: aws.String(s.bucket)}); err == nil {
-		return nil
+	if _, err := s.client.HeadBucket(ctx, &s3.HeadBucketInput{Bucket: aws.String(s.bucket)}); err != nil {
+		if _, err := s.client.CreateBucket(ctx, &s3.CreateBucketInput{Bucket: aws.String(s.bucket)}); err != nil {
+			return err
+		}
 	}
-	_, err := s.client.CreateBucket(ctx, &s3.CreateBucketInput{Bucket: aws.String(s.bucket)})
+	_, err := s.client.PutBucketVersioning(ctx, &s3.PutBucketVersioningInput{
+		Bucket: aws.String(s.bucket),
+		VersioningConfiguration: &types.VersioningConfiguration{
+			Status: types.BucketVersioningStatusEnabled,
+		},
+	})
 	return err
 }
 
