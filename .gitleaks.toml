@@ -14,28 +14,36 @@ title = "Grafikarsa — konfigurasi gitleaks"
 [extend]
 useDefault = true
 
-# Allowlist sengaja dibuat seketat mungkin: HANYA pola token JWT contoh yang
-# dipotong literal dengan "...", tanpa mengecualikan file utuh.
+# Allowlist dibatasi SECARA GANDA: hanya token JWT contoh yang dipotong
+# literal dengan "...", DAN hanya di tiga file dokumentasi v1 tersebut.
 #
-# Catatan: dalam satu blok [[allowlists]] kondisi paths/regexes di-OR-kan,
-# jadi memberi path berarti membebaskan SELURUH secret di file tersebut.
-# Karena itu tidak ada paths di sini.
+# condition = "AND" itu wajib. Tanpa itu (default-nya "OR"), satu path yang
+# cocok sudah cukup membebaskan SELURUH secret di file itu — termasuk
+# secret asli yang kebetulan ada di file yang sama. Dengan "AND", secret
+# asli di ketiga path itu tetap terdeteksi.
 #
-# Asal temuan: dokumentasi v1 (docs/api.md, docs/api/api.md,
-# docs/jwt/jwt-implementation.md) memuat contoh access_token berbentuk JWT
-# yang dipotong jadi "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...". Nilai itu
-# bukan kredensial nyata, tapi aturan generic-api-key menandainya karena
-# entropy header JWT tinggi. Ketiga file sudah dihapus di v2.
+# Asal temuan: dokumentasi v1 memuat contoh access_token berbentuk JWT yang
+# dipotong jadi "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...". Nilai itu bukan
+# kredensial nyata, tapi aturan generic-api-key menandainya karena entropy
+# header JWT tinggi. Ketiga file sudah dihapus di v2, jadi allowlist ini
+# praktis hanya berlaku untuk versi historis file-file tersebut.
 #
-# Regex di bawah hanya cocok untuk nilai yang PERSIS berakhiran "...",
-# sedangkan token JWT asli tidak pernah berakhir seperti itu.
+# Regex hanya cocok untuk nilai yang PERSIS berakhiran "..."; token JWT
+# asli tidak pernah berakhir seperti itu.
 [[allowlists]]
 description = """
 Contoh access_token pada dokumentasi v1: nilai JWT yang dipotong literal
 dengan "...", bukan kredensial nyata (false positive aturan generic-api-key
-karena entropy header JWT tinggi).
+karena entropy header JWT tinggi). Hanya dikecualikan di file-file yang
+tertentu (condition AND), bukan untuk seluruh secret di file itu.
 """
+paths = [
+  '''^docs/api\.md$''',
+  '''^docs/api/api\.md$''',
+  '''^docs/jwt/jwt-implementation\.md$''',
+]
 regexes = [
   '''^eyJhbGciOiJIUzI1NiIs(InR5cCI6IkpXVCJ9)?\.\.\.$''',
 ]
 regexTarget = "secret"
+condition = "AND"
