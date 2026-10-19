@@ -181,8 +181,10 @@
   - Fix: binary resmi gitleaks v8.30.1 dipasang langsung (tanpa license) + `.gitleaks.toml` allowlist sempit untuk 6 false positive token JWT terpotong di dokumentasi v1 yang sudah dihapus
   - ⚠️ Alternatif: tambah secret `GITLEAKS_LICENSE` lalu kembali ke action resmi
   - ✅ Sprint 1 (commit `e027ca7`) — diverifikasi lokal: 230 commit → "no leaks found", exit 0
-  - 🔴 **KOREKSI (commit `f67237d`, temuan CodeRabbit):** config `.gitleaks.toml` versi awal **tidak memuat default rules** (butuh `[extend] useDefault = true`) → job selalu hijau tanpa memindai apa pun. Diperbaiki + allowlist diperketat (tanpa `paths`) + **self-test CI** yang menyisipkan secret palsu dan mewajibkan gitleaks menemukannya
-  - Catatan: config yang benar → 233 commit → 0 temuan, rules terbukti aktif lewat self-test
+  - 🔴 **KOREKSI (temuan CodeRabbit):** config `.gitleaks.toml` versi awal **tidak memuat default rules** (butuh `[extend] useDefault = true`) → job selalu hijau tanpa memindai apa pun. Diperbaiki di `061ab00` + **self-test CI** yang menyisipkan secret palsu dan mewajibkan gitleaks menemukannya
+  - 🔴 **KOREKSI 2 (komentar inline CodeRabbit):** dalam satu blok `[[allowlists]]` kondisi `paths`/`regexes` di-OR-kan → `paths` membebaskan seluruh file. Diperbaiki di `dc47a5d` dengan `condition = "AND"` (paths + regex harus dua-duanya cocok)
+  - 🔴 **KOREKSI 3:** self-test sempat flaky (secret kosong akibat SIGPIPE di `head -c N` ujung pipeline). Diperbaiki di `bb8cadc` → 30x berturut-turut tanpa kegagalan
+  - Catatan: config yang benar → 243 commit → 0 temuan, rules terbukti aktif lewat self-test (positive & negative test)
 
 ---
 
@@ -272,8 +274,8 @@ di-edit manual dan diverifikasi **identik** dengan format output sqlc v1.31.1
 **Pelajaran (dari temuan CodeRabbit di PR #23):**
 - Config gitleaks yang disuplai **mengganti** default rules, bukan menyatuinya. Wajib `[extend] useDefault = true`.
 - Dalam satu blok `[[allowlists]]`, kondisi `paths`/`regexes` di-OR-kan → `paths` membebaskan seluruh file. **Set `condition = "AND"`** (gitleaks v8.30.1 mendukungnya) supaya hanya token spesifik di path spesifik yang dikecualikan.
-- **Setiap config scanner harus punya self-test** (sisipkan secret palsu → pastikan terdeteksi). Tanpa itu, config salah tetap hijau.
-- Gitleaks memindai **history**: string yang pernah masuk commit akan tetap terflag meski sudah dihapus dari working tree.
+- **Setiap config scanner harus punya self-test** (sisipkan secret palsu → pastikan terdeteksi). Tanpa itu, config salah tetap hijau. Self-test juga harus **deterministik**: jangan pakai `head -c N` di ujung pipeline (head menutup pipe duluan → producer dapat SIGPIPE → secret bisa kosong → tidak dipindai → self-test gagal acak). Tutup pipeline di ujung (`tr`), verifikasi panjang secret, dan pastikan isinya benar-benar tertulis. Guard yang flaky ≈ tidak ada guard.
+- Gitleaks memindai **history**: string yang pernah masuk commit akan tetap terflag meski sudah dihapus dari working tree. Kalau string sintetis sempat masuk history branch yang belum ter-merge, rewrite history-nya (`--force-with-lease`).
 - Kalau butuh string high-entropy di file CI, **generate saat runtime** — jangan tulis literal (self-referential).
 
 **Yang sudah benar (jangan diubah):**
