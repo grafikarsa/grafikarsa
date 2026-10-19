@@ -108,8 +108,25 @@ jobs:
           # Secret di-generate saat runtime. Kalau literal-nya ditulis di file
           # ini, gitleaks akan menandainya sebagai temuan (self-referential) dan
           # repo sendiri tidak akan pernah bisa hijau.
-          SECRET=$(head -c 32 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 32)
+          #
+          # PENTING: jangan pakai `head -c N` di ujung pipeline — head menutup
+          # pipe duluan, producer-nya dapat SIGPIPE dan hasilnya bisa kosong.
+          # Nilai kosong TIDAK dipindai gitleaks, jadi self-test akan gagal
+          # secara acak. Karena itu pipe-nya ditutup di ujung (tr), bukan di head,
+          # dan panjang secret-nya diverifikasi sebelum dipakai.
+          if command -v openssl >/dev/null 2>&1; then
+            SECRET="$(openssl rand -base64 32 | tr -dc 'A-Za-z0-9')"
+          else
+            SECRET="$(cat /dev/urandom | base64 | tr -dc 'A-Za-z0-9')"
+          fi
+          if [ "${#SECRET}" -lt 32 ]; then
+            echo "FATAL: gagal membuat secret self-test (panjang=${#SECRET})"
+            exit 1
+          fi
           printf 'api_key = "%s"\n' "$SECRET" > planted-secret.txt
+          # Pastikan secret benar-benar tertulis sebelum dipindai.
+          grep -qF "$SECRET" planted-secret.txt || {
+            echo "FATAL: secret self-test tidak tertulis ke file"; exit 1; }
           git add -A
           git -c user.email=ci@local -c user.name=ci commit -qm "self-test"
           if gitleaks detect --source . --no-banner --redact >/dev/null 2>&1; then
