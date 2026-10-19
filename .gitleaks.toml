@@ -1,22 +1,40 @@
 title = "Grafikarsa — konfigurasi gitleaks"
 
-# Rules bawaan gitleaks dipakai seluruhnya. Allowlist di bawah SANGAT sempit:
-# hanya file dokumentasi v1 yang sudah dihapus + pola token JWT terpotong
-# literal. Secret asli di file lain tetap terdeteksi.
+# Rules bawaan gitleaks WAJIB diaktifkan.
+#
+# Tanpa blok [extend] useDefault = true, file konfigurasi ini akan MENGGANTI
+# seluruh default rules — konfigurasi jadi tidak punya aturan sama sekali dan
+# gitleaks selalu melaporkan "no leaks found" apa pun isinya. Itu sempat
+# terjadi: config versi lama hanya berisi [[allowlists]] tanpa [extend], dan
+# scan di CI hijau padahal tidak memindai apa pun.
+#
+# Self-test di .github/workflows/ci.yml ("gitleaks self-test") menyisipkan
+# secret palsu lalu memastikan gitleaks MENEMUKANNYA, sehingga regresi ini
+# ketahuan otomatis.
+[extend]
+useDefault = true
 
+# Allowlist sengaja dibuat seketat mungkin: HANYA pola token JWT contoh yang
+# dipotong literal dengan "...", tanpa mengecualikan file utuh.
+#
+# Catatan: dalam satu blok [[allowlists]] kondisi paths/regexes di-OR-kan,
+# jadi memberi path berarti membebaskan SELURUH secret di file tersebut.
+# Karena itu tidak ada paths di sini.
+#
+# Asal temuan: dokumentasi v1 (docs/api.md, docs/api/api.md,
+# docs/jwt/jwt-implementation.md) memuat contoh access_token berbentuk JWT
+# yang dipotong jadi "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...". Nilai itu
+# bukan kredensial nyata, tapi aturan generic-api-key menandainya karena
+# entropy header JWT tinggi. Ketiga file sudah dihapus di v2.
+#
+# Regex di bawah hanya cocok untuk nilai yang PERSIS berakhiran "...",
+# sedangkan token JWT asli tidak pernah berakhir seperti itu.
 [[allowlists]]
 description = """
-Contoh access_token pada dokumentasi v1: docs/api.md, docs/api/api.md, dan
-docs/jwt/jwt-implementation.md. Nilainya token JWT yang dipotong literal
-dengan "...", bukan kredensial nyata — false positive aturan generic-api-key
-karena entropy header JWT tinggi. Ketiga file sudah dihapus di v2, jadi
-allowlist ini tidak menutupi kode yang aktif.
+Contoh access_token pada dokumentasi v1: nilai JWT yang dipotong literal
+dengan "...", bukan kredensial nyata (false positive aturan generic-api-key
+karena entropy header JWT tinggi).
 """
-paths = [
-  '''^docs/api\.md$''',
-  '''^docs/api/api\.md$''',
-  '''^docs/jwt/jwt-implementation\.md$''',
-]
 regexes = [
   '''^eyJhbGciOiJIUzI1NiIs(InR5cCI6IkpXVCJ9)?\.\.\.$''',
 ]

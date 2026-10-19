@@ -90,6 +90,34 @@ jobs:
           gitleaks version
       - name: gitleaks
         run: gitleaks detect --source . --redact --verbose --exit-code 1
+      # Self-test: buktikan bahwa scan di atas benar-benar aktif.
+      #
+      # Tanpa langkah ini, konfigurasi gitleaks yang salah (mis. [[allowlists]]
+      # tanpa [extend] useDefault, sehingga tidak ada rules yang aktif) akan
+      # selalu melaporkan "no leaks found" dan job tetap hijau — persis yang
+      # pernah terjadi. Self-test menyisipkan secret palsu ke repo sementara
+      # memakai .gitleaks.toml yang SAMA dengan yang dipakai scan utama, lalu
+      # mewajibkan gitleaks MENEMUKAN secret itu.
+      - name: gitleaks self-test (pastikan rules aktif)
+        run: |
+          set -euo pipefail
+          T=$(mktemp -d)
+          cp "$GITHUB_WORKSPACE/.gitleaks.toml" "$T/.gitleaks.toml"
+          cd "$T"
+          git init -q .
+          # Secret di-generate saat runtime. Kalau literal-nya ditulis di file
+          # ini, gitleaks akan menandainya sebagai temuan (self-referential) dan
+          # repo sendiri tidak akan pernah bisa hijau.
+          SECRET=$(head -c 32 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 32)
+          printf 'api_key = "%s"\n' "$SECRET" > planted-secret.txt
+          git add -A
+          git -c user.email=ci@local -c user.name=ci commit -qm "self-test"
+          if gitleaks detect --source . --no-banner --redact >/dev/null 2>&1; then
+            echo "FATAL: gitleaks TIDAK menemukan secret yang disisipkan."
+            echo "       Rules kemungkinan tidak aktif — cek [extend] useDefault di .gitleaks.toml"
+            exit 1
+          fi
+          echo "gitleaks self-test OK: rules aktif dan secret terdeteksi"
 
   compose-validate:
     runs-on: ubuntu-latest
