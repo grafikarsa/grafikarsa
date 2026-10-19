@@ -71,7 +71,6 @@ func (a *App) authRequired(next http.Handler) http.Handler {
 		ctx = context.WithValue(ctx, ctxJTI, claims.ID)
 		ctx = context.WithValue(ctx, ctxScope, claims.ScopeMajorID)
 		ctx = context.WithValue(ctx, ctxPerms, perms)
-		ctx = context.WithValue(ctx, ctxMustChange, claims.MustChangePassword)
 		// Wajib ganti password: blokir endpoint lain sampai diganti.
 		if claims.MustChangePassword && !passwordChangeAllowlist[r.URL.Path] {
 			writeJSON(w, http.StatusForbidden, fail("PASSWORD_CHANGE_REQUIRED", "Ganti password dulu sebelum melanjutkan.", r))
@@ -169,7 +168,7 @@ func (a *App) csrf(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// rateLimit: batas request per IP per menit (default 100) via Dragonfly.
+// rateLimit: batas request per IP per menit (default 300) via Dragonfly.
 // Degradasi aman: bila cache error, request dilewatkan.
 func (a *App) rateLimit(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -196,23 +195,13 @@ func (a *App) rateLimit(next http.Handler) http.Handler {
 	})
 }
 
-// mustChangePassword: blokir semua endpoint kecuali yang diperlukan untuk
-// mengganti password sendiri.
+// passwordChangeAllowlist: endpoint yang tetap boleh diakses saat user
+// wajib ganti password. Dipakai INLINE di authRequired (bukan sebagai
+// middleware terpisah) supaya check berlaku seragam di semua route
+// ber-token — termasuk route yang menambah/mengubah middleware sendiri.
 var passwordChangeAllowlist = map[string]bool{
 	"/v1/me": true, "/v1/me/password": true, "/v1/me/permissions": true,
 	"/v1/auth/logout": true, "/v1/auth/logout-all": true, "/v1/auth/sessions": true,
-}
-
-func (a *App) mustChangePassword(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if v, _ := r.Context().Value(ctxMustChange).(bool); v {
-			if !passwordChangeAllowlist[r.URL.Path] {
-				writeJSON(w, http.StatusForbidden, fail("PASSWORD_CHANGE_REQUIRED", "Ganti password dulu sebelum melanjutkan.", r))
-				return
-			}
-		}
-		next.ServeHTTP(w, r)
-	})
 }
 
 // handleMetrics: hanya untuk pemegang permission system.jobs (Prometheus

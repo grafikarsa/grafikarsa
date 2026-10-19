@@ -21,14 +21,13 @@ import (
 type ctxKey string
 
 const (
-	ctxUserID     ctxKey = "user_id"
-	ctxRole       ctxKey = "role"
-	ctxJTI        ctxKey = "jti"
-	ctxPerms      ctxKey = "perms"
-	ctxScope      ctxKey = "scope"
-	ctxCSRF       ctxKey = "csrf_ok"
-	ctxMustChange ctxKey = "must_change"
-	ctxDeviceID   ctxKey = "device_id"
+	ctxUserID   ctxKey = "user_id"
+	ctxRole     ctxKey = "role"
+	ctxJTI      ctxKey = "jti"
+	ctxPerms    ctxKey = "perms"
+	ctxScope    ctxKey = "scope"
+	ctxCSRF     ctxKey = "csrf_ok"
+	ctxDeviceID ctxKey = "device_id"
 )
 
 func UserID(r *http.Request) string {
