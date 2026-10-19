@@ -80,10 +80,16 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      # gitleaks-action@v2 mewajibkan GITLEAKS_LICENSE untuk repositori
+      # organisasi, jadi binary resmi dipasang langsung (tanpa license).
+      # Allowlist sempit ada di .gitleaks.toml.
+      - name: Install gitleaks
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/gitleaks/gitleaks/master/install.sh \
+            | sh -s -- -b /usr/local/bin v8.30.1
+          gitleaks version
       - name: gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gitleaks detect --source . --redact --verbose --exit-code 1
 
   compose-validate:
     runs-on: ubuntu-latest
