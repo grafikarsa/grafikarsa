@@ -129,9 +129,24 @@ jobs:
             echo "FATAL: secret self-test tidak tertulis ke file"; exit 1; }
           git add -A
           git -c user.email=ci@local -c user.name=ci commit -qm "self-test"
-          if gitleaks detect --source . --no-banner --redact >/dev/null 2>&1; then
+          # Exit code gitleaks dipakai sebagai pembuktian, bukan sekadar
+          # "tidak nol = sukses". Ada tiga kemungkinan:
+          #   0  -> tidak ada temuan  -> rules TIDAK aktif (gagal)
+          #   99 -> ada temuan        -> inilah yang harus dibuktikan (sukses)
+          #   >1 -> gitleaks error    -> config rusak/git error/flag salah (gagal)
+          # Kalau hanya "exit != 0 berarti sukses", error gitleaks ikut lolos
+          # dan self-testfirmasi tanpa membuktikan apa pun.
+          set +e
+          gitleaks detect --source . --no-banner --redact --exit-code 99 >"$T/gitleaks.log" 2>&1
+          rc=$?
+          set -e
+          if [ "$rc" -eq 0 ]; then
             echo "FATAL: gitleaks TIDAK menemukan secret yang disisipkan."
             echo "       Rules kemungkinan tidak aktif — cek [extend] useDefault di .gitleaks.toml"
+            exit 1
+          elif [ "$rc" -ne 99 ]; then
+            echo "FATAL: gitleaks error (exit=$rc), bukan temuan:"
+            cat "$T/gitleaks.log"
             exit 1
           fi
           echo "gitleaks self-test OK: rules aktif dan secret terdeteksi"
