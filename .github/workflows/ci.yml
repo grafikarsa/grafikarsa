@@ -45,6 +45,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
+        with:
+          # Tidak ada package.json di root repo, jadi pnpm/action-setup tidak
+          # bisa membaca field "packageManager". Versi dictate eksplisit (pnpm
+          # 10, sama dengan apps/web/Dockerfile).
+          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: 20
