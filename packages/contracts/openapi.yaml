@@ -3662,7 +3662,7 @@ components:
         id: { type: string, format: uuid }
         block_type:
           type: string
-          enum: [text, image, table, youtube, button, embed, figma, canva, ppt, pdf, doc]
+          enum: [text, image, table, youtube, button, embed, figma, canva, ppt, pdf, doc, link]
         position: { type: integer }
         payload: { type: object }
         asset_media_id: { type: string, nullable: true }

@@ -2095,7 +2095,7 @@ export interface components {
             /** Format: uuid */
             id?: string;
             /** @enum {string} */
-            block_type?: "text" | "image" | "table" | "youtube" | "button" | "embed" | "figma" | "canva" | "ppt" | "pdf" | "doc";
+            block_type?: "text" | "image" | "table" | "youtube" | "button" | "embed" | "figma" | "canva" | "ppt" | "pdf" | "doc" | "link";
             position?: number;
             payload?: Record<string, never>;
             asset_media_id?: string | null;
