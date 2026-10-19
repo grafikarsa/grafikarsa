@@ -181,8 +181,7 @@ func (a *App) handleListComments(w http.ResponseWriter, r *http.Request) {
 		roots = []map[string]any{}
 	}
 	total, _ := a.Q.CountComments(r.Context(), mustUUID(id))
-	_ = page
-	writeJSON(w, http.StatusOK, okMeta(roots, meta(1, limit, total), r))
+	writeJSON(w, http.StatusOK, okMeta(roots, meta(page, limit, total), r))
 }
 
 func (a *App) handleDeleteComment(w http.ResponseWriter, r *http.Request) {
