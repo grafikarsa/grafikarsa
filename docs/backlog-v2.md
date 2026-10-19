@@ -175,6 +175,12 @@
 - [ ] **P3-09** Test Go domain kritis belum ada (auth rotation, RBAC scope, promotion, outbox, upload)
   - Ada: `formula_test.go`, `contract_blocks_test.go`, `config_test.go`, `router_test.go`, `gen-openapi`, `migrate-old`
 - [ ] **P3-10** `next-sitemap` tidak dipakai (sitemap manual — fungsional, boleh tetap)
+- [x] **P3-11** `pnpm/action-setup@v4` tanpa input `version` (repo tak punya package.json di root) → job `web` crash sebelum menjalankan kode
+  - Fix: `version: 10` (sama dengan `apps/web/Dockerfile`) — ✅ Sprint 1 (commit `038bd4e`)
+- [x] **P3-12** `gitleaks/gitleaks-action@v2` mewajibkan `GITLEAKS_LICENSE` untuk repo organisasi → job `secrets-scan` crash
+  - Fix: binary resmi gitleaks v8.30.1 dipasang langsung (tanpa license) + `.gitleaks.toml` allowlist sempit untuk 6 false positive token JWT terpotong di dokumentasi v1 yang sudah dihapus
+  - ⚠️ Alternatif: tambah secret `GITLEAKS_LICENSE` lalu kembali ke action resmi
+  - ✅ Sprint 1 (commit `e027ca7`) — diverifikasi lokal: 230 commit → "no leaks found", exit 0
 
 ---
 
