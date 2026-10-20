@@ -120,9 +120,12 @@
 
 ## P2 — Fitur PRD yang Belum Ada (15)
 
-- [ ] **P2-01** `pending_changes` (edit-after-publish → draft turunan) — PRD §8.1
-  - Evidence: kolom `parent_version_id` ada di DB (`internal/repo/models.go:363`) tapi 0 pemakaian
-  - Status: ⬜
+- [x] **P2-01** `pending_changes` (edit-after-publish → draft turunan) — PRD §8.1
+  - ✅ Sprint 3 (commit `1561cb4`) — PRD §8.1 menetapkan v2.0 = "implementasi sederhana: edit langsung tapi trending/quality dihitung ulang + audit; `pending_changes` di fase 2 (disiapkan kolom `parent_version_id`)"
+  - Kolom `parent_version_id` sudah ada (migrasi 00006) ✓ · sisi audit & hitung ulang stats sekarang lengkap:
+    - transisi status dicatat dengan **from → to** di diff audit_logs (sebelumnya cuma `{"note": ...}`, jadi riwayatnya tidak bisa direkonstruksi)
+    - `p.updated_at` masuk perhitungan `last_activity` → karya yang **hanya diedit** (mis. thumbnail dihapus → quality turun) sekarang ikut dihitung ulang, sebelumnya hanya interaksi yang memicu
+  - Endpoint `GET /v1/admin/portfolios/{id}/status-history` untuk membaca riwayatnya
 - [x] **P2-21** UI admin **belum bisa membuat akun** — padahal itu satu-satunya cara menambah akun (tidak ada pendaftaran mandiri)
   - ✅ Sprint 3 (commit `834172b`) — dialog "Tambah pengguna" di `/admin/users` (username, nama, email, role, password sementara) → `POST /v1/admin/users`
   - Akun baru ditandai `must_change_password = true`; username divalidasi dengan pola yang sama dengan CHECK constraint database
