@@ -59,11 +59,31 @@ func InitTracing(ctx context.Context, serviceName, endpoint string, sampleRatio 
 		return noop, nil
 	}
 
-	exp, err := otlptracehttp.New(ctx,
-		otlptracehttp.WithEndpoint(strings.TrimPrefix(strings.TrimPrefix(endpoint, "http://"), "https://")),
-		otlptracehttp.WithInsecure(),
-		otlptracehttp.WithTimeout(10*time.Second),
-	)
+	// Endpoint dipakai apa adanya: skema https:// berarti TLS, http:// berarti
+	// plaintext. Sebelumnya skema ALWAYS dilepas dan WithInsecure() dipaksa —
+	// artinya collector https menerima ekspor plaintext (ditolak collector
+	// TLS-only) dan header OTLP (sering berisi API key) terkirim tanpa
+	// enkripsi.
+	secure := strings.HasPrefix(endpoint, "https://")
+	host := strings.TrimPrefix(strings.TrimPrefix(endpoint, "https://"), "http://")
+	// WithEndpoint hanya menerima host:port; kalau endpoint punya path
+	// (mis. /v1/traces), path-nya dipisah dan dikirim lewat WithURLPath.
+	path := ""
+	if i := strings.IndexByte(host, '/'); i >= 0 {
+		path = host[i:]
+		host = host[:i]
+	}
+	opts := []otlptracehttp.Option{
+		otlptracehttp.WithEndpoint(host),
+		otlptracehttp.WithTimeout(10 * time.Second),
+	}
+	if !secure {
+		opts = append(opts, otlptracehttp.WithInsecure())
+	}
+	if path != "" {
+		opts = append(opts, otlptracehttp.WithURLPath(path))
+	}
+	exp, err := otlptracehttp.New(ctx, opts...)
 	if err != nil {
 		return noop, fmt.Errorf("observability: buat exporter OTLP: %w", err)
 	}
@@ -131,7 +151,14 @@ func getEnv(key, def string) string {
 // X-Trace-Id supaya bisa dicari di log lokal maupun di collector.
 func TraceMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx, span := Tracer().Start(r.Context(), spanName(r))
+		// Ambil konteks trace dari request (W3C traceparent) supaya span
+		// ini jadi ANAK dari trace yang sama — itulah gunanya propagator.
+		//
+		// Tanpa ini, tracer().Start() selalu memulai trace baru dan jejak
+		// BFF tidak pernah terhubung dengan jejak API, padahal komentar di
+		// atas menjanjikan sebaliknya.
+		ctx := otel.GetTextMapPropagator().Extract(r.Context(), propagation.HeaderCarrier(r.Header))
+		ctx, span := Tracer().Start(ctx, spanName(r))
 		defer span.End()
 
 		// Teruskan context trace ke handler.

@@ -200,11 +200,13 @@ const componentsYAML = `components:
         - SERVICE_UNAVAILABLE
         - USERNAME_TAKEN
     PaginationMeta:
-      # Nullable: endpoint yang tidak berpaginasi (leaderboard, feed ringkas)
-      # mengirim meta: null. Kalau tidak nullable, contract test menandai
-      # "null is not of type object" padahal itu perilaku yang disengaja.
-      type: object
-      nullable: true
+      # Endpoint yang tidak berpaginasi (leaderboard, feed ringkas) mengirim
+      # meta: null.
+      #
+      # OpenAPI 3.1 memakai JSON Schema, dan nullable BUKAN keyword-nya
+      # (itu cara OpenAPI 3.0). Di 3.1, null ditulis sebagai salah satu
+      # tipe: type: [object, "null"].
+      type: [object, "null"]
       properties:
         page: { type: integer }
         per_page: { type: integer }

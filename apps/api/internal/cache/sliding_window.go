@@ -3,6 +3,7 @@ package cache
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -50,15 +51,23 @@ func (c *Cache) ResetSlidingWindow(ctx context.Context, key string) error {
 	return c.rdb.Del(ctx, key).Err()
 }
 
-// seq menghasilkan angka urut untuk membedakan member ZSET.
+// seqCounter menghasilkan angka urut untuk membedakan member ZSET.
 // Tanpa ini, dua request dalam milidetik yang sama bisa menimpa satu
 // sama lain (member ZSET harus unik) dan request-nya jadi tak terhitung.
+//
+// Aksesnya dikunci mutex: SlidingWindow dipanggil dari banyak goroutine
+// (satu per request), jadi tanpa locking ada data race — dua goroutine bisa
+// membaca nilai `last` yang sama dan menghasilkan member yang sama, lalu
+// ZADD menimpa entri sebelumnya dan rate limiter menghitung terlalu sedikit.
 var seqCounter struct {
+	mu   sync.Mutex
 	last int64
 }
 
 // randSeq mengembalikan angka unik (monoton) untuk member ZSET.
 func randSeq() int64 {
+	seqCounter.mu.Lock()
+	defer seqCounter.mu.Unlock()
 	now := time.Now().UnixNano()
 	if now <= seqCounter.last {
 		now = seqCounter.last + 1

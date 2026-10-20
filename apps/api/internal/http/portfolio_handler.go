@@ -8,6 +8,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"grafikarsa/api/internal/repo"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 func slugify(title string) string {
@@ -54,6 +56,17 @@ func (a *App) handleCreatePortfolio(w http.ResponseWriter, r *http.Request) {
 	if req.SeriesID != nil && *req.SeriesID != "" {
 		seriesID = mustUUID(*req.SeriesID)
 	}
+	// Tag ID dicek SEBELUM portfolio dibuat.
+	//
+	// mustUUID mem-panic untuk input tak valid, dan panic-nya jadi 400. Kalau
+	// pemeriksaannyaAFTER insert, baris portfolio sudah terlanjur dibuat
+	// waktu klien menerima 400 — lalu retry-nya kena 409 DUPLICATE_SLUG,
+	// karena slug pertama sudah dipakai. Klien akhirnya tidak bisa membuat
+	// karya sama sekali.
+	tagIDs := make([]pgtype.UUID, 0, len(req.TagIDs))
+	for _, tid := range req.TagIDs {
+		tagIDs = append(tagIDs, mustUUID(tid))
+	}
 	id, err := a.Q.CreatePortfolio(r.Context(), repo.CreatePortfolioParams{
 		OwnerID: mustUUID(uid), Title: req.Title, Slug: slug, SeriesID: seriesID,
 	})
@@ -67,8 +80,8 @@ func (a *App) handleCreatePortfolio(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal membuat portfolio.", r))
 		return
 	}
-	for _, tid := range req.TagIDs {
-		_ = a.Q.AddPortfolioTag(r.Context(), repo.AddPortfolioTagParams{PortfolioID: id, TagID: mustUUID(tid)})
+	for _, tid := range tagIDs {
+		_ = a.Q.AddPortfolioTag(r.Context(), repo.AddPortfolioTagParams{PortfolioID: id, TagID: tid})
 	}
 	auditLogTransition(r, a, "portfolio.create", "portfolios", uuidStr(id), "", "draft")
 	writeJSON(w, http.StatusCreated, ok(map[string]any{"id": uuidStr(id), "slug": slug}, r))
