@@ -216,6 +216,22 @@
   - Fix: `/me` jadi client component memakai `apiGet("v1/me")`
 - [x] **P2-20** ~~Path parameter tidak dideklarasikan + status code tak lengkap di OpenAPI~~ → **SUDAH DIPERBAIKI** (commit `4c9aac7`)
   - 16 "Schema Error: Path parameter 'id' is not defined" + status (400/404/409/201/403) tak terdokumentasi
+- [x] **P2-22** 14 temuan review CodeRabbit di PR #27 — semuanya diperbaiki
+  - ✅ Sprint 3 (commit `f47e7ed`, `def0b76`, `fd3f339`, `7ddac58`)
+  - **Stored XSS di JSON-LD**: `JSON.stringify` tidak meng-escape `<`, jadi judul karya bisa menyisipkan `</script><script>` ke halaman publik. Ketiga pemakaian JSON-LD kini lewat helper `jsonLdScript()`
+  - **False-pass di verifikasi mirror**: `mc diff` selalu exit 0, bahkan saat ada perbedaan — skrip yang mengandalkan exit code akan bilang "tidak ada perbedaan" padahal objek hilang. Sekarang isinya yang diperiksa
+  - **Key ber-spasi salah dibaca** saat checksum (`awk $NF` → hanya field terakhir)
+  - **Kredensial S3 tertinggal di `~/.mc/config.json`** → `MC_CONFIG_DIR` diarahkan ke direktori sementara
+  - **Data race di `randSeq`** (rate limiter bisa menghitung terlalu sedikit request)
+  - **`entity_id` divalidasi setelah dedup** → foreign entity lolos dengan 200
+  - **Dedup tidak di-scope per entitas** → dua karya berbagi satu file
+  - **Tag ID divalidasi setelah insert** → klien kena 409 DUPLICATE_SLUG dan tidak bisa membuat karya
+  - **Tracing memaksa plaintext** (header OTLP berisi API key terkirim tanpa TLS) + `traceparent` tak pernah diekstrak → jejakan BFF & API tak terhubung
+  - **Advisory OpenTelemetry** GHSA-mh2q-q3fh-2475 (tingkat tinggi) → v1.38.0 → v1.41.0
+  - **OpenAPI 3.1**: `nullable: true` bukan keyword JSON Schema → `type: [object, "null"]`
+  - **`POST /search` tanpa request body** di spec → kini didokumentasikan (per method)
+  - **Migrasi media bisa exit 0 tanpa mendaftarkan semua objek** → sekarang fatal
+  - **`export const TRACE` tidak didukung Next.js** → dihapus; 405 diberikan Caddy di edge
 - [x] **P2-16** Empat check schemathesis yang dikecualikan → **sekarang AKTIF dan LOLOS** — PRD §14.3
   - ✅ Sprint 3 (commit `1d69113`) — **1302 test case, 1302 lulus, 0 failure** (sebelumnya 110 failure)
   - Yang diperbaiki (banyak bug nyata, bukan cuma dokumen):
