@@ -35,11 +35,19 @@ import {
 // useUpload: unggah media dengan progress (XHR supaya progress dapat dilacak).
 export function useUpload() {
   const [progress, setProgress] = useState<number | null>(null);
-  async function upload(purpose: string, file: File): Promise<{ media_id: string; width?: number; height?: number }> {
+  async function upload(
+    purpose: string,
+    file: File,
+    entityId?: string,
+  ): Promise<{ media_id: string; width?: number; height?: number }> {
     const { accessToken, csrfToken } = useAuthStore.getState();
     const fd = new FormData();
     fd.append("purpose", purpose);
     fd.append("file", file);
+    // entity_id (opsional): entitas induk file — portfolio untuk gambar
+    // block & dokumen. API memakainya untuk menyusun object key per-entitas
+    // (PRD §7.1) dan memverifikasi bahwa entitas itu milik kita.
+    if (entityId) fd.append("entity_id", entityId);
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open("POST", "/api/v1/media/upload");
@@ -76,12 +84,16 @@ export function BlockForm({
   onSubmit,
   onCancel,
   submitLabel,
+  entityId,
 }: {
   blockType: BlockType;
   initial?: Draft;
   busy?: boolean;
   onSubmit: (draft: Draft) => Promise<void> | void;
   onCancel?: () => void;
+  // Id portfolio induk. Dikirim sebagai entity_id supaya object key-nya
+  // mengikuti path per-entity (PRD §7.1).
+  entityId?: string;
   submitLabel?: string;
 }) {
   const init = initial ?? {};
@@ -96,7 +108,7 @@ export function BlockForm({
 
   async function handleUpload(file: File) {
     try {
-      const res = await upload(blockType === "pdf" ? "document" : "block_image", file);
+      const res = await upload(blockType === "pdf" ? "document" : "block_image", file, entityId);
       set("media_id", res.media_id);
       if (blockType === "image" && !draft.alt) {
         set("alt", `Gambar ${file.name.replace(/\.[a-z0-9]+$/i, "")}`.slice(0, 200));
@@ -151,14 +163,24 @@ export function BlockForm({
           </div>
           <div className="grid gap-1">
             <Label htmlFor="b-alt">Alt (5-200 karakter, untuk pembaca layar)</Label>
-            <Input id="b-alt" value={String(draft.alt ?? "")} onChange={(e) => set("alt", e.target.value)} />
+            <Input
+              id="b-alt"
+              value={String(draft.alt ?? "")}
+              onChange={(e) => set("alt", e.target.value)}
+            />
           </div>
           <div className="grid gap-1">
             <Label htmlFor="b-caption">Caption (opsional)</Label>
-            <Input id="b-caption" value={String(draft.caption ?? "")} onChange={(e) => set("caption", e.target.value)} />
+            <Input
+              id="b-caption"
+              value={String(draft.caption ?? "")}
+              onChange={(e) => set("caption", e.target.value)}
+            />
           </div>
           {typeof draft.media_id === "string" && draft.media_id !== "" && (
-            <p className="text-muted-foreground text-xs">Media siap: {String(draft.media_id).slice(0, 8)}…</p>
+            <p className="text-muted-foreground text-xs">
+              Media siap: {String(draft.media_id).slice(0, 8)}…
+            </p>
           )}
         </>
       )}
@@ -169,8 +191,18 @@ export function BlockForm({
             <Label htmlFor="b-headers">Header (pisahkan dengan koma)</Label>
             <Input
               id="b-headers"
-              defaultValue={Array.isArray(draft.headers) ? (draft.headers as string[]).join(", ") : ""}
-              onChange={(e) => set("headers", e.target.value.split(",").map((h) => h.trim()).filter(Boolean))}
+              defaultValue={
+                Array.isArray(draft.headers) ? (draft.headers as string[]).join(", ") : ""
+              }
+              onChange={(e) =>
+                set(
+                  "headers",
+                  e.target.value
+                    .split(",")
+                    .map((h) => h.trim())
+                    .filter(Boolean),
+                )
+              }
               placeholder="Alat, Fungsi, Hasil"
             />
           </div>
@@ -179,7 +211,11 @@ export function BlockForm({
             <Textarea
               id="b-rows"
               rows={4}
-              defaultValue={Array.isArray(draft.rows) ? (draft.rows as string[][]).map((r) => r.join(" | ")).join("\n") : ""}
+              defaultValue={
+                Array.isArray(draft.rows)
+                  ? (draft.rows as string[][]).map((r) => r.join(" | ")).join("\n")
+                  : ""
+              }
               onChange={(e) => {
                 const parsed = parseTable(
                   Array.isArray(draft.headers) ? (draft.headers as string[]).join(",") : "",
@@ -198,7 +234,9 @@ export function BlockForm({
           <Label htmlFor="b-yt">URL YouTube</Label>
           <Input
             id="b-yt"
-            defaultValue={typeof draft.video_id === "string" ? `https://youtu.be/${draft.video_id}` : ""}
+            defaultValue={
+              typeof draft.video_id === "string" ? `https://youtu.be/${draft.video_id}` : ""
+            }
             onChange={(e) => set("video_id", ytId(e.target.value) ?? "")}
             placeholder="https://www.youtube.com/watch?v=..."
           />
@@ -209,11 +247,19 @@ export function BlockForm({
         <>
           <div className="grid gap-1">
             <Label htmlFor="b-label">Label</Label>
-            <Input id="b-label" value={String(draft.label ?? "")} onChange={(e) => set("label", e.target.value)} />
+            <Input
+              id="b-label"
+              value={String(draft.label ?? "")}
+              onChange={(e) => set("label", e.target.value)}
+            />
           </div>
           <div className="grid gap-1">
             <Label htmlFor="b-url">URL (https)</Label>
-            <Input id="b-url" value={String(draft.url ?? "")} onChange={(e) => set("url", e.target.value)} />
+            <Input
+              id="b-url"
+              value={String(draft.url ?? "")}
+              onChange={(e) => set("url", e.target.value)}
+            />
           </div>
           <div className="grid gap-1">
             <Label>Varian</Label>
@@ -233,11 +279,19 @@ export function BlockForm({
         <>
           <div className="grid gap-1">
             <Label htmlFor="b-ltitle">Judul (opsional)</Label>
-            <Input id="b-ltitle" value={String(draft.title ?? "")} onChange={(e) => set("title", e.target.value)} />
+            <Input
+              id="b-ltitle"
+              value={String(draft.title ?? "")}
+              onChange={(e) => set("title", e.target.value)}
+            />
           </div>
           <div className="grid gap-1">
             <Label htmlFor="b-lurl">URL (https)</Label>
-            <Input id="b-lurl" value={String(draft.url ?? "")} onChange={(e) => set("url", e.target.value)} />
+            <Input
+              id="b-lurl"
+              value={String(draft.url ?? "")}
+              onChange={(e) => set("url", e.target.value)}
+            />
           </div>
         </>
       )}
@@ -274,7 +328,11 @@ export function BlockForm({
           {progress !== null && <span className="text-xs">Mengunggah… {progress}%</span>}
           <div className="grid gap-1">
             <Label htmlFor="b-purl">atau URL PDF (https)</Label>
-            <Input id="b-purl" value={String(draft.url ?? "")} onChange={(e) => set("url", e.target.value)} />
+            <Input
+              id="b-purl"
+              value={String(draft.url ?? "")}
+              onChange={(e) => set("url", e.target.value)}
+            />
           </div>
         </>
       )}

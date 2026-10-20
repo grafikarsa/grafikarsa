@@ -1,24 +1,61 @@
 import type { Metadata } from "next";
 import { PortfolioDetail } from "@/components/portfolio/portfolio-detail";
+import { creativeWorkJsonLd, getPortfolio } from "./data";
+import { jsonLdScript } from "@/lib/json-ld";
 
-async function getPortfolio(username: string, slug: string) {
-  const base = process.env.INTERNAL_API_URL ?? "http://localhost:8091/v1";
-  const res = await fetch(`${base}/portfolios/by-slug?username=${username}&slug=${slug}`, { next: { revalidate: 60 } });
-  if (!res.ok) return null;
-  const json = await res.json();
-  return json.data;
-}
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
-export async function generateMetadata({ params }: { params: Promise<{ username: string; slug: string }> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ username: string; slug: string }>;
+}): Promise<Metadata> {
   const { username, slug } = await params;
   const p = await getPortfolio(username, slug);
   if (!p) return { title: "Tidak ditemukan — Grafikarsa" };
-  return { title: `${p.title} — Grafikarsa`, description: `Karya ${username} di Grafikarsa.` };
+
+  const description = `Karya ${p.author_name ?? username} di Grafikarsa.`;
+
+  // Gambar OG TIDAK ditulis manual: file opengraph-image.tsx di segmen ini
+  // otomatis dipakai Next.js untuk openGraph.images dan twitter.images.
+  // Kalau images diisi manual di sini, yang otomatis justru dikalahkan.
+  return {
+    title: `${p.title} — Grafikarsa`,
+    description,
+    openGraph: {
+      type: "article",
+      title: p.title,
+      description,
+      url: `${SITE_URL}/${username}/${slug}`,
+      siteName: "Grafikarsa",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: p.title,
+      description,
+    },
+  };
 }
 
-export default async function PortfolioPage({ params }: { params: Promise<{ username: string; slug: string }> }) {
+export default async function PortfolioPage({
+  params,
+}: {
+  params: Promise<{ username: string; slug: string }>;
+}) {
   const { username, slug } = await params;
   const p = await getPortfolio(username, slug);
   if (!p) return <main className="p-8">Portfolio tidak ditemukan.</main>;
-  return <PortfolioDetail initial={p} />;
+
+  // JSON-LD CreativeWork (PRD §14.3).
+  const jsonLd = creativeWorkJsonLd(p, username, SITE_URL);
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
+      />
+      <PortfolioDetail initial={p} />
+    </>
+  );
 }

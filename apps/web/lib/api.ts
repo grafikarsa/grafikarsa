@@ -35,7 +35,8 @@ async function refreshSession(): Promise<boolean> {
     refreshing = fetch("/api/v1/auth/refresh", { method: "POST" })
       .then(async (res) => {
         if (!res.ok) return false;
-        const json = (await res.json()) as ApiSuccess<{ access_token: string; csrf_token: string }> | ApiError;
+        const json = (await res.json()) as
+          ApiSuccess<{ access_token: string; csrf_token: string }> | ApiError;
         if (!json.success) return false;
         useAuthStore.getState().setSession(json.data.access_token, json.data.csrf_token);
         return true;
@@ -53,7 +54,11 @@ async function request<T>(path: string, init?: RequestInit, retry = true): Promi
   if (res.status === 401 && retry) {
     // Access token di memori hilang/expired -> coba refresh sekali lalu ulangi.
     if (await refreshSession()) {
-      return request<T>(path, { ...init, headers: { ...(init?.headers ?? {}), ...authHeaders() } }, false);
+      return request<T>(
+        path,
+        { ...init, headers: { ...(init?.headers ?? {}), ...authHeaders() } },
+        false,
+      );
     }
   }
   return parse<T>(res);
@@ -66,8 +71,7 @@ export async function login(username: string, password: string, captchaToken?: s
     body: JSON.stringify({ username, password, captcha_token: captchaToken }),
   });
   const json = (await res.json()) as
-    | ApiSuccess<{ access_token: string; csrf_token: string; user: AuthUser }>
-    | ApiError;
+    ApiSuccess<{ access_token: string; csrf_token: string; user: AuthUser }> | ApiError;
   if (!json.success) throw new ApiErrorWithCode(json.error.code, json.error.message);
   const { access_token, csrf_token, user } = json.data;
   useAuthStore.getState().setSession(access_token, csrf_token);
@@ -88,6 +92,34 @@ export async function apiGet<T>(path: string): Promise<T> {
   return request<T>(path, { headers: authHeaders(), cache: "no-store" });
 }
 
+// apiGetWithMeta: GET yang juga mengembalikan meta (page/total).
+//
+// Dipakai DataTable server-side (PRD §12.3) yang butuh jumlah total baris
+// untuk menghitung halaman — `apiGet` hanya mengembalikan bagian `data`.
+//
+// Sengaja tidak lewat `request()`: fungsi itu mengembalikan `json.data`,
+// sedangkan di sini meta dibutuhkan juga. Header auth tetap sama.
+export async function apiGetWithMeta<T>(
+  path: string,
+): Promise<{ data: T[]; meta: NonNullable<ApiSuccess<unknown>["meta"]> }> {
+  const res = await fetch(`/api/${path.replace(/^\//, "")}`, {
+    headers: authHeaders(),
+    cache: "no-store",
+  });
+  let json: (ApiSuccess<T[]> & { meta?: NonNullable<ApiSuccess<unknown>["meta"]> }) | ApiError;
+  try {
+    json = (await res.json()) as
+      (ApiSuccess<T[]> & { meta?: NonNullable<ApiSuccess<unknown>["meta"]> }) | ApiError;
+  } catch {
+    throw new ApiErrorWithCode("NETWORK_ERROR", `Server error ${res.status}.`);
+  }
+  if (!json.success) throw new ApiErrorWithCode(json.error.code, json.error.message);
+  return {
+    data: (Array.isArray(json.data) ? json.data : []) as T[],
+    meta: json.meta ?? { page: 1, per_page: 20, total: 0 },
+  };
+}
+
 // apiUpload: multipart (FormData) dengan CSRF + Authorization, tanpa
 // Content-Type manual (biar boundary diisi browser/Node).
 export async function apiUpload<T>(path: string, form: FormData, retry = true): Promise<T> {
@@ -95,7 +127,11 @@ export async function apiUpload<T>(path: string, form: FormData, retry = true): 
   const headers: Record<string, string> = {};
   if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
   if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
-  const res = await fetch(`/api/${path.replace(/^\//, "")}`, { method: "POST", headers, body: form });
+  const res = await fetch(`/api/${path.replace(/^\//, "")}`, {
+    method: "POST",
+    headers,
+    body: form,
+  });
   if (res.status === 401 && retry && (await refreshSession())) {
     return apiUpload<T>(path, form, false);
   }

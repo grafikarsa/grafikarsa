@@ -25,9 +25,33 @@ type loginRequest struct {
 	CaptchaToken string `json:"captcha_token"`
 }
 
+// invalidUUIDError adalah panic yang sengaja dipakai untuk menandai UUID
+// tak valid pada input pengguna (path param atau body).
+type invalidUUIDError struct {
+	Value  string
+	Origin string
+}
+
+func (e invalidUUIDError) Error() string {
+	return "UUID tidak valid: " + e.Value
+}
+
+// mustUUID mengubah string menjadi UUID, atau panic kalau stringnya bukan
+// UUID.
+//
+// Sebelumnya kegagalan parse "ditelan": string yang bukan UUID menjadi UUID
+// nol (00000000-0000-0000-0000-000000000000) dan query tetap jalan. Akibatnya
+// "/portfolios/id/abc/comments" membalas 200 dengan daftar kosong — klien
+// menampilkan "belum ada komentar" untuk portofolio yang sebenarnya ada, dan
+// salah ketik tidak pernah ketahuan.
+//
+// Sekarang UUID tak valid jadi panic yang ditangkap recoverer, yang
+// diterjemahkan jadi 400 dengan pesan jelas.
 func mustUUID(s string) pgtype.UUID {
 	var v pgtype.UUID
-	_ = v.Scan(s)
+	if err := v.Scan(s); err != nil {
+		panic(invalidUUIDError{Value: s})
+	}
 	return v
 }
 
@@ -112,8 +136,8 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 	if absolute <= 0 {
 		absolute = 720 * time.Hour
 	}
-	absoluteAt := time.Now().Add(absolute)
-	expires := time.Now().Add(idle)
+	absoluteAt := a.now().Add(absolute)
+	expires := a.now().Add(idle)
 	_, err = a.Q.CreateSession(ctx, repo.CreateSessionParams{
 		UserID:            u.ID,
 		RefreshHash:       hash,
@@ -131,9 +155,9 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 	_ = a.Q.TouchLastLogin(ctx, u.ID)
 	audit(ctx, a.Q, uuidStr(u.ID), "login_success", ip, r.UserAgent())
 
-	csrf := newCSRFToken(a.Cfg.JWT.CSRFSecret(), uuidStr(u.ID))
-	setCookie(w, "__Host-rt", plain, 30*24*3600, true, a.Secure)
-	setCookie(w, "__Host-csrf", csrf, 30*24*3600, false, a.Secure)
+	csrf := newCSRFToken(a.Cfg.JWT.CSRFSecret(), uuidStr(u.ID), a.now())
+	setCookie(w, sessionCookieName(a.Secure), plain, 30*24*3600, true, a.Secure)
+	setCookie(w, csrfCookieName(a.Secure), csrf, 30*24*3600, false, a.Secure)
 	_ = jti
 	writeJSON(w, http.StatusOK, ok(map[string]any{
 		"access_token": access,
@@ -143,7 +167,7 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) handleRefresh(w http.ResponseWriter, r *http.Request) {
-	c, err := r.Cookie("__Host-rt")
+	c, err := r.Cookie(sessionCookieName(a.Secure))
 	if err != nil || c.Value == "" {
 		writeJSON(w, http.StatusUnauthorized, fail("UNAUTHORIZED", "Sesi tidak ditemukan.", r))
 		return
@@ -153,16 +177,16 @@ func (a *App) handleRefresh(w http.ResponseWriter, r *http.Request) {
 	hash := auth.HashRefreshToken(c.Value)
 	s, err := a.Q.GetSessionByHash(ctx, hash)
 	if err != nil {
-		clearCookie(w, "__Host-rt", a.Secure)
+		clearCookie(w, sessionCookieName(a.Secure), a.Secure)
 		writeJSON(w, http.StatusUnauthorized, fail("UNAUTHORIZED", "Sesi tidak ditemukan.", r))
 		return
 	}
-	now := time.Now()
+	now := a.now()
 	if s.RevokedAt.Valid {
 		// Token yang sudah dirotasi dipakai lagi -> indikasi pencurian.
 		_ = a.Q.RevokeFamily(ctx, s.FamilyID)
 		audit(ctx, a.Q, uuidStr(s.UserID), "reuse_detected", ip, r.UserAgent())
-		clearCookie(w, "__Host-rt", a.Secure)
+		clearCookie(w, sessionCookieName(a.Secure), a.Secure)
 		writeJSON(w, http.StatusUnauthorized, fail("TOKEN_REUSE_DETECTED", "Sesi tidak valid. Silakan login ulang.", r))
 		return
 	}
@@ -170,7 +194,7 @@ func (a *App) handleRefresh(w http.ResponseWriter, r *http.Request) {
 		// Idle habis atau batas absolut tercapai; bukan reuse attack.
 		_ = a.Q.RevokeSession(ctx, s.ID)
 		audit(ctx, a.Q, uuidStr(s.UserID), "session_expired", ip, r.UserAgent())
-		clearCookie(w, "__Host-rt", a.Secure)
+		clearCookie(w, sessionCookieName(a.Secure), a.Secure)
 		writeJSON(w, http.StatusUnauthorized, fail("SESSION_EXPIRED", "Sesi kedaluwarsa. Silakan login ulang.", r))
 		return
 	}
@@ -190,7 +214,7 @@ func (a *App) handleRefresh(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal refresh sesi.", r))
 		return
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 	qtx := a.Q.WithTx(tx)
 	ipNet := toPgInet(ip)
 	idleTTL := a.Cfg.JWT.RefreshIdleTTL
@@ -204,7 +228,7 @@ func (a *App) handleRefresh(w http.ResponseWriter, r *http.Request) {
 		DeviceLabel:       toPgText(r.UserAgent()),
 		Ip:                ipNet,
 		UserAgent:         toPgText(r.UserAgent()),
-		ExpiresAt:         toPgTimestamptzTime(minTime(time.Now().Add(idleTTL), s.AbsoluteExpiresAt.Time)),
+		ExpiresAt:         toPgTimestamptzTime(minTime(a.now().Add(idleTTL), s.AbsoluteExpiresAt.Time)),
 		AbsoluteExpiresAt: s.AbsoluteExpiresAt,
 	})
 	if err != nil {
@@ -224,15 +248,15 @@ func (a *App) handleRefresh(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal membuat sesi.", r))
 		return
 	}
-	csrf := newCSRFToken(a.Cfg.JWT.CSRFSecret(), uuidStr(u.ID))
-	setCookie(w, "__Host-rt", plain, 30*24*3600, true, a.Secure)
-	setCookie(w, "__Host-csrf", csrf, 30*24*3600, false, a.Secure)
+	csrf := newCSRFToken(a.Cfg.JWT.CSRFSecret(), uuidStr(u.ID), a.now())
+	setCookie(w, sessionCookieName(a.Secure), plain, 30*24*3600, true, a.Secure)
+	setCookie(w, csrfCookieName(a.Secure), csrf, 30*24*3600, false, a.Secure)
 	audit(ctx, a.Q, uuidStr(u.ID), "refresh", ip, r.UserAgent())
 	writeJSON(w, http.StatusOK, ok(map[string]any{"access_token": access, "csrf_token": csrf}, r))
 }
 
 func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
-	c, _ := r.Cookie("__Host-rt")
+	c, _ := r.Cookie(sessionCookieName(a.Secure))
 	if c != nil && c.Value != "" {
 		if s, err := a.Q.GetSessionByHash(r.Context(), auth.HashRefreshToken(c.Value)); err == nil {
 			_ = a.Q.RevokeSession(r.Context(), s.ID)
@@ -242,7 +266,7 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 	if jti, _ := r.Context().Value(ctxJTI).(string); jti != "" {
 		blacklistJTI(r.Context(), a.Cache, jti, 15*time.Minute)
 	}
-	clearCookie(w, "__Host-rt", a.Secure)
+	clearCookie(w, sessionCookieName(a.Secure), a.Secure)
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "ok"}, r))
 }
 
@@ -254,7 +278,7 @@ func (a *App) handleLogoutAll(w http.ResponseWriter, r *http.Request) {
 	}
 	invalidatePerms(r.Context(), a.Cache, uid)
 	audit(r.Context(), a.Q, uid, "logout_all", clientIP(r), r.UserAgent())
-	clearCookie(w, "__Host-rt", a.Secure)
+	clearCookie(w, sessionCookieName(a.Secure), a.Secure)
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "ok"}, r))
 }
 
@@ -266,7 +290,7 @@ func (a *App) handleSessions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cur := ""
-	if c, _ := r.Cookie("__Host-rt"); c != nil {
+	if c, _ := r.Cookie(sessionCookieName(a.Secure)); c != nil {
 		cur = auth.HashRefreshToken(c.Value)
 	}
 	out := []map[string]any{}
@@ -334,8 +358,6 @@ func verifyTurnstile(ctx context.Context, cfg *config.Config, token string) bool
 	}
 	return out.Success
 }
-
-func verifyBcrypt(pw, hash string) bool { return checkBcrypt(pw, hash) }
 
 // effectiveScope: scope jurusan efektif (user_roles berscope, atau major user
 // untuk admin_jurusan) — dipakai untuk row-level filtering, bukan otoritas.

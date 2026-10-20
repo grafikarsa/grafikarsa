@@ -261,14 +261,49 @@ SELECT COALESCE(
 FROM users u WHERE u.id = $1;
 
 -- name: ListUsersScoped :many
+-- scope   = scope jurusan ("" = global)
+-- search  = pencarian username/nama/email ("" = semua)
+-- sort_by = kolom urut: username | name | role | status | created_at
+-- sort_dir= arah urut: asc | desc
+-- limit   = jumlah baris, offset = baris pertama
+--
+-- Pencarian & pengurutan di server (PRD §12.3: "DataTable server-side
+-- (page/sort/search via URL)"). Kalau filtering dilakukan di browser, tabel
+-- ini harus menarik SELURUH user sekaligus — tidak akan layak saat sekolah
+-- punya ribuan akun.
 SELECT id, username, email, name, role_primary, status, class_id, major_id, is_active, created_at
 FROM users WHERE deleted_at IS NULL
-  AND ($1 = '' OR major_id::text = $1)
-ORDER BY created_at DESC LIMIT $2 OFFSET $3;
+  AND (sqlc.arg('scope') = '' OR major_id::text = sqlc.arg('scope'))
+  AND (sqlc.arg('search') = '' OR username ILIKE '%' || sqlc.arg('search') || '%'
+       OR name ILIKE '%' || sqlc.arg('search') || '%' OR email ILIKE '%' || sqlc.arg('search') || '%')
+ORDER BY
+  CASE WHEN sqlc.arg('sort_dir') = 'asc' THEN
+    CASE sqlc.arg('sort_by')
+      WHEN 'name' THEN name
+      WHEN 'role' THEN role_primary
+      WHEN 'status' THEN status
+      WHEN 'created_at' THEN created_at::text
+      ELSE username
+    END
+  END ASC NULLS LAST,
+  CASE WHEN sqlc.arg('sort_dir') = 'desc' THEN
+    CASE sqlc.arg('sort_by')
+      WHEN 'name' THEN name
+      WHEN 'role' THEN role_primary
+      WHEN 'status' THEN status
+      WHEN 'created_at' THEN created_at::text
+      ELSE username
+    END
+  END DESC NULLS LAST,
+  created_at DESC
+LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
 
 -- name: CountUsersScoped :one
+-- scope & search punya arti yang sama dengan ListUsersScoped.
 SELECT COUNT(*) FROM users WHERE deleted_at IS NULL
-  AND ($1 = '' OR major_id::text = $1);
+  AND (sqlc.arg('scope') = '' OR major_id::text = sqlc.arg('scope'))
+  AND (sqlc.arg('search') = '' OR username ILIKE '%' || sqlc.arg('search') || '%'
+       OR name ILIKE '%' || sqlc.arg('search') || '%' OR email ILIKE '%' || sqlc.arg('search') || '%');
 
 -- name: MediaUsedInPublishedPortfolio :one
 SELECT (

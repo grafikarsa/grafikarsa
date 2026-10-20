@@ -1,0 +1,51 @@
+# Konfigurasi golangci-lint (PRD §2.2, §13.3).
+#
+# Rigor yang dipakai: linter standar golangci-lint (errcheck, govet,
+# ineffassign, staticcheck, unused) plus beberapa linter berguna.
+#
+# Prinsip: yang dilaporkan harus bisa diperbaiki dan bernilai — bukan
+# gaya. Linter yang murni subjektif (revive, gocritic, stylecheck)
+# sengaja tidak diaktifkan supaya gate tidak jadi syarat yang menjauhkan
+# kontributor.
+version: "2"
+
+linters:
+  default: standard
+  enable:
+    - bodyclose    # response body yang tidak di-close = connection leak
+    - errorlint   # perbandingan error: pakai errors.Is/As, bukan ==
+    - misspell     # salah ketik
+    - unconvert   # konversi tipe yang tidak perlu
+    - wastedassign
+  settings:
+    errcheck:
+      # Blank identifier (err _) diabaikan: pola umum untuk error yang
+      # memang tidak penting (defer close, best-effort cleanup).
+      check-blank: false
+    govet:
+      # shadow sengaja TIDAK diaktifkan. Di kode ini seluruh temuan shadow
+      # berasal dari idiom `if err := ...; err != nil` di dalam scope yang
+      # lebih sempit — itu pola Go yang lazim, bukan bug, dan memunculkan 14
+      # temuan tanpa ada bug nyata. Linter yang noisy membuat gate diabaikan.
+      enable: []
+  exclusions:
+    generated: lax
+    presets:
+      # Excludes bawaan: close/flush idiomatis, false positives umum, dll.
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      # File test boleh cuek soal error (mis. os.Setenv di setup).
+      - path: _test\.go
+        linters:
+          - errcheck
+          - dupl
+
+formatters:
+  enable:
+    - gofmt
+  settings:
+    gofmt:
+      simplify: true

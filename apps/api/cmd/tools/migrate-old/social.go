@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/microcosm-cc/bluemonday"
 	"log/slog"
 	"strings"
 
@@ -23,8 +24,8 @@ func migrateSocial(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o opt
 					if err := rows.Scan(&u, &p); err != nil {
 						break
 					}
-					uid, ok1 := mappedID(ctx, v2, "users", fmt.Sprint(u), "users")
-					pid, ok2 := mappedID(ctx, v2, "portfolios", fmt.Sprint(p), "portfolios")
+					uid, ok1 := mappedID(ctx, v2, "users", uuidString(u), "users")
+					pid, ok2 := mappedID(ctx, v2, "portfolios", uuidString(p), "portfolios")
 					if !ok1 || !ok2 {
 						st.Skipped["like_ref"]++
 						continue
@@ -51,8 +52,8 @@ func migrateSocial(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o opt
 					if err := rows.Scan(&f, &t); err != nil {
 						break
 					}
-					fid, ok1 := mappedID(ctx, v2, "users", fmt.Sprint(f), "users")
-					tid, ok2 := mappedID(ctx, v2, "users", fmt.Sprint(t), "users")
+					fid, ok1 := mappedID(ctx, v2, "users", uuidString(f), "users")
+					tid, ok2 := mappedID(ctx, v2, "users", uuidString(t), "users")
 					if !ok1 || !ok2 {
 						st.Skipped["follow_ref"]++
 						continue
@@ -81,12 +82,12 @@ func migrateSocial(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o opt
 					if err := rows.Scan(&id, &u, &p, &body); err != nil {
 						break
 					}
-					sid := fmt.Sprint(id)
+					sid := uuidString(id)
 					if _, ok := mappedID(ctx, v2, "comments", sid, "comments"); ok {
 						continue
 					}
-					uid, ok1 := mappedID(ctx, v2, "users", fmt.Sprint(u), "users")
-					pid, ok2 := mappedID(ctx, v2, "portfolios", fmt.Sprint(p), "portfolios")
+					uid, ok1 := mappedID(ctx, v2, "users", uuidString(u), "users")
+					pid, ok2 := mappedID(ctx, v2, "portfolios", uuidString(p), "portfolios")
 					if !ok1 || !ok2 {
 						st.Skipped["comment_ref"]++
 						continue
@@ -98,11 +99,18 @@ func migrateSocial(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o opt
 					}
 					if !o.dryRun {
 						var nid string
-						err := v2.QueryRow(ctx, `INSERT INTO comments (portfolio_id, user_id, body_md)
-							VALUES ($1,$2,$3) RETURNING id::text`, pid, uid, b).Scan(&nid)
-						if err == nil {
-							_ = saveMap(ctx, v2, o.dryRun, "comments", sid, "comments", nid)
+						// Kolom v2: author_id (bukan user_id) dan body_html NOT NULL.
+						// Memakai nama kolom yang salah membuat INSERT gagal
+						// tanpa jejak karena errornya ditelan.
+						err := v2.QueryRow(ctx, `INSERT INTO comments (portfolio_id, author_id, body_md, body_html)
+							VALUES ($1,$2,$3,$4) RETURNING id::text`,
+							pid, uid, b, sanitizeHTML(b)).Scan(&nid)
+						if err != nil {
+							slog.Warn("komentar gagal", "src", sid, "err", err)
+							st.Skipped["comment_insert"]++
+							continue
 						}
+						_ = saveMap(ctx, v2, o.dryRun, "comments", sid, "comments", nid)
 					}
 					st.Comments++
 				}
@@ -126,7 +134,7 @@ func migrateSocial(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o opt
 					if err := rows.Scan(&u, &ti, &bo, &ty, &rd); err != nil {
 						break
 					}
-					uid, ok := mappedID(ctx, v2, "users", fmt.Sprint(u), "users")
+					uid, ok := mappedID(ctx, v2, "users", uuidString(u), "users")
 					if !ok {
 						st.Skipped["notif_ref"]++
 						continue
@@ -167,48 +175,92 @@ func mapNotifType(t string) string {
 	}
 }
 
+// sanitizeHTML membersihkan HTML dari konten v1 sebelum disimpan di
+// body_html. Isi v1 berasal dari input pengguna, jadi tidak boleh disimpan
+// mentah-mentah di kolom yang someday bisa dirender sebagai HTML.
+var ugcPolicy = bluemonday.UGCPolicy()
+
+func sanitizeHTML(s string) string {
+	return strings.TrimSpace(ugcPolicy.Sanitize(s))
+}
+
 // migrateAssessments memindahkan metrics + assessments 1:1 + isi assessment_avg.
 func migrateAssessments(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o options, st *stats) error {
-	at := s.firstTable("assessments", "scores")
+	// Sumber data assessment di v1: tabel 'assessments'/'scores'/'portfolio_assessments'
+	// ATAU view 'v_portfolio_assessments' (yang di v1 prod berisi 901 baris).
+	at := s.firstTableWithRows(ctx, v1, "assessments", "scores", "v_portfolio_assessments", "portfolio_assessments")
 	if at == "" {
 		return nil
 	}
-	idCol := colOr(s, at, "id")
-	uCol := colOr(s, at, "user_id", "assessor_id", "guru_id")
+	idCol := colOr(s, at, "id", "assessment_id")
+	uCol := colOr(s, at, "user_id", "assessor_id", "guru_id", "assessed_by")
 	pCol := colOr(s, at, "portfolio_id")
 	scCol := colOr(s, at, "total_score", "score", "nilai", "value")
+	cmCol := colOr(s, at, "comment", "final_comment", "komentar")
 	if idCol == "" {
 		return nil
 	}
-	rows, err := v1.Query(ctx, fmt.Sprintf(`SELECT %s, %s, %s, %s FROM %s`, idCol, nullCol(uCol), nullCol(pCol), nullCol(scCol), at))
+	rows, err := v1.Query(ctx, fmt.Sprintf(`SELECT %s, %s, %s, %s, %s FROM %s`,
+		idCol, nullCol(uCol), nullCol(pCol), nullCol(scCol), nullCol(cmCol), at))
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var id, u, p, sc any
-		if err := rows.Scan(&id, &u, &p, &sc); err != nil {
+		var id, u, p, sc, cm any
+		if err := rows.Scan(&id, &u, &p, &sc, &cm); err != nil {
 			return err
 		}
-		sid := fmt.Sprint(id)
+		sid := uuidString(id)
+		if sid == "" {
+			// Beberapa baris di view v1 punya assessment_id NULL; pakai
+			// portfolio_id sebagai kunci pemetaan supaya tidak terduplikasi.
+			sid = uuidString(p)
+		}
 		if _, ok := mappedID(ctx, v2, "assessments", sid, "assessments"); ok {
 			continue
 		}
-		pid, ok := mappedID(ctx, v2, "portfolios", fmt.Sprint(p), "portfolios")
+		pid, ok := mappedID(ctx, v2, "portfolios", uuidString(p), "portfolios")
 		if !ok {
 			st.Skipped["assessment_ref"]++
 			continue
 		}
-		uid, _ := mappedID(ctx, v2, "users", fmt.Sprint(u), "users")
+		// Baris dengan skor NULL berarti tidak ada assessment sebenarnya
+		// (di v1 prod view-nya berisi 901 baris kosong). Membuat assessment
+		// ber skor 0 hanya mengotori antrean penilaian admin.
+		if sc == nil {
+			st.Skipped["assessment_empty"]++
+			continue
+		}
+		uid, _ := mappedID(ctx, v2, "users", uuidString(u), "users")
 		var score float64
-		fmt.Sscanf(fmt.Sprint(sc), "%f", &score)
+		if _, err := fmt.Sscanf(fmt.Sprint(sc), "%f", &score); err != nil {
+			// Nilai assessment yang tidak bisa diparse dianggap 0 supaya
+			// migrasi tetap lanjut; assessment tak ada di v1 jadi ini
+			// hanya memengaruhi kolom yang memang kosong.
+			score = 0
+		}
+		comment := strings.TrimSpace(fmt.Sprint(cm))
+		if comment == "<nil>" {
+			comment = ""
+		}
 		if !o.dryRun {
 			var nid string
-			err := v2.QueryRow(ctx, `INSERT INTO assessments (portfolio_id, assessor_id, total_score)
-				VALUES ($1,NULLIF($2,'')::uuid,$3) RETURNING id::text`, pid, uid, score).Scan(&nid)
-			if err == nil {
-				_ = saveMap(ctx, v2, o.dryRun, "assessments", sid, "assessments", nid)
+			// Tabel target v2 bernama portfolio_assessments (bukan
+			// "assessments") — INSERT ke nama yang salah akan gagal
+			// diam-diam karena errornya ditelan.
+			// Kolom comment v2 NOT NULL — jangan pakai NULLIF yang menghasilkan
+			// NULL, pakai string kosong bila tidak ada komentar.
+			err := v2.QueryRow(ctx, `INSERT INTO portfolio_assessments (portfolio_id, assessor_id, total_score, comment)
+				VALUES ($1,NULLIF($2,'')::uuid,$3,$4)
+				ON CONFLICT (portfolio_id) DO UPDATE SET total_score=EXCLUDED.total_score, comment=EXCLUDED.comment
+				RETURNING id::text`, pid, uid, score, comment).Scan(&nid)
+			if err != nil {
+				slog.Warn("assessment gagal", "src", sid, "err", err)
+				st.Skipped["assessment_insert"]++
+				continue
 			}
+			_ = saveMap(ctx, v2, o.dryRun, "assessments", sid, "assessments", nid)
 		}
 		st.Assessments++
 	}
@@ -231,7 +283,7 @@ func migrateFeedbackChangelog(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1sc
 					if err := rows.Scan(&id, &ti, &bo, &em); err != nil {
 						break
 					}
-					sid := fmt.Sprint(id)
+					sid := uuidString(id)
 					if _, ok := mappedID(ctx, v2, "feedback_threads", sid, "feedback_threads"); ok {
 						continue
 					}
@@ -274,7 +326,7 @@ func migrateFeedbackChangelog(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1sc
 					if err := rows.Scan(&id, &ve, &ti, &bo); err != nil {
 						break
 					}
-					sid := fmt.Sprint(id)
+					sid := uuidString(id)
 					if _, ok := mappedID(ctx, v2, "changelogs", sid, "changelogs"); ok {
 						continue
 					}
@@ -363,14 +415,26 @@ func migrateMediaRefs(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o 
 					url, mid, key)
 				st.MediaRegistered++
 			} else {
-				_, _ = v2.Exec(ctx, `INSERT INTO legacy_urls (old_url, object_key)
-					VALUES ($1,$2) ON CONFLICT (old_url) DO NOTHING`, url, key)
+				// Insert media_assets gagal. Object key tetap dicatat di
+				// legacy_urls supaya URL lamanya tidak mati, tapi objeknya
+				// TIDAK terikat ke media — harus dihitung dan menggagalkan
+				// migrasi, bukan lolos diam-diam.
+				if _, lerr := v2.Exec(ctx, `INSERT INTO legacy_urls (old_url, object_key)
+					VALUES ($1,$2) ON CONFLICT (old_url) DO NOTHING`, url, key); lerr != nil {
+					slog.Error("gagal mencatat legacy_url", "url", url, "err", lerr)
+				}
+				st.MediaFallback++
+				slog.Warn("objek storage tidak terikat ke media_assets", "url", url, "key", key)
 			}
 		} else {
 			st.MediaRegistered++
 		}
 	}
-	slog.Info("URL lama terdaftar", "count", len(urls))
+	slog.Info("URL lama terdaftar",
+		"count", len(urls), "registered", st.MediaRegistered, "fallback", st.MediaFallback)
+	if st.MediaFallback > 0 {
+		return fmt.Errorf("%d objek storage tidak bisa didaftarkan sebagai media_assets", st.MediaFallback)
+	}
 	return nil
 }
 

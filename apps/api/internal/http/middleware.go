@@ -11,22 +11,41 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"grafikarsa/api/internal/auth"
 	"grafikarsa/api/internal/cache"
+	"grafikarsa/api/internal/clock"
 	"grafikarsa/api/internal/config"
 	"grafikarsa/api/internal/repo"
 	"grafikarsa/api/internal/storage"
 )
 
 type App struct {
-	Cfg     *config.Config
-	Q       *repo.Queries
-	Cache   *cache.Cache
-	Storage *storage.Storage
-	Secure  bool
-	Tx      *txRunner
+	Cfg   *config.Config
+	Q     *repo.Queries
+	Cache *cache.Cache
+	// Storage dipakai lewat interface (PRD §7.5 ayat 3): handler tidak
+	// boleh tahu apa pun soal kode S3 di baliknya.
+	Storage storage.Store
+	// Clock adalah sumber waktu yang bisa disisipkan (PRD §13.2).
+	// Semua handler memakai a.Clock.Now() supaya kasus "waktu sudah lewat"
+	// bisa diuji tanpa menunggu.
+	Clock  clock.Clock
+	Secure bool
+	Tx     *txRunner
 }
 
-func NewApp(cfg *config.Config, q *repo.Queries, c *cache.Cache, st *storage.Storage) *App {
-	return &App{Cfg: cfg, Q: q, Cache: c, Storage: st, Secure: cfg.AppEnv == "production"}
+func NewApp(cfg *config.Config, q *repo.Queries, c *cache.Cache, st storage.Store) *App {
+	return &App{
+		Cfg: cfg, Q: q, Cache: c, Storage: st,
+		Secure: cfg.AppEnv == "production",
+		Clock:  clock.System{},
+	}
+}
+
+// now mengembalikan waktu saat ini dari sumber waktu yang bisa disisipkan.
+func (a *App) now() time.Time {
+	if a.Clock == nil {
+		return time.Now()
+	}
+	return a.Clock.Now()
 }
 
 func (a *App) authOptional(next http.Handler) http.Handler {
@@ -80,20 +99,6 @@ func (a *App) authRequired(next http.Handler) http.Handler {
 	})
 }
 
-func (a *App) withPerm(perm string, h http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if UserRole(r) == "admin" {
-			h(w, r)
-			return
-		}
-		if !UserPerms(r)[perm] {
-			writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Kamu tidak memiliki akses ini.", r))
-			return
-		}
-		h(w, r)
-	}
-}
-
 // withAnyPerm: lolos bila user punya SALAH SATU permission.
 // Dipakai agar admin_jurusan (permission *_jurusan) bisa memakai route yang
 // sama dengan admin global, dengan filter scope di query.
@@ -116,7 +121,7 @@ func (a *App) withAnyPerm(perms []string, h http.HandlerFunc) http.HandlerFunc {
 
 func (a *App) requireAnyPerm(perms ...string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(a.withAnyPerm(perms, next.ServeHTTP))
+		return a.withAnyPerm(perms, next.ServeHTTP)
 	}
 }
 
@@ -155,12 +160,12 @@ func (a *App) csrf(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		header := r.Header.Get("X-CSRF-Token")
-		cookie, _ := r.Cookie("__Host-csrf")
+		cookie, _ := r.Cookie(csrfCookieName(a.Secure))
 		if header == "" || cookie == nil || header != cookie.Value {
 			writeJSON(w, http.StatusForbidden, fail("CSRF_INVALID", "Token keamanan tidak valid.", r))
 			return
 		}
-		if !verifyCSRFToken(a.Cfg.JWT.CSRFSecret(), UserID(r), header) {
+		if !verifyCSRFToken(a.Cfg.JWT.CSRFSecret(), UserID(r), header, a.now()) {
 			writeJSON(w, http.StatusForbidden, fail("CSRF_INVALID", "Token keamanan kedaluwarsa.", r))
 			return
 		}
@@ -186,8 +191,15 @@ func (a *App) rateLimit(next http.Handler) http.Handler {
 		if id == "" {
 			id = clientIP(r)
 		}
-		key := "rl:" + id + ":" + time.Now().UTC().Format("2006-01-02T15:04")
-		if n, err := a.Cache.IncrWithExpire(r.Context(), key, time.Minute); err == nil && n > int64(limit) {
+		// Sliding window (PRD §6.2): yang dihitung adalah request dalam
+		// N detik terakhir, selalu bergeser. Fixed window (key per menit)
+		// bisa dipakai penuh dua kali berturut-turut di batas menit.
+		window := a.Cfg.RateLimit.Window
+		if window <= 0 {
+			window = time.Minute
+		}
+		key := "rl:" + id
+		if n, err := a.Cache.SlidingWindow(r.Context(), key, window, limit); err == nil && n > int64(limit) {
 			writeJSON(w, http.StatusTooManyRequests, fail("TOO_MANY_REQUESTS", "Terlalu banyak permintaan. Coba lagi sebentar.", r))
 			return
 		}

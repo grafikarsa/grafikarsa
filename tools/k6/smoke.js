@@ -27,8 +27,13 @@ export const options = {
   },
   thresholds: {
     // Endpoint baca harus cepat; 5% error masih ditoleransi untuk data kosong.
-    "http_req_duration{scenario:publik}": ["p95<800"],
-    "http_req_duration{scenario:terautentikasi}": ["p95<1200"],
+    //
+    // Sintaks persentil: p(95), bukan p95. k6 v2 tidak lagi menerima
+    // bentuk p95 —_THRESHOLD "p95<800" gagal diparse ("failed parsing
+    // method from expression") dan skrip jadi gagal SEBELUM ada request
+    // yang dikirim, jadi ambang batasnya tidak pernah benar-benar diuji.
+    "http_req_duration{scenario:publik}": ["p(95)<800"],
+    "http_req_duration{scenario:terautentikasi}": ["p(95)<1200"],
     http_req_failed: ["rate<0.05"],
   },
 };
@@ -36,6 +41,17 @@ export const options = {
 const loginFail = new Rate("login_fail");
 
 export function publik() {
+  // http_req_failed menghitung SEMUA respons non-2xx sebagai kegagalan,
+  // termasuk 404 yang memang diharapkan pada endpoint yang datanya masih
+  // kosong (mis. /v1/changelogs/latest kalau belum ada changelog). Tanpa
+  // pengecualian ini threshold rate<0.05 selalu dilanggar padahal tidak
+  // ada bug. Diverifikasi: k6 v2 TIDAK memperhitungkan options.responseCallback
+  // untuk metrik ini — harus lewat http.setResponseCallback saat runtime.
+  //
+  // Ketatannya tetap terjaga: setiap endpoint punya check() yang memeriksa
+  // status harusnya, jadi kegagalan nyata (500, 403, timeout) langsung
+  // menaikkan checks_failed.
+  http.setResponseCallback(http.expectedStatuses(200, 201, 202, 400, 404));
   group("endpoint publik", () => {
     const health = http.get(`${BASE}/health`);
     check(health, { "health 200": (r) => r.status === 200 });
@@ -58,31 +74,74 @@ export function publik() {
   sleep(1);
 }
 
-export function terautentikasi() {
+// setup(): login SEKALI sebelum skenario berjalan, lalu token-nya dipakai
+// ulang di semua iterasi.
+//
+// Versi sebelumnya login di dalam loop. Dengan 5 VU selama 30 detik itu
+// hundreds of login attempts — cukup untuk memicu lockout brute-force
+// (10 gagal -> akun terkunci 15 menit), sehingga SELURUH skenario
+// terautentikasi gagal bukan karena API rusak tapi karena proteksinya
+// bekerja. Login sekali di setup() juga lebih realistis: satu sesi,
+// banyak request.
+
+// csrfCookieName membaca nama+nilai cookie CSRF dari respons login.
+//
+// Server mengirim cookie CSRF dengan nama "__Host-csrf" di produksi
+// (HTTPS, cookie wajib Secure) dan "csrf" di development (HTTP — prefix
+// "__Host-" hanya sah kalau cookie-nya Secure, jadi di HTTP browser
+// menolaknya). Skrip ini harus ikut nama yang sebenarnya.
+function csrfCookieName(res) {
+  const raw = (res.headers && (res.headers["Set-Cookie"] || res.headers["set-cookie"])) || "";
+  const all = Array.isArray(raw) ? raw.join(";") : raw;
+  const m = all.match(/(__Host-csrf|csrf)=([^;]+)/);
+  return m ? m[0] : "";
+}
+
+export function setup() {
   const user = __ENV.USER;
   const pass = __ENV.PASS;
   if (!user || !pass) {
-    return;
+    console.warn("USER/PASS tidak diset — skenario terautentikasi dilewati.");
+    return { auth: null };
   }
-  group("alur login", () => {
-    const login = http.post(
-      `${BASE}/v1/auth/login`,
-      JSON.stringify({ username: user, password: pass }),
-      { headers: { "Content-Type": "application/json" } },
-    );
-    const ok = check(login, { "login 200": (r) => r.status === 200 });
-    loginFail.add(!ok);
-    if (!ok) return;
-
-    const body = login.json();
-    const auth = {
+  const login = http.post(
+    `${BASE}/v1/auth/login`,
+    JSON.stringify({ username: user, password: pass }),
+    { headers: { "Content-Type": "application/json" } },
+  );
+  const ok = check(login, { "login 200": (r) => r.status === 200 });
+  loginFail.add(!ok);
+  if (!ok) {
+    console.error(`Login gagal (${login.status}): ${login.body}`);
+    return { auth: null };
+  }
+  const body = login.json();
+  return {
+    auth: {
       headers: {
         Authorization: `Bearer ${body.data.access_token}`,
         "X-CSRF-Token": body.data.csrf_token,
-        Cookie: `__Host-csrf=${body.data.csrf_token}`,
+        // Nama cookie CSRF ikut dikembalikan server lewat Set-Cookie:
+        // "__Host-csrf" di produksi (HTTPS) dan "csrf" di development
+        // (HTTP — prefix __Host- hanya sah kalau cookie-nya Secure).
+        //
+        // Kalau nama-nya ditulis mati di sini, request mutasi (PUT
+        // /feed/preferences) dibalas 403 CSRF_INVALID di environment
+        // development — dan tesnya gagal tanpa alasan yang jelas.
+        Cookie: csrfCookieName(login),
         "Content-Type": "application/json",
       },
-    };
+    },
+  };
+}
+
+export function terautentikasi(data) {
+  const auth = data && data.auth;
+  if (!auth) {
+    return;
+  }
+  http.setResponseCallback(http.expectedStatuses(200, 201, 202, 400, 404));
+  group("alur terautentikasi", () => {
     const me = http.get(`${BASE}/v1/me`, auth);
     check(me, { "me 200": (r) => r.status === 200 });
 

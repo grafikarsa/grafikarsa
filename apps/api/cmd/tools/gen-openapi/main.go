@@ -120,10 +120,10 @@ func (w *walker) Visit(n ast.Node) ast.Visitor {
 		if mw := middlewareUse(x); mw != "" {
 			if len(w.stack) > 0 {
 				top := &w.stack[len(w.stack)-1]
-				switch {
-				case mw == "authRequired":
+				switch mw {
+				case "authRequired":
 					top.auth = "bearer"
-				case mw == "authOptional":
+				case "authOptional":
 					if top.auth != "bearer" {
 						top.auth = "optional"
 					}
@@ -241,6 +241,14 @@ func (w *walker) httpRoute(call *ast.CallExpr) (route, bool) {
 	}
 	if len(full) > 1 && strings.HasSuffix(full, "/") {
 		full = strings.TrimSuffix(full, "/")
+	}
+
+	// Endpoint probe di root API (/health, /ready, /metrics) BUKAN
+	// bagian kontrak publik: BFF tidak menyajikannya, dan probe container
+	// memanggilnya langsung ke API. Mendokumentasikan mereka sebagai
+	// "/api/health" berarti promising path yang tidak ada.
+	if skipPublicPath(full) {
+		return route{}, false
 	}
 
 	r := route{method: method, path: full}
@@ -444,6 +452,9 @@ func render(routes []route) string {
 			if r.csrf {
 				b.WriteString("      x-csrf: required\n")
 			}
+			writePathParams(&b, r.path)
+			writeRequiredQueryParams(&b, r.path)
+			writeRequestBody(&b, r.method, r.path)
 			writeResponses(&b, r)
 		}
 	}
@@ -455,23 +466,244 @@ func render(routes []route) string {
 	return out
 }
 
+// writeResponses menulis blok responses untuk satu operasi.
+//
+// Status code yang benar-benar dikembalikan handler tapi sebelumnya TIDAK
+// terdokumentasikan: 400 (body/parameter rusak), 404 (sumber daya tidak ada),
+// 409 (duplikat), 201 (dibuat), dan 403 (di luar scope / permission
+// ditolak — sebelumnya hanya ditulis untuk route yang butuh CSRF).
+//
+// Driver: schemathesis di CI menandai "undocumented status code" kalau status
+// yang benar-benar dikembalikan handler tidak ada di spec.
 func writeResponses(b *strings.Builder, r route) {
 	b.WriteString("      responses:\n")
+	if r.method == "POST" {
+		b.WriteString("        \"201\":\n          description: Berhasil dibuat\n")
+		b.WriteString("          content:\n            application/json:\n              schema:\n                $ref: \"#/components/schemas/SuccessEnvelope\"\n")
+	}
 	b.WriteString("        \"200\":\n")
 	b.WriteString("          description: Berhasil\n")
-	b.WriteString("          content:\n")
-	b.WriteString("            application/json:\n")
-	b.WriteString("              schema:\n")
-	b.WriteString("                $ref: \"#/components/schemas/SuccessEnvelope\"\n")
+	b.WriteString("          content:\n            application/json:\n              schema:\n                $ref: \"#/components/schemas/SuccessEnvelope\"\n")
+	b.WriteString("        \"400\":\n          $ref: \"#/components/responses/BadRequest\"\n")
+	// Redirect 301: hanya untuk route "/storage/*" yang meneruskan URL lama
+	// v1 ke media baru (PRD §16.1, berlaku 6 bulan pasca go-live).
+	if strings.Contains(r.path, "/storage/") {
+		b.WriteString("        \"301\":\n          description: Permanen dialihkan ke media baru\n")
+		b.WriteString("          headers:\n            Location: { type: string }\n")
+		// 410: URL lama terdaftar tapi file-nya sudah tidak tersedia
+		// (setelah masa redirect 6 bulan berakhir).
+		b.WriteString("        \"410\":\n          $ref: \"#/components/responses/Gone\"\n")
+	}
+	if canReturn404(r.path) {
+		b.WriteString("        \"404\":\n          $ref: \"#/components/responses/NotFound\"\n")
+	}
 	if r.method != "GET" {
 		b.WriteString("        \"422\":\n          $ref: \"#/components/responses/ValidationError\"\n")
 	}
-	if r.csrf {
+	if r.csrf || len(r.perms) > 0 {
 		b.WriteString("        \"403\":\n          $ref: \"#/components/responses/Forbidden\"\n")
 	}
 	if r.auth == "bearer" {
 		b.WriteString("        \"401\":\n          $ref: \"#/components/responses/Unauthorized\"\n")
 	}
+	b.WriteString("        \"409\":\n          $ref: \"#/components/responses/Conflict\"\n")
+	// 405: router mengembalikan 405 kalau path-nya dikenali tapi method-nya
+	// tidak (mis. GET ke endpoint yang hanya menerima POST). Tanpa ini,
+	// contract test menandai "Wrong response to undeclared method" —
+	// padahal respons 405 itu benar.
+	b.WriteString("        \"405\":\n          $ref: \"#/components/responses/MethodNotAllowed\"\n")
 	b.WriteString("        \"429\":\n          $ref: \"#/components/responses/TooManyRequests\"\n")
 	b.WriteString("        \"500\":\n          $ref: \"#/components/responses/InternalError\"\n")
+}
+
+// canReturn404 menentukan apakah sebuah endpoint bisa membalas 404.
+//
+// Dua sumber 404:
+//  1. Endpoint dengan path parameter — "/portfolios/{id}" bisa 404 kalau
+//     id-nya tidak ada.
+//  2. Endpoint "singleton" yang mewakili satu entitas dan belum tentu ada:
+//     "/changelogs/latest" (404 kalau belum ada changelog), "/media/by-key/*"
+//     (404 kalau key-nya tidak dikenal), "/storage/*" (redirect ke media lama).
+//
+// Selain itu, endpoint koleksi tidak pernah membalas 404 — daftarnya kosong
+// tetap 200 dengan array kosong.
+func canReturn404(path string) bool {
+	if len(pathParams(path)) > 0 {
+		return true
+	}
+	for _, frag := range singletonPaths {
+		if strings.Contains(path, frag) {
+			return true
+		}
+	}
+	return false
+}
+
+// singletonPaths: endpoint yang membalas 404 kalau entitasnya belum ada.
+var singletonPaths = []string{
+	"/changelogs/latest",
+	"/media/by-key/",
+	"/storage/",
+	// by-slug: 404 kalau kombinasi username+slug-nya tidak ada.
+	"/portfolios/by-slug",
+}
+
+// skipPublicPath menentukan apakah sebuah path bukan bagian kontrak publik.
+//
+// Endpoint probe di root API (/health, /ready, /metrics) dibaca probe
+// container langsung ke API, bukan lewat BFF — jadi "/api/health" adalah
+// path yang tidak pernah ada. Mendokumentasikannya berarti promising
+// sesuatu yang tidak bisa dipanggil.
+func skipPublicPath(path string) bool {
+	switch path {
+	case "/api/health", "/api/ready", "/api/metrics":
+		return true
+	}
+	return false
+}
+
+// requestBodies: deskripsi body request untuk endpoint yang punya body.
+//
+// Generator tidak memodelkan body secara umum, jadi endpoint yang butuh body
+// didaftarkan di sini.
+//
+// Penting: PRD §5 menyebut "POST /search — query dikirim di body agar
+// panjang/UTF-8 aman", dan endpoint itu memang menerima body JSON
+// {query|q}. Tanpa deskripsi body di spec, klien hasil generate tidak bisa
+// merepresentasikan request itu — dan contract test menganggap request yang
+// tidak sesuai spec "ditolak".
+//
+// Kuncinya "METHOD path" — bukan path saja: /search punya GET (query di URL)
+// dan POST (query di body). Kalau requestBody ditempel ke pathnya, GET juga
+// diklaim punya body — dan schemathesis lalu mengirim body ke GET yang
+// diaplikasinya mengabaikan, sehingga request itu dianggap melanggar skema
+// padahal server tidak pernah memcion body itu.
+var requestBodies = map[string]string{
+	"POST /api/v1/search": `      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query: { type: string, minLength: 2 }
+                q: { type: string, minLength: 2 }
+          text/plain:
+            schema: { type: string }
+`,
+}
+
+// writeRequestBody menulis blok requestBody untuk operasi yang punya body.
+func writeRequestBody(b *strings.Builder, method, path string) {
+	body, ok := requestBodies[method+" "+path]
+	if !ok {
+		return
+	}
+	b.WriteString(body)
+}
+
+// pathParams mengembalikan daftar nama parameter path pada sebuah path,
+// mis. "/api/v1/portfolios/id/{id}" -> ["id"].
+//
+// Path parameter WAJIB dideklarasikan di OpenAPI. Tanpa itu spec-nya tidak
+// valid dan tooling (validator, client generator) menolaknya.
+func pathParams(path string) []string {
+	var out []string
+	for _, seg := range strings.Split(path, "/") {
+		if len(seg) > 2 && strings.HasPrefix(seg, "{") && strings.HasSuffix(seg, "}") {
+			out = append(out, seg[1:len(seg)-1])
+		}
+	}
+	return out
+}
+
+// uuidPathParams: nama parameter yang isinya UUID.
+var uuidPathParams = map[string]bool{
+	"id": true, "blockId": true, "userId": true, "portfolio_id": true,
+}
+
+// queryParamsRequired: parameter query WAJIB per endpoint.
+//
+// Generator tidak memodelkan parameter query secara umum, jadi endpoint
+// yang butuh query wajib didaftarkan di sini. Tanpa ini, spec-nya
+// tidak memberi tahu klien parameter mana yang wajib diisi — dan contract
+// test menandai "Schema-valid request rejected" (permintaan yang valid
+// menurut spec ditolak server karena parameter wajibnya tidak ada).
+var queryParamsRequired = map[string][]struct {
+	Name      string
+	Type      string
+	MinLength int
+	Pattern   string
+}{
+	//nolint:govet // peta dengan struct inline; nama field sudah jelas
+	"/api/v1/portfolios/by-slug": {
+		{Name: "username", Type: "string", MinLength: 1},
+		{Name: "slug", Type: "string", MinLength: 1},
+	},
+	"/api/v1/search": {
+		// Server menolak query < 2 karakter ATAU yang tidak mengandung
+		// karakter alfanumerik (supaya "%%" tidak mengembalikan seluruh
+		// katalog). Pola di spec harus mencerminkan aturan itu.
+		{Name: "q", Type: "string", MinLength: 2, Pattern: ".*[a-zA-Z0-9].*"},
+	},
+}
+
+// writeRequiredQueryParams menulis blok parameter query wajib.
+func writeRequiredQueryParams(b *strings.Builder, path string) {
+	params, ok := queryParamsRequired[path]
+	if !ok {
+		return
+	}
+	b.WriteString("      parameters:\n")
+	for _, p := range params {
+		fmt.Fprintf(b, "        - name: %s\n          in: query\n          required: true\n", p.Name)
+		// minLength wajib: tanpa itu skema membolehkan nilai yang server
+		// tolak (string kosong, query terlalu pendek), jadi kontrak
+		// bertentangan dengan perilaku server.
+		min := p.MinLength
+		if min <= 0 {
+			min = 1
+		}
+		if p.Pattern != "" {
+			fmt.Fprintf(b, "          schema: { type: %s, minLength: %d, pattern: %q }\n", p.Type, min, p.Pattern)
+		} else {
+			fmt.Fprintf(b, "          schema: { type: %s, minLength: %d }\n", p.Type, min)
+		}
+	}
+}
+
+// pathParamSchemas: skema parameter path per nama.
+//
+// Penting: parameter path harus punya POLA, bukan `type: string` bebas.
+// Kalau skema membolehkan string apa pun, schemathesis menganggap request
+// dengan username gibberish itu "valid menurut spec" — padahal server
+// menolak dengan 400. Kontraknya jadi bertentangan dengan dirinya sendiri.
+//
+// Parameter UUID tetap `format: uuid`; sisanya punya pola yang sama dengan
+// validasi di server.
+var pathParamSchemas = map[string]string{
+	"username": `{ type: string, pattern: "^[a-z0-9._-]{3,30}$" }`,
+	"slug":     `{ type: string, pattern: "^[a-z0-9._-]{3,80}$" }`,
+	"version":  `{ type: string, pattern: "^[0-9]+\\.[0-9]+$" }`,
+	"key":      `{ type: string, minLength: 1 }`,
+}
+
+// writePathParams menulis blok parameters untuk path yang punya {param}.
+func writePathParams(b *strings.Builder, path string) {
+	params := pathParams(path)
+	if len(params) == 0 {
+		return
+	}
+	b.WriteString("      parameters:\n")
+	for _, p := range params {
+		fmt.Fprintf(b, "        - name: %s\n          in: path\n          required: true\n", p)
+		switch {
+		case uuidPathParams[p]:
+			b.WriteString("          schema: { type: string, format: uuid }\n")
+		case pathParamSchemas[p] != "":
+			fmt.Fprintf(b, "          schema: %s\n", pathParamSchemas[p])
+		default:
+			b.WriteString("          schema: { type: string }\n")
+		}
+	}
 }

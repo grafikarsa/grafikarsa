@@ -59,60 +59,6 @@ tags:
   - name: tags
   - name: users
 paths:
-  "/api/health":
-    get:
-      tags: [system]
-      operationId: get_api_health
-      summary: "inline (publik)"
-      x-handler: inline
-      security: []
-      responses:
-        "200":
-          description: Berhasil
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SuccessEnvelope"
-        "429":
-          $ref: "#/components/responses/TooManyRequests"
-        "500":
-          $ref: "#/components/responses/InternalError"
-  "/api/metrics":
-    get:
-      tags: [system]
-      operationId: get_api_metrics
-      summary: "inline (publik)"
-      x-handler: inline
-      security: []
-      responses:
-        "200":
-          description: Berhasil
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SuccessEnvelope"
-        "429":
-          $ref: "#/components/responses/TooManyRequests"
-        "500":
-          $ref: "#/components/responses/InternalError"
-  "/api/ready":
-    get:
-      tags: [system]
-      operationId: get_api_ready
-      summary: "inline (publik)"
-      x-handler: inline
-      security: []
-      responses:
-        "200":
-          description: Berhasil
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SuccessEnvelope"
-        "429":
-          $ref: "#/components/responses/TooManyRequests"
-        "500":
-          $ref: "#/components/responses/InternalError"
   "/api/v1/admin/assessments":
     get:
       tags: [admin-assessments]
@@ -129,8 +75,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -151,8 +105,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -167,18 +129,30 @@ paths:
       x-permissions: [assessments.manage_metrics, assessments.view]
       x-csrf: required
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -192,6 +166,11 @@ paths:
       security:
         - bearerAuth: []
       x-permissions: [assessments.score, assessments.view]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -199,8 +178,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -214,19 +203,38 @@ paths:
         - bearerAuth: []
       x-permissions: [assessments.score, assessments.view]
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -247,8 +255,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -264,18 +280,30 @@ paths:
       x-permissions: [system.backup]
       x-csrf: required
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -296,8 +324,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -312,18 +348,30 @@ paths:
       x-permissions: [changelog.manage]
       x-csrf: required
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -338,19 +386,38 @@ paths:
         - bearerAuth: []
       x-permissions: [changelog.manage, changelog.publish]
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -364,6 +431,11 @@ paths:
       security:
         - bearerAuth: []
       x-permissions: [changelog.manage]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -371,8 +443,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -386,19 +468,38 @@ paths:
         - bearerAuth: []
       x-permissions: [changelog.manage]
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -413,6 +514,15 @@ paths:
         - bearerAuth: []
       x-permissions: [changelog.manage]
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -420,12 +530,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -440,19 +558,38 @@ paths:
         - bearerAuth: []
       x-permissions: [changelog.manage, changelog.publish]
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -467,19 +604,38 @@ paths:
         - bearerAuth: []
       x-permissions: [changelog.manage, changelog.publish]
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -500,8 +656,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -516,18 +680,30 @@ paths:
       x-permissions: [academic.manage_classes, academic.view]
       x-csrf: required
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -543,18 +719,30 @@ paths:
       x-permissions: [academic.manage_classes, academic.view]
       x-csrf: required
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -569,6 +757,11 @@ paths:
         - bearerAuth: []
       x-permissions: [academic.manage_classes, academic.view]
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -576,12 +769,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -595,6 +796,11 @@ paths:
       security:
         - bearerAuth: []
       x-permissions: [academic.view]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -602,8 +808,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -624,8 +840,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -646,8 +870,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -661,6 +893,11 @@ paths:
       security:
         - bearerAuth: []
       x-permissions: [feedback.triage]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -668,8 +905,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -684,19 +931,38 @@ paths:
         - bearerAuth: []
       x-permissions: [feedback.triage]
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -711,6 +977,11 @@ paths:
         - bearerAuth: []
       x-permissions: [feedback.triage]
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -718,12 +989,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -739,18 +1018,30 @@ paths:
       x-permissions: [academic.import_students]
       x-csrf: required
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -771,8 +1062,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -788,18 +1087,30 @@ paths:
       x-permissions: [system.jobs]
       x-csrf: required
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -820,8 +1131,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -836,18 +1155,30 @@ paths:
       x-permissions: [academic.manage_majors, academic.view]
       x-csrf: required
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -868,8 +1199,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -884,19 +1223,38 @@ paths:
         - bearerAuth: []
       x-permissions: [media.delete_any]
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -917,8 +1275,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -934,18 +1300,30 @@ paths:
       x-permissions: [portfolios.moderate, portfolios.moderate_jurusan, portfolios.view_all]
       x-csrf: required
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -966,8 +1344,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -981,6 +1367,11 @@ paths:
       security:
         - bearerAuth: []
       x-permissions: [portfolios.moderate_jurusan, portfolios.view_all]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -988,8 +1379,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1004,19 +1405,38 @@ paths:
         - bearerAuth: []
       x-permissions: [portfolios.moderate, portfolios.moderate_jurusan, portfolios.view_all]
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1031,19 +1451,38 @@ paths:
         - bearerAuth: []
       x-permissions: [portfolios.moderate, portfolios.moderate_jurusan, portfolios.view_all]
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1058,19 +1497,38 @@ paths:
         - bearerAuth: []
       x-permissions: [portfolios.moderate, portfolios.moderate_jurusan, portfolios.view_all]
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1085,6 +1543,56 @@ paths:
         - bearerAuth: []
       x-permissions: [portfolios.moderate, portfolios.moderate_jurusan, portfolios.view_all]
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "200":
+          description: Berhasil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  "/api/v1/admin/portfolios/{id}/status-history":
+    get:
+      tags: [admin-portfolios]
+      operationId: get_admin_portfolios_id_status_history
+      summary: "inline (butuh login, permission: portfolios.moderate_jurusan|portfolios.view_all)"
+      x-handler: inline
+      security:
+        - bearerAuth: []
+      x-permissions: [portfolios.moderate_jurusan, portfolios.view_all]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -1092,12 +1600,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
-        "422":
-          $ref: "#/components/responses/ValidationError"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1118,8 +1632,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1135,18 +1657,30 @@ paths:
       x-permissions: [academic.promote_dryrun]
       x-csrf: required
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1161,19 +1695,38 @@ paths:
         - bearerAuth: []
       x-permissions: [academic.promote_dryrun, academic.promote_execute]
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1188,19 +1741,38 @@ paths:
         - bearerAuth: []
       x-permissions: [academic.promote_dryrun, academic.promote_execute]
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1221,8 +1793,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1237,18 +1817,30 @@ paths:
       x-permissions: [roles.create, roles.view]
       x-csrf: required
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1270,12 +1862,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1290,18 +1888,30 @@ paths:
       x-permissions: [roles.assign, roles.assign_jurusan, roles.view]
       x-csrf: required
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1322,8 +1932,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1338,18 +1956,30 @@ paths:
       x-permissions: [series.manage]
       x-csrf: required
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1364,19 +1994,38 @@ paths:
         - bearerAuth: []
       x-permissions: [series.manage]
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1397,8 +2046,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1413,6 +2070,11 @@ paths:
         - bearerAuth: []
       x-permissions: [system.settings]
       x-csrf: required
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
       responses:
         "200":
           description: Berhasil
@@ -1420,12 +2082,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1446,8 +2116,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1462,18 +2140,30 @@ paths:
       x-permissions: [tags.manage]
       x-csrf: required
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1488,6 +2178,11 @@ paths:
         - bearerAuth: []
       x-permissions: [tags.manage]
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -1495,12 +2190,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1514,6 +2217,11 @@ paths:
         - bearerAuth: []
       x-permissions: [tags.manage]
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -1521,12 +2229,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1547,8 +2263,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1563,18 +2287,30 @@ paths:
       x-permissions: [users.create, users.create_jurusan, users.view, users.view_jurusan]
       x-csrf: required
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1589,6 +2325,11 @@ paths:
         - bearerAuth: []
       x-permissions: [users.delete, users.view, users.view_jurusan]
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -1596,12 +2337,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1614,6 +2363,11 @@ paths:
       security:
         - bearerAuth: []
       x-permissions: [users.view, users.view_jurusan]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -1621,8 +2375,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1636,6 +2400,11 @@ paths:
         - bearerAuth: []
       x-permissions: [users.edit, users.edit_jurusan, users.view, users.view_jurusan]
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -1643,12 +2412,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1663,19 +2440,38 @@ paths:
         - bearerAuth: []
       x-permissions: [users.activate, users.view, users.view_jurusan]
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1690,19 +2486,38 @@ paths:
         - bearerAuth: []
       x-permissions: [users.reset_password, users.view, users.view_jurusan]
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1723,8 +2538,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1739,18 +2562,30 @@ paths:
       x-permissions: [academic.manage_years, academic.view]
       x-csrf: required
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1765,19 +2600,38 @@ paths:
         - bearerAuth: []
       x-permissions: [academic.manage_years, academic.view]
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1790,14 +2644,26 @@ paths:
       x-handler: inline
       security: []
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1812,18 +2678,30 @@ paths:
         - bearerAuth: []
       x-csrf: required
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1838,18 +2716,30 @@ paths:
         - bearerAuth: []
       x-csrf: required
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1862,14 +2752,26 @@ paths:
       x-handler: inline
       security: []
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1889,8 +2791,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1904,6 +2812,11 @@ paths:
       security:
         - bearerAuth: []
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -1911,12 +2824,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1930,6 +2851,11 @@ paths:
       security:
         - bearerAuth: []
       x-csrf: required
+      parameters:
+        - name: blockId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -1937,12 +2863,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1955,6 +2889,11 @@ paths:
       security:
         - bearerAuth: []
       x-csrf: required
+      parameters:
+        - name: blockId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -1962,12 +2901,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1988,6 +2935,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2008,6 +2961,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2022,18 +2983,30 @@ paths:
         - bearerAuth: []
       x-csrf: required
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2053,8 +3026,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2068,6 +3047,11 @@ paths:
       security:
         - bearerAuth: []
         - {}
+      parameters:
+        - name: version
+          in: path
+          required: true
+          schema: { type: string, pattern: "^[0-9]+\\.[0-9]+$" }
       responses:
         "200":
           description: Berhasil
@@ -2075,6 +3059,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2088,6 +3080,11 @@ paths:
       security:
         - bearerAuth: []
         - {}
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -2095,6 +3092,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2108,19 +3113,38 @@ paths:
       security:
         - bearerAuth: []
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2141,6 +3165,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2154,6 +3184,11 @@ paths:
       security:
         - bearerAuth: []
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -2161,12 +3196,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2187,6 +3230,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2206,8 +3255,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2227,12 +3282,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2252,8 +3313,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2267,14 +3334,26 @@ paths:
         - bearerAuth: []
         - {}
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2287,6 +3366,11 @@ paths:
       x-handler: inline
       security:
         - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -2294,8 +3378,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2309,19 +3401,38 @@ paths:
       security:
         - bearerAuth: []
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2335,19 +3446,38 @@ paths:
       security:
         - bearerAuth: []
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2366,6 +3496,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2386,6 +3522,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2406,6 +3548,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2425,8 +3573,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2446,12 +3600,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2471,8 +3631,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2492,8 +3658,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2513,12 +3685,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2539,12 +3717,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2564,8 +3748,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2586,12 +3776,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2612,6 +3808,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2627,18 +3831,30 @@ paths:
       x-permissions: [media.upload]
       x-csrf: required
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2652,6 +3868,11 @@ paths:
       security:
         - bearerAuth: []
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -2659,12 +3880,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2677,6 +3906,11 @@ paths:
       security:
         - bearerAuth: []
         - {}
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -2684,6 +3918,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2697,19 +3939,38 @@ paths:
       security:
         - bearerAuth: []
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2729,8 +3990,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2750,8 +4017,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2766,18 +4039,30 @@ paths:
         - bearerAuth: []
       x-csrf: required
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2791,6 +4076,11 @@ paths:
       security:
         - bearerAuth: []
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -2798,12 +4088,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2817,6 +4115,11 @@ paths:
       security:
         - bearerAuth: []
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -2824,12 +4127,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2848,6 +4159,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2862,18 +4179,30 @@ paths:
       x-permissions: [portfolios.create]
       x-csrf: required
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2885,6 +4214,15 @@ paths:
       summary: "inline (publik)"
       x-handler: inline
       security: []
+      parameters:
+        - name: username
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: slug
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
       responses:
         "200":
           description: Berhasil
@@ -2892,6 +4230,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2905,6 +4251,11 @@ paths:
       security:
         - bearerAuth: []
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -2912,12 +4263,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2928,6 +4287,11 @@ paths:
       summary: "inline (publik)"
       x-handler: inline
       security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -2935,6 +4299,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2947,6 +4319,11 @@ paths:
       security:
         - bearerAuth: []
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -2954,12 +4331,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2973,19 +4358,38 @@ paths:
       security:
         - bearerAuth: []
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2999,19 +4403,38 @@ paths:
       security:
         - bearerAuth: []
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3025,19 +4448,38 @@ paths:
       security:
         - bearerAuth: []
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3051,6 +4493,11 @@ paths:
       security:
         - bearerAuth: []
         - {}
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -3058,6 +4505,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3070,19 +4525,38 @@ paths:
       security:
         - bearerAuth: []
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3096,6 +4570,11 @@ paths:
       security:
         - bearerAuth: []
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -3103,12 +4582,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3121,19 +4608,38 @@ paths:
       security:
         - bearerAuth: []
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3147,19 +4653,38 @@ paths:
       security:
         - bearerAuth: []
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3173,19 +4698,38 @@ paths:
       security:
         - bearerAuth: []
       x-csrf: required
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3205,8 +4749,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3220,19 +4770,38 @@ paths:
       security:
         - bearerAuth: []
       x-csrf: required
+      parameters:
+        - name: portfolio_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3246,6 +4815,11 @@ paths:
       security:
         - bearerAuth: []
       x-csrf: required
+      parameters:
+        - name: portfolio_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -3253,12 +4827,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3272,6 +4854,11 @@ paths:
       security:
         - bearerAuth: []
         - {}
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, minLength: 2, pattern: ".*[a-zA-Z0-9].*" }
       responses:
         "200":
           description: Berhasil
@@ -3279,6 +4866,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3291,15 +4884,43 @@ paths:
       security:
         - bearerAuth: []
         - {}
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, minLength: 2, pattern: ".*[a-zA-Z0-9].*" }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query: { type: string, minLength: 2 }
+                q: { type: string, minLength: 2 }
+          text/plain:
+            schema: { type: string }
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/ValidationError"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3320,6 +4941,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3333,6 +4960,11 @@ paths:
       security:
         - bearerAuth: []
         - {}
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Berhasil
@@ -3340,6 +4972,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3360,6 +5000,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "301":
+          description: Permanen dialihkan ke media baru
+          headers:
+            Location: { type: string }
+        "410":
+          $ref: "#/components/responses/Gone"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3380,6 +5034,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3400,6 +5060,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3413,6 +5079,11 @@ paths:
       security:
         - bearerAuth: []
         - {}
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema: { type: string, pattern: "^[a-z0-9._-]{3,30}$" }
       responses:
         "200":
           description: Berhasil
@@ -3420,6 +5091,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3433,6 +5112,11 @@ paths:
       security:
         - bearerAuth: []
       x-csrf: required
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema: { type: string, pattern: "^[a-z0-9._-]{3,30}$" }
       responses:
         "200":
           description: Berhasil
@@ -3440,12 +5124,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3458,19 +5150,38 @@ paths:
       security:
         - bearerAuth: []
       x-csrf: required
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema: { type: string, pattern: "^[a-z0-9._-]{3,30}$" }
       responses:
+        "201":
+          description: Berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
         "200":
           description: Berhasil
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3484,6 +5195,11 @@ paths:
       security:
         - bearerAuth: []
         - {}
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema: { type: string, pattern: "^[a-z0-9._-]{3,30}$" }
       responses:
         "200":
           description: Berhasil
@@ -3491,6 +5207,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3504,6 +5228,11 @@ paths:
       security:
         - bearerAuth: []
         - {}
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema: { type: string, pattern: "^[a-z0-9._-]{3,30}$" }
       responses:
         "200":
           description: Berhasil
@@ -3511,6 +5240,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3525,6 +5262,58 @@ components:
         Access token 15 menit dari POST /api/v1/auth/login (disimpan di memori
         FE, bukan localStorage). Refresh token ada di cookie __Host-rt HttpOnly.
   responses:
+    BadRequest:
+      description: >-
+        Format request tidak dikenali (body JSON rusak, parameter tidak valid).
+        Content-Type bisa text/plain kalau framework menolak URL-nya sebelum
+        aplikasi sempat menjawab (mis. percent-encoding rusak).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example:
+            success: false
+            error: { code: VALIDATION_ERROR, message: Body JSON tidak valid. }
+        text/plain:
+          schema: { type: string }
+          example: "400 Bad Request"
+    NotFound:
+      description: Sumber daya tidak ada (atau tidak terlihat oleh pemanggil)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example:
+            success: false
+            error: { code: NOT_FOUND, message: Tidak ditemukan. }
+    MethodNotAllowed:
+      description: >-
+        Method HTTP tidak diizinkan untuk path ini. Router mengembalikan 405
+        kalau path-nya dikenali tapi method-nya tidak (mis. GET ke endpoint
+        yang hanya menerima POST).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example:
+            success: false
+            error: { code: METHOD_NOT_ALLOWED, message: Method tidak diizinkan. }
+    Gone:
+      description: >-
+        Sumber daya sudah tidak tersedia. Untuk route "/storage/*" ini berarti
+        URL lama v1 terdaftar, tapi file-nya sudah tidak ada (masa redirect
+        6 bulan berakhir).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example:
+            success: false
+            error: { code: GONE, message: File lama sudah tidak tersedia. }
+    Conflict:
+      description: Konflik dengan data yang sudah ada (duplikat)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example:
+            success: false
+            error: { code: DUPLICATE_USER, message: Sudah ada. }
     Unauthorized:
       description: Belum login atau token kedaluwarsa
       content:
@@ -3646,8 +5435,28 @@ components:
         - TAG_IN_USE
         - METHOD_NOT_ALLOWED
         - INTERNAL_ERROR
+        - ALREADY_HAS_BLOCKS
+        - CANNOT_FOLLOW_SELF
+        - CLASS_NOT_EMPTY
+        - DUPLICATE_CLASS
+        - DUPLICATE_JOB
+        - DUPLICATE_MAJOR
+        - DUPLICATE_ROLE
+        - DUPLICATE_SLUG
+        - DUPLICATE_YEAR
+        - GONE
+        - NO_ACTIVE_YEAR
+        - OBJECT_MISSING
+        - SERVICE_UNAVAILABLE
+        - USERNAME_TAKEN
     PaginationMeta:
-      type: object
+      # Endpoint yang tidak berpaginasi (leaderboard, feed ringkas) mengirim
+      # meta: null.
+      #
+      # OpenAPI 3.1 memakai JSON Schema, dan nullable BUKAN keyword-nya
+      # (itu cara OpenAPI 3.0). Di 3.1, null ditulis sebagai salah satu
+      # tipe: type: [object, "null"].
+      type: [object, "null"]
       properties:
         page: { type: integer }
         per_page: { type: integer }

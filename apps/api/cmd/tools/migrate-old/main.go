@@ -27,14 +27,18 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log/slog"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"grafikarsa/api/internal/config"
 )
@@ -57,7 +61,12 @@ type stats struct {
 	Assessments              int
 	Feedback, Changelogs     int
 	MediaRegistered          int
-	Skipped                  map[string]int
+	// MediaFallback: URL yang TIDAK bisa didaftarkan sebagai media_assets
+	// (hanya masuk legacy_urls tanpa media_id). Ini berarti ada objek yang
+	// tidak terikat ke media — harus menggagalkan migrasi, bukan cuma
+	// logged sebagai warning.
+	MediaFallback int
+	Skipped       map[string]int
 }
 
 func newStats() *stats { return &stats{Skipped: map[string]int{}} }
@@ -134,7 +143,12 @@ func main() {
 	}
 	if o.migrateMedia {
 		if err := migrateMediaRefs(ctx, v1, v2, introspect, o, st); err != nil {
-			slog.Warn("migrate media dilewati sebagian", "err", err)
+			// Fase media tidak boleh "dilewati sebagian": kalau gagal,
+			// operator harus tahu dan memperbaiki sebelum go-live. Kalau
+			// hanya di-warn, migrasi tetap exit 0 padahal sebagian objek
+			// tidak terikat ke media — dan itu baru ketahuan setelah
+			// pengguna membuka karya yang gambarnya hilang.
+			fatal("migrate media gagal: %v", err)
 		}
 	}
 
@@ -173,7 +187,10 @@ type v1schema struct {
 
 func inspectV1(ctx context.Context, db *pgxpool.Pool) (*v1schema, error) {
 	s := &v1schema{tables: map[string]bool{}, cols: map[string]map[string]bool{}}
-	rows, err := db.Query(ctx, `SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'`)
+	// View ikut diintrospeksi: di v1 data assessment ada di view
+	// v_portfolio_assessments (901 baris), bukan di tabel biasa.
+	rows, err := db.Query(ctx, `SELECT table_name FROM information_schema.tables
+		WHERE table_schema='public' AND table_type IN ('BASE TABLE','VIEW')`)
 	if err != nil {
 		return nil, err
 	}
@@ -220,6 +237,29 @@ func (s *v1schema) has(table string, cols ...string) bool {
 	return true
 }
 
+// firstTableWithRows memilih kandidat tabel pertama yang benar-benar punya
+// baris.
+//
+// Ini perlu untuk assessment: di v1 prod ada tabel 'portfolio_assessments'
+// yang KOSONG dan view 'v_portfolio_assessments' yang berisi 901 baris.
+// firstTable akan memilih yang kosong lebih dulu, jadi assessment-nya hilang.
+func (s *v1schema) firstTableWithRows(ctx context.Context, db *pgxpool.Pool, cands ...string) string {
+	fallback := ""
+	for _, t := range cands {
+		if !s.tables[t] {
+			continue
+		}
+		if fallback == "" {
+			fallback = t
+		}
+		var n int64
+		if err := db.QueryRow(ctx, "SELECT count(*) FROM "+t).Scan(&n); err == nil && n > 0 {
+			return t
+		}
+	}
+	return fallback
+}
+
 func (s *v1schema) firstTable(cands ...string) string {
 	for _, t := range cands {
 		if s.tables[t] {
@@ -238,8 +278,86 @@ func colOr(s *v1schema, table string, cands ...string) string {
 	return ""
 }
 
+// dryRunMap menyimpan pemetaan id selama dry-run.
+//
+// Peta ini TIDAK bisa ditulis ke legacy_id_map karena dry-run tidak boleh
+// menulis apa pun ke database target. Tapi tanpa peta, semua referensi
+// (like/follow/comment/notification) selalu gagal dipetakan, sehingga
+// dry-run melaporkan 0 relasional dimigrasi — memberi keyakinan palsu
+// padahal datanya sebenarnya bisa dimigrasi.
+//
+// Peta di memori membuat dry-run benar-benar memvalidasi data relasional.
+var dryRunMap sync.Map
+
+// jsonText mengubah nilai jsonb yang dibaca driver menjadi teks JSON.
+//
+// pgx membaca kolom jsonb ke `any` sebagai map[string]any. fmt.Sprint atas
+// map itu menghasilkan "map[content:...]" — BUKAN JSON. Akibatnya
+// json.Unmarshal gagal: isi text block jadi sampah ("map[content:]"), dan
+// semua tipe block lain masuk karantina karena payload-nya dianggap rusak.
+func jsonText(v any) string {
+	switch t := v.(type) {
+	case nil:
+		return "{}"
+	case string:
+		return t
+	case []byte:
+		return string(t)
+	case map[string]any:
+		b, err := json.Marshal(t)
+		if err != nil {
+			return "{}"
+		}
+		return string(b)
+	case map[string]string:
+		b, err := json.Marshal(t)
+		if err != nil {
+			return "{}"
+		}
+		return string(b)
+	default:
+		return fmt.Sprint(v)
+	}
+}
+
+// uuidString menormalkan nilai id yang dibaca dari driver menjadi string UUID.
+//
+// pgx membaca kolom uuid ke `any` sebagai array 16 byte, jadi fmt.Sprint
+// menghasilkan "[0 43 33 205 ...]" — bukan UUID. Nilai itu tidak bisa
+// dipakai di query (invalid input syntax for type uuid) dan juga membuat
+// legacy_id_map storing tidak terbaca manusia.
+func uuidString(v any) string {
+	switch t := v.(type) {
+	case nil:
+		return ""
+	case string:
+		return t
+	case uuid.UUID:
+		return t.String()
+	case pgtype.UUID:
+		if t.Valid {
+			return uuid.UUID(t.Bytes).String()
+		}
+		return ""
+	case [16]byte:
+		return uuid.UUID(t).String()
+	case []byte:
+		if len(t) == 16 {
+			return uuid.UUID(t).String()
+		}
+		return string(t)
+	default:
+		return fmt.Sprint(v)
+	}
+}
+
 // mapID mencatat / membaca mapping idempotent.
 func mappedID(ctx context.Context, v2 *pgxpool.Pool, srcTable, srcID, targetTable string) (string, bool) {
+	// Dry-run: pakai peta di memori (tidak ada yang ditulis ke database).
+	if v, ok := dryRunMap.Load(srcTable + "|" + srcID + "|" + targetTable); ok {
+		id, _ := v.(string)
+		return id, id != ""
+	}
 	var id string
 	err := v2.QueryRow(ctx, `SELECT target_id::text FROM legacy_id_map WHERE source_table=$1 AND source_id=$2 AND target_table=$3`, srcTable, srcID, targetTable).Scan(&id)
 	return id, err == nil
@@ -247,6 +365,9 @@ func mappedID(ctx context.Context, v2 *pgxpool.Pool, srcTable, srcID, targetTabl
 
 func saveMap(ctx context.Context, v2 *pgxpool.Pool, dry bool, srcTable, srcID, targetTable, targetID string) error {
 	if dry {
+		// Dry-run: simpan pemetaan di memori supaya referensi antar tabel
+		// (like/follow/comment/notification) tetap bisa diverifikasi.
+		dryRunMap.Store(srcTable+"|"+srcID+"|"+targetTable, targetID)
 		return nil
 	}
 	_, err := v2.Exec(ctx, `INSERT INTO legacy_id_map (source_table, source_id, target_table, target_id) VALUES ($1,$2,$3,$4)

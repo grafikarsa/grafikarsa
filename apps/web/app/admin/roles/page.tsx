@@ -9,7 +9,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectField } from "@/components/ui/select-field";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { apiGet, apiSend } from "@/lib/api";
 
 type Role = { id: string; slug: string; name: string; scope_type: string; is_system: boolean };
@@ -36,8 +43,14 @@ export default function RolesPage() {
   const [assignUser, setAssignUser] = useState("");
   const [assignRole, setAssignRole] = useState("");
 
-  const roles = useQuery({ queryKey: ["admin-roles"], queryFn: () => apiGet<Role[]>("v1/admin/roles") });
-  const users = useQuery({ queryKey: ["admin-users-list"], queryFn: () => apiGet<{ id: string; username: string }[]>("v1/admin/users") });
+  const roles = useQuery({
+    queryKey: ["admin-roles"],
+    queryFn: () => apiGet<Role[]>("v1/admin/roles"),
+  });
+  const users = useQuery({
+    queryKey: ["admin-users-list"],
+    queryFn: () => apiGet<{ id: string; username: string }[]>("v1/admin/users"),
+  });
 
   const create = useMutation({
     mutationFn: () => apiSend("v1/admin/roles", "POST", { slug, name, permissions: perms }),
@@ -51,7 +64,8 @@ export default function RolesPage() {
   });
 
   const assign = useMutation({
-    mutationFn: () => apiSend("v1/admin/roles/assign", "POST", { user_id: assignUser, role_slug: assignRole }),
+    mutationFn: () =>
+      apiSend("v1/admin/roles/assign", "POST", { user_id: assignUser, role_slug: assignRole }),
     onSuccess: () => {
       toast.success("Role diberikan.");
       qc.invalidateQueries({ queryKey: ["admin-roles"] });
@@ -84,7 +98,13 @@ export default function RolesPage() {
                   <TableCell className="font-mono text-xs">{r.slug}</TableCell>
                   <TableCell>{r.name}</TableCell>
                   <TableCell>{r.scope_type}</TableCell>
-                  <TableCell>{r.is_system ? <Badge variant="secondary">sistem</Badge> : <Badge>custom</Badge>}</TableCell>
+                  <TableCell>
+                    {r.is_system ? (
+                      <Badge variant="secondary">sistem</Badge>
+                    ) : (
+                      <Badge>custom</Badge>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -103,11 +123,21 @@ export default function RolesPage() {
           <div className="grid gap-2 md:grid-cols-2">
             <div className="grid gap-1">
               <Label htmlFor="rslug">Slug</Label>
-              <Input id="rslug" value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="moderator_rpl" />
+              <Input
+                id="rslug"
+                value={slug}
+                onChange={(e) => setSlug(e.target.value)}
+                placeholder="moderator_rpl"
+              />
             </div>
             <div className="grid gap-1">
               <Label htmlFor="rname">Nama</Label>
-              <Input id="rname" value={name} onChange={(e) => setName(e.target.value)} placeholder="Moderator RPL" />
+              <Input
+                id="rname"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Moderator RPL"
+              />
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -116,13 +146,18 @@ export default function RolesPage() {
                 <input
                   type="checkbox"
                   checked={perms.includes(p)}
-                  onChange={(e) => setPerms(e.target.checked ? [...perms, p] : perms.filter((x) => x !== p))}
+                  onChange={(e) =>
+                    setPerms(e.target.checked ? [...perms, p] : perms.filter((x) => x !== p))
+                  }
                 />
                 {p}
               </label>
             ))}
           </div>
-          <Button onClick={() => create.mutate()} disabled={!slug || !name || perms.length === 0 || create.isPending}>
+          <Button
+            onClick={() => create.mutate()}
+            disabled={!slug || !name || perms.length === 0 || create.isPending}
+          >
             Buat role
           </Button>
         </CardContent>
@@ -152,7 +187,11 @@ export default function RolesPage() {
                 options={roleList.map((r) => ({ value: r.slug, label: r.name }))}
               />
             </div>
-            <Button className="self-end" onClick={() => assign.mutate()} disabled={!assignUser || !assignRole || assign.isPending}>
+            <Button
+              className="self-end"
+              onClick={() => assign.mutate()}
+              disabled={!assignUser || !assignRole || assign.isPending}
+            >
               Berikan
             </Button>
           </div>

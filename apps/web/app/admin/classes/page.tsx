@@ -36,7 +36,12 @@ export default function ClassesPage() {
         toast.error("Belum ada tahun aktif.");
         return;
       }
-      await apiSend("v1/admin/classes", "POST", { year_id: active.id, major_id: majorId, grade: Number(grade), group });
+      await apiSend("v1/admin/classes", "POST", {
+        year_id: active.id,
+        major_id: majorId,
+        grade: Number(grade),
+        group,
+      });
       toast.success("Kelas dibuat.");
       load();
     } catch (err) {
@@ -52,18 +57,36 @@ export default function ClassesPage() {
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
           <div className="flex gap-2">
-            <select value={majorId} onChange={(e) => setMajorId(e.target.value)} className="border rounded p-2">
+            <select
+              value={majorId}
+              onChange={(e) => setMajorId(e.target.value)}
+              className="border rounded p-2"
+            >
               <option value="">Jurusan...</option>
               {majors.map((m) => (
-                <option key={m.id} value={m.id}>{m.name}</option>
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
               ))}
             </select>
-            <Input value={grade} onChange={(e) => setGrade(e.target.value)} placeholder="10/11/12" className="w-24" />
-            <Input value={group} onChange={(e) => setGroup(e.target.value)} placeholder="A" className="w-16" />
+            <Input
+              value={grade}
+              onChange={(e) => setGrade(e.target.value)}
+              placeholder="10/11/12"
+              className="w-24"
+            />
+            <Input
+              value={group}
+              onChange={(e) => setGroup(e.target.value)}
+              placeholder="A"
+              className="w-16"
+            />
             <Button onClick={create}>Buat</Button>
           </div>
           {classes.map((c) => (
-            <p key={c.id} className="border-b py-1 text-sm">{c.name} — {c.students} siswa</p>
+            <p key={c.id} className="border-b py-1 text-sm">
+              {c.name} — {c.students} siswa
+            </p>
           ))}
         </CardContent>
       </Card>

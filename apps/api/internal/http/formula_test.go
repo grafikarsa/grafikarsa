@@ -15,10 +15,15 @@ func TestRecencyFormula(t *testing.T) {
 		{336, math.Exp(-2)},
 	}
 	for _, c := range cases {
-		got := math.Exp(-c.ageH / 168)
+		got := recencyScore(c.ageH)
 		if math.Abs(got-c.want) > 1e-9 {
 			t.Fatalf("recency(%v) = %v, want %v", c.ageH, got, c.want)
 		}
+	}
+	// Umur negatif (published_at di masa depan) harus dibatasi 0, bukan
+	// menghasilkan skor > 1.
+	if got := recencyScore(-5); got != 1.0 {
+		t.Fatalf("recency(umur negatif) = %v, ingin 1.0", got)
 	}
 }
 

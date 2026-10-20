@@ -39,6 +39,25 @@ func MigrateDown(ctx context.Context, cfg *config.Config) error {
 	return goose.Down(db, ".")
 }
 
+// MigrateDownTo mengembalikan skema ke versi tertentu.
+//
+// Dipakai saat rollback deploy: kalau image baru gagal healthcheck, skema
+// juga harus dikembalikan ke versi sebelumnya — image lama yang dikembalikan
+// saja tidak cukup kalau migrasi barunya tidak backward-compatible.
+func MigrateDownTo(ctx context.Context, cfg *config.Config, version int64) error {
+	pc, err := parseConfig(cfg.DatabaseURL())
+	if err != nil {
+		return fmt.Errorf("db: parse config: %w", err)
+	}
+	db := stdlib.OpenDB(*pc)
+	defer db.Close()
+	goose.SetBaseFS(dbmigrations.FS)
+	if err := goose.SetDialect("postgres"); err != nil {
+		return err
+	}
+	return goose.DownTo(db, ".", version)
+}
+
 // MigrateStatus menampilkan status semua migrasi (dipakai `make migrate-status`
 // dan saat verifikasi deploy).
 func MigrateStatus(ctx context.Context, cfg *config.Config) error {

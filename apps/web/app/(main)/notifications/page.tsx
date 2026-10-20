@@ -8,32 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiGet, apiSend } from "@/lib/api";
 
-type Notif = {
-  id: string;
-  type: string;
-  title: string;
-  body: string;
-  created_at: string;
-  is_read: boolean;
-  data?: Record<string, unknown> | null;
-};
-
-// deepLink memetakan payload `data` notifikasi ke halaman yang relevan
-// (PRD §10: notifikasi harus bisa diklik menuju konteksnya).
-export function deepLink(n: Notif): string | null {
-  const d = (n.data ?? {}) as Record<string, unknown>;
-  const portfolioID = typeof d.portfolio_id === "string" ? d.portfolio_id : "";
-  const username = typeof d.username === "string" ? d.username : "";
-  const slug = typeof d.slug === "string" ? d.slug : "";
-  const threadID = typeof d.thread_id === "string" ? d.thread_id : "";
-  const version = typeof d.version === "string" ? d.version : "";
-
-  if (username && slug) return `/${username}/${slug}`;
-  if (portfolioID) return `/portfolios?highlight=${portfolioID}`;
-  if (threadID) return `/feedback?thread=${threadID}`;
-  if (version) return `/changelog/${version}`;
-  return null;
-}
+import { deepLink, type Notif } from "@/lib/notifications";
 
 export default function NotificationsPage() {
   const [items, setItems] = useState<Notif[]>([]);
@@ -78,14 +53,19 @@ export default function NotificationsPage() {
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
           {loading && <p className="text-muted-foreground text-sm">Memuat...</p>}
-          {!loading && items.length === 0 && <p className="text-muted-foreground text-sm">Tidak ada notifikasi.</p>}
+          {!loading && items.length === 0 && (
+            <p className="text-muted-foreground text-sm">Tidak ada notifikasi.</p>
+          )}
           {items.map((n) => {
             const href = deepLink(n);
             return (
               <div key={n.id} className="flex flex-col gap-1 border-b py-2">
                 <div className="flex items-center gap-2">
                   {!n.is_read && (
-                    <span className="bg-primary inline-block size-2 rounded-full" aria-label="Belum dibaca" />
+                    <span
+                      className="bg-primary inline-block size-2 rounded-full"
+                      aria-label="Belum dibaca"
+                    />
                   )}
                   <p className="font-semibold">{n.title}</p>
                   <Badge variant="secondary">{n.type}</Badge>

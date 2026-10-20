@@ -6,7 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { apiGet } from "@/lib/api";
 
 type AuditLog = {
@@ -25,7 +32,9 @@ export default function AdminAuditLogsPage() {
   const q = useQuery({
     queryKey: ["admin-audit-logs", action],
     queryFn: () =>
-      apiGet<AuditLog[]>(`v1/admin/audit-logs?per_page=50${action ? `&action=${encodeURIComponent(action)}` : ""}`),
+      apiGet<AuditLog[]>(
+        `v1/admin/audit-logs?per_page=50${action ? `&action=${encodeURIComponent(action)}` : ""}`,
+      ),
   });
   const items = Array.isArray(q.data) ? q.data : [];
 

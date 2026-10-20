@@ -13,7 +13,9 @@ export default function AssessmentPage({ params }: { params: Promise<{ id: strin
   const [scores, setScores] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    apiGet<{ id: string; name: string }[]>("v1/admin/assessments/metrics").then(setMetrics).catch(() => null);
+    apiGet<{ id: string; name: string }[]>("v1/admin/assessments/metrics")
+      .then(setMetrics)
+      .catch(() => null);
   }, []);
 
   async function submit() {

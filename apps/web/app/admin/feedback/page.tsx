@@ -8,11 +8,25 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { SelectField } from "@/components/ui/select-field";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { apiGet, apiSend } from "@/lib/api";
 
-type Thread = { id: string; category: string; title: string; status: string; upvotes: number; priority?: string };
+type Thread = {
+  id: string;
+  category: string;
+  title: string;
+  status: string;
+  upvotes: number;
+  priority?: string;
+};
 type Detail = {
   id: string;
   title: string;
@@ -111,7 +125,9 @@ export default function AdminFeedbackPage() {
                   <TableCell>{t.title}</TableCell>
                   <TableCell>{t.category}</TableCell>
                   <TableCell>
-                    <Badge variant={t.status === "resolved" ? "secondary" : "default"}>{t.status}</Badge>
+                    <Badge variant={t.status === "resolved" ? "secondary" : "default"}>
+                      {t.status}
+                    </Badge>
                   </TableCell>
                   <TableCell>{t.upvotes}</TableCell>
                   <TableCell className="text-right">
@@ -144,8 +160,8 @@ export default function AdminFeedbackPage() {
           <CardContent className="flex flex-col gap-3">
             <p className="text-sm">{detail.data.body}</p>
             <p className="text-muted-foreground text-xs">
-              Status {detail.data.status} · prioritas {detail.data.priority} · umur {Math.round(detail.data.age_hours)} jam ·
-              target {detail.data.sla_hours} jam
+              Status {detail.data.status} · prioritas {detail.data.priority} · umur{" "}
+              {Math.round(detail.data.age_hours)} jam · target {detail.data.sla_hours} jam
             </p>
 
             <div className="flex flex-wrap gap-2">
@@ -175,7 +191,11 @@ export default function AdminFeedbackPage() {
               ))}
             </div>
 
-            <Textarea value={reply} onChange={(e) => setReply(e.target.value)} placeholder="Balasan..." />
+            <Textarea
+              value={reply}
+              onChange={(e) => setReply(e.target.value)}
+              placeholder="Balasan..."
+            />
             <div className="flex flex-wrap items-center gap-2">
               <SelectField
                 value={nextStatus}
@@ -185,7 +205,11 @@ export default function AdminFeedbackPage() {
                 options={STATUSES.map((s) => ({ value: s, label: `→ ${s}` }))}
               />
               <label className="flex items-center gap-1 text-xs">
-                <input type="checkbox" checked={internal} onChange={(e) => setInternal(e.target.checked)} />
+                <input
+                  type="checkbox"
+                  checked={internal}
+                  onChange={(e) => setInternal(e.target.checked)}
+                />
                 catatan internal
               </label>
               <Button onClick={() => send.mutate()} disabled={reply.length < 2 || send.isPending}>

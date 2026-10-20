@@ -1,5 +1,9 @@
 "use client";
 
+// Alias: "Image" di file ini dipakai sebagai constructor DOM (untuk crop),
+// jadi komponen Next.js diimpor dengan nama lain.
+import NextImage from "next/image";
+
 import Cropper from "react-easy-crop";
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -7,7 +11,11 @@ import { Button } from "@/components/ui/button";
 import { useUpload } from "@/components/portfolio/block-form";
 
 // helper: potong gambar sesuai area pilihan lalu kembalikan File hasil crop.
-async function cropToFile(src: string, area: { x: number; y: number; width: number; height: number }, ratio: number): Promise<File> {
+async function cropToFile(
+  src: string,
+  area: { x: number; y: number; width: number; height: number },
+  ratio: number,
+): Promise<File> {
   const img = new Image();
   img.crossOrigin = "anonymous";
   await new Promise<void>((resolve, reject) => {
@@ -24,7 +32,9 @@ async function cropToFile(src: string, area: { x: number; y: number; width: numb
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas tidak tersedia.");
   ctx.drawImage(img, area.x, area.y, area.width, area.height, 0, 0, canvas.width, canvas.height);
-  const blob: Blob | null = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
+  const blob: Blob | null = await new Promise((resolve) =>
+    canvas.toBlob(resolve, "image/jpeg", 0.9),
+  );
   if (!blob) throw new Error("Gagal memproses gambar.");
   return new File([blob], "cropped.jpg", { type: "image/jpeg" });
 }
@@ -40,14 +50,22 @@ export function AvatarUploader({
   const [src, setSrc] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-  const [areaPixels, setAreaPixels] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [areaPixels, setAreaPixels] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
   const [busy, setBusy] = useState(false);
   const { upload, progress } = useUpload();
   const fileRef = useRef<HTMLInputElement | null>(null);
 
-  const onCropComplete = useCallback((_area: unknown, pixels: { x: number; y: number; width: number; height: number }) => {
-    setAreaPixels(pixels);
-  }, []);
+  const onCropComplete = useCallback(
+    (_area: unknown, pixels: { x: number; y: number; width: number; height: number }) => {
+      setAreaPixels(pixels);
+    },
+    [],
+  );
 
   async function confirmCrop() {
     if (!src || !areaPixels) return;
@@ -71,9 +89,11 @@ export function AvatarUploader({
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-3">
         {currentMediaID && (
-          <img
+          <NextImage
             src={`/api/v1/media/${currentMediaID}?w=320`}
             alt="Avatar sekarang"
+            width={64}
+            height={64}
             className="size-16 rounded-full object-cover"
           />
         )}

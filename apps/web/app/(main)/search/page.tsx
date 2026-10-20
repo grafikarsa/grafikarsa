@@ -33,7 +33,11 @@ export default function SearchPage() {
   return (
     <main className="mx-auto max-w-2xl p-4">
       <h1 className="mb-4 text-2xl font-bold">Pencarian</h1>
-      <Input value={q} onChange={(e) => search(e.target.value)} placeholder="Minimal 2 karakter..." />
+      <Input
+        value={q}
+        onChange={(e) => search(e.target.value)}
+        placeholder="Minimal 2 karakter..."
+      />
       {res && (
         <div className="mt-4 flex flex-col gap-4">
           {res.portfolios.map((p) => (
@@ -50,7 +54,9 @@ export default function SearchPage() {
             <Link key={u.id} href={`/${u.username}`}>
               <Card>
                 <CardContent className="p-3">
-                  <p className="font-semibold">{u.name} <span className="text-muted-foreground">@{u.username}</span></p>
+                  <p className="font-semibold">
+                    {u.name} <span className="text-muted-foreground">@{u.username}</span>
+                  </p>
                 </CardContent>
               </Card>
             </Link>

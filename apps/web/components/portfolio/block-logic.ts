@@ -30,7 +30,10 @@ export function ytId(url: string): string | null {
 }
 
 // parseTable: baris "a | b | c" -> rows; header dari input koma.
-export function parseTable(headersRaw: string, rowsRaw: string): { headers: string[]; rows: string[][] } | null {
+export function parseTable(
+  headersRaw: string,
+  rowsRaw: string,
+): { headers: string[]; rows: string[][] } | null {
   const headers = headersRaw
     .split(",")
     .map((h) => h.trim())
@@ -51,17 +54,24 @@ export function parseTable(headersRaw: string, rowsRaw: string): { headers: stri
 export function validateDraft(blockType: string, d: Draft): string | null {
   switch (blockType) {
     case "text":
-      return typeof d.markdown === "string" && d.markdown.trim().length > 0 ? null : "Teks tidak boleh kosong.";
+      return typeof d.markdown === "string" && d.markdown.trim().length > 0
+        ? null
+        : "Teks tidak boleh kosong.";
     case "image":
-      if (!d.media_id && !(typeof d.url === "string" && isHttps(d.url))) return "Unggah gambar atau isi URL https.";
-      if (typeof d.alt !== "string" || d.alt.trim().length < 5) return "Alt wajib 5+ karakter (aksesibilitas).";
+      if (!d.media_id && !(typeof d.url === "string" && isHttps(d.url)))
+        return "Unggah gambar atau isi URL https.";
+      if (typeof d.alt !== "string" || d.alt.trim().length < 5)
+        return "Alt wajib 5+ karakter (aksesibilitas).";
       return null;
     case "table":
       return validateTableDraft(d);
     case "youtube":
-      return typeof d.video_id === "string" && d.video_id.length === 11 ? null : "ID video YouTube 11 karakter.";
+      return typeof d.video_id === "string" && d.video_id.length === 11
+        ? null
+        : "ID video YouTube 11 karakter.";
     case "button":
-      if (typeof d.label !== "string" || d.label.trim().length === 0 || d.label.length > 50) return "Label 1-50 karakter.";
+      if (typeof d.label !== "string" || d.label.trim().length === 0 || d.label.length > 50)
+        return "Label 1-50 karakter.";
       return typeof d.url === "string" && isHttps(d.url) ? null : "URL tombol harus https.";
     case "link":
       return typeof d.url === "string" && isHttps(d.url) ? null : "URL tautan harus https.";

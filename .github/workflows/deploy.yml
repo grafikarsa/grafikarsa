@@ -1,7 +1,19 @@
 name: deploy
 on:
+  # Deploy ke produksi TIDAK lagi otomatis tiap push ke main.
+  #
+  # Grafikarsa masih menjalankan stack v1 di server, dan go-live v2 punya
+  # prasyarat yang belum dipenuhi: storage mirror 5,1 GB, migrasi DB v1→v2
+  # di server, jendela maintenance, dan restore drill. Kalau push ke main
+  # otomatis men-deploy, satu merge bisa mengganti situs produksi dengan stack
+  # v2 yang datanya belum dimigrasi -> situsnya kosong.
+  #
+  # Deploy sekarang jadi tindakan yang disengaja: tag versi (v2.0.0) atau
+  # manual lewat workflow_dispatch. Itu juga cocok dengan prosedur go-live
+  # PRD §16: jendela maintenance, backup, migrasi, verifikasi.
   push:
-    branches: [main]
+    tags:
+      - "v*"
   workflow_dispatch:
 
 env:
@@ -62,7 +74,12 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Trivy scan (blocking on HIGH/CRITICAL fixable)
-        uses: aquasecurity/trivy-action@v0.28.0
+        # v0.28.0 rusak: composite action-nya mereferensikan
+        # aquasecurity/setup-trivy@v0.2.1, dan tag itu sudah dihapus dari
+        # upstream -> workflow gagal saat "Prepare all required actions" dengan
+        # "unable to find version 'v0.2.1'". Versi yang lebih baru mengunci
+        # setup-trivy by commit SHA, jadi selalu bisa di-resolve.
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-api:sha-${{ github.sha }}
           severity: HIGH,CRITICAL
@@ -116,7 +133,45 @@ jobs:
           $DC pull || { echo "FAIL: pull"; exit 1; }
 
           # 3. Migrasi goose (one-off container, idempoten).
+          #
+          # Versi skema SEBELUM migrasi dicatat dulu: kalau image baru nanti
+          # gagal, skemanya juga harus dikembalikan — mengembalikan image saja
+          # tidak cukup kalau migrasi barunya tidak backward-compatible.
+          # Ambil versi skema dari baris "db version: N" secara spesifik.
+          # Dulu dipakai `tr -dc '0-9'` (semua angka di output) — rapuh:
+          # satu baris log bertimestamp atau nomor request akan ikut
+          # terambil dan PREV_SCHEMA jadi sampah, sehingga rollback skema
+          # gagal diam-diam (hanya "WARN").
+          PREV_SCHEMA=$($DC run --rm --entrypoint /migrate api version 2>/dev/null \
+            | sed -n 's/^db version: *\([0-9][0-9]*\).*/\1/p' | head -n 1)
+          if [ -z "${PREV_SCHEMA:-}" ]; then
+            # Kemungkinan image baru sendiri yang rusak (bukan cuma
+            # aplikasinya) — lalu versi skema tak bisa dibaca dari image itu.
+            # Rolls back skema otomatis jadi tidak mungkin; jaring pengaman
+            # terakhirnya restore dari backup pre-deploy (lihat langkah 6).
+            echo "PERINGATAN: versi skema pra-deploy tidak terbaca; rollback skema otomatis TIDAK bisa dilakukan."
+            echo "  Kalau deploy gagal, restore manual dari backup pre-deploy (lihat langkah 6)."
+          else
+            echo "Versi skema sebelum deploy: $PREV_SCHEMA"
+          fi
           $DC run --rm --entrypoint /migrate api up || { echo "FAIL: migrate"; exit 1; }
+
+          # 3b. Migrasi baru saja mengubah skema sementara image LAMA masih
+          # berjalan. Kalau migrasi tidak backward-compatible, aplikasi yang
+          # sedang hidup bisa rusak. Periksa SEBELUM mengganti image, supaya
+          # tidak perlu menyentuh image baru sama sekali.
+          still_ok=0
+          for i in $(seq 1 10); do
+            if $DC exec -T api /api -healthcheck >/dev/null 2>&1; then still_ok=1; break; fi
+            sleep 3
+          done
+          if [ "$still_ok" != "1" ]; then
+            echo "FAIL: aplikasi yang sedang berjalan rusak setelah migrasi; kembalikan skema"
+            if [ -n "${PREV_SCHEMA:-}" ] && [ "$PREV_SCHEMA" != "0" ]; then
+              $DC run --rm --entrypoint /migrate api down-to "$PREV_SCHEMA" || echo "WARN: rollback skema gagal"
+            fi
+            exit 1
+          fi
 
           # 4. Naikkan service.
           $DC up -d || { echo "FAIL: up"; exit 1; }
@@ -128,11 +183,27 @@ jobs:
             sleep 10
           done
 
-          # 6. Rollback bila gagal.
+          # 6. Rollback bila gagal: image DAN skema.
           if [ "$ok" != "1" ]; then
             echo "FAIL: healthcheck; rollback ke $PREV_TAG"
+            # Skema dulu, baru image: image LAMA dijalankan dengan skema LAMA.
+            # Kalau dibalik, image lama akan berjalan dengan skema baru — itu
+            # justru penyebab rollback tidak berhasil.
+            if [ -n "${PREV_SCHEMA:-}" ] && [ "$PREV_SCHEMA" != "0" ]; then
+              echo "Kembalikan skema ke versi $PREV_SCHEMA"
+              $DC run --rm --entrypoint /migrate api down-to "$PREV_SCHEMA" || echo "WARN: rollback skema gagal"
+            else
+              echo "PERINGATAN: versi skema pra-deploy tidak diketahui, skema TIDAK dikembalikan."
+              echo "  Restore manual dari backup pre-deploy:"
+              echo "    ls -t backup/pre-deploy-*.dump | head -1"
+              echo "    $DC exec -T db pg_restore -U \"\${DB_USER:-grafikarsa}\" -d \"\${DB_NAME:-grafikarsa}\" --clean --if-exists < \$(ls -t backup/pre-deploy-*.dump | head -1)"
+            fi
             sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=$PREV_TAG|" .env
             $DC up -d
+            # Verifikasi skema setelah rollback: harus kembali ke versi pra-deploy.
+            if [ -n "${PREV_SCHEMA:-}" ] && [ "$PREV_SCHEMA" != "0" ]; then
+              echo "Cek skema setelah rollback:"; $DC run --rm --entrypoint /migrate api version || true
+            fi
             exit 1
           fi
 

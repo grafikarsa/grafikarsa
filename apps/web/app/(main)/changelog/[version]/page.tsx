@@ -3,9 +3,17 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { jsonLdScript } from "@/lib/json-ld";
 
 type Section = { kind: string; title: string; body_md: string };
-type Detail = { id: string; version: string; title: string; summary: string; status: string; sections: Section[] };
+type Detail = {
+  id: string;
+  version: string;
+  title: string;
+  summary: string;
+  status: string;
+  sections: Section[];
+};
 
 const KIND_LABEL: Record<string, string> = {
   added: "Baru",
@@ -15,7 +23,11 @@ const KIND_LABEL: Record<string, string> = {
 };
 
 // Halaman SEO per rilis: /changelog/{version} (PRD §11.2).
-export async function generateMetadata({ params }: { params: Promise<{ version: string }> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ version: string }>;
+}): Promise<Metadata> {
   const { version } = await params;
   const data = await fetchDetail(version);
   if (!data) return { title: "Changelog — Grafikarsa" };
@@ -40,7 +52,11 @@ async function fetchDetail(version: string): Promise<Detail | null> {
   }
 }
 
-export default async function ChangelogVersionPage({ params }: { params: Promise<{ version: string }> }) {
+export default async function ChangelogVersionPage({
+  params,
+}: {
+  params: Promise<{ version: string }>;
+}) {
   const { version } = await params;
   const data = await fetchDetail(version);
   if (!data) notFound();
@@ -55,7 +71,10 @@ export default async function ChangelogVersionPage({ params }: { params: Promise
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-4 p-4">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
+      />
       <Link href="/changelog" className="text-sm underline">
         ← Semua changelog
       </Link>
@@ -73,7 +92,9 @@ export default async function ChangelogVersionPage({ params }: { params: Promise
                 {KIND_LABEL[s.kind] ?? s.kind}
               </Badge>
               <span className="font-medium">{s.title}</span>
-              {s.body_md && <p className="text-muted-foreground mt-1 whitespace-pre-wrap">{s.body_md}</p>}
+              {s.body_md && (
+                <p className="text-muted-foreground mt-1 whitespace-pre-wrap">{s.body_md}</p>
+              )}
             </div>
           ))}
           {(data.sections ?? []).length === 0 && (

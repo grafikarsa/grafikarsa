@@ -191,10 +191,18 @@ func (q *Queries) CountUsersAll(ctx context.Context) (int64, error) {
 const countUsersScoped = `-- name: CountUsersScoped :one
 SELECT COUNT(*) FROM users WHERE deleted_at IS NULL
   AND ($1 = '' OR major_id::text = $1)
+  AND ($2 = '' OR username ILIKE '%' || $2 || '%'
+       OR name ILIKE '%' || $2 || '%' OR email ILIKE '%' || $2 || '%')
 `
 
-func (q *Queries) CountUsersScoped(ctx context.Context, dollar_1 interface{}) (int64, error) {
-	row := q.db.QueryRow(ctx, countUsersScoped, dollar_1)
+type CountUsersScopedParams struct {
+	Scope  interface{} `json:"scope"`
+	Search interface{} `json:"search"`
+}
+
+// scope & search punya arti yang sama dengan ListUsersScoped.
+func (q *Queries) CountUsersScoped(ctx context.Context, arg CountUsersScopedParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countUsersScoped, arg.Scope, arg.Search)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -1344,13 +1352,38 @@ const listUsersScoped = `-- name: ListUsersScoped :many
 SELECT id, username, email, name, role_primary, status, class_id, major_id, is_active, created_at
 FROM users WHERE deleted_at IS NULL
   AND ($1 = '' OR major_id::text = $1)
-ORDER BY created_at DESC LIMIT $2 OFFSET $3
+  AND ($2 = '' OR username ILIKE '%' || $2 || '%'
+       OR name ILIKE '%' || $2 || '%' OR email ILIKE '%' || $2 || '%')
+ORDER BY
+  CASE WHEN $3 = 'asc' THEN
+    CASE $4
+      WHEN 'name' THEN name
+      WHEN 'role' THEN role_primary
+      WHEN 'status' THEN status
+      WHEN 'created_at' THEN created_at::text
+      ELSE username
+    END
+  END ASC NULLS LAST,
+  CASE WHEN $3 = 'desc' THEN
+    CASE $4
+      WHEN 'name' THEN name
+      WHEN 'role' THEN role_primary
+      WHEN 'status' THEN status
+      WHEN 'created_at' THEN created_at::text
+      ELSE username
+    END
+  END DESC NULLS LAST,
+  created_at DESC
+LIMIT $6 OFFSET $5
 `
 
 type ListUsersScopedParams struct {
-	Column1 interface{} `json:"column_1"`
-	Limit   int32       `json:"limit"`
+	Scope   interface{} `json:"scope"`
+	Search  interface{} `json:"search"`
+	SortDir interface{} `json:"sort_dir"`
+	SortBy  interface{} `json:"sort_by"`
 	Offset  int32       `json:"offset"`
+	Limit   int32       `json:"limit"`
 }
 
 type ListUsersScopedRow struct {
@@ -1366,8 +1399,25 @@ type ListUsersScopedRow struct {
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
+// scope   = scope jurusan ("" = global)
+// search  = pencarian username/nama/email ("" = semua)
+// sort_by = kolom urut: username | name | role | status | created_at
+// sort_dir= arah urut: asc | desc
+// limit   = jumlah baris, offset = baris pertama
+//
+// Pencarian & pengurutan di server (PRD §12.3: "DataTable server-side
+// (page/sort/search via URL)"). Kalau filtering dilakukan di browser, tabel
+// ini harus menarik SELURUH user sekaligus — tidak akan layak saat sekolah
+// punya ribuan akun.
 func (q *Queries) ListUsersScoped(ctx context.Context, arg ListUsersScopedParams) ([]ListUsersScopedRow, error) {
-	rows, err := q.db.Query(ctx, listUsersScoped, arg.Column1, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, listUsersScoped,
+		arg.Scope,
+		arg.Search,
+		arg.SortDir,
+		arg.SortBy,
+		arg.Offset,
+		arg.Limit,
+	)
 	if err != nil {
 		return nil, err
 	}

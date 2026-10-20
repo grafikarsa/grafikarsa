@@ -7,7 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { apiGet, apiSend } from "@/lib/api";
 
 type Year = { id: string; start_year: number; is_active: boolean };
@@ -50,7 +57,12 @@ export default function YearsPage() {
       <CardContent className="flex flex-col gap-4">
         <div className="flex items-end gap-2">
           <div className="grid gap-1">
-            <Input value={year} onChange={(e) => setYear(e.target.value)} placeholder="2027" className="w-28" />
+            <Input
+              value={year}
+              onChange={(e) => setYear(e.target.value)}
+              placeholder="2027"
+              className="w-28"
+            />
           </div>
           <Button onClick={() => create.mutate()} disabled={!year || create.isPending}>
             Tambah
@@ -72,7 +84,13 @@ export default function YearsPage() {
             {items.map((y) => (
               <TableRow key={y.id}>
                 <TableCell>{y.start_year}</TableCell>
-                <TableCell>{y.is_active ? <Badge>Aktif</Badge> : <span className="text-muted-foreground text-xs">nonaktif</span>}</TableCell>
+                <TableCell>
+                  {y.is_active ? (
+                    <Badge>Aktif</Badge>
+                  ) : (
+                    <span className="text-muted-foreground text-xs">nonaktif</span>
+                  )}
+                </TableCell>
                 <TableCell className="text-right">
                   {!y.is_active && (
                     <Button variant="outline" size="sm" onClick={() => activate.mutate(y.id)}>

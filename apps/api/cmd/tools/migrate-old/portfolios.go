@@ -42,11 +42,11 @@ func migratePortfolios(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o
 		if err := rows.Scan(&srcID, &owner, &title, &slug, &status, &thumb); err != nil {
 			return err
 		}
-		sid := fmt.Sprint(srcID)
+		sid := uuidString(srcID)
 		if _, ok := mappedID(ctx, v2, "portfolios", sid, "portfolios"); ok {
 			continue
 		}
-		ownerV2, ok := mappedID(ctx, v2, "users", fmt.Sprint(owner), "users")
+		ownerV2, ok := mappedID(ctx, v2, "users", uuidString(owner), "users")
 		if !ok && !o.dryRun {
 			slog.Warn("portfolio dilewati: owner belum termigrasi", "src", sid)
 			st.Skipped["portfolio_owner"]++
@@ -69,15 +69,12 @@ func migratePortfolios(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o
 		if !o.dryRun {
 			err := v2.QueryRow(ctx, `INSERT INTO portfolios (owner_id, title, slug, status)
 				VALUES ($1,$2,$3,$4)
-				ON CONFLICT (slug) DO UPDATE SET title=EXCLUDED.title
+				ON CONFLICT (owner_id, slug) DO UPDATE SET title=EXCLUDED.title
 				RETURNING id::text`, ownerV2, t, sl, stt).Scan(&targetID)
 			if err != nil {
 				slog.Warn("portfolio gagal", "src", sid, "err", err)
 				st.Skipped["portfolio_insert"]++
 				continue
-			}
-			if err := saveMap(ctx, v2, o.dryRun, "portfolios", sid, "portfolios", targetID); err != nil {
-				return err
 			}
 			// Thumbnail URL lama -> legacy_urls (bukan overwrite buta).
 			if th := strings.TrimSpace(fmt.Sprint(thumb)); th != "" && th != "<nil>" {
@@ -86,7 +83,16 @@ func migratePortfolios(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o
 			st.Portfolios++
 		} else {
 			st.Portfolios++
-			targetID = "dry-run"
+			// Dry-run tidak menulis apa pun, tapi pemetaan tetap dicatat di
+			// memori supaya like/follow/comment/notification yang merujuk
+			// portfolio bisa diverifikasi. Tanpa ini dry-run selalu melaporkan
+			// 0 relasional dimigrasi.
+			targetID = "dry-run-" + sid
+		}
+		// saveMap DI LUAR cabang dry-run: pada dry-run ia menyimpan ke peta
+		// memori, pada mode execute ia menulis ke legacy_id_map.
+		if err := saveMap(ctx, v2, o.dryRun, "portfolios", sid, "portfolios", targetID); err != nil {
+			return err
 		}
 		if bTable != "" {
 			migrateBlocks(ctx, v1, v2, s, bTable, sid, targetID, o, st)
@@ -131,6 +137,9 @@ func migrateBlocks(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, bTabl
 	rows, err := v1.Query(ctx, fmt.Sprintf(`SELECT %s, %s, %s, %s FROM %s%s ORDER BY %s`,
 		idCol, typeCol, nullCol(payloadCol), nullCol(posCol), bTable, where, order))
 	if err != nil {
+		// Jangan ditelan: tanpa log, kegagalan di sini terlihat sebagai
+		// "0 block dimigrasi" yang seakan-akan data v1 memang kosong.
+		slog.Warn("gagal query block v1", "table", bTable, "portfolio", srcPID, "err", err)
 		return
 	}
 	defer rows.Close()
@@ -138,17 +147,18 @@ func migrateBlocks(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, bTabl
 	for rows.Next() {
 		var bid, btype, payload, ppos any
 		if err := rows.Scan(&bid, &btype, &payload, &ppos); err != nil {
+			slog.Warn("gagal scan baris block v1", "table", bTable, "err", err)
 			return
 		}
 		bt := normalizeBlockType(fmt.Sprint(btype))
 		if bt == "" {
-			quarantine(ctx, v2, o, targetPID, fmt.Sprint(bid), fmt.Sprint(btype), fmt.Sprint(payload), "tipe block tidak dikenal")
+			quarantine(ctx, v2, o, targetPID, fmt.Sprint(bid), fmt.Sprint(btype), jsonText(payload), "tipe block tidak dikenal")
 			st.BlocksQuarantined++
 			continue
 		}
-		pl, ok := normalizePayload(bt, fmt.Sprint(payload))
+		pl, ok := normalizePayload(bt, jsonText(payload))
 		if !ok {
-			quarantine(ctx, v2, o, targetPID, fmt.Sprint(bid), bt, fmt.Sprint(payload), "payload tidak valid untuk tipe "+bt)
+			quarantine(ctx, v2, o, targetPID, fmt.Sprint(bid), bt, jsonText(payload), "payload tidak valid untuk tipe "+bt)
 			st.BlocksQuarantined++
 			continue
 		}
@@ -156,7 +166,7 @@ func migrateBlocks(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, bTabl
 			pb, _ := json.Marshal(pl)
 			if _, err := v2.Exec(ctx, `INSERT INTO portfolio_blocks (portfolio_id, block_type, position, payload)
 				VALUES ($1,$2,$3,$4)`, targetPID, bt, pos, pb); err != nil {
-				quarantine(ctx, v2, o, targetPID, fmt.Sprint(bid), bt, fmt.Sprint(payload), "insert gagal: "+err.Error())
+				quarantine(ctx, v2, o, targetPID, fmt.Sprint(bid), bt, jsonText(payload), "insert gagal: "+err.Error())
 				st.BlocksQuarantined++
 				continue
 			}
@@ -191,6 +201,38 @@ func normalizeBlockType(t string) string {
 	default:
 		return ""
 	}
+}
+
+// youtubeIDFromURL mencoba mengambil ID video 11 karakter dari URL YouTube.
+// Mengembalikan string kosong kalau URL-nya bukan YouTube atau tidak punya ID.
+func youtubeIDFromURL(raw string) string {
+	u := strings.TrimSpace(raw)
+	if u == "" || !strings.Contains(u, "youtube.com") && !strings.Contains(u, "youtu.be") {
+		return ""
+	}
+	// youtube.com/watch?v=ID
+	if i := strings.Index(u, "v="); i >= 0 {
+		v := u[i+2:]
+		if j := strings.IndexAny(v, "&#?"); j >= 0 {
+			v = v[:j]
+		}
+		if len(v) == 11 {
+			return v
+		}
+	}
+	// youtu.be/ID atau youtube.com/embed/ID atau /shorts/ID
+	for _, p := range []string{"/embed/", "/shorts/", "youtu.be/"} {
+		if i := strings.Index(u, p); i >= 0 {
+			v := u[i+len(p):]
+			if j := strings.IndexAny(v, "?&#/"); j >= 0 {
+				v = v[:j]
+			}
+			if len(v) == 11 {
+				return v
+			}
+		}
+	}
+	return ""
 }
 
 // normalizePayload memaksa payload ke bentuk kanonis per tipe; false = quarantine.
@@ -254,12 +296,25 @@ func normalizePayload(bt, raw string) (map[string]any, bool) {
 		return map[string]any{"headers": h, "rows": rws}, true
 	case "youtube":
 		vid, _ := m["video_id"].(string)
+		vid = strings.TrimSpace(vid)
+		if len(vid) != 11 {
+			// v1 kadang menyimpan URL lengkap, bukan ID 11 karakter.
+			// Coba ekstrak ID-nya; kalau bukan YouTube, tetap dikarantina.
+			vid = youtubeIDFromURL(vid)
+		}
 		if len(vid) != 11 {
 			return nil, false
 		}
 		return map[string]any{"video_id": vid}, true
 	case "button":
+		// v1 menyimpan label dengan key "text"; v2 memakai "label".
 		label, _ := m["label"].(string)
+		if label == "" {
+			label, _ = m["text"].(string)
+		}
+		if label == "" {
+			label, _ = m["name"].(string)
+		}
 		url, _ := m["url"].(string)
 		if len(label) < 1 || len(label) > 50 || !strings.HasPrefix(url, "https://") {
 			return nil, false

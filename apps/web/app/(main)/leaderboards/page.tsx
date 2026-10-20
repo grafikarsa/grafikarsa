@@ -25,7 +25,14 @@ type Entry = {
 type Kind = "best_students" | "best_projects";
 type Period = "weekly" | "monthly";
 
-const SCOPES = ["global", "jurusan:rpl", "jurusan:tkj", "jurusan:mm", "jurusan:dkv", "jurusan:animasi"];
+const SCOPES = [
+  "global",
+  "jurusan:rpl",
+  "jurusan:tkj",
+  "jurusan:mm",
+  "jurusan:dkv",
+  "jurusan:animasi",
+];
 
 function Delta({ n }: { n: number }) {
   if (!n) return <span className="text-muted-foreground text-xs">—</span>;
@@ -43,7 +50,10 @@ export default function LeaderboardsPage() {
 
   const q = useQuery({
     queryKey: ["leaderboard", kind, period, scope],
-    queryFn: () => apiGet<Entry[]>(`v1/leaderboards?kind=${kind}&period=${period}&scope=${encodeURIComponent(scope)}`),
+    queryFn: () =>
+      apiGet<Entry[]>(
+        `v1/leaderboards?kind=${kind}&period=${period}&scope=${encodeURIComponent(scope)}`,
+      ),
   });
 
   const items = Array.isArray(q.data) ? q.data : [];
@@ -86,10 +96,7 @@ export default function LeaderboardsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
-          {q.isLoading &&
-            [0, 1, 2].map((i) => (
-              <Skeleton key={i} className="h-6 w-full" />
-            ))}
+          {q.isLoading && [0, 1, 2].map((i) => <Skeleton key={i} className="h-6 w-full" />)}
           {q.isError && <p className="text-sm">Gagal memuat peringkat.</p>}
           {!q.isLoading && items.length === 0 && (
             <p className="text-muted-foreground text-sm">
@@ -97,14 +104,20 @@ export default function LeaderboardsPage() {
             </p>
           )}
           {items.map((e) => (
-            <div key={`${e.rank}-${e.subject_user_id ?? e.subject_portfolio_id}`} className="flex items-center gap-3 border-b py-2">
+            <div
+              key={`${e.rank}-${e.subject_user_id ?? e.subject_portfolio_id}`}
+              className="flex items-center gap-3 border-b py-2"
+            >
               <span className="w-6 text-right font-semibold">{e.rank}</span>
               <Delta n={e.delta_rank} />
               <div className="flex-1">
                 <p className="text-sm">
                   {e.title && e.username && e.slug ? (
                     <>
-                      <Link className="font-medium hover:underline" href={`/${e.username}/${e.slug}`}>
+                      <Link
+                        className="font-medium hover:underline"
+                        href={`/${e.username}/${e.slug}`}
+                      >
                         {e.title}
                       </Link>
                       <span className="text-muted-foreground"> · @{e.username}</span>
@@ -119,7 +132,8 @@ export default function LeaderboardsPage() {
                 </p>
                 <p className="text-muted-foreground text-xs">
                   skor {Number(e.score).toFixed(1)}
-                  {e.breakdown?.portfolios !== undefined && ` · ${e.breakdown.portfolios} portfolio`}
+                  {e.breakdown?.portfolios !== undefined &&
+                    ` · ${e.breakdown.portfolios} portfolio`}
                   {e.breakdown?.likes !== undefined && ` · ${e.breakdown.likes} suka`}
                   {e.breakdown?.assessment ? ` · nilai ${e.breakdown.assessment}` : ""}
                   {e.breakdown?.rising ? " · Rising" : ""}

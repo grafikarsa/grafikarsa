@@ -51,7 +51,7 @@ func migrateUsers(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o opti
 		if err := rows.Scan(&srcID, &username, &email, &name, &role, &pw, &masuk, &kelas, &jurusan, &special); err != nil {
 			return err
 		}
-		sid := fmt.Sprint(srcID)
+		sid := uuidString(srcID)
 		un := strings.ToLower(strings.TrimSpace(fmt.Sprint(username)))
 		if un == "" {
 			st.UsersSkipped++
@@ -98,9 +98,16 @@ func migrateUsers(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o opti
 			if spec := fmt.Sprint(special); spec != "" && spec != "<nil>" && spec != "{}" {
 				assignSpecialRoles(ctx, v2, targetID, spec)
 			}
-			if err := saveMap(ctx, v2, o.dryRun, "users", sid, "users", targetID); err != nil {
-				return err
-			}
+		} else {
+			// Dry-run: pakai placeholder agar pemetaan tetap bisa dicatat di
+			// memori dan semua referensi (like/follow/comment/notification)
+			// ikut terverifikasi.
+			targetID = "dry-run-" + sid
+		}
+		// saveMap DI LUAR cabang dry-run: pada dry-run ia menyimpan ke peta
+		// memori, pada mode execute ia menulis ke legacy_id_map.
+		if err := saveMap(ctx, v2, o.dryRun, "users", sid, "users", targetID); err != nil {
+			return err
 		}
 		st.Users++
 		_ = targetID
@@ -115,9 +122,14 @@ func nullCol(c string) string {
 	return c
 }
 
+// toInt mengubah nilai v1 menjadi integer. Nilai yang tidak bisa diparse
+// menghasilkan 0 (bukan error) supaya migrasi tidak berhenti di tengah
+// jalan — tapi nilainya harus dicek pemanggilnya.
 func toInt(v any) int {
 	var n int
-	fmt.Sscanf(fmt.Sprint(v), "%d", &n)
+	if _, err := fmt.Sscanf(fmt.Sprint(v), "%d", &n); err != nil {
+		return 0
+	}
 	return n
 }
 
@@ -213,7 +225,7 @@ func assignSystemRole(ctx context.Context, v2 *pgxpool.Pool, userID, rolePrimary
 		scope = majorID
 	}
 	_, err = v2.Exec(ctx, `INSERT INTO user_roles (user_id, role_id, scope_major_id)
-		VALUES ($1,$2,$3) ON CONFLICT (user_id, role_id) DO NOTHING`, userID, roleID, scope)
+		VALUES ($1,$2,$3) ON CONFLICT (user_id, role_id, scope_major_id) DO NOTHING`, userID, roleID, scope)
 	return err
 }
 
@@ -238,9 +250,14 @@ func assignSpecialRoles(ctx context.Context, v2 *pgxpool.Pool, userID, spec stri
 			if err := v2.QueryRow(ctx, `SELECT id::text FROM permissions WHERE key=$1`, perm).Scan(&permID); err != nil {
 				continue
 			}
-			v2.Exec(ctx, `INSERT INTO user_roles (user_id, role_id, scope_major_id)
+			// Error tidak diabaikan: assignment role yang gagal hilang
+			// tanpa jejak dan hasil migrasi terlihat benar. Dilaporkan
+			// lewat log supaya bisa diperiksa ulang.
+			if _, err := v2.Exec(ctx, `INSERT INTO user_roles (user_id, role_id, scope_major_id)
 				SELECT $1, r.id, NULL FROM roles r WHERE r.slug='custom-import'
-				ON CONFLICT DO NOTHING`, userID)
+				ON CONFLICT DO NOTHING`, userID); err != nil {
+				slog.Error("gagal membuat assignment role", "user", userID, "err", err)
+			}
 		}
 	}
 }
@@ -268,7 +285,7 @@ func migrateAcademics(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o 
 		if err := rows.Scan(&srcID, &kelas); err != nil {
 			return err
 		}
-		targetID, ok := mappedID(ctx, v2, "users", fmt.Sprint(srcID), "users")
+		targetID, ok := mappedID(ctx, v2, "users", uuidString(srcID), "users")
 		if !ok || o.dryRun || activeYear == "" {
 			continue
 		}

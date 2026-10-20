@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/h2non/filetype"
 	"github.com/jackc/pgx/v5/pgtype"
 	"grafikarsa/api/internal/repo"
@@ -161,10 +160,10 @@ func (a *App) handleUpload(w http.ResponseWriter, r *http.Request) {
 	n, _ := io.ReadFull(f, head)
 	head = head[:n]
 	kind, _ := filetype.Match(head)
-	mime := hdr.Header.Get("Content-Type")
-	if kind != filetype.Unknown {
-		mime = kind.MIME.Value
-	} else {
+	// MIME ditentukan dari magic bytes, BUKAN dari header klien. Header
+	// klien hanya dipakai sebagai cadangan kalau magic bytes tak dikenali.
+	mime := kind.MIME.Value
+	if kind == filetype.Unknown {
 		// Magic bytes tidak dikenal: JANGAN percaya header klien.
 		writeJSON(w, http.StatusUnprocessableEntity, fail("INVALID_CONTENT_TYPE", "Tipe file tidak dikenali.", r))
 		return
@@ -212,10 +211,42 @@ func (a *App) handleUpload(w http.ResponseWriter, r *http.Request) {
 	sum := sha256.Sum256(data)
 	checksum := hex.EncodeToString(sum[:])
 
+	// Object key memakai path per-entity (PRD §7.1): mis.
+	// thumbnails/{portfolio_id}/{uuid7}.webp. Entity id opsional — kalau
+	// tidak diberikan, path jatuh ke owner (user) supaya tetap jelas.
+	//
+	// entity_id divalidasi DI AWAL, sebelum dedup: kalau tidak, request
+	// dengan entity_id asing akan lebih dulu dicocokkan ke dedup dan
+	// dijawab 200 — jadi validasi kepemilikan tidak pernah dijalankan.
+	entityID := ""
+	if raw := strings.TrimSpace(r.FormValue("entity_id")); raw != "" {
+		seg, ok := sanitizeSegment(raw)
+		if !ok {
+			writeJSON(w, http.StatusUnprocessableEntity, fail("VALIDATION_ERROR", "entity_id tidak valid.", r))
+			return
+		}
+		if !a.ownsEntity(ctx, purpose, seg, uid) {
+			writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Entitas itu bukan milikmu.", r))
+			return
+		}
+		entityID = seg
+	}
+	// Prefix folder tempat objek ini harus berada — dipakai untuk deciding
+	// apakah media yang sudah ada boleh dipakai ulang.
+	keyPrefix := mediaKeyPrefix(purpose, entityID)
+	if keyPrefix == "" {
+		keyPrefix = mediaKeyPrefix(purpose, uid)
+	}
+
 	// Dedup: file identik milik user yang sama untuk purpose sama -> reuse.
+	//
+	// Reuse hanya sah kalau objeknya berada di folder entitas yang sama.
+	// Kalau tidak, file yang sama untuk portfolio A dan portfolio B akan
+	// memakai satu key di folder A — lalu portfolio B bergantung pada file
+	// yang ikut terhapus bersama A.
 	if existing, derr := a.Q.FindMediaByChecksum(ctx, repo.FindMediaByChecksumParams{
 		OwnerID: mustUUID(uid), Purpose: purpose, ChecksumSha256: checksum,
-	}); derr == nil {
+	}); derr == nil && strings.HasPrefix(existing.ObjectKey, keyPrefix) {
 		writeJSON(w, http.StatusOK, ok(map[string]any{
 			"media_id": uuidStr(existing.ID), "object_key": existing.ObjectKey, "deduplicated": true,
 		}, r))
@@ -230,8 +261,7 @@ func (a *App) handleUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ext := extForMime(mime)
-	base := fmt.Sprintf("%ss/%s/%s", purpose, uid, uuid.NewString())
-	key := base + ext
+	key := mediaObjectKey(purpose, uid, entityID, ext)
 	if err := a.Storage.Put(ctx, key, mime, bytes.NewReader(data)); err != nil {
 		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal menyimpan file.", r))
 		return
@@ -239,7 +269,7 @@ func (a *App) handleUpload(w http.ResponseWriter, r *http.Request) {
 	// Varian disimpan di key berakhiran _<lebar><ext>.
 	variantKeys := map[string]string{}
 	for wpx, vdata := range variants {
-		vkey := fmt.Sprintf("%s_%d%s", base, wpx, ext)
+		vkey := mediaVariantKey(key, wpx, ext)
 		if err := a.Storage.Put(ctx, vkey, mime, bytes.NewReader(vdata)); err != nil {
 			continue
 		}

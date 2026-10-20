@@ -3,15 +3,14 @@ package http
 import (
 	"encoding/json"
 	"net/http"
-	"regexp"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"grafikarsa/api/internal/repo"
-)
 
-var slugRe = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
+	"github.com/jackc/pgx/v5/pgtype"
+)
 
 func slugify(title string) string {
 	s := strings.ToLower(title)
@@ -57,17 +56,34 @@ func (a *App) handleCreatePortfolio(w http.ResponseWriter, r *http.Request) {
 	if req.SeriesID != nil && *req.SeriesID != "" {
 		seriesID = mustUUID(*req.SeriesID)
 	}
+	// Tag ID dicek SEBELUM portfolio dibuat.
+	//
+	// mustUUID mem-panic untuk input tak valid, dan panic-nya jadi 400. Kalau
+	// pemeriksaannyaAFTER insert, baris portfolio sudah terlanjur dibuat
+	// waktu klien menerima 400 — lalu retry-nya kena 409 DUPLICATE_SLUG,
+	// karena slug pertama sudah dipakai. Klien akhirnya tidak bisa membuat
+	// karya sama sekali.
+	tagIDs := make([]pgtype.UUID, 0, len(req.TagIDs))
+	for _, tid := range req.TagIDs {
+		tagIDs = append(tagIDs, mustUUID(tid))
+	}
 	id, err := a.Q.CreatePortfolio(r.Context(), repo.CreatePortfolioParams{
 		OwnerID: mustUUID(uid), Title: req.Title, Slug: slug, SeriesID: seriesID,
 	})
 	if err != nil {
+		// Slug turunan dari judul, jadi judul yang sama inevitably bentrok.
+		// Answer itu 409, bukan 500: kliennya perlu tahu harus mengubah judul.
+		if isUniqueViolation(err) {
+			writeJSON(w, http.StatusConflict, fail("DUPLICATE_SLUG", "Karya dengan judul yang sama sudah ada.", r))
+			return
+		}
 		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal membuat portfolio.", r))
 		return
 	}
-	for _, tid := range req.TagIDs {
-		_ = a.Q.AddPortfolioTag(r.Context(), repo.AddPortfolioTagParams{PortfolioID: id, TagID: mustUUID(tid)})
+	for _, tid := range tagIDs {
+		_ = a.Q.AddPortfolioTag(r.Context(), repo.AddPortfolioTagParams{PortfolioID: id, TagID: tid})
 	}
-	auditLog(r, a, "portfolio.create", "portfolios", uuidStr(id), "")
+	auditLogTransition(r, a, "portfolio.create", "portfolios", uuidStr(id), "", "draft")
 	writeJSON(w, http.StatusCreated, ok(map[string]any{"id": uuidStr(id), "slug": slug}, r))
 }
 
@@ -124,12 +140,11 @@ func (a *App) handleGetPortfolioBySlug(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Portfolio tidak ditemukan.", r))
 		return
 	}
-	byID := repo.GetPortfolioByIDRow{
-		ID: p.ID, OwnerID: p.OwnerID, Title: p.Title, Slug: p.Slug, Status: p.Status,
-		ThumbnailMediaID: p.ThumbnailMediaID, SeriesID: p.SeriesID, DraftPayload: p.DraftPayload,
-		PublishedAt: p.PublishedAt, SubmittedAt: p.SubmittedAt, ReviewedBy: p.ReviewedBy,
-		ReviewedAt: p.ReviewedAt, ReviewNote: p.ReviewNote, CreatedAt: p.CreatedAt,
-	}
+	// GetPortfolioBySlugRow dan GetPortfolioByIDRow punya field yang sama
+	// persis, jadi konversi tipe langsung dipakai. Versi lama menyalin
+	// field per satu — kalau satu query menambah field, field itu diam-diam
+	// hilang di sini.
+	byID := repo.GetPortfolioByIDRow(p)
 	ownerScope := ""
 	if owner.MajorID.Valid {
 		ownerScope = uuidStr(owner.MajorID)
@@ -285,7 +300,7 @@ func (a *App) handleDeletePortfolio(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_ = a.Q.SoftDeletePortfolio(r.Context(), p.ID)
-	auditLog(r, a, "portfolio.delete", "portfolios", id, "")
+	auditLogTransition(r, a, "portfolio.delete", "portfolios", id, p.Status, "deleted")
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "deleted"}, r))
 }
 
@@ -319,7 +334,7 @@ func (a *App) handleSubmitPortfolio(w http.ResponseWriter, r *http.Request) {
 	if nt == 0 {
 		details = append(details, map[string]string{"field": "tag_ids", "message": "Minimal 1 tag."})
 	}
-	if p.SeriesID.Valid == false {
+	if !p.SeriesID.Valid {
 		if owner, err := a.Q.GetUserByID(r.Context(), p.OwnerID); err == nil && owner.MajorID.Valid {
 			if req, err := a.Q.GetMajorRequireSeries(r.Context(), owner.MajorID); err == nil && req {
 				details = append(details, map[string]string{"field": "series_id", "message": "Jurusanmu mewajibkan series."})
@@ -333,7 +348,7 @@ func (a *App) handleSubmitPortfolio(w http.ResponseWriter, r *http.Request) {
 	snap := buildSnapshot(r, a, p)
 	_ = a.Q.SubmitPortfolio(r.Context(), repo.SubmitPortfolioParams{ID: p.ID, SubmittedSnapshot: snap})
 	_, _ = a.Q.EnqueueOutbox(r.Context(), repo.EnqueueOutboxParams{Topic: "portfolio.submitted", Payload: []byte(`{"portfolio_id":"` + id + `"}`)})
-	auditLog(r, a, "portfolio.submit", "portfolios", id, "")
+	auditLogTransition(r, a, "portfolio.submit", "portfolios", id, p.Status, "pending_review")
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "pending_review"}, r))
 }
 

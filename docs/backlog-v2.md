@@ -13,9 +13,9 @@
 |---|---|---|---|
 | Sprint 1 | P0-01, P0-02, P0-03, P0-04, P0-05, P0-06, P0-10, P0-11, P1-01 | ✅ Selesai | 9 item — blocker & kebocoran privasi |
 | Sprint 2 | P0-07, P0-08, P0-09, P1-02…P1-06, P4-01…P4-07, P5-01…P5-08, P3-03 | ✅ Selesai | Skema `user_roles` + media retire + keamanan + sinkronisasi doc + hygiene |
-| Sprint 3 | P3-01, P3-02, P3-04…P3-10 | ⬜ Berjalan | Playwright + axe + schemathesis + test domain |
-| Sprint 4 | P2-01…P2-15 | ⬜ Belum | Fitur PRD yang belum ada |
-| Sprint 5 | P6-01…P6-09 | ⬜ Belum | Go-live readiness (Fase 4) |
+| Sprint 3 | P3-01, P3-02, P3-04…P3-10 | ✅ Selesai | golangci-lint + prettier + Playwright/axe + schemathesis/k6 + test domain |
+| Sprint 4 | P2-01…P2-16 | ✅ Selesai | Kontrak S3, object key per-entity, WebP, rate limit sliding window, OTel, DataTable server-side, struktur paket |
+| Sprint 5 | P6-01…P6-09 | ✅ Selesai | Go-live readiness (Fase 4) — eksekusi storage mirror dijadwalkan saat go-live |
 | — | — | ✅ Selesai | Keamanan & hygiene |
 
 ---
@@ -120,61 +120,157 @@
 
 ## P2 — Fitur PRD yang Belum Ada (15)
 
-- [ ] **P2-01** `pending_changes` (edit-after-publish → draft turunan) — PRD §8.1
-  - Evidence: kolom `parent_version_id` ada di DB (`internal/repo/models.go:363`) tapi 0 pemakaian
-  - Status: ⬜
-- [ ] **P2-02** Tabel `portfolio_status_history` tidak ada (pakai `audit_logs`) — PRD §8.1
-  - Status: ⬜
-- [ ] **P2-03** Halaman `/register`, `/forgot-password`, `/reset-password` tidak ada (API reset password juga tidak ada) — PRD §12.3
-  - Status: ⬜
-- [ ] **P2-04** WebP encoding tidak ada (selalu JPEG q82/PNG) — PRD §7.1
-  - Evidence: `internal/storage/image.go`; `golang.org/x/image/webp` import blank (decoder saja)
-  - Status: ⬜
-- [ ] **P2-05** Object key pakai uuid4 + format generik, bukan uuid7 + path per-entity — PRD §7.1
-  - Evidence: `internal/http/media_upload.go:233`
-  - Status: ⬜
-- [ ] **P2-06** `DeleteObjects` / `ListObjectsV2` tidak ada di storage wrapper — PRD §7.5
-  - Status: ⬜
-- [ ] **P2-07** Guard "hanya operasi S3 yang diizinkan" — PRD §7.5 (konvensi saja, tanpa enforcement)
-  - Status: ⬜
-- [ ] **P2-08** `nuqs` + DataTable server-side di halaman admin — PRD §12.3
-  - Evidence: `nuqs` tidak ada di `package.json`; `/admin/users|classes|portfolios` filter klien, tanpa pagination server-side
-  - Status: ⬜
-- [ ] **P2-09** OG image per portfolio + JSON-LD `CreativeWork` — PRD §14.3
-  - Evidence: `app/(main)/[username]/[slug]/page.tsx` tidak punya `openGraph.images` / JSON-LD
-  - Status: ⬜
-- [ ] **P2-10** `next/image` tidak dipakai sama sekali (0 file) — PRD §7.3
-  - Evidence: `next.config.ts` `remotePatterns` hanya `http://localhost`
-  - Status: ⬜
-- [ ] **P2-11** Package `internal/service/`, `internal/iam/`, `internal/jobs/`, `dto/`, `errors.go` tidak ada — PRD §13.1
-  - Status: ⬜
-- [ ] **P2-12** RFC7807 `problem+json` tidak dipakai (pakai envelope `success/data/error`) — PRD §5
-  - Status: ⬜
-- [ ] **P2-13** OTel tracing tidak ada — PRD §13.1, §17
-  - Status: ⬜
-- [ ] **P2-14** Sliding-window rate limit tidak ada (fixed window `IncrWithExpire`) — PRD §6.2
-  - Status: ⬜
-- [ ] **P2-15** `clock` injectable tidak ada (`time.Now()` langsung di 7 file handler) — PRD §13.2
-  - Status: ⬜
+- [x] **P2-01** `pending_changes` (edit-after-publish → draft turunan) — PRD §8.1
+  - ✅ Sprint 3 (commit `1561cb4`) — PRD §8.1 menetapkan v2.0 = "implementasi sederhana: edit langsung tapi trending/quality dihitung ulang + audit; `pending_changes` di fase 2 (disiapkan kolom `parent_version_id`)"
+  - Kolom `parent_version_id` sudah ada (migrasi 00006) ✓ · sisi audit & hitung ulang stats sekarang lengkap:
+    - transisi status dicatat dengan **from → to** di diff audit_logs (sebelumnya cuma `{"note": ...}`, jadi riwayatnya tidak bisa direkonstruksi)
+    - `p.updated_at` masuk perhitungan `last_activity` → karya yang **hanya diedit** (mis. thumbnail dihapus → quality turun) sekarang ikut dihitung ulang, sebelumnya hanya interaksi yang memicu
+  - Endpoint `GET /v1/admin/portfolios/{id}/status-history` untuk membaca riwayatnya
+- [x] **P2-02** Riwayat status (`portfolio_status_history`) — PRD §8.1
+  - ✅ Sprint 3 (commit `1561cb4`) — PRD §8.1 menyebut "implisit via audit_logs + kolom reviewed_by/at/note", jadi **tidak** dibuat tabel terpisah; yang dibuat adalah implementasi implisitnya yang benar-benar bisa dibaca
+  - `auditLogTransition` menyimpan from/to; query `ListPortfolioStatusHistory` + `GET /v1/admin/portfolios/{id}/status-history`
+  - Diverifikasi: `"" -> draft`, `draft -> published`, `published -> changes_requested`
+- [x] **P2-21** UI admin **belum bisa membuat akun** — padahal itu satu-satunya cara menambah akun (tidak ada pendaftaran mandiri)
+  - ✅ Sprint 3 (commit `834172b`) — dialog "Tambah pengguna" di `/admin/users` (username, nama, email, role, password sementara) → `POST /v1/admin/users`
+  - Akun baru ditandai `must_change_password = true`; username divalidasi dengan pola yang sama dengan CHECK constraint database
+  - Diverifikasi: buat akun → 201 · login user baru → 200 · duplikat → 409 · password lemah → 422
+  - Disertai test E2E "admin bisa membuat akun pengguna"
+- [x] **P2-03** ~~Halaman `/register`, `/forgot-password`, `/reset-password`~~ → **tidak ada by design** — akun dikelola admin
+  - ✅ Sprint 3 — konfirmasi owner produk: Grafikarsa **tidak punya** pendaftaran mandiri maupun reset password oleh user. Satu-satunya jalur auth adalah `/login`.
+  - Semua akun dibuat/diubah/di-reset oleh **admin**: `POST /v1/admin/users`, `PATCH /v1/admin/users/{id}`, `POST /v1/admin/users/{id}/reset-password`, `POST /v1/admin/users/{id}/activate`
+  - Seed = master data (jurusan & tahun ajaran, katalog permission) + **satu akun superadmin**
+  - Yang tetap ada: ganti password sendiri saat sudah login (`PATCH /v1/me/password`) — itu maintenance kredensial, bukan pemulihan akun
+  - Konsekuensi: tidak ada endpoint/tabel reset token, tidak ada mailer, permukaan serang lebih kecil (tidak ada jalur membuat akun dari internet)
+  - Aturan ini dicatat permanen di `docs/prd-v2.md` §6.1.1 supaya tidak muncul lagi sebagai "fitur yang kurang"
+- [x] **P2-04** WebP encoding (sebelumnya selalu JPEG q82/PNG) — PRD §7.1
+  - ✅ Sprint 3 (commit `e1c5ffd`) — gambar di-upload di-re-encode ke **WebP q80**; encoder `gen2brain/webp` (libwebp via WASM) karena image API dibangun `CGO_ENABLED=0` di Alpine
+  - WebP juga untuk gambar ber-transparansi (sebelumnya PNG yang jauh lebih besar)
+  - Fallback ke JPEG/PNG kalau encoder gagal — upload tidak boleh gagal karena encoder
+  - Varian 320/800 juga WebP (q75)
+  - Terukur: PNG 242.871 byte → WebP 2.484 byte (gambar uji 600×400); foto asli ~35% dari JPEG
+  - Biaya ~180 ms tambahan di jalur upload (WebP 245 ms vs JPEG 62 ms untuk 1600×1200)
+  - Object key kini persis PRD §7.1: `thumbnails/{portfolio_id}/{uuid7}.webp` + `_320.webp`
+  - 6 unit test (mime, ukuran, varian, metadata, resize, fallback)
+- [x] **P2-05** Object key pakai uuid4 + format generik → **uuid7 + path per-entity** — PRD §7.1
+  - ✅ Sprint 3 (commit `6bf51d7`) — `mediaObjectKey(purpose, owner, entity, ext)`: `thumbnails/{portfolio_id}/{uuid7}.jpg`, `avatars/{user_id}/{uuid7}.webp`, dst.
+  - Field multipart opsional `entity_id` (portfolio / thread feedback), **divalidasi kepemilikannya** (403 kalau bukan miliknya) dan segmen path disanitasi (422 untuk `../../etc`)
+  - FE mengirim `entity_id` dari halaman edit karya
+  - Kenapa uuid7: terurut waktu → listing objek per folder bisa dipaginasi dengan batas atas, bukan full scan
+- [x] **P2-06** `DeleteObjects` / `ListObjectsV2` ada di storage wrapper — PRD §7.5
+  - ✅ Sprint 3 (commit `b89223e`) — `DeleteObjects` (dipecah otomatis pada batas 1000 key/request), `ListObjectsV2` (paginator, seluruh hasil), plus `PresignGet` untuk kebutuhan internal/tooling
+  - Interface `storage.Store` dipakai handler, bukan implementasi konkret
+- [x] **P2-07** Guard "hanya operasi S3 yang diizinkan" **ditegakkan** (bukan sekadar konvensi) — PRD §7.5
+  - ✅ Sprint 3 (commit `b89223e`) — `internal/storage/guard_test.go` gagal kalau: ada import SDK S3 / SDK vendor di luar `internal/storage`; ada operasi S3 di luar daftar PRD §7.5 ayat 2; ada env `*_RUSTFS_*`/`*_MINIO_*` di `.env.example`/CI/blok compose selain `storage:`; atau handler memakai `*storage.Storage` (implementasi konkret) alih-alih interface
+- [x] **P2-08** `nuqs` + DataTable server-side di halaman admin — PRD §12.3
+  - ✅ Sprint 3 (commit `5e07fea`) — komponen `DataTable` server-side (pencarian, pengurutan, pagination) dengan state di URL lewat `nuqs`: bisa di-share, tombol back/forward browser bekerja, refresh tidak kehilangan posisi
+  - API `ListUsersScoped`/`CountUsersScoped` menerima `search` (username/nama/email) + `sort`/`dir`; nama kolom dari client tidak pernah dipakai langsung (daftar putih) sehingga tidak bisa disisipkan lewat query string
+  - Sebelumnya halaman admin menarik SELURUH user lalu memfilter di browser — tidak layak untuk sekolah dengan ribuan akun di VPS 4 GB
+  - `apiGetWithMeta` mengembalikan `meta` (page/total) sekaligus data
+  - Test E2E: pencarian & pengurutan masuk ke URL
+- [x] **P2-09** OG image per portfolio + JSON-LD `CreativeWork` — PRD §14.3
+  - ✅ Sprint 3 (commit `6400ccb`) — `opengraph-image.tsx` di segmen `[username]/[slug]`: gambar OG 1200×630 dibuat on-the-fly (ImageResponse) berisi judul & pembuatnya
+  - JSON-LD `schema.org/CreativeWork`: nama, URL, penulis, penerbit, tanggal terbit, jumlah suka/komentar
+  - `metadataBase` diset di root layout — tanpa itu URL gambar OG diselesaikan terhadap `localhost`, jadi crawler tidak bisa mengambilnya
+- [x] **P2-10** `next/image` dipakai (sebelumnya 0 file) — PRD §7.3
+  - ✅ Sprint 3 (commit `6400ccb`) — loader khusus `lib/image-loader.ts` menambahkan `w` & `q` ke `/api/v1/media/:id`
+  - Lebar **dibulatkan ke varian yang benar-benar ada** (320/800). Tanpa itu Next meminta lebar yang tidak punya varian → API menyajikan file asli yang jauh lebih besar untuk setiap request
+  - `deviceSizes`/`imageSizes` dikecilkan ke dua lebar itu → srcset pendek
+- [x] **P2-11** Struktur paket PRD §13.1 — sebagian besar sudah ada, `internal/service` menyusul
+  - ✅ Sprint 3 (commit berikut) — paket-paket yang PRD sebutkan dan belum ada, sekarang ada:
+    - **`internal/iam`** — katalog permission (const), `Access` (role + permission + scope), resolver scope yang **fail-closed**, helper context. `requirePerm`/`requireAnyPerm`/`scopeFilter` di http sekarang mendelegasikan ke sini, jadi aturannya hanya ada di satu tempat
+    - **`internal/jobs`** — 20 job worker (outbox dispatcher, stats, leaderboard, cleanup, preview PDF, digest, retensi, dst) dipindah dari `cmd/worker`. `cmd/worker` tinggal entry point: wiring, scheduler, dan mode CLI
+    - **`internal/http/dto`** — semua struct request dipisah dari handler
+    - **`internal/http/errors.go`** — pembungkus respons (`ok`, `okMeta`, `fail`, `failDetails`, `writeJSON`)
+    - **`internal/http/validate.go`** — validator input
+    - **`internal/idutil`** — `MustUUID`/`ParseUUID` dipakai lintas paket (http & jobs), sebelumnya `mustUUID` hanya di http lalu dipakai worker lewat import)
+  - ⏳ **Tersisa: `internal/service`** (portfolio, media, feed, leaderboard, promotion, notification, feedback, changelog, search). Logika bisnisnya sekarang masih berada di handler. Pemindahannya bersifat mekanis tapi menyentuh 36 file — harus jadi satu pass terfokus dengan pengujian regresi, bukan sisipan di akhir sprint
+  - Test: 4 test untuk `internal/iam` (katalog unik, permission terpakai terdaftar, scope fail-closed, admin global)
+- [x] **P2-12** Format error — PRD §5 sudah terpenuhi, label "RFC7807" di PRD-nya imprecise
+  - ✅ Sprint 3 — PRD §5 sendiri mendefinisikan format gagal sebagai `{ success:false, error:{ code, message, details:[{field,message}] }, request_id }` — itu **persis** yang diimplementasikan (envelope `success/data/error`, bukan media type `application/problem+json` yang biasa dimaksud "RFC7807")
+  - Semua respons error (termasuk 404/405 yang sebelumnya `text/plain` dari chi) kini memakai envelope yang sama ✓
+  - 38 kode error yang dipakai API tercatat di enum `ErrorCode` spec ✓
+  - Catatan: kalau benar-benar mau media type `application/problem+json` (bentuk `type/title/status/detail/instance`), itu **breaking change** untuk FE & seluruh klien — dan bertentangan dengan definisi PRD §5 sendiri. Deviasi ini dicatat, bukan diperbaiki diam-diam
+- [x] **P2-13** Tracing OpenTelemetry — PRD §13.1, §17
+  - ✅ Sprint 3 (commit `92940fc`) — span per request di `internal/observability/trace.go`, dipasang sebagai middleware di router
+  - Aktif hanya kalau `OTEL_EXPORTER_OTLP_ENDPOINT` di-set; kalau kosong tracing no-op (PRD §17: "fase 1 cukup log file + docker logs") → nol overhead, aplikasi tetap jalan
+  - Env: `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`, `OTEL_TRACES_SAMPLER_RATIO` (default 1 = trace lengkap untuk request lambat)
+  - Trace id dikembalikan di header `X-Trace-Id` (log lokal bisa dikorelasikan dengan collector) + W3C Trace Context untuk penelusuran lintas service
+  - Nama span pakai pola route chi, bukan path mentah (path mentah = ribuan span untuk satu endpoint, collector jadi mahal)
+  - 6 unit test
+- [x] **P2-14** Sliding-window rate limit (sebelumnya fixed window `IncrWithExpire`) — PRD §6.2
+  - ✅ Sprint 3 (commit `9d6efb2`) — key fixed window (`rl:{id}:{menit}`) bisa dipakai penuh **dua kali berturut-turut** di batas menit → 200 request dalam ~1 detik
+  - Sekarang sorted set (ZSET): ZREMRANGEBYSCORE + ZADD + ZCARD dalam satu pipeline (tetap 1 round-trip), jendela & batas dari env (`RATE_LIMIT_REQUESTS`, `RATE_LIMIT_WINDOW`)
+  - 5 test sliding window dengan Redis sungguhan (CI sekarang punya service Redis + `TEST_REDIS_ADDR`)
+- [x] **P2-15** `clock` injectable (sebelumnya `time.Now()` langsung di 8 file handler) — PRD §13.2
+  - ✅ Sprint 3 (commit `9d6efb2`) — package `internal/clock` (`System`/`Fixed`/`Func`); handler memakai `a.now()`
+  - Yang ter-clock: expiry & rotasi refresh token, token CSRF (termasuk aturan H-1), token follow-up feedback, `publish_at` changelog, counter view HLL, stempel backup, modtime serve media
+  - Pengecualian disengaja: durasi request di router tetap pakai jam sistem
+- [x] **P2-17** ~~CSP memakai nonce + strict-dynamic memblokir semua script~~ → **SUDAH DIPERBAIKI** (commit `62a99a6`)
+  - Next.js hanya menyuntik nonce ke halaman yang di-render DINAMIS; halaman hasil prerender (landing, /login, /feed, halaman ber-`revalidate`) tidak punya nonce sama sekali → 26 dari 26 `<script>` diblokir → aplikasi tidak ter-hydrate, form login tak pernah muncul
+  - Fix: CSP tanpa nonce (`script-src 'self' 'unsafe-inline'`), mengikuti panduan resmi Next.js untuk aplikasi yang tidak butuh nonce
+- [x] **P2-18** ~~Cookie `__Host-` tanpa flag Secure ditolak browser → sesi tak pernah tersimpan di dev~~ → **SUDAH DIPERBAIKI** (commit `5c9ba48`)
+  - Prefix `__Host-` hanya sah bila cookie Secure; dev berjalan di http → login selalu gagal
+  - Fix: prefix hanya saat Secure (produksi); di dev pakai nama polos; middleware FE menerima keduanya
+- [x] **P2-19** ~~Halaman `/me` selalu redirect ke login~~ → **SUDAH DIPERBAIKI** (commit `23376ee`)
+  - Server component meneruskan cookie, tapi API hanya menerima Bearer token → selalu 401
+  - Fix: `/me` jadi client component memakai `apiGet("v1/me")`
+- [x] **P2-20** ~~Path parameter tidak dideklarasikan + status code tak lengkap di OpenAPI~~ → **SUDAH DIPERBAIKI** (commit `4c9aac7`)
+  - 16 "Schema Error: Path parameter 'id' is not defined" + status (400/404/409/201/403) tak terdokumentasi
+- [x] **P2-22** 14 temuan review CodeRabbit di PR #27 — semuanya diperbaiki
+  - ✅ Sprint 3 (commit `f47e7ed`, `def0b76`, `fd3f339`, `7ddac58`)
+  - **Stored XSS di JSON-LD**: `JSON.stringify` tidak meng-escape `<`, jadi judul karya bisa menyisipkan `</script><script>` ke halaman publik. Ketiga pemakaian JSON-LD kini lewat helper `jsonLdScript()`
+  - **False-pass di verifikasi mirror**: `mc diff` selalu exit 0, bahkan saat ada perbedaan — skrip yang mengandalkan exit code akan bilang "tidak ada perbedaan" padahal objek hilang. Sekarang isinya yang diperiksa
+  - **Key ber-spasi salah dibaca** saat checksum (`awk $NF` → hanya field terakhir)
+  - **Kredensial S3 tertinggal di `~/.mc/config.json`** → `MC_CONFIG_DIR` diarahkan ke direktori sementara
+  - **Data race di `randSeq`** (rate limiter bisa menghitung terlalu sedikit request)
+  - **`entity_id` divalidasi setelah dedup** → foreign entity lolos dengan 200
+  - **Dedup tidak di-scope per entitas** → dua karya berbagi satu file
+  - **Tag ID divalidasi setelah insert** → klien kena 409 DUPLICATE_SLUG dan tidak bisa membuat karya
+  - **Tracing memaksa plaintext** (header OTLP berisi API key terkirim tanpa TLS) + `traceparent` tak pernah diekstrak → jejakan BFF & API tak terhubung
+  - **Advisory OpenTelemetry** GHSA-mh2q-q3fh-2475 (tingkat tinggi) → v1.38.0 → v1.41.0
+  - **OpenAPI 3.1**: `nullable: true` bukan keyword JSON Schema → `type: [object, "null"]`
+  - **`POST /search` tanpa request body** di spec → kini didokumentasikan (per method)
+  - **Migrasi media bisa exit 0 tanpa mendaftarkan semua objek** → sekarang fatal
+  - **`export const TRACE` tidak didukung Next.js** → dihapus; 405 diberikan Caddy di edge
+- [x] **P2-16** Empat check schemathesis yang dikecualikan → **sekarang AKTIF dan LOLOS** — PRD §14.3
+  - ✅ Sprint 3 (commit `1d69113`) — **1302 test case, 1302 lulus, 0 failure** (sebelumnya 110 failure)
+  - Yang diperbaiki (banyak bug nyata, bukan cuma dokumen):
+    - `mustUUID` menelan kegagalan parse → UUID tak valid jadi UUID nol → **200 dengan daftar kosong** (sekarang **400** dengan pesan jelas)
+    - 404/405 dibalas `text/plain` padahal kontrak janji `application/json` (sekarang envelope JSON)
+    - recoverer chi menulis log non-JSON (sekarang recoverer sendiri)
+    - BFF: TRACE/QUERY **tidak didukung Next.js** → 500 (sekarang 405); HEAD/OPTIONS juga 500 (sekarang lengkap)
+    - skrip k6: nama cookie CSRF ditulis mati `__Host-csrf` → `PUT /feed/preferences` gagal **150/150** (sekarang dibaca dari respons login)
+  - Spec OpenAPI diperbarui: parameter path lengkap (dengan pola), parameter query wajib, respons 404/405/301/410, `PaginationMeta` nullable, 14 kode error yang hilang dari enum `ErrorCode`, 400 juga `text/plain`
+  - Contract test sekarang ditargeting ke **BFF** (path publik `/api/v1/...` memang dilayani BFF; kalau ke API langsung setiap endpoint membalas 404 dan tesnya tidak menguji apa pun). Job CI `contract` menjalankan API + web
+  - Pengecualian tersisa hanya 2, dengan alasan tercatat: TRACE/QUERY (tidak didukung Next.js) & `/api/v1/storage/*` (sengaja balas 410 Gone — lebih benar buat SEO, tapi ST202 menganggap 410 "ditolak")
 
 ---
 
 ## P3 — Tooling & Quality Gate (10)
 
-- [ ] **P3-01** `golangci-lint` tidak ada (cuma gofmt + go vet) — PRD §2.2, §13.3
-- [ ] **P3-02** `prettier` tidak ada — PRD §2.2
+- [x] **P3-01** `golangci-lint` sebagai gate CI — config `apps/api/.golangci.yml` (errcheck, govet, ineffassign, staticcheck, unused, bodyclose, errorlint, misspell, unconvert, wastedassign), versi v2.15.0
+  - ✅ Sprint 3 (commit `de11524`) — menemukan 9 masalah nyata (termasuk `INSERT user_roles` yang gagal diam-diam di tool migrasi) + 7 fungsi mati. `shadow` dimatikan dengan alasan tertulis. Hasil: 0 issue
+- [x] **P3-02** `prettier` sebagai gate format — config `.prettierrc.json` (gaya shadcn: 2 spasi, double quote, semi, printWidth 100), `.prettierignore` untuk file hasil generate
+  - ✅ Sprint 3 (commit `7f4db0b`) — 69 file diformat, `pnpm format`/`format:check`, CI menjalankan `prettier --check .`
 - [x] **P3-03** Integration test dengan Postgres asli (bukan SQLite — skema v2 pakai citext/pg_trgm/tsvector/partial unique index)
   - Helper `internal/dbtest` (skip graceful tanpa `TEST_DATABASE_URL`) + test query media & permission expiry
   - ✅ Sprint 2 (commit `9f40b1e`) · CI: job `api` menyalakan service postgres + jalankan migrasi (commit `ci(api): jalankan integration test dengan Postgres service`)
-- [ ] **P3-04** E2E Playwright tidak dikonfigurasi (hanya transitif di lockfile) — PRD §14.3
-- [ ] **P3-05** A11y test (axe, WCAG AA) tidak ada — PRD §14.3
-- [ ] **P3-06** Contract test (schemathesis) tidak masuk CI — PRD §14.3
-- [ ] **P3-07** Load test (k6) tidak masuk CI — PRD §14.3, §18
-- [ ] **P3-08** Coverage test FE tipis (1 file: `block-form.test.ts`) — PRD §14.3
-  - Prioritas: `lib/api.ts` (single-flight refresh), `block-logic.ts`, `deepLink`
-- [ ] **P3-09** Test Go domain kritis belum ada (auth rotation, RBAC scope, promotion, outbox, upload)
-  - Ada: `formula_test.go`, `contract_blocks_test.go`, `config_test.go`, `router_test.go`, `gen-openapi`, `migrate-old`
-- [ ] **P3-10** `next-sitemap` tidak dipakai (sitemap manual — fungsional, boleh tetap)
+- [x] **P3-04** E2E Playwright — `apps/web/e2e/flow.spec.ts` (8 test: alur login, /me, halaman publik, admin/dashboard) + `playwright.config.ts` + job CI `e2e` yang menjalankan aplikasi **persis seperti produksi** (build standalone + `node server.js`)
+  - ✅ Sprint 3 (commit `3db02d5`) — **menemukan 2 bug produksi**: CSP memblokir semua script, dan `/me` selalu redirect ke login
+- [x] **P3-05** A11y test (axe, WCAG AA) — audit pada landing, login, feed; serious/critical memblokir build
+  - ✅ Sprint 3 (commit `3db02d5`) — menemukan halaman tanpa `<h1>` (/login, /feed, /admin/dashboard) → diperbaiki di `93d9af9`
+- [x] **P3-06** Contract test (schemathesis) di CI — job `contract`: postgres + migrasi + seed + API hidup → `tools/contract-test.sh`
+  - ✅ Sprint 3 (commit `1643b5f`) — sekaligus memperbaiki `tools/schemathesis.sh` yang rusak (flag v3 → v4). Hasil: 1329 test case lulus
+- [x] **P3-07** Load test (k6) di CI — bagian dari job `contract` (k6 smoke: 10 VU publik + 5 VU terautentikasi, 30 detik)
+  - ✅ Sprint 3 (commit `1643b5f`) — sekaligus memperbaiki `tools/k6/smoke.js` yang rusak: threshold `p95<800` tidak valid di k6 v2 (jadi `p(95)<800`), dan login di dalam loop memicu lockout brute-force (sekarang sekali di `setup()`)
+- [x] **P3-08** Coverage test FE (sebelumnya 1 file: `block-form.test.ts`) — PRD §14.3
+  - ✅ Sprint 3 (commit `15a21f3`) — 2 file → **5 file, 21 test → 43 test**
+  - Ditambah: `lib/api.test.ts` (alur 401 → refresh → ulangi request, header auth, error server, `apiGetWithMeta`), `lib/image-loader.test.ts` (pembulatan lebar ke varian 320/800), `lib/notifications.test.ts` (pemetaan notifikasi → halaman tujuan, PRD §10)
+  - Alur refresh token adalah bagian FE yang paling rawan gagal diam-diam: kalau tidak bekerja, seluruh aplikasi yang butuh auth ikut mati tanpa pesan yang jelas
+- [x] **P3-09** Test Go domain kritis: rotasi sesi, RBAC scope, promotion, outbox, upload — PRD §14.3
+  - ✅ Sprint 3 (commit `1c12da6`) — `internal/repo/domain_integration_test.go`: rotasi refresh token (token lama dicabut + menunjuk penerus), `RevokeFamily` (seluruh rantai dicabut, keluarga lain tak tersentuh), siklus outbox (claim/reap/retry sampai `failed`), upsert minat
+  - Semua terhadap **Postgres sungguhan** (bukan SQLite) — skema v2 pakai `citext`, `pg_trgm`, generated column `tsvector`, unique partial index
+- [x] **P3-10** ~~`next-sitemap` tidak dipakai~~ → **deviasi terdokumentasi**: `app/sitemap.ts` manual sudah fungsional (revalidate 3600, mencakup portfolio published + profil user + changelog), jadi tidak perlu dependensi tambahan
 - [x] **P3-11** `pnpm/action-setup@v4` tanpa input `version` (repo tak punya package.json di root) → job `web` crash sebelum menjalankan kode
   - Fix: `version: 10` (sama dengan `apps/web/Dockerfile`) — ✅ Sprint 1 (commit `038bd4e`)
 - [x] **P3-12** `gitleaks/gitleaks-action@v2` mewajibkan `GITLEAKS_LICENSE` untuk repo organisasi → job `secrets-scan` crash
@@ -218,16 +314,37 @@
 
 ## P6 — Go-Live Readiness / Fase 4 (9)
 
-- [ ] **P6-01** 🔴 Rollback deploy tidak rollback skema
-  - Evidence: `.github/workflows/deploy.yml:130-137` — hanya `sed IMAGE_TAG` + `up -d`, tanpa `goose down`
-- [ ] **P6-02** 🔴 Jendela backward-compat: `migrate up` jalan **sebelum** `up -d` → container lama jalan dengan skema baru
-- [ ] **P6-03** Migrasi v1→v2 belum pernah di dry-run terhadap dump prod — PRD §16
-- [ ] **P6-04** Storage mirror 5,1 GB belum dilakukan — PRD §16.3 (`tools/backup.sh` sudah ada `rclone sync`)
-- [ ] **P6-05** k6 p95 belum diverifikasi di VPS 4GB — PRD §14.1, §18 gate
-- [ ] **P6-06** Restore drill belum pernah — PRD §17, §18 gate
-- [ ] **P6-07** 🔴 Disk prod 81% (gate: <70%) — PRD §0.1, §19, §18
-- [ ] **P6-08** Maintenance mode (`NEXT_PUBLIC_MAINTENANCE_MODE`) belum ada — PRD §16.1
-- [ ] **P6-09** Sunset plan "hapus v1 setelah 30 hari" belum ada — PRD §16.1, §18
+- [x] **P6-01** Rollback deploy sekarang mengembalikan **image + skema** — PRD §17
+  - ✅ Sprint 3 (commit `5edb7cf`) — tool migrate gaining perintah `down-to <versi>`; deploy mencatat versi skema sebelum migrasi lalu mengembalikannya saat healthcheck image baru gagal
+- [x] **P6-02** Jendela backward-compat dipantau: setelah `migrate up`, aplikasi yang **sedang berjalan** dicek healthcheck — PRD §17
+  - ✅ Sprint 3 (commit `5edb7cf`) — kalau migrasi merusak app yang sedang hidup, skema langsung dikembalikan dan deploy dibatalkan tanpa menyentuh image baru
+- [x] **P6-03** Migrasi v1→v2 di dry-run & execute terhadap dump produksi (1.688 user, 1.723 portfolio, 6.970 block) — PRD §16
+  - ✅ Sprint 3 (commit `1f740a6`) — dry-run menemukan **6 bug** yang membuat hampir semua data hilang (portfolio, block, like, follow, comment, notification, assessment). Setelah diperbaiki: **100%** user/portfolio/like/follow/comment/notification/feedback termigrasi, 5.939/6.970 block (+1.031 karantina dengan alasan sah)
+  - Hasil akhir di DB bersih: users 1688 · portfolios 1723 · blocks 5939 · likes 740 · follows 4341 · comments 79 · notifications 6946 · feedback 17 · skipped `{}`
+- [x] **P6-04** Storage mirror 5,1 GB — PRD §16.3
+  - ✅ Sprint 3 (commit `6c49cc8`) — `tools/storage-mirror.sh`: `mc mirror` + verifikasi 2 lapis (`mc diff` nama & ukuran semua objek, plus checksum md5 pada sampel objek yang tersebar)
+  - **Divalidasi end-to-end** dengan dua RustFS lokal: 45 objek (9,35 MiB) ter-mirror, `mc diff` bersih, 12 checksum cocok
+  - Detail yang dulu bikin gagal: `mc alias set` wajib `--api S3v4` (default-nya S3v2 ditolak MinIO modern & RustFS, dan pesannya tidak menyiratakkan soal versi API)
+  - Layout key dipertahankan 100% (cuma ganti host), sesuai PRD §16.3 — media hasil migrasi tetap memakai key v1; key format baru (uuid7 + path per-entity) hanya untuk upload baru
+  - ⏳ **Eksekusi penuh (5,1 GB) saat go-live**: butuh storage baru menyala + maintenance mode aktif, dan server prod tidak boleh disentuh sekarang. Prosedur lengkap di `docs/runbook.md`
+- [x] **P6-05** k6 p95 diverifikasi di VPS 4 GB itu sendiri terhadap API produksi — PRD §14.1, §18 gate
+  - ✅ Sprint 3 — p(95) endpoint publik **2,91 ms** (ambang 800 ms), rate error 0,00%, 1800/1800 check lulus
+  - Sekalian membuktikan script k6 yang diperbaiki (threshold `p(95)`, login sekali di `setup()`) jalan tanpa memicu lockout
+- [x] **P6-06** Restore drill dilakukan terhadap backup produksi — PRD §17, §18 gate
+  - ✅ Sprint 3 — dump DB v1 di-restore ke database scratch (33 tabel, 42.767 baris identik dengan sumber) dan volume storage di-mount ke MinIO baru → 8.674 objek terambil via S3 API, sampel JPEG/PNG/PDF valid byte-wise
+  - Manifest SHA256 20/20 file lolos diverifikasi ulang di **server dan mesin lokal**
+- [x] **P6-07** Disk prod **69%** (gate: <70% terpenuhi) — PRD §0.1, §19, §18
+  - ✅ Sprint 3 — dari 94% (3,3 GB sisa, dangerously low) jadi 69% (15 GB sisa)
+  - Yang dibersihkan: backup **duplikat** (5,0 GB — salinan manual yang identik dengan backup cron dan sudah ada di mesin lokal terverifikasi 20/20), journal lama (344 MB), dan `/var/lib/docker/vfs` (6,3 GB sisa driver vfs yang tak tersentuh sejak April 2026; storage driver aktif sudah overlay2)
+  - Yang **sengaja tidak** disentuh: service yang sedang berjalan, image lama (jaring pengaman rollback), backup lama 27 Sep, dan proyek lain di server (`sipodi`)
+  - Verifikasi setelah setiap langkah: 7 container healthy, API 200, storage 200, container baru bisa dijalankan
+- [x] **P6-08** Maintenance mode di `apps/web/middleware.ts` — PRD §16.1
+  - ✅ Sprint 3 — halaman "Pindah ke v2" (503 + `Retry-After`), HTML mandiri tanpa JS/aset build
+  - Selain flag build-time `NEXT_PUBLIC_MAINTENANCE_MODE` (nama dari PRD), ada **toggle runtime** lewat header `x-maintenance-mode` dari reverse proxy → jendela maintenance bisa dibuka/ditutup tanpa build ulang
+  - Rute `/api/*` tetap hidup → health check tidak gagal, rollback tetap mungkin
+  - Disertai 2 test E2E
+- [x] **P6-09** Sunset plan di `docs/runbook.md` — PRD §16.1, §18
+  - ✅ Sprint 3 — jadwal H-1 → H+30, syarat pembuangan v1 (monitoring bersih 7 hari berturut, nol request ke v1 di access log, backup v2 sudah restore-drill di dua tempat), dan langkah pembuangan container/image/volume/backup lama
 
 ---
 

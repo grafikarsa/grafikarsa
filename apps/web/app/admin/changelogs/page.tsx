@@ -9,7 +9,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectField } from "@/components/ui/select-field";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { apiGet, apiSend } from "@/lib/api";
 
@@ -42,7 +49,10 @@ function ContributorPanel({ changelogID }: { changelogID: string }) {
     mutationFn: () => {
       const u = users.find((x) => x.username === username);
       if (!u) throw new Error("Pilih user dari daftar.");
-      return apiSend(`v1/admin/changelogs/${changelogID}/contributors`, "POST", { user_id: u.id, role });
+      return apiSend(`v1/admin/changelogs/${changelogID}/contributors`, "POST", {
+        user_id: u.id,
+        role,
+      });
     },
     onSuccess: () => {
       toast.success("Kontributor ditambahkan.");
@@ -53,7 +63,8 @@ function ContributorPanel({ changelogID }: { changelogID: string }) {
   });
 
   const remove = useMutation({
-    mutationFn: (userID: string) => apiSend(`v1/admin/changelogs/${changelogID}/contributors/${userID}`, "DELETE"),
+    mutationFn: (userID: string) =>
+      apiSend(`v1/admin/changelogs/${changelogID}/contributors/${userID}`, "DELETE"),
     onSuccess: () => {
       toast.success("Kontributor dihapus.");
       qc.invalidateQueries({ queryKey: ["changelog-contributors", changelogID] });
@@ -82,7 +93,9 @@ function ContributorPanel({ changelogID }: { changelogID: string }) {
           </Button>
         </div>
       ))}
-      {items.length === 0 && <p className="text-muted-foreground text-xs">Belum ada kontributor.</p>}
+      {items.length === 0 && (
+        <p className="text-muted-foreground text-xs">Belum ada kontributor.</p>
+      )}
       <div className="flex flex-wrap items-center gap-2">
         <SelectField
           value={username}
@@ -97,7 +110,12 @@ function ContributorPanel({ changelogID }: { changelogID: string }) {
           className="w-32"
           options={ROLES.map((r) => ({ value: r, label: r }))}
         />
-        <Button size="sm" variant="outline" onClick={() => add.mutate()} disabled={!username || add.isPending}>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => add.mutate()}
+          disabled={!username || add.isPending}
+        >
           Tambah
         </Button>
       </div>
@@ -174,11 +192,21 @@ export default function AdminChangelogsPage() {
           <div className="grid gap-2 md:grid-cols-3">
             <div className="grid gap-1">
               <Label htmlFor="cv">Versi</Label>
-              <Input id="cv" value={version} onChange={(e) => setVersion(e.target.value)} placeholder="0.5.0" />
+              <Input
+                id="cv"
+                value={version}
+                onChange={(e) => setVersion(e.target.value)}
+                placeholder="0.5.0"
+              />
             </div>
             <div className="grid gap-1 md:col-span-2">
               <Label htmlFor="ct">Judul</Label>
-              <Input id="ct" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Perbaikan moderasi" />
+              <Input
+                id="ct"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Perbaikan moderasi"
+              />
             </div>
           </div>
           <div className="grid gap-1">
@@ -187,7 +215,12 @@ export default function AdminChangelogsPage() {
           </div>
           <div className="grid gap-1 md:w-64">
             <Label htmlFor="cp">Jadwal terbit (opsional)</Label>
-            <Input id="cp" type="datetime-local" value={publishAt} onChange={(e) => setPublishAt(e.target.value)} />
+            <Input
+              id="cp"
+              type="datetime-local"
+              value={publishAt}
+              onChange={(e) => setPublishAt(e.target.value)}
+            />
             <p className="text-muted-foreground text-xs">
               Dikosongkan berarti draft manual; diisi masa depan berarti otomatis terbit.
             </p>
@@ -198,22 +231,37 @@ export default function AdminChangelogsPage() {
               <div key={i} className="grid gap-1 md:grid-cols-[130px_1fr_1fr]">
                 <SelectField
                   value={s.kind}
-                  onValueChange={(v) => setSections(sections.map((x, j) => (j === i ? { ...x, kind: v } : x)))}
+                  onValueChange={(v) =>
+                    setSections(sections.map((x, j) => (j === i ? { ...x, kind: v } : x)))
+                  }
                   options={KINDS.map((k) => ({ value: k, label: k }))}
                 />
                 <Input
                   value={s.title}
                   placeholder="Judul section"
-                  onChange={(e) => setSections(sections.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))}
+                  onChange={(e) =>
+                    setSections(
+                      sections.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)),
+                    )
+                  }
                 />
                 <Input
                   value={s.body_md}
                   placeholder="Detail"
-                  onChange={(e) => setSections(sections.map((x, j) => (j === i ? { ...x, body_md: e.target.value } : x)))}
+                  onChange={(e) =>
+                    setSections(
+                      sections.map((x, j) => (j === i ? { ...x, body_md: e.target.value } : x)),
+                    )
+                  }
                 />
               </div>
             ))}
-            <Button variant="outline" size="sm" className="self-start" onClick={() => setSections([...sections, { kind: "fixed", title: "", body_md: "" }])}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="self-start"
+              onClick={() => setSections([...sections, { kind: "fixed", title: "", body_md: "" }])}
+            >
               Tambah section
             </Button>
           </div>
@@ -244,10 +292,16 @@ export default function AdminChangelogsPage() {
                   <TableCell className="font-mono text-xs">{c.version}</TableCell>
                   <TableCell>{c.title}</TableCell>
                   <TableCell>
-                    <Badge variant={c.status === "published" ? "default" : "secondary"}>{c.status}</Badge>
+                    <Badge variant={c.status === "published" ? "default" : "secondary"}>
+                      {c.status}
+                    </Badge>
                   </TableCell>
                   <TableCell className="flex flex-wrap justify-end gap-2">
-                    <Button size="sm" variant="ghost" onClick={() => setOpenContrib(openContrib === c.id ? null : c.id)}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setOpenContrib(openContrib === c.id ? null : c.id)}
+                    >
                       Kontributor
                     </Button>
                     {c.status !== "published" && (

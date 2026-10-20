@@ -7,7 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { apiGet, apiSend } from "@/lib/api";
 
 type Major = { id: string; code: string; name: string; require_series: boolean };
@@ -44,11 +51,22 @@ export default function MajorsPage() {
         <div className="flex items-end gap-2">
           <div className="grid gap-1">
             <Label htmlFor="kode">Kode</Label>
-            <Input id="kode" value={code} onChange={(e) => setCode(e.target.value)} placeholder="rpl" className="w-28" />
+            <Input
+              id="kode"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="rpl"
+              className="w-28"
+            />
           </div>
           <div className="grid flex-1 gap-1">
             <Label htmlFor="nama">Nama</Label>
-            <Input id="nama" value={name} onChange={(e) => setName(e.target.value)} placeholder="Rekayasa Perangkat Lunak" />
+            <Input
+              id="nama"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Rekayasa Perangkat Lunak"
+            />
           </div>
           <Button onClick={() => create.mutate()} disabled={!code || !name || create.isPending}>
             Tambah

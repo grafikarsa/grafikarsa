@@ -26,7 +26,11 @@ export function SelectField({
   disabled?: boolean;
 }) {
   return (
-    <Select value={value || undefined} onValueChange={(v) => onValueChange(v ?? "")} disabled={disabled}>
+    <Select
+      value={value || undefined}
+      onValueChange={(v) => onValueChange(v ?? "")}
+      disabled={disabled}
+    >
       <SelectTrigger className={className}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>

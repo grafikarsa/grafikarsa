@@ -1,0 +1,51 @@
+# Konfigurasi CodeRabbit.
+#
+# Repo ini memakai PR bertumpuk (stacked PR): PR Sprint 3 basing ke branch
+# Sprint 2, dan seterusnya. CodeRabbit secara default hanya me-review PR
+# yang targetnya branch default (main) — sehingga PR #25, #26, dan #27
+# (seluruh stack selain yang pertama) TIDAK PERNAH di-review otomatis.
+#
+# base_branches menambah branch target yang mau di-review. Setiap entri
+# adalah pola regex, dan branch default (main) selalu ikut — jadi tidak
+# perlu disebutkannya.
+#
+# reviews.review_status sengaja dibiarkan default (menampilkan "review
+# skipped"): kalau suatu saat ada PR yang targetnya di luar daftar ini,
+# kelewatan review lebih baik kelihatan daripada diam-diam.
+reviews:
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    drafts: false
+    base_branches:
+      # Seluruh branch feat/* ikut di-review — mencakup stack PR Sprint 2-5
+      # sekarang dan stack berikutnya.
+      - "feat/.*"
+      - "release/.*"
+      - "hotfix/.*"
+
+  # Petunjuk per-path: bahasa Indonesia di komentar & pesan error itu disengaja,
+  # dan linter "misspell" di proyek ini sengaja dikecualikan untuk kata itu.
+  # Tanpa petunjuk ini, review cenderung menandai kata Indonesia sebagai
+  # salah ketik — persis yang sudah pernah terjadi dan wasting time.
+  path_instructions:
+    - path: "**/*.go"
+      instructions: |
+        Komentar, pesan error, dan nama identifier dalam bahasa Indonesia
+        adalah disengaja (repo ini berbahasa Indonesia). Jangan menandai kata
+        Indonesia sebagai typo — linter `misspell` di .golangci.yml sudah
+        dikecualikan untuk itu. Fokus pada kebenaran logika, keamanan, dan
+        konsistensi dengan kontrak OpenAPI.
+    - path: "**/*.ts"
+      instructions: |
+        Komentar dan pesan dalam bahasa Indonesia disengaja. Fokus pada
+        kebenaran logika, keamanan, dan aksesibilitas.
+    - path: "**/db/queries/*.sql"
+      instructions: |
+        SQL adalah sumber kebenaran (sqlc generate). Perubahan di sini harus
+        disertai `sqlc -f apps/api/sqlc.yaml generate` dan file .sql.go yang
+        dihasilkan ikut dikommit.
+    - path: "**/e2e/**"
+      instructions: |
+        Test E2E memakai Playwright. Jangan mengubah selector yang sudah
+        ada tanpa alasan — test lain bergantung padanya.

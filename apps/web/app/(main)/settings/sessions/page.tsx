@@ -7,7 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiGet, apiSend, logout } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 
-type Session = { id: string; device_label: string; ip: string; expires_at: string; is_current: boolean };
+type Session = {
+  id: string;
+  device_label: string;
+  ip: string;
+  expires_at: string;
+  is_current: boolean;
+};
 
 export default function SessionsPage() {
   const user = useAuthStore((s) => s.user);
@@ -36,7 +42,9 @@ export default function SessionsPage() {
           {sessions.map((s) => (
             <div key={s.id} className="flex items-center justify-between border-b py-2">
               <div>
-                <p className="text-sm font-semibold">{s.device_label || "Perangkat"} {s.is_current && "(ini)"}</p>
+                <p className="text-sm font-semibold">
+                  {s.device_label || "Perangkat"} {s.is_current && "(ini)"}
+                </p>
                 <p className="text-muted-foreground text-xs">{s.ip}</p>
               </div>
               {!s.is_current && (

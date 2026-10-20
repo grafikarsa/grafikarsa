@@ -17,11 +17,32 @@
 
 ## Deploy & rollback
 
-Alur `deploy.yml` (push ke `main`): build image (`sha-<commit>` + `latest`) →
-scan Trivy → backup DB di server → tulis `IMAGE_TAG` ke `.env` → `goose up` →
-`up -d` → healthcheck 30×10 detik → seed idempoten → prune image lama. Bila
-healthcheck gagal, workflow mengembalikan `IMAGE_TAG` ke tag sebelumnya dan
-menjalankan `up -d` lagi.
+Alur `deploy.yml`: build image (`sha-<commit>` + `latest`) → scan Trivy →
+backup DB di server → tulis `IMAGE_TAG` ke `.env` → `goose up` → `up -d` →
+healthcheck 30×10 detik → seed idempoten → prune image lama. Bila
+healthcheck gagal, workflow mengembalikan **image dan skema** ke versi
+sebelumnya lalu menjalankan `up -d` lagi.
+
+**Kapan workflow ini jalan:** hanya dari **tag versi** (`v2.0.0`) atau
+**manual** (`workflow_dispatch`).
+
+Push ke `main` sengaja **tidak** men-deploy. Alasannya: go-live v2 punya
+prasyarat yang harus selesai lebih dulu — storage mirror 5,1 GB, migrasi
+DB v1→v2 di server, jendela maintenance, dan restore drill. Volume v2
+(`postgres_data`, `storage_data`) berbeda nama dari volume yang sedang jalan
+(`grafikarsa_postgres_data`, `grafikarsa_minio_data`), jadi data v1 tidak ikut
+terhapus — tapi kalau stack v2 start sebelum dimigrasi, **situsnya kosong**.
+Deploy karena itu harus tindakan yang disengaja, bukan efek samping merge.
+
+Untuk go-live:
+
+```bash
+# 1. Maintenance mode aktif (v1 menulis beku) + storage mirror + migrasi DB.
+#    Lihat bagian "Mirror storage saat go-live" dan prosedur migrasi.
+# 2. Deploy (setelah migrasi selesai & diverifikasi):
+git tag v2.0.0 && git push origin v2.0.0
+#    atau manual: gh workflow run deploy.yml
+```
 
 Rollback manual:
 
@@ -70,6 +91,193 @@ digest 07:00 WIB · flush view 1 menit · decay minat 03:00 WIB · scan media
 03:30 WIB · preview PDF tiap 30 menit. Semua job dibungkus `recover` sehingga panic satu job tidak
 mematikan scheduler. Jalankan satu job manual:
 `go run ./cmd/worker <outbox|stats|leaderboard|cleanup-media|publish-changelogs|retention|promotion-draft|digest>`.
+
+## Maintenance mode (jendela migrasi v1 → v2)
+
+Saat data dimindahkan, aplikasi v1 perlu di-*freeze* supaya tidak ada tulisan
+baru yang masuk selama migrasi berjalan. Pengunjung melihat halaman
+"Pindah ke v2" (HTTP 503, `Retry-After: 600`).
+
+Dua cara menyalakannya:
+
+| Cara | Kapan aktif | Catatan |
+|---|---|---|
+| `NEXT_PUBLIC_MAINTENANCE_MODE=true` saat build | saat build ulang | Nama flag yang dipakai PRD §16.1; perlu build + deploy ulang |
+| Header `x-maintenance-mode: on` dari reverse proxy | **sekali reload proxy** | Tanpa build ulang — dipakai untuk go-live |
+
+Contoh Caddy (reverse proxy di depan Next.js):
+
+```caddy
+# buka maintenance
+grafikarsa.com {
+    header x-maintenance-mode on
+    reverse_proxy web:3000
+}
+# tutup maintenance: hapus baris "header x-maintenance-mode on", lalu
+#   docker compose exec caddy caddy reload
+```
+
+`/api/*` **tidak** disentuh maintenance — health check, BFF, dan API tetap
+hidup, jadi pod masih lolos health check dan rollback tetap mungkin.
+
+Aktifkan **H-1** (bukan saat migrasi dimulai) supaya orang tidak sempat
+menulis karya yang tidak ikut termigrasi.
+
+## Mirror storage saat go-live (PRD §16.3)
+
+Bucket lama (MinIO v1) disalin ke bucket baru (RustFS/S3 v2) memakai
+`tools/storage-mirror.sh`. Layout key dipertahankan 100% — hanya host yang
+ganti — supaya mapping DB sesederhana mungkin.
+
+```bash
+# di server, setelah service storage baru menyala & maintenance mode aktif
+export SRC_ENDPOINT=http://127.0.0.1:9000   # bucket lama
+export SRC_KEY=... SRC_SECRET=...
+export DST_ENDPOINT=http://127.0.0.1:9020   # bucket baru
+export DST_KEY=... DST_SECRET=...
+export BUCKET=grafikarsa
+
+# 1. plan dulu (tidak menulis apa pun)
+MIRROR_DRY_RUN=1 ./tools/storage-mirror.sh
+
+# 2. eksekusi + verifikasi (15-30 mnt untuk 5,1 GB)
+./tools/storage-mirror.sh
+```
+
+Verifikasi di dalam skrip: `mc diff` (nama & ukuran semua objek) +
+checksum md5 pada sampel objek yang tersebar. Kalau script keluar dengan
+error, jangan lanjut ke migrasi DB — obyek yang tidak lengkap akan membuat sebagian gambar hilang di karya yang sudah tayang.
+
+**`mc` wajib memakai `--api S3v4`.** Tanpa itu mc memakai S3v2 yang ditolak
+MinIO modern & RustFS, dan pesannya ("The Access Key Id you provided does
+not exist in our records") tidak menyiratkannya bahwa masalahnya versi API.
+Flag ini sudah dipakai di dalam skrip.
+
+Setelah mirror selesai:
+
+```bash
+# daftarkan objek storage jadi media_assets + legacy_urls
+go run ./cmd/tools/migrate-old --v1 ... --v2 ... --execute --migrate-media
+```
+
+## Migrasi DB v1 → v2 di server (go-live)
+
+Skema v1 dan v2 **berbeda total** — jadi migrasi bukan "jalanin migration
+goose di atas data v1", tapi: buat DB v2 kosong → jalankan migrasi goose v2 →
+salin data dari DB v1 ke DB v2 dengan `migrate-old`.
+
+**Kendala yang menentukan bentuknya:** compose v2 memakai
+`container_name: grafikarsa-db` yang **sama** dengan stack v1 yang sedang
+jalan. Dua stack dengan nama container yang sama tidak bisa hidup
+berdampingan. Jadi v1 **dimatikan** lebih dulu, dan datanya dipulihkan dari
+dump (bukan dibaca dari container yang hidup).
+
+Semua perintah dijalankan di server (`/opt/grafikarsa`).
+
+```bash
+DC="docker compose -f docker-compose.deploy.yml"
+
+# 0. Maintenance mode v1 aktif (v1 tidak boleh menerima tulisan baru selama
+#    migrasi) — lihat bagian "Maintenance mode".
+
+# 1. Backup v1 terakhir (dipakai sebagai sumber di langkah 3).
+$DC exec -T db pg_dump -Fc -U "$DB_USER" "$DB_NAME" > "/tmp/v1-pre-migrate.dump"
+ls -la /tmp/v1-pre-migrate.dump
+
+# 2. Matikan stack v1. Volume v1 (grafikarsa_postgres_data) TIDAK dihapus —
+#    data v1 tetap utuh sebagai jaring pengaman.
+$DC down
+
+# 3. Nyalakan DB v2 (volume postgres_data, kosong) + pulihkan dump v1 ke
+#    database terpisah di container yang sama, sebagai sumber migrasi.
+$DC up -d db
+$DC exec -T db psql -U "$DB_USER" -d postgres -c "CREATE DATABASE v1_src OWNER $DB_USER;"
+$DC exec -T db pg_restore -U "$DB_USER" -d v1_src --no-owner --no-privileges \
+  < /tmp/v1-pre-migrate.dump
+
+# 4. Skema v2 (goose) di database v2.
+$DC exec -T db psql -U "$DB_USER" -d postgres -c "CREATE DATABASE $DB_NAME OWNER $DB_USER;"
+$DC run --rm --entrypoint /migrate -e DB_NAME="$DB_NAME" api up
+
+# 5. Salin data v1 -> v2. KERINGKASAN dulu (wajib):
+$DC run --rm --entrypoint /migrate-old \
+  -e DB_NAME="$DB_NAME" api \
+  --v1 "postgres://$DB_USER:$DB_PASSWORD@db:5432/v1_src?sslmode=disable" \
+  --v2 "postgres://$DB_USER:$DB_PASSWORD@db:5432/$DB_NAME?sslmode=disable" \
+  --dry-run
+#    Periksa hitungannya: users 1688 · portfolios 1723 · blocks 5939
+#    (+1031 karantina) · likes 740 · follows 4341 · comments 79
+#    · notifications 6946 · feedback 17 · skipped {}
+#    Kalau ada yang tidak cocok, JANGAN lanjut.
+$DC run --rm --entrypoint /migrate-old -e DB_NAME="$DB_NAME" api \
+  --v1 "postgres://$DB_USER:$DB_PASSWORD@db:5432/v1_src?sslmode=disable" \
+  --v2 "postgres://$DB_USER:$DB_PASSWORD@db:5432/$DB_NAME?sslmode=disable" \
+  --execute --migrate-media
+
+# 6. Verifikasi: jumlah baris v2 harus sama dengan v1 (kecuali blok yang
+#    dikarantina). Cek juga `legacy_urls` terisi.
+$DC exec -T db psql -U "$DB_USER" -d "$DB_NAME" -c \
+  "select (select count(*) from users) users, (select count(*) from portfolios) portfolios,
+          (select count(*) from portfolio_blocks) blocks, (select count(*) from follows) follows;"
+
+# 7. Nyalakan sisa stack v2 + deploy (tag versi / workflow_dispatch).
+$DC up -d
+```
+
+Kalau migrasi gagal di tengah jalan, ulangi dari langkah 3 — database v2
+dibuang dan dibuat ulang. Data v1 tidak pernah hilang: ada di
+`grafikarsa_postgres_data` **dan** di `/tmp/v1-pre-migrate.dump`.
+
+Yang **tidak** boleh dilewati: langkah 5 (dry-run) dan langkah 6. Tool
+`migrate-old` sekarang gagal keras kalau ada objek storage yang tidak
+terdaftar sebagai media — jadi "migrasi sukses" tidak lagi bisa berarti
+"sebagian data hilang diam-diam".
+
+## Sunset plan (P6-09)
+
+Rencana resmi membuang v1 setelah go-live. Tidak ada data v1 yang dihapus
+sebelum 30 hari.
+
+| Hari | Aksi | Pemeriksa |
+|---|---|---|
+| H-1 | Aktifkan maintenance mode v1 | ops |
+| H-0 | Migrasi DB + mirror storage, verifikasi | ops + migration dry-run (`migrate-old --dry-run` di staging dengan dump prod) |
+| H-0 | Go-live v2, redirect `/storage/*` → objek baru | ops |
+| H-0 + 1 jam | Matikan maintenance mode | ops |
+| H+1…H+6 | Monitor 404/500, latency p95, complain | ops + support |
+| H+7 | Review monitoring. Kalau bersih → lanjutkan | ops |
+| H+30 | **Hapus v1**: container, image, volume, dan backup lama di server | ops — butuh persetujuan tertulis |
+
+Syarat H+30: monitoring H+7 bersih (tanpa insiden 5xx selama 7 hari berturut),
+tidak ada request ke v1 yang tercatat di access log selama 7 hari, dan backup
+v2 sudah terverifikasi lewat restore drill.
+
+Sebelum dihapus, pastikan backup v2 (DB + storage) ada di **dua** tempat
+(server + mesin terpisah) dan sudah pernah di-restore-drill.
+
+## Integration test lokal
+
+Integration test memakai Postgres sungguhan (bukan SQLite — skema v2 memakai
+`citext`, `pg_trgm`, generated column `tsvector`, dan unique partial index).
+
+```bash
+# database test TERPISAH dari database dev
+docker exec -i gk-pg-test psql -U grafikarsa -d postgres \
+  -c 'CREATE DATABASE grafikarsa_test;'
+cd apps/api
+DB_HOST=127.0.0.1 DB_PORT=5439 DB_USER=grafikarsa DB_PASSWORD=test \
+  DB_NAME=grafikarsa_test go run ./cmd/tools/migrate up
+
+# jalankan test
+TEST_DATABASE_URL="postgres://grafikarsa:test@127.0.0.1:5439/grafikarsa_test?sslmode=disable" \
+  go test ./...
+```
+
+**Wajib pakai database terpisah.** Test ini menghapus isi tabel dengan
+`TRUNCATE`. Helper `internal/dbtest` menolak DSN yang nama databasenya tidak
+mengandung "test" — kalau tidak, satu `go test ./...` bisa menghapus seluruh
+user, portfolio, dan komentar di database dev/produksi tanpa jejak. Kalau
+memang disengaja, setel `ALLOW_DESTRUCTIVE_TEST_DB=1`.
 
 ## Catatan operasional
 
