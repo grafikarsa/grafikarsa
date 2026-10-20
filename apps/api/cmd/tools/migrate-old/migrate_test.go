@@ -13,15 +13,15 @@ func TestMapRoleAlumni(t *testing.T) {
 	if role != "siswa" || status != "lulus" {
 		t.Fatal("alumni salah: " + role + "/" + status)
 	}
-	role, status = mapRole("student", nowYear())
+	_, status = mapRole("student", nowYear())
 	if status != "aktif" {
 		t.Fatal("siswa aktif salah: " + status)
 	}
-	role, status = mapRole("admin", 0)
+	role, _ = mapRole("admin", 0)
 	if role != "admin" {
 		t.Fatal("admin salah: " + role)
 	}
-	role, status = mapRole("teacher", 0)
+	role, _ = mapRole("teacher", 0)
 	if role != "guru" {
 		t.Fatal("guru salah: " + role)
 	}

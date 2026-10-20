@@ -61,7 +61,9 @@ function FeedbackInner() {
 
   async function loadThread(id: string, t: string) {
     try {
-      const d = await apiGet<ThreadDetail>(`v1/feedback/${id}${t ? `?t=${encodeURIComponent(t)}` : ""}`);
+      const d = await apiGet<ThreadDetail>(
+        `v1/feedback/${id}${t ? `?t=${encodeURIComponent(t)}` : ""}`,
+      );
       setDetail(d);
       setMyToken(t || null);
     } catch (err) {
@@ -124,7 +126,10 @@ function FeedbackInner() {
   async function sendReply() {
     if (!detail) return;
     try {
-      await apiSend(`v1/feedback/${detail.id}/reply`, "POST", { body: reply, t: myToken ?? undefined });
+      await apiSend(`v1/feedback/${detail.id}/reply`, "POST", {
+        body: reply,
+        t: myToken ?? undefined,
+      });
       setReply("");
       loadThread(detail.id, myToken ?? "").catch(() => null);
       toast.success("Balasan terkirim.");
@@ -138,7 +143,9 @@ function FeedbackInner() {
       {myToken && (
         <Card>
           <CardContent className="flex flex-col gap-2 p-3">
-            <p className="text-xs">Tautan balasanmu (simpan untuk membuka thread ini tanpa login):</p>
+            <p className="text-xs">
+              Tautan balasanmu (simpan untuk membuka thread ini tanpa login):
+            </p>
             <code className="bg-muted truncate rounded p-2 text-xs">{`/feedback?t=${myToken}`}</code>
           </CardContent>
         </Card>
@@ -168,8 +175,18 @@ function FeedbackInner() {
                 <p className="text-muted-foreground text-xs">Belum ada balasan.</p>
               )}
             </div>
-            <Textarea value={reply} onChange={(e) => setReply(e.target.value)} placeholder="Balasan..." rows={3} />
-            <Button size="sm" className="self-start" onClick={sendReply} disabled={reply.trim().length < 2}>
+            <Textarea
+              value={reply}
+              onChange={(e) => setReply(e.target.value)}
+              placeholder="Balasan..."
+              rows={3}
+            />
+            <Button
+              size="sm"
+              className="self-start"
+              onClick={sendReply}
+              disabled={reply.trim().length < 2}
+            >
               Kirim balasan
             </Button>
           </CardContent>
@@ -183,7 +200,12 @@ function FeedbackInner() {
         <CardContent className="flex flex-col gap-3">
           <div className="grid gap-2">
             <Label htmlFor="kategori">Kategori</Label>
-            <SelectField value={category} onValueChange={setCategory} options={CATEGORIES} className="w-full" />
+            <SelectField
+              value={category}
+              onValueChange={setCategory}
+              options={CATEGORIES}
+              className="w-full"
+            />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="judul">Judul (min 5)</Label>
@@ -216,7 +238,9 @@ function FeedbackInner() {
               </Button>
             </div>
           ))}
-          {items.length === 0 && <p className="text-muted-foreground text-sm">Belum ada masukan publik.</p>}
+          {items.length === 0 && (
+            <p className="text-muted-foreground text-sm">Belum ada masukan publik.</p>
+          )}
         </CardContent>
       </Card>
     </main>

@@ -11,7 +11,14 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiGet, apiSend } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 
-type FeedItem = { id: string; title: string; slug: string; username: string; owner_name: string; score?: number };
+type FeedItem = {
+  id: string;
+  title: string;
+  slug: string;
+  username: string;
+  owner_name: string;
+  score?: number;
+};
 type Algorithm = "smart" | "recent" | "following";
 
 const EMPTY: Record<Algorithm, string> = {
@@ -48,7 +55,8 @@ export function FeedList() {
 
   const q = useInfiniteQuery({
     queryKey: ["feed", algo, user?.username ?? "guest"],
-    queryFn: ({ pageParam }) => apiGet<FeedItem[]>(`v1/feed?algorithm=${algo}&page=${pageParam}&per_page=15`),
+    queryFn: ({ pageParam }) =>
+      apiGet<FeedItem[]>(`v1/feed?algorithm=${algo}&page=${pageParam}&per_page=15`),
     getNextPageParam: (last, all) => (last.length === 15 ? all.length + 1 : undefined),
     initialPageParam: 1,
     enabled: algo !== "following" || Boolean(user),
@@ -92,6 +100,9 @@ export function FeedList() {
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-4 p-4">
+      {/* Halaman ini butuh heading sendiri: struktur dokumen yang benar
+          (dan test E2E/a11y bisa menemukan judul halaman). */}
+      <h1 className="text-2xl font-bold">Feed</h1>
       <Tabs value={algo} onValueChange={changeAlgo}>
         <TabsList>
           <TabsTrigger value="smart" disabled={!user}>
@@ -128,7 +139,10 @@ export function FeedList() {
       {items.map((it) => (
         <Card key={it.id}>
           <CardContent className="flex flex-col gap-2 p-4">
-            <Link href={`/${it.username}/${it.slug}`} className="text-lg font-semibold hover:underline">
+            <Link
+              href={`/${it.username}/${it.slug}`}
+              className="text-lg font-semibold hover:underline"
+            >
               {it.title}
             </Link>
             <p className="text-muted-foreground text-sm">
@@ -137,7 +151,9 @@ export function FeedList() {
                 {it.owner_name}
               </Link>{" "}
               (@{it.username})
-              {typeof it.score === "number" && <span className="ml-2 text-xs">skor {it.score.toFixed(2)}</span>}
+              {typeof it.score === "number" && (
+                <span className="ml-2 text-xs">skor {it.score.toFixed(2)}</span>
+              )}
             </p>
             <div className="flex gap-2">
               {user && (
@@ -170,7 +186,9 @@ export function FeedList() {
       )}
 
       <div ref={sentinel} className="h-4" />
-      {q.isFetchingNextPage && <p className="text-muted-foreground text-center text-sm">Memuat...</p>}
+      {q.isFetchingNextPage && (
+        <p className="text-muted-foreground text-center text-sm">Memuat...</p>
+      )}
     </div>
   );
 }

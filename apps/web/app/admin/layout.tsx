@@ -51,7 +51,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {n.label}
           </Link>
         ))}
-        {isAdmin && <span className="px-3 py-2 text-xs text-muted-foreground">Mode admin penuh</span>}
+        {isAdmin && (
+          <span className="px-3 py-2 text-xs text-muted-foreground">Mode admin penuh</span>
+        )}
       </nav>
       <div className="flex-1">{children}</div>
     </div>

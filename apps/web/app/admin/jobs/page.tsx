@@ -5,7 +5,14 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SelectField } from "@/components/ui/select-field";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { apiGet } from "@/lib/api";
 
 type Job = {
@@ -64,7 +71,15 @@ export default function AdminJobsPage() {
                 <TableCell className="font-mono text-xs">{j.id}</TableCell>
                 <TableCell className="font-mono text-xs">{j.topic}</TableCell>
                 <TableCell>
-                  <Badge variant={j.status === "failed" ? "destructive" : j.status === "sent" ? "secondary" : "default"}>
+                  <Badge
+                    variant={
+                      j.status === "failed"
+                        ? "destructive"
+                        : j.status === "sent"
+                          ? "secondary"
+                          : "default"
+                    }
+                  >
                     {j.status}
                   </Badge>
                 </TableCell>

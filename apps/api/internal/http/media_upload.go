@@ -161,10 +161,10 @@ func (a *App) handleUpload(w http.ResponseWriter, r *http.Request) {
 	n, _ := io.ReadFull(f, head)
 	head = head[:n]
 	kind, _ := filetype.Match(head)
-	mime := hdr.Header.Get("Content-Type")
-	if kind != filetype.Unknown {
-		mime = kind.MIME.Value
-	} else {
+	// MIME ditentukan dari magic bytes, BUKAN dari header klien. Header
+	// klien hanya dipakai sebagai cadangan kalau magic bytes tak dikenali.
+	mime := kind.MIME.Value
+	if kind == filetype.Unknown {
 		// Magic bytes tidak dikenal: JANGAN percaya header klien.
 		writeJSON(w, http.StatusUnprocessableEntity, fail("INVALID_CONTENT_TYPE", "Tipe file tidak dikenali.", r))
 		return

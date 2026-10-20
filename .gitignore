@@ -13,3 +13,9 @@ dist/
 coverage/
 .sqlc/
 tmp/
+
+# Artefak Playwright (E2E): trace, screenshot, laporan.
+test-results/
+playwright-report/
+blob-report/
+.playwright/

@@ -3,15 +3,12 @@ package http
 import (
 	"encoding/json"
 	"net/http"
-	"regexp"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"grafikarsa/api/internal/repo"
 )
-
-var slugRe = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 
 func slugify(title string) string {
 	s := strings.ToLower(title)
@@ -124,12 +121,11 @@ func (a *App) handleGetPortfolioBySlug(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Portfolio tidak ditemukan.", r))
 		return
 	}
-	byID := repo.GetPortfolioByIDRow{
-		ID: p.ID, OwnerID: p.OwnerID, Title: p.Title, Slug: p.Slug, Status: p.Status,
-		ThumbnailMediaID: p.ThumbnailMediaID, SeriesID: p.SeriesID, DraftPayload: p.DraftPayload,
-		PublishedAt: p.PublishedAt, SubmittedAt: p.SubmittedAt, ReviewedBy: p.ReviewedBy,
-		ReviewedAt: p.ReviewedAt, ReviewNote: p.ReviewNote, CreatedAt: p.CreatedAt,
-	}
+	// GetPortfolioBySlugRow dan GetPortfolioByIDRow punya field yang sama
+	// persis, jadi konversi tipe langsung dipakai. Versi lama menyalin
+	// field per satu — kalau satu query menambah field, field itu diam-diam
+	// hilang di sini.
+	byID := repo.GetPortfolioByIDRow(p)
 	ownerScope := ""
 	if owner.MajorID.Valid {
 		ownerScope = uuidStr(owner.MajorID)
@@ -319,7 +315,7 @@ func (a *App) handleSubmitPortfolio(w http.ResponseWriter, r *http.Request) {
 	if nt == 0 {
 		details = append(details, map[string]string{"field": "tag_ids", "message": "Minimal 1 tag."})
 	}
-	if p.SeriesID.Valid == false {
+	if !p.SeriesID.Valid {
 		if owner, err := a.Q.GetUserByID(r.Context(), p.OwnerID); err == nil && owner.MajorID.Valid {
 			if req, err := a.Q.GetMajorRequireSeries(r.Context(), owner.MajorID); err == nil && req {
 				details = append(details, map[string]string{"field": "series_id", "message": "Jurusanmu mewajibkan series."})

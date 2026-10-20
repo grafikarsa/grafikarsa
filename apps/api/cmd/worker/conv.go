@@ -37,7 +37,7 @@ func mustUUID(s string) pgtype.UUID {
 func uuidOrNull(v pgtype.UUID) pgtype.UUID { return v }
 
 func toInt(v any) int {
-	switch x := any(v).(type) {
+	switch x := v.(type) {
 	case int64:
 		return int(x)
 	case int32:
@@ -57,18 +57,6 @@ func norm(v, max float64) float64 {
 		v = max
 	}
 	return v / max
-}
-
-func expDecay(ageDays, half float64) float64 {
-	if ageDays < 0 {
-		ageDays = 0
-	}
-	e := 1.0
-	for i := 0; i < int(ageDays/half)+1; i++ {
-		e *= 0.5
-	}
-	_ = e
-	return expNeg(ageDays / half)
 }
 
 func expNeg(x float64) float64 {

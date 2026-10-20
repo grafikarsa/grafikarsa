@@ -120,10 +120,10 @@ func (w *walker) Visit(n ast.Node) ast.Visitor {
 		if mw := middlewareUse(x); mw != "" {
 			if len(w.stack) > 0 {
 				top := &w.stack[len(w.stack)-1]
-				switch {
-				case mw == "authRequired":
+				switch mw {
+				case "authRequired":
 					top.auth = "bearer"
-				case mw == "authOptional":
+				case "authOptional":
 					if top.auth != "bearer" {
 						top.auth = "optional"
 					}
@@ -444,6 +444,7 @@ func render(routes []route) string {
 			if r.csrf {
 				b.WriteString("      x-csrf: required\n")
 			}
+			writePathParams(&b, r.path)
 			writeResponses(&b, r)
 		}
 	}
@@ -455,23 +456,75 @@ func render(routes []route) string {
 	return out
 }
 
+// writeResponses menulis blok responses untuk satu operasi.
+//
+// Status code yang benar-benar dikembalikan handler tapi sebelumnya TIDAK
+// terdokumentasikan: 400 (body/parameter rusak), 404 (sumber daya tidak ada),
+// 409 (duplikat), 201 (dibuat), dan 403 (di luar scope / permission
+// ditolak — sebelumnya hanya ditulis untuk route yang butuh CSRF).
+//
+// Driver: schemathesis di CI menandai "undocumented status code" kalau status
+// yang benar-benar dikembalikan handler tidak ada di spec.
 func writeResponses(b *strings.Builder, r route) {
 	b.WriteString("      responses:\n")
+	if r.method == "POST" {
+		b.WriteString("        \"201\":\n          description: Berhasil dibuat\n")
+		b.WriteString("          content:\n            application/json:\n              schema:\n                $ref: \"#/components/schemas/SuccessEnvelope\"\n")
+	}
 	b.WriteString("        \"200\":\n")
 	b.WriteString("          description: Berhasil\n")
-	b.WriteString("          content:\n")
-	b.WriteString("            application/json:\n")
-	b.WriteString("              schema:\n")
-	b.WriteString("                $ref: \"#/components/schemas/SuccessEnvelope\"\n")
+	b.WriteString("          content:\n            application/json:\n              schema:\n                $ref: \"#/components/schemas/SuccessEnvelope\"\n")
+	b.WriteString("        \"400\":\n          $ref: \"#/components/responses/BadRequest\"\n")
+	if len(pathParams(r.path)) > 0 {
+		b.WriteString("        \"404\":\n          $ref: \"#/components/responses/NotFound\"\n")
+	}
 	if r.method != "GET" {
 		b.WriteString("        \"422\":\n          $ref: \"#/components/responses/ValidationError\"\n")
 	}
-	if r.csrf {
+	if r.csrf || len(r.perms) > 0 {
 		b.WriteString("        \"403\":\n          $ref: \"#/components/responses/Forbidden\"\n")
 	}
 	if r.auth == "bearer" {
 		b.WriteString("        \"401\":\n          $ref: \"#/components/responses/Unauthorized\"\n")
 	}
+	b.WriteString("        \"409\":\n          $ref: \"#/components/responses/Conflict\"\n")
 	b.WriteString("        \"429\":\n          $ref: \"#/components/responses/TooManyRequests\"\n")
 	b.WriteString("        \"500\":\n          $ref: \"#/components/responses/InternalError\"\n")
+}
+
+// pathParams mengembalikan daftar nama parameter path pada sebuah path,
+// mis. "/api/v1/portfolios/id/{id}" -> ["id"].
+//
+// Path parameter WAJIB dideklarasikan di OpenAPI. Tanpa itu spec-nya tidak
+// valid dan tooling (validator, client generator) menolaknya.
+func pathParams(path string) []string {
+	var out []string
+	for _, seg := range strings.Split(path, "/") {
+		if len(seg) > 2 && strings.HasPrefix(seg, "{") && strings.HasSuffix(seg, "}") {
+			out = append(out, seg[1:len(seg)-1])
+		}
+	}
+	return out
+}
+
+// uuidPathParams: nama parameter yang isinya UUID.
+var uuidPathParams = map[string]bool{
+	"id": true, "blockId": true, "userId": true, "portfolio_id": true,
+}
+
+// writePathParams menulis blok parameters untuk path yang punya {param}.
+func writePathParams(b *strings.Builder, path string) {
+	params := pathParams(path)
+	if len(params) == 0 {
+		return
+	}
+	b.WriteString("      parameters:\n")
+	for _, p := range params {
+		fmt.Fprintf(b, "        - name: %s\n          in: path\n          required: true\n", p)
+		if uuidPathParams[p] {
+			b.WriteString("          schema: { type: string, format: uuid }\n")
+		} else {
+			b.WriteString("          schema: { type: string }\n")
+		}
+	}
 }

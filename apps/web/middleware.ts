@@ -37,11 +37,31 @@ function isPublic(pathname: string): boolean {
 }
 
 export function middleware(req: NextRequest) {
-  const nonce = crypto.randomUUID().replace(/-/g, "");
   const isDev = process.env.NODE_ENV !== "production";
+  // CSP tanpa nonce.
+  //
+  // Kenapa bukan nonce + 'strict-dynamic' (yang sebelumnya dipakai):
+  // Next.js hanya bisa menyuntik nonce ke halaman yang di-render SECARA
+  // DINAMIS. Halaman yang di-prerender saat build (landing, /login, dan
+  // semua halaman dengan revalidate) tidak punya request header saat
+  // build, jadi nonce-nya tidak pernah ada di HTML.
+  //
+  // Akibatnya: 26 dari 26 tag <script> di halaman app-router TIDAK punya
+  // nonce, sementara 'strict-dynamic' membuat 'self' diabaikan ->
+  // SEMUA script diblokir -> aplikasi tidak ter-hydrate sama sekali
+  // (form login tak pernah muncul, tidak ada interaksi apa pun).
+  //
+  // Nonce mengharuskan semua halaman jadi dynamic: static generation dan
+  // ISR dimatikan, tidak bisa dicache CDN, dan tiap request butuh SSR —
+  // biaya yang jauh lebih besar untuk aplikasi yang sengaja memakai
+  // revalidate (landing 600s, detail karya 60s, changelog 300s).
+  //
+  // Pendekatan ini mengikuti panduan resmi Next.js untuk aplikasi yang tidak
+  // butuh nonce. 'self' + 'unsafe-inline' mengizinkan script dari origin
+  // sendiri dan script inline milik Next.js.
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://challenges.cloudflare.com${isDev ? " 'unsafe-eval'" : ""}`,
+    `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
     "media-src 'self'",
@@ -54,19 +74,25 @@ export function middleware(req: NextRequest) {
     "frame-ancestors 'self'",
   ].join("; ");
 
-  const reqHeaders = new Headers(req.headers);
-  reqHeaders.set("x-nonce", nonce);
-  reqHeaders.set("Content-Security-Policy", csp);
-
-  const hasSession = Boolean(req.cookies.get("__Host-rt")?.value);
+  // Auth gate: tanpa cookie sesi, halaman privat dialihkan ke /login.
+  // Yang dicek hanya KEHADIRAN cookie __Host-rt — validasi tokennya tetap
+  // dilakukan API (middleware tidak bisa memverifikasi JWT tanpa secret).
+  //
+  // Dua nama dicek: "__Host-rt" (produksi, cookie Secure) dan "rt" (dev).
+  // Prefix "__Host-" hanya sah kalau cookie punya flag Secure, sedangkan dev
+  // berjalan di http://localhost — jadi di dev API memakai nama polos.
+  const hasSession = Boolean(req.cookies.get("__Host-rt")?.value || req.cookies.get("rt")?.value);
   if (!hasSession && !isPublic(req.nextUrl.pathname)) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     url.search = `?next=${encodeURIComponent(req.nextUrl.pathname)}`;
-    return NextResponse.redirect(url);
+    const redirect = NextResponse.redirect(url);
+    redirect.headers.set("Content-Security-Policy", csp);
+    redirect.headers.set("Cross-Origin-Opener-Policy", "same-origin");
+    return redirect;
   }
 
-  const res = NextResponse.next({ request: { headers: reqHeaders } });
+  const res = NextResponse.next();
   res.headers.set("Content-Security-Policy", csp);
   res.headers.set("Cross-Origin-Opener-Policy", "same-origin");
   res.headers.set("x-request-id", req.headers.get("x-request-id") ?? crypto.randomUUID());
@@ -74,5 +100,7 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|webp|ico|txt|xml)).*)"],
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|webp|ico|txt|xml)).*)",
+  ],
 };

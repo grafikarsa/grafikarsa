@@ -155,6 +155,22 @@
 - [ ] **P2-14** Sliding-window rate limit tidak ada (fixed window `IncrWithExpire`) — PRD §6.2
   - Status: ⬜
 - [ ] **P2-15** `clock` injectable tidak ada (`time.Now()` langsung di 7 file handler) — PRD §13.2
+- [x] **P2-17** ~~CSP memakai nonce + strict-dynamic memblokir semua script~~ → **SUDAH DIPERBAIKI** (commit `62a99a6`)
+  - Next.js hanya menyuntik nonce ke halaman yang di-render DINAMIS; halaman hasil prerender (landing, /login, /feed, halaman ber-`revalidate`) tidak punya nonce sama sekali → 26 dari 26 `<script>` diblokir → aplikasi tidak ter-hydrate, form login tak pernah muncul
+  - Fix: CSP tanpa nonce (`script-src 'self' 'unsafe-inline'`), mengikuti panduan resmi Next.js untuk aplikasi yang tidak butuh nonce
+- [x] **P2-18** ~~Cookie `__Host-` tanpa flag Secure ditolak browser → sesi tak pernah tersimpan di dev~~ → **SUDAH DIPERBAIKI** (commit `5c9ba48`)
+  - Prefix `__Host-` hanya sah bila cookie Secure; dev berjalan di http → login selalu gagal
+  - Fix: prefix hanya saat Secure (produksi); di dev pakai nama polos; middleware FE menerima keduanya
+- [x] **P2-19** ~~Halaman `/me` selalu redirect ke login~~ → **SUDAH DIPERBAIKI** (commit `23376ee`)
+  - Server component meneruskan cookie, tapi API hanya menerima Bearer token → selalu 401
+  - Fix: `/me` jadi client component memakai `apiGet("v1/me")`
+- [x] **P2-20** ~~Path parameter tidak dideklarasikan + status code tak lengkap di OpenAPI~~ → **SUDAH DIPERBAIKI** (commit `4c9aac7`)
+  - 16 "Schema Error: Path parameter 'id' is not defined" + status (400/404/409/201/403) tak terdokumentasi
+- [ ] **P2-16** Empat check schemathesis dikecualikan dari contract test: `status_code_conformance`, `missing_required_header`, `unsupported_method`, `content_type_conformance`
+  - Semua complained **kelengkapan dokumentasi spec**, bukan pelanggaran kontrak: 404 untuk resource yang belum ada, 405 untuk method yang tidak di-deklarasikan, 401-vs-404 untuk endpoint publik berpath param
+  - Menutupnya butuh dokumentasi status per-endpoint (generator tidak tahu perilaku tiap handler)
+  - Check yang **tetap diuji** (semua lulus): `response_schema_conformance`, `response_headers_conformance`, `not_a_server_error`, `negative_data_rejection`, `use_after_free`
+  - Ditemukan saat menyiapkan job CI contract test (Sprint 3)
   - Status: ⬜
 
 ---
@@ -166,8 +182,10 @@
 - [x] **P3-03** Integration test dengan Postgres asli (bukan SQLite — skema v2 pakai citext/pg_trgm/tsvector/partial unique index)
   - Helper `internal/dbtest` (skip graceful tanpa `TEST_DATABASE_URL`) + test query media & permission expiry
   - ✅ Sprint 2 (commit `9f40b1e`) · CI: job `api` menyalakan service postgres + jalankan migrasi (commit `ci(api): jalankan integration test dengan Postgres service`)
-- [ ] **P3-04** E2E Playwright tidak dikonfigurasi (hanya transitif di lockfile) — PRD §14.3
-- [ ] **P3-05** A11y test (axe, WCAG AA) tidak ada — PRD §14.3
+- [x] **P3-04** E2E Playwright — `apps/web/e2e/flow.spec.ts` (8 test: alur login, /me, halaman publik, admin/dashboard) + `playwright.config.ts` + job CI `e2e` yang menjalankan aplikasi **persis seperti produksi** (build standalone + `node server.js`)
+  - ✅ Sprint 3 (commit `3db02d5`) — **menemukan 2 bug produksi**: CSP memblokir semua script, dan `/me` selalu redirect ke login
+- [x] **P3-05** A11y test (axe, WCAG AA) — audit pada landing, login, feed; serious/critical memblokir build
+  - ✅ Sprint 3 (commit `3db02d5`) — menemukan halaman tanpa `<h1>` (/login, /feed, /admin/dashboard) → diperbaiki di `93d9af9`
 - [ ] **P3-06** Contract test (schemathesis) tidak masuk CI — PRD §14.3
 - [ ] **P3-07** Load test (k6) tidak masuk CI — PRD §14.3, §18
 - [ ] **P3-08** Coverage test FE tipis (1 file: `block-form.test.ts`) — PRD §14.3

@@ -43,10 +43,14 @@ export default function PromotionPage() {
 
   async function doPreview() {
     try {
-      const r = await apiSend<{ id: string; preview: Record<string, unknown> }>("v1/admin/promotion/jobs/preview", "POST", {
-        from_year_id: from,
-        to_year_id: to,
-      });
+      const r = await apiSend<{ id: string; preview: Record<string, unknown> }>(
+        "v1/admin/promotion/jobs/preview",
+        "POST",
+        {
+          from_year_id: from,
+          to_year_id: to,
+        },
+      );
       setJobId(r.id);
       setPreview(r.preview);
     } catch (err) {
@@ -89,19 +93,33 @@ export default function PromotionPage() {
           <div className="grid gap-2">
             <Label>Langkah 1 — Pilih tahun</Label>
             <div className="flex gap-2">
-              <select value={from} onChange={(e) => setFrom(e.target.value)} className="border rounded p-2">
+              <select
+                value={from}
+                onChange={(e) => setFrom(e.target.value)}
+                className="border rounded p-2"
+              >
                 <option value="">Dari...</option>
                 {years.map((y) => (
-                  <option key={y.id} value={y.id}>{y.start_year} {y.is_active && "(aktif)"}</option>
+                  <option key={y.id} value={y.id}>
+                    {y.start_year} {y.is_active && "(aktif)"}
+                  </option>
                 ))}
               </select>
-              <select value={to} onChange={(e) => setTo(e.target.value)} className="border rounded p-2">
+              <select
+                value={to}
+                onChange={(e) => setTo(e.target.value)}
+                className="border rounded p-2"
+              >
                 <option value="">Ke...</option>
                 {years.map((y) => (
-                  <option key={y.id} value={y.id}>{y.start_year}</option>
+                  <option key={y.id} value={y.id}>
+                    {y.start_year}
+                  </option>
                 ))}
               </select>
-              <Button onClick={doPreview} disabled={!from || !to}>Preview</Button>
+              <Button onClick={doPreview} disabled={!from || !to}>
+                Preview
+              </Button>
             </div>
           </div>
           {preview && (
@@ -111,10 +129,9 @@ export default function PromotionPage() {
                 <p>
                   Total siswa: <strong>{(preview as { total?: number }).total ?? 0}</strong> · naik:{" "}
                   <strong>
-                    {Object.values((preview as { naik?: Record<string, number> }).naik ?? {}).reduce(
-                      (a, b) => a + Number(b),
-                      0,
-                    )}
+                    {Object.values(
+                      (preview as { naik?: Record<string, number> }).naik ?? {},
+                    ).reduce((a, b) => a + Number(b), 0)}
                   </strong>{" "}
                   · lulus: <strong>{(preview as { lulus?: number }).lulus ?? 0}</strong>
                 </p>
@@ -131,7 +148,8 @@ export default function PromotionPage() {
               <div className="flex flex-col gap-2 rounded border p-3">
                 <Label>Pengecualian (tinggal kelas / pindah)</Label>
                 <p className="text-muted-foreground text-xs">
-                  Siswa pada daftar ini tidak naik: <strong>tinggal kelas</strong> tetap di grade & rombel yang sama,
+                  Siswa pada daftar ini tidak naik: <strong>tinggal kelas</strong> tetap di grade &
+                  rombel yang sama,
                   <strong> pindah</strong> ditandai transferred (bukan alumni).
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
@@ -140,7 +158,10 @@ export default function PromotionPage() {
                     onValueChange={setExcUser}
                     placeholder="Pilih siswa..."
                     className="w-56"
-                    options={users.map((u) => ({ value: u.id, label: `@${u.username} — ${u.name}` }))}
+                    options={users.map((u) => ({
+                      value: u.id,
+                      label: `@${u.username} — ${u.name}`,
+                    }))}
                   />
                   <SelectField
                     value={excAction}
@@ -156,7 +177,10 @@ export default function PromotionPage() {
                     size="sm"
                     onClick={() => {
                       if (!excUser) return;
-                      setExceptions((prev) => [...prev.filter((e) => e.user_id !== excUser), { user_id: excUser, action: excAction }]);
+                      setExceptions((prev) => [
+                        ...prev.filter((e) => e.user_id !== excUser),
+                        { user_id: excUser, action: excAction },
+                      ]);
                       setExcUser("");
                     }}
                   >
@@ -174,14 +198,18 @@ export default function PromotionPage() {
                         variant="ghost"
                         size="sm"
                         className="ml-auto"
-                        onClick={() => setExceptions((prev) => prev.filter((x) => x.user_id !== e.user_id))}
+                        onClick={() =>
+                          setExceptions((prev) => prev.filter((x) => x.user_id !== e.user_id))
+                        }
                       >
                         Hapus
                       </Button>
                     </div>
                   );
                 })}
-                {exceptions.length === 0 && <p className="text-muted-foreground text-xs">Belum ada pengecualian.</p>}
+                {exceptions.length === 0 && (
+                  <p className="text-muted-foreground text-xs">Belum ada pengecualian.</p>
+                )}
               </div>
 
               <Button variant="outline" onClick={approve}>
@@ -189,7 +217,11 @@ export default function PromotionPage() {
               </Button>
               <Label>Langkah 3 — Ketik tahun tujuan untuk eksekusi</Label>
               <div className="flex gap-2">
-                <Input value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="cth. 2026" />
+                <Input
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  placeholder="cth. 2026"
+                />
                 <Button variant="destructive" onClick={execute}>
                   Eksekusi
                 </Button>
@@ -199,7 +231,9 @@ export default function PromotionPage() {
           <div>
             <Label>Riwayat jobs</Label>
             {jobs.map((j) => (
-              <p key={j.id} className="text-sm">{j.id.slice(0, 8)} — {j.status}</p>
+              <p key={j.id} className="text-sm">
+                {j.id.slice(0, 8)} — {j.status}
+              </p>
             ))}
           </div>
         </CardContent>

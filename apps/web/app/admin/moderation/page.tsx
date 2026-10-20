@@ -12,7 +12,10 @@ import { apiGet, apiSend } from "@/lib/api";
 
 type Pending = { id: string; title: string; slug: string; username: string; submitted_at: string };
 
-function sla(submitted: string): { label: string; variant: "default" | "destructive" | "secondary" } {
+function sla(submitted: string): {
+  label: string;
+  variant: "default" | "destructive" | "secondary";
+} {
   const hours = (Date.now() - new Date(submitted).getTime()) / 36e5;
   if (hours > 72) return { label: "Lewat SLA", variant: "destructive" };
   if (hours > 48) return { label: "Hampir SLA", variant: "secondary" };
@@ -87,7 +90,11 @@ export default function ModerationPage() {
         <CardContent className="flex flex-col gap-4">
           <div className="grid gap-2">
             <Label>Catatan (wajib untuk tolak/perbaikan)</Label>
-            <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Catatan review..." />
+            <Input
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Catatan review..."
+            />
           </div>
           {selected.size > 0 && (
             <Button onClick={bulkApprove}>Setujui {selected.size} terpilih</Button>
@@ -99,11 +106,19 @@ export default function ModerationPage() {
                 <p className="font-semibold">{it.title}</p>
                 <Badge variant={sla(it.submitted_at).variant}>{sla(it.submitted_at).label}</Badge>
               </div>
-              <p className="text-muted-foreground text-xs">@{it.username} · {it.submitted_at}</p>
+              <p className="text-muted-foreground text-xs">
+                @{it.username} · {it.submitted_at}
+              </p>
               <div className="flex gap-2">
-                <Button size="sm" onClick={() => act(it.id, "approve")}>Setujui</Button>
-                <Button size="sm" variant="outline" onClick={() => act(it.id, "request-changes")}>Minta perbaikan</Button>
-                <Button size="sm" variant="destructive" onClick={() => act(it.id, "reject")}>Tolak</Button>
+                <Button size="sm" onClick={() => act(it.id, "approve")}>
+                  Setujui
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => act(it.id, "request-changes")}>
+                  Minta perbaikan
+                </Button>
+                <Button size="sm" variant="destructive" onClick={() => act(it.id, "reject")}>
+                  Tolak
+                </Button>
               </div>
             </div>
           ))}

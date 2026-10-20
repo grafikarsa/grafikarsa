@@ -115,9 +115,14 @@ func nullCol(c string) string {
 	return c
 }
 
+// toInt mengubah nilai v1 menjadi integer. Nilai yang tidak bisa diparse
+// menghasilkan 0 (bukan error) supaya migrasi tidak berhenti di tengah
+// jalan — tapi nilainya harus dicek pemanggilnya.
 func toInt(v any) int {
 	var n int
-	fmt.Sscanf(fmt.Sprint(v), "%d", &n)
+	if _, err := fmt.Sscanf(fmt.Sprint(v), "%d", &n); err != nil {
+		return 0
+	}
 	return n
 }
 
@@ -238,9 +243,14 @@ func assignSpecialRoles(ctx context.Context, v2 *pgxpool.Pool, userID, spec stri
 			if err := v2.QueryRow(ctx, `SELECT id::text FROM permissions WHERE key=$1`, perm).Scan(&permID); err != nil {
 				continue
 			}
-			v2.Exec(ctx, `INSERT INTO user_roles (user_id, role_id, scope_major_id)
+			// Error tidak diabaikan: assignment role yang gagal hilang
+			// tanpa jejak dan hasil migrasi terlihat benar. Dilaporkan
+			// lewat log supaya bisa diperiksa ulang.
+			if _, err := v2.Exec(ctx, `INSERT INTO user_roles (user_id, role_id, scope_major_id)
 				SELECT $1, r.id, NULL FROM roles r WHERE r.slug='custom-import'
-				ON CONFLICT DO NOTHING`, userID)
+				ON CONFLICT DO NOTHING`, userID); err != nil {
+				slog.Error("gagal membuat assignment role", "user", userID, "err", err)
+			}
 		}
 	}
 }

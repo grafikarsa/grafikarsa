@@ -201,7 +201,12 @@ func migrateAssessments(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, 
 		}
 		uid, _ := mappedID(ctx, v2, "users", fmt.Sprint(u), "users")
 		var score float64
-		fmt.Sscanf(fmt.Sprint(sc), "%f", &score)
+		if _, err := fmt.Sscanf(fmt.Sprint(sc), "%f", &score); err != nil {
+			// Nilai assessment yang tidak bisa diparse dianggap 0 supaya
+			// migrasi tetap lanjut; assessment tak ada di v1 jadi ini
+			// hanya memengaruhi kolom yang memang kosong.
+			score = 0
+		}
 		if !o.dryRun {
 			var nid string
 			err := v2.QueryRow(ctx, `INSERT INTO assessments (portfolio_id, assessor_id, total_score)

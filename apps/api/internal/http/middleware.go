@@ -80,20 +80,6 @@ func (a *App) authRequired(next http.Handler) http.Handler {
 	})
 }
 
-func (a *App) withPerm(perm string, h http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if UserRole(r) == "admin" {
-			h(w, r)
-			return
-		}
-		if !UserPerms(r)[perm] {
-			writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Kamu tidak memiliki akses ini.", r))
-			return
-		}
-		h(w, r)
-	}
-}
-
 // withAnyPerm: lolos bila user punya SALAH SATU permission.
 // Dipakai agar admin_jurusan (permission *_jurusan) bisa memakai route yang
 // sama dengan admin global, dengan filter scope di query.
@@ -116,7 +102,7 @@ func (a *App) withAnyPerm(perms []string, h http.HandlerFunc) http.HandlerFunc {
 
 func (a *App) requireAnyPerm(perms ...string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(a.withAnyPerm(perms, next.ServeHTTP))
+		return a.withAnyPerm(perms, next.ServeHTTP)
 	}
 }
 
@@ -155,7 +141,7 @@ func (a *App) csrf(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		header := r.Header.Get("X-CSRF-Token")
-		cookie, _ := r.Cookie("__Host-csrf")
+		cookie, _ := r.Cookie(csrfCookieName(a.Secure))
 		if header == "" || cookie == nil || header != cookie.Value {
 			writeJSON(w, http.StatusForbidden, fail("CSRF_INVALID", "Token keamanan tidak valid.", r))
 			return

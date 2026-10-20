@@ -20,7 +20,16 @@ async function api<T>(path: string): Promise<T | null> {
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3020";
-  const staticRoutes = ["", "/feed", "/portfolios", "/leaderboards", "/users", "/changelog", "/feedback", "/search"];
+  const staticRoutes = [
+    "",
+    "/feed",
+    "/portfolios",
+    "/leaderboards",
+    "/users",
+    "/changelog",
+    "/feedback",
+    "/search",
+  ];
   const entries: MetadataRoute.Sitemap = staticRoutes.map((path) => ({
     url: `${appUrl}${path}`,
     lastModified: new Date(),
@@ -36,14 +45,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   for (const w of works ?? []) {
     if (w.username && w.slug) {
-      entries.push({ url: `${appUrl}/${w.username}/${w.slug}`, changeFrequency: "monthly", priority: 0.6 });
+      entries.push({
+        url: `${appUrl}/${w.username}/${w.slug}`,
+        changeFrequency: "monthly",
+        priority: 0.6,
+      });
     }
   }
   for (const u of users ?? []) {
-    if (u.username) entries.push({ url: `${appUrl}/${u.username}`, changeFrequency: "weekly", priority: 0.5 });
+    if (u.username)
+      entries.push({ url: `${appUrl}/${u.username}`, changeFrequency: "weekly", priority: 0.5 });
   }
   for (const c of changelogs ?? []) {
-    if (c.version) entries.push({ url: `${appUrl}/changelog/${c.version}`, changeFrequency: "monthly", priority: 0.5 });
+    if (c.version)
+      entries.push({
+        url: `${appUrl}/changelog/${c.version}`,
+        changeFrequency: "monthly",
+        priority: 0.5,
+      });
   }
 
   return entries;

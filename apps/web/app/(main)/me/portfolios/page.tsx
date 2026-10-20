@@ -50,9 +50,16 @@ export default function MyPortfoliosPage() {
           <div className="flex gap-2">
             <div className="grid flex-1 gap-2">
               <Label htmlFor="title">Judul baru</Label>
-              <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Judul portfolio..." />
+              <Input
+                id="title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Judul portfolio..."
+              />
             </div>
-            <Button className="self-end" onClick={create}>Buat draft</Button>
+            <Button className="self-end" onClick={create}>
+              Buat draft
+            </Button>
           </div>
           {items.map((it) => (
             <div key={it.id} className="flex items-center justify-between border-b py-2">
@@ -60,7 +67,13 @@ export default function MyPortfoliosPage() {
                 <p className="font-semibold">{it.title}</p>
                 <p className="text-muted-foreground text-xs">{it.status}</p>
               </div>
-              <Button variant="outline" size="sm" onClick={() => router.push(`/me/portfolios/${it.id}/edit`)}>Edit</Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push(`/me/portfolios/${it.id}/edit`)}
+              >
+                Edit
+              </Button>
             </div>
           ))}
         </CardContent>

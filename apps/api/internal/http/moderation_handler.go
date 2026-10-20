@@ -116,9 +116,10 @@ func (a *App) moderate(w http.ResponseWriter, r *http.Request, status string, ne
 		ID: p.ID, Status: status, ReviewNote: req.Note, ReviewedBy: mustUUID(UserID(r)),
 	})
 	notifType := "portfolio_approved"
-	if status == "rejected" {
+	switch status {
+	case "rejected":
 		notifType = "portfolio_rejected"
-	} else if status == "changes_requested" {
+	case "changes_requested":
 		notifType = "portfolio_changes_requested"
 	}
 	_, _ = a.Q.EnqueueOutbox(r.Context(), repo.EnqueueOutboxParams{

@@ -667,7 +667,7 @@ func renderPdfPreview(ctx context.Context, q *repo.Queries, st *storage.Storage,
 	outPrefix := filepath.Join(tmpDir, "page")
 	cmd := exec.CommandContext(ctx, "pdftoppm", "-jpeg", "-r", "80", "-f", "1", "-l", "1", pdfPath, outPrefix)
 	if out, err := cmd.CombinedOutput(); err != nil {
-		return pgtype.UUID{}, fmt.Errorf("pdftoppm: %v (%s)", err, strings.TrimSpace(string(out)))
+		return pgtype.UUID{}, fmt.Errorf("pdftoppm: %w (%s)", err, strings.TrimSpace(string(out)))
 	}
 	matches, _ := filepath.Glob(outPrefix + "*.jpg")
 	if len(matches) == 0 {

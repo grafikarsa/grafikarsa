@@ -51,7 +51,12 @@ function CatalogInner() {
         </p>
       )}
       <form action="/portfolios" className="mb-4 flex flex-wrap gap-2">
-        <Input name="search" placeholder="Cari judul atau pembuat..." defaultValue={search} aria-label="Cari portfolio" />
+        <Input
+          name="search"
+          placeholder="Cari judul atau pembuat..."
+          defaultValue={search}
+          aria-label="Cari portfolio"
+        />
         {user && <input type="hidden" name="user" value={user} />}
         {tag && <input type="hidden" name="tag" value={tag} />}
         <select

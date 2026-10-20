@@ -7,7 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { apiGet, apiSend } from "@/lib/api";
 
 type Tag = { id: string; slug: string; name: string };
@@ -20,7 +27,10 @@ export default function TagsPage() {
   const [editName, setEditName] = useState("");
   const [editSlug, setEditSlug] = useState("");
 
-  const list = useQuery({ queryKey: ["admin-tags"], queryFn: () => apiGet<Tag[]>("v1/admin/tags") });
+  const list = useQuery({
+    queryKey: ["admin-tags"],
+    queryFn: () => apiGet<Tag[]>("v1/admin/tags"),
+  });
 
   const create = useMutation({
     mutationFn: () => apiSend("v1/admin/tags", "POST", { name, slug }),
@@ -34,7 +44,8 @@ export default function TagsPage() {
   });
 
   const update = useMutation({
-    mutationFn: (id: string) => apiSend(`v1/admin/tags/${id}`, "PATCH", { name: editName, slug: editSlug }),
+    mutationFn: (id: string) =>
+      apiSend(`v1/admin/tags/${id}`, "PATCH", { name: editName, slug: editSlug }),
     onSuccess: () => {
       toast.success("Tag diperbarui.");
       setEditID(null);
@@ -49,7 +60,8 @@ export default function TagsPage() {
       toast.success("Tag dihapus.");
       qc.invalidateQueries({ queryKey: ["admin-tags"] });
     },
-    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Gagal menghapus (mungkin masih dipakai)."),
+    onError: (e: unknown) =>
+      toast.error(e instanceof Error ? e.message : "Gagal menghapus (mungkin masih dipakai)."),
   });
 
   const items = Array.isArray(list.data) ? list.data : [];
@@ -88,13 +100,25 @@ export default function TagsPage() {
                 editID === t.id ? (
                   <TableRow key={t.id}>
                     <TableCell>
-                      <Input value={editName} onChange={(e) => setEditName(e.target.value)} aria-label="Nama tag" />
+                      <Input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        aria-label="Nama tag"
+                      />
                     </TableCell>
                     <TableCell>
-                      <Input value={editSlug} onChange={(e) => setEditSlug(e.target.value)} aria-label="Slug tag" />
+                      <Input
+                        value={editSlug}
+                        onChange={(e) => setEditSlug(e.target.value)}
+                        aria-label="Slug tag"
+                      />
                     </TableCell>
                     <TableCell className="flex justify-end gap-2">
-                      <Button size="sm" onClick={() => update.mutate(t.id)} disabled={update.isPending}>
+                      <Button
+                        size="sm"
+                        onClick={() => update.mutate(t.id)}
+                        disabled={update.isPending}
+                      >
                         Simpan
                       </Button>
                       <Button size="sm" variant="ghost" onClick={() => setEditID(null)}>
@@ -122,7 +146,11 @@ export default function TagsPage() {
                         size="sm"
                         variant="destructive"
                         onClick={() => {
-                          if (confirm(`Hapus tag "${t.name}"? Tag yang masih dipakai portfolio akan ditolak.`)) {
+                          if (
+                            confirm(
+                              `Hapus tag "${t.name}"? Tag yang masih dipakai portfolio akan ditolak.`,
+                            )
+                          ) {
                             remove.mutate(t.id);
                           }
                         }}

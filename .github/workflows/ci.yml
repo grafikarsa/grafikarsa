@@ -39,6 +39,16 @@ jobs:
       - name: go vet
         working-directory: apps/api
         run: go vet ./...
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          # v2.15.0 dibangun dengan Go 1.26. Versi yang lebih lama (v2.5.0)
+          # dibangun dengan Go 1.25 dan menolak konfigurasi untuk proyek
+          # yang menargetkan go 1.26: "the Go language version used to build
+          # golangci-lint is lower than the targeted Go version".
+          version: v2.15.0
+          working-directory: apps/api
+          args: --timeout 10m
       - name: Siapkan skema database test
         working-directory: apps/api
         env:
@@ -89,6 +99,9 @@ jobs:
         working-directory: apps/web
       - run: pnpm exec eslint .
         working-directory: apps/web
+      - name: Prettier (format check)
+        working-directory: apps/web
+        run: pnpm exec prettier --check .
       - name: Tipe kontrak FE tidak stale
         working-directory: apps/web
         run: |
@@ -178,6 +191,174 @@ jobs:
             exit 1
           fi
           echo "gitleaks self-test OK: rules aktif dan secret terdeteksi"
+
+  contract:
+    # Uji kontrak (schemathesis) + uji beban (k6) terhadap API yang hidup.
+    # Dijalankan pada push/PR ke main agar regresi kontrak atau performa
+    # terdeteksi sebelum deploy, bukan sesudahnya.
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: grafikarsa
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: grafikarsa_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U grafikarsa"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: "5432"
+      DB_USER: grafikarsa
+      DB_PASSWORD: test
+      DB_NAME: grafikarsa_test
+      ADMIN_SEED_EMAIL: admin@grafikarsa.test
+      ADMIN_SEED_PASSWORD: AdminContractTest123
+      JWT_ACCESS_SECRET: ci-contract-access-secret-value
+      JWT_REFRESH_SECRET: ci-contract-refresh-secret-value
+      CSRF_SECRET: ci-contract-csrf-secret-value
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache-dependency-path: apps/api/go.sum
+      - name: Siapkan skema + seed
+        working-directory: apps/api
+        run: |
+          go run ./cmd/tools/migrate up
+          go run ./cmd/tools/seed
+      - name: Jalankan API
+        working-directory: apps/api
+        run: |
+          go build -o /tmp/api ./cmd/api
+          nohup /tmp/api > /tmp/api.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:8080/health >/dev/null; then
+              echo "API siap"; break
+            fi
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:8080/health || { echo "API gagal start"; cat /tmp/api.log; exit 1; }
+      - name: Pasang schemathesis
+        run: pipx install schemathesis
+      - name: Contract test (schemathesis) + load test (k6)
+        env:
+          # Username-nya "admin" (seed membuat username tetap admin, email
+          # hanya untuk login). Salah username akan memicu lockout
+          # brute-force setelah 10 percobaan dan seluruh skenario gagal.
+          USER: admin
+          PASS: AdminContractTest123
+        run: ./tools/contract-test.sh http://127.0.0.1:8080
+      - name: Log API
+        if: failure()
+        run: cat /tmp/api.log
+
+  e2e:
+    # E2E Playwright + audit a11y axe (PRD §14.3).
+    #
+    # Job ini menjalankan aplikasi PERSIS seperti cara prodisinya: Next.js
+    # build standalone + node server.js. Menjalankan `next start` di atas build
+    # standalone tidak menyajikan file static dengan benar, dan gejalanya
+    # (chunk 400 -> hydration gagal) sangat mirip dengan bug CSP sungguhan —
+    # jadi test di setup yang salah hanya menghasilkan kebingungan.
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: grafikarsa
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: grafikarsa_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U grafikarsa"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: "5432"
+      DB_USER: grafikarsa
+      DB_PASSWORD: test
+      DB_NAME: grafikarsa_test
+      ADMIN_SEED_EMAIL: admin@grafikarsa.test
+      ADMIN_SEED_PASSWORD: AdminContractTest123
+      JWT_ACCESS_SECRET: ci-e2e-access-secret-value
+      JWT_REFRESH_SECRET: ci-e2e-refresh-secret-value
+      CSRF_SECRET: ci-e2e-csrf-secret-value
+      INTERNAL_API_URL: http://127.0.0.1:8080/v1
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache-dependency-path: apps/api/go.sum
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+      - name: Install dependensi
+        working-directory: apps/web
+        run: pnpm install --frozen-lockfile
+      - name: Siapkan skema + seed
+        working-directory: apps/api
+        run: |
+          go run ./cmd/tools/migrate up
+          go run ./cmd/tools/seed
+      - name: Build web (standalone)
+        working-directory: apps/web
+        run: |
+          pnpm build
+          # Samakan dengan Dockerfile: server standalone butuh folder static
+          # di dalam dirinya sendiri.
+          mkdir -p .next/standalone/.next
+          cp -r .next/static .next/standalone/.next/static
+      - name: Jalankan API
+        working-directory: apps/api
+        run: |
+          go build -o /tmp/api ./cmd/api
+          nohup /tmp/api > /tmp/api.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:8080/health >/dev/null && break
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:8080/health || { echo "API gagal start"; cat /tmp/api.log; exit 1; }
+      - name: Jalankan web (standalone)
+        working-directory: apps/web/.next/standalone
+        run: |
+          nohup node server.js > /tmp/web.log 2>&1 &
+          for i in $(seq 1 40); do
+            curl -sf http://127.0.0.1:3000/ >/dev/null && break
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:3000/ >/dev/null || { echo "Web gagal start"; cat /tmp/web.log; exit 1; }
+      - name: Pasang browser Playwright
+        working-directory: apps/web
+        run: pnpm exec playwright install --with-deps chromium
+      - name: E2E Playwright + a11y axe
+        working-directory: apps/web
+        env:
+          E2E_USER: admin
+          E2E_PASS: AdminContractTest123
+          E2E_BASE_URL: http://127.0.0.1:3000
+        run: pnpm exec playwright test
+      - name: Log API & web
+        if: failure()
+        run: |
+          cat /tmp/api.log || true
+          cat /tmp/web.log || true
 
   compose-validate:
     runs-on: ubuntu-latest

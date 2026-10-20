@@ -225,3 +225,8 @@ func contains(s []string, v string) bool {
 	}
 	return false
 }
+
+// toPgTS mengubah time.Time menjadi pgtype.Timestamptz untuk parameter query.
+func toPgTS(t time.Time) pgtype.Timestamptz {
+	return pgtype.Timestamptz{Time: t, Valid: true}
+}

@@ -63,7 +63,11 @@ export default function SettingsPage() {
             {user && <span className="text-muted-foreground"> (@{user.username})</span>}
           </p>
           {LINKS.map((l) => (
-            <Link key={l.href} href={l.href} className={`text-sm hover:underline ${pathname === l.href ? "font-semibold" : ""}`}>
+            <Link
+              key={l.href}
+              href={l.href}
+              className={`text-sm hover:underline ${pathname === l.href ? "font-semibold" : ""}`}
+            >
               {l.label}
             </Link>
           ))}
