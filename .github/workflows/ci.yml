@@ -42,7 +42,11 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.5.0
+          # v2.15.0 dibangun dengan Go 1.26. Versi yang lebih lama (v2.5.0)
+          # dibangun dengan Go 1.25 dan menolak konfigurasi untuk proyek
+          # yang menargetkan go 1.26: "the Go language version used to build
+          # golangci-lint is lower than the targeted Go version".
+          version: v2.15.0
           working-directory: apps/api
           args: --timeout 10m
       - name: Siapkan skema database test
