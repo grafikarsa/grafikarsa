@@ -8,3 +8,8 @@ node_modules
 out
 coverage
 pnpm-lock.yaml
+
+# artefak Playwright (E2E): trace, screenshot, laporan, error-context
+test-results
+playwright-report
+blob-report
