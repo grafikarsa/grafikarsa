@@ -226,8 +226,10 @@
   - ✅ Sprint 3 (commit `1643b5f`) — sekaligus memperbaiki `tools/schemathesis.sh` yang rusak (flag v3 → v4). Hasil: 1329 test case lulus
 - [x] **P3-07** Load test (k6) di CI — bagian dari job `contract` (k6 smoke: 10 VU publik + 5 VU terautentikasi, 30 detik)
   - ✅ Sprint 3 (commit `1643b5f`) — sekaligus memperbaiki `tools/k6/smoke.js` yang rusak: threshold `p95<800` tidak valid di k6 v2 (jadi `p(95)<800`), dan login di dalam loop memicu lockout brute-force (sekarang sekali di `setup()`)
-- [ ] **P3-08** Coverage test FE tipis (1 file: `block-form.test.ts`) — PRD §14.3
-  - Prioritas: `lib/api.ts` (single-flight refresh), `block-logic.ts`, `deepLink`
+- [x] **P3-08** Coverage test FE (sebelumnya 1 file: `block-form.test.ts`) — PRD §14.3
+  - ✅ Sprint 3 (commit `15a21f3`) — 2 file → **5 file, 21 test → 43 test**
+  - Ditambah: `lib/api.test.ts` (alur 401 → refresh → ulangi request, header auth, error server, `apiGetWithMeta`), `lib/image-loader.test.ts` (pembulatan lebar ke varian 320/800), `lib/notifications.test.ts` (pemetaan notifikasi → halaman tujuan, PRD §10)
+  - Alur refresh token adalah bagian FE yang paling rawan gagal diam-diam: kalau tidak bekerja, seluruh aplikasi yang butuh auth ikut mati tanpa pesan yang jelas
 - [x] **P3-09** Test Go domain kritis: rotasi sesi, RBAC scope, promotion, outbox, upload — PRD §14.3
   - ✅ Sprint 3 (commit `1c12da6`) — `internal/repo/domain_integration_test.go`: rotasi refresh token (token lama dicabut + menunjuk penerus), `RevokeFamily` (seluruh rantai dicabut, keluarga lain tak tersentuh), siklus outbox (claim/reap/retry sampai `failed`), upsert minat
   - Semua terhadap **Postgres sungguhan** (bukan SQLite) — skema v2 pakai `citext`, `pg_trgm`, generated column `tsvector`, unique partial index
