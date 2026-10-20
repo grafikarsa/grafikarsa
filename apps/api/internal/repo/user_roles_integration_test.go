@@ -12,29 +12,47 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// seedRole membuat role.
+// seedRole membuat role khusus test.
+//
+// Slug-nya unik per eksekusi dan role-nya dihapus setelah test selesai.
+//
+// Penting: test TIDAK boleh meng-truncate tabel `roles` atau `permissions`
+// — keduanya berisi role & permission SISTEM yang dibuat migrasi. Menghapus
+// membuat seluruh aplikasi kehilangan hak akses: pada database dev lokal
+// efeknya langsung terasa (siswa tidak lagi bisa membuat karya), dan di CI
+// kebetulan tidak ketahuan karena database selalu dibuat ulang.
+//
+// Test ini hanya butuh role milik sendiri, jadi cukup membuat & membersihkannya.
 func seedRole(t *testing.T, pool *pgxpool.Pool, slug string) uuid.UUID {
 	t.Helper()
 	ctx := context.Background()
 	id := uuid.New()
+	unique := slug + "_" + id.String()[:8]
 	_, err := pool.Exec(ctx,
 		`INSERT INTO roles (id, slug, name, scope_type, is_system) VALUES ($1, $2, $3, 'jurusan', false)`,
-		id, slug, slug)
+		id, unique, unique)
 	if err != nil {
-		t.Fatalf("seed role %s: %v", slug, err)
+		t.Fatalf("seed role %s: %v", unique, err)
 	}
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(), `DELETE FROM roles WHERE id = $1`, id)
+	})
 	return id
 }
 
-// seedMajor membuat jurusan.
+// seedMajor membuat jurusan khusus test, lalu membersihkannya.
 func seedMajor(t *testing.T, pool *pgxpool.Pool, code string) uuid.UUID {
 	t.Helper()
 	ctx := context.Background()
 	id := uuid.New()
-	_, err := pool.Exec(ctx, `INSERT INTO majors (id, code, name) VALUES ($1, $2, $3)`, id, code, code)
+	unique := code + "-" + id.String()[:8]
+	_, err := pool.Exec(ctx, `INSERT INTO majors (id, code, name) VALUES ($1, $2, $3)`, id, unique, unique)
 	if err != nil {
-		t.Fatalf("seed major %s: %v", code, err)
+		t.Fatalf("seed major %s: %v", unique, err)
 	}
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(), `DELETE FROM majors WHERE id = $1`, id)
+	})
 	return id
 }
 
@@ -69,7 +87,9 @@ func scopeNull() pgtype.UUID { return pgtype.UUID{} }
 //     index, jadi assignment global tidak bisa terduplikasi.
 func TestAssignUserRoleScopeSemantics(t *testing.T) {
 	pool := dbtest.Pool(t)
-	dbtest.Truncate(t, pool, "user_roles", "role_permissions", "permissions", "roles", "users", "majors")
+	// Hanya tabel yang dipakai test yang dikosongkan. `roles` dan
+	// `permissions` TIDAK boleh disentuh: isinya role & permission sistem.
+	dbtest.Truncate(t, pool, "user_roles", "users", "majors")
 	q := repo.New(pool)
 	ctx := context.Background()
 
@@ -128,7 +148,9 @@ func TestAssignUserRoleScopeSemantics(t *testing.T) {
 // terduplikasi (unique index memakai NULLS NOT DISTINCT).
 func TestAssignUserRoleGlobalScopeUnik(t *testing.T) {
 	pool := dbtest.Pool(t)
-	dbtest.Truncate(t, pool, "user_roles", "role_permissions", "permissions", "roles", "users", "majors")
+	// Hanya tabel yang dipakai test yang dikosongkan. `roles` dan
+	// `permissions` TIDAK boleh disentuh: isinya role & permission sistem.
+	dbtest.Truncate(t, pool, "user_roles", "users", "majors")
 	q := repo.New(pool)
 	ctx := context.Background()
 
