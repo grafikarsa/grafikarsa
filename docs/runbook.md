@@ -160,6 +160,79 @@ Setelah mirror selesai:
 go run ./cmd/tools/migrate-old --v1 ... --v2 ... --execute --migrate-media
 ```
 
+## Migrasi DB v1 → v2 di server (go-live)
+
+Skema v1 dan v2 **berbeda total** — jadi migrasi bukan "jalanin migration
+goose di atas data v1", tapi: buat DB v2 kosong → jalankan migrasi goose v2 →
+salin data dari DB v1 ke DB v2 dengan `migrate-old`.
+
+**Kendala yang menentukan bentuknya:** compose v2 memakai
+`container_name: grafikarsa-db` yang **sama** dengan stack v1 yang sedang
+jalan. Dua stack dengan nama container yang sama tidak bisa hidup
+berdampingan. Jadi v1 **dimatikan** lebih dulu, dan datanya dipulihkan dari
+dump (bukan dibaca dari container yang hidup).
+
+Semua perintah dijalankan di server (`/opt/grafikarsa`).
+
+```bash
+DC="docker compose -f docker-compose.deploy.yml"
+
+# 0. Maintenance mode v1 aktif (v1 tidak boleh menerima tulisan baru selama
+#    migrasi) — lihat bagian "Maintenance mode".
+
+# 1. Backup v1 terakhir (dipakai sebagai sumber di langkah 3).
+$DC exec -T db pg_dump -Fc -U "$DB_USER" "$DB_NAME" > "/tmp/v1-pre-migrate.dump"
+ls -la /tmp/v1-pre-migrate.dump
+
+# 2. Matikan stack v1. Volume v1 (grafikarsa_postgres_data) TIDAK dihapus —
+#    data v1 tetap utuh sebagai jaring pengaman.
+$DC down
+
+# 3. Nyalakan DB v2 (volume postgres_data, kosong) + pulihkan dump v1 ke
+#    database terpisah di container yang sama, sebagai sumber migrasi.
+$DC up -d db
+$DC exec -T db psql -U "$DB_USER" -d postgres -c "CREATE DATABASE v1_src OWNER $DB_USER;"
+$DC exec -T db pg_restore -U "$DB_USER" -d v1_src --no-owner --no-privileges \
+  < /tmp/v1-pre-migrate.dump
+
+# 4. Skema v2 (goose) di database v2.
+$DC exec -T db psql -U "$DB_USER" -d postgres -c "CREATE DATABASE $DB_NAME OWNER $DB_USER;"
+$DC run --rm --entrypoint /migrate -e DB_NAME="$DB_NAME" api up
+
+# 5. Salin data v1 -> v2. KERINGKASAN dulu (wajib):
+$DC run --rm --entrypoint /migrate-old \
+  -e DB_NAME="$DB_NAME" api \
+  --v1 "postgres://$DB_USER:$DB_PASSWORD@db:5432/v1_src?sslmode=disable" \
+  --v2 "postgres://$DB_USER:$DB_PASSWORD@db:5432/$DB_NAME?sslmode=disable" \
+  --dry-run
+#    Periksa hitungannya: users 1688 · portfolios 1723 · blocks 5939
+#    (+1031 karantina) · likes 740 · follows 4341 · comments 79
+#    · notifications 6946 · feedback 17 · skipped {}
+#    Kalau ada yang tidak cocok, JANGAN lanjut.
+$DC run --rm --entrypoint /migrate-old -e DB_NAME="$DB_NAME" api \
+  --v1 "postgres://$DB_USER:$DB_PASSWORD@db:5432/v1_src?sslmode=disable" \
+  --v2 "postgres://$DB_USER:$DB_PASSWORD@db:5432/$DB_NAME?sslmode=disable" \
+  --execute --migrate-media
+
+# 6. Verifikasi: jumlah baris v2 harus sama dengan v1 (kecuali blok yang
+#    dikarantina). Cek juga `legacy_urls` terisi.
+$DC exec -T db psql -U "$DB_USER" -d "$DB_NAME" -c \
+  "select (select count(*) from users) users, (select count(*) from portfolios) portfolios,
+          (select count(*) from portfolio_blocks) blocks, (select count(*) from follows) follows;"
+
+# 7. Nyalakan sisa stack v2 + deploy (tag versi / workflow_dispatch).
+$DC up -d
+```
+
+Kalau migrasi gagal di tengah jalan, ulangi dari langkah 3 — database v2
+dibuang dan dibuat ulang. Data v1 tidak pernah hilang: ada di
+`grafikarsa_postgres_data` **dan** di `/tmp/v1-pre-migrate.dump`.
+
+Yang **tidak** boleh dilewati: langkah 5 (dry-run) dan langkah 6. Tool
+`migrate-old` sekarang gagal keras kalau ada objek storage yang tidak
+terdaftar sebagai media — jadi "migrasi sukses" tidak lagi bisa berarti
+"sebagian data hilang diam-diam".
+
 ## Sunset plan (P6-09)
 
 Rencana resmi membuang v1 setelah go-live. Tidak ada data v1 yang dihapus
