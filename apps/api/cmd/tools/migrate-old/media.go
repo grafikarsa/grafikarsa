@@ -136,6 +136,35 @@ func mimeByExt(key string) string {
 	}
 }
 
+// purposeFromKey menentukan purpose media dari awalan key.
+//
+// Sebelum ini semua media dilabeli "document", padahal key v1 sudah
+// membedakan jenisnya (avatars/, thumbnails/, portfolio-images/, ...).
+// Purpose dipakai UI untuk mengelompokkan media (avatar terpisah dari gambar
+// karya), jadi label yang salah = galeri yang kacau.
+//
+// Semua nilai harus ada di CHECK constraint media_purpose_valid.
+func purposeFromKey(key string) string {
+	switch {
+	case strings.HasPrefix(key, "avatars/"):
+		return "avatar"
+	case strings.HasPrefix(key, "banners/"):
+		return "banner"
+	case strings.HasPrefix(key, "thumbnails/"):
+		return "thumbnail"
+	case strings.HasPrefix(key, "portfolio-images/"):
+		return "block_image"
+	case strings.HasPrefix(key, "feedback/"):
+		return "feedback"
+	case strings.HasPrefix(key, "feedback-attachments/"):
+		return "feedback"
+	case strings.HasPrefix(key, "changelog-covers/"):
+		return "changelog_cover"
+	default:
+		return "document"
+	}
+}
+
 // storageURLRegex menangkap URL /storage/... di dalam teks (mis. payload
 // blok portfolio yang berupa JSON).
 var storageURLRegex = regexp.MustCompile(`https?://[^\s"'<>\\]+/storage/[^\s"'<>\\]+`)

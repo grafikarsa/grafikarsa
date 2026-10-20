@@ -52,3 +52,22 @@ func TestStorageURLRegex(t *testing.T) {
 		t.Fatalf("harus ketemu 1 URL tanpa spasi, ketemu %d", n)
 	}
 }
+
+// TestPurposeFromKey Purpose mengategorikan media di galeri. Semua nilai
+// harus ada di CHECK constraint media_purpose_valid.
+func TestPurposeFromKey(t *testing.T) {
+	cases := map[string]string{
+		"avatars/uuid/x.jpg":           "avatar",
+		"banners/uuid/x.jpg":           "banner",
+		"thumbnails/uuid/x.jpg":        "thumbnail",
+		"portfolio-images/uuid/x.jpg":  "block_image",
+		"feedback-attachments/u/x.pdf": "feedback",
+		"documents/u/x.docx":           "document",
+		"lain/u/x.bin":                 "document",
+	}
+	for key, want := range cases {
+		if got := purposeFromKey(key); got != want {
+			t.Fatalf("purposeFromKey(%q) = %q, mau %q", key, got, want)
+		}
+	}
+}

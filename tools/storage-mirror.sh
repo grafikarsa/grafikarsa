@@ -30,6 +30,13 @@ BUCKET="${BUCKET:-grafikarsa}"
 MIRROR_DRY_RUN="${MIRROR_DRY_RUN:-0}"
 MIRROR_SAMPLE="${MIRROR_SAMPLE:-200}"
 PREFIX="${MIRROR_ALIAS_PREFIX:-gk}"
+# Manifest key sumber (yang disalin ke storage baru). Dipakai migrate-old
+# untuk membedakan dua jenis objek yang hilang:
+#   - ada di manifest tapi hilang di storage baru -> MIRROR GAGAL (fatal)
+#   - tidak ada di manifest -> memang sudah hilang di v1 (bukan #' bukan
+#     kerusakan hasil migrasi)
+# Tanpa manifest, migrate-old hanya memberi peringatan.
+MANIFEST="${MIRROR_MANIFEST:-./mirror-manifest-$(date +%Y%m%d-%H%M%S).txt}"
 
 need() {
   [ -n "${!1:-}" ] || { echo "ERROR: env $1 wajib diisi"; exit 1; }
@@ -72,6 +79,11 @@ log "objek di bucket sumber: $TOTAL"
 if [ "$TOTAL" -eq 0 ]; then
   echo "WARNING: bucket sumber kosong — tidak ada yang dimirror"; exit 1
 fi
+
+# Manifest key sumber (tanpa timestamp mc). Format output mc:
+# "[2024-01-01 10:00:00 UTC]  20KiB  STANDARD  path/to/obj"
+sed -e 's/^\[[^]]*\] *//' "$LIST" | awk '{print $NF}' | grep -v '^$' | sort -u > "$MANIFEST" || true
+log "manifest key sumber -> $MANIFEST ($(wc -l < "$MANIFEST") key)"
 
 # ---------- 3. pastikan bucket tujuan ada ----------
 if ! mc stat "${PREFIX}dst/${BUCKET}" >/dev/null 2>&1; then

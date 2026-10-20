@@ -47,6 +47,7 @@ type options struct {
 	dryRun       bool
 	migrateMedia bool
 	storageHost  string
+	v1Manifest   string
 	batchSize    int
 }
 
@@ -82,6 +83,7 @@ func main() {
 	flag.BoolVar(&execute, "execute", false, "Tulis ke v2 (menonaktifkan dry-run)")
 	flag.BoolVar(&o.migrateMedia, "migrate-media", false, "Daftarkan objek storage jadi media_assets + legacy_urls")
 	flag.StringVar(&o.storageHost, "storage-host", "", "Host S3 baru (untuk verifikasi objek, opsional)")
+	flag.StringVar(&o.v1Manifest, "v1-manifest", "", "Manifest key storage v1 (dari tools/storage-mirror.sh)")
 	flag.IntVar(&o.batchSize, "batch", 500, "Ukuran batch insert")
 	flag.Parse()
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/microcosm-cc/bluemonday"
 	"log/slog"
+	"os"
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -380,6 +381,26 @@ func migrateMediaRefs(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o 
 	// terverifikasi, jadi harus ada di log.
 	var ix *storageIndex
 	var missing []string
+	var alreadyGone []string
+	// Manifest key v1 (dari tools/storage-mirror.sh). Kalau ada, kita bisa
+	// membedakan "objek hilang karena mirror gagal" (fatal) dari "objek memang
+	// sudah hilang di v1" (bukan kerusakan migrasi).
+	var v1Keys map[string]struct{}
+	if o.v1Manifest != "" {
+		raw, err := os.ReadFile(o.v1Manifest)
+		if err != nil {
+			slog.Warn("manifest v1 tidak bisa dibaca; objek hilang hanya jadi peringatan", "file", o.v1Manifest, "err", err)
+		} else {
+			v1Keys = map[string]struct{}{}
+			for _, line := range strings.Split(string(raw), "\n") {
+				k := strings.TrimSpace(line)
+				if k != "" {
+					v1Keys[k] = struct{}{}
+				}
+			}
+			slog.Info("manifest v1 dimuat", "file", o.v1Manifest, "key", len(v1Keys))
+		}
+	}
 	if cfg, err := config.Load(); err != nil {
 		slog.Warn("config tidak bisa dimuat; metadata media generik", "err", err)
 	} else {
@@ -416,6 +437,10 @@ func migrateMediaRefs(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o 
 		rows.Close()
 	}
 	collect("users", colOr(s, "users", "avatar_url", "avatar", "photo_url"), "users")
+	// Banner terpisah dari avatar: di v1 ada users.banner_url (364 gambar di
+	// produksi). Kalau hanya avatar yang dipindai, URL banner lama tidak
+	// terdaftar dan berakhir 410 Gone.
+	collect("users", colOr(s, "users", "banner_url", "cover_url"), "users")
 	for _, t := range []string{"portfolios", "content_blocks", "portfolio_blocks", "blocks"} {
 		if !s.tables[t] {
 			continue
@@ -450,11 +475,30 @@ func migrateMediaRefs(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o 
 		if ix != nil {
 			size = ix.size(key)
 			if size == 0 {
-				// Objek tidak ada di storage baru: URL lama akan diarahkan
-				// ke key yang tidak ada — gambar rusak. Dihitung dan
-				// menggagalkan migrasi, bukan lolos diam-diam.
-				st.Skipped["media_objek_tidak_ada"]++
-				missing = append(missing, key)
+				// Objek tidak ada di storage baru. Dua kemungkinan:
+				//   a) ada di manifest v1 -> mirror GAGAL (objek hilang saat
+				//      disalin) -> fatal, jangan lanjut
+				//   b) tidak ada di manifest v1 -> memang sudah hilang di v1
+				//      (gambarnya sudah rusak sebelum migrasi) -> bukan
+				//      kerusakan hasil migrasi, cukup dicatat
+				if v1Keys != nil {
+					if _, wasThere := v1Keys[key]; wasThere {
+						st.Skipped["media_objek_hilang_setelah_mirror"]++
+						missing = append(missing, key)
+						continue
+					}
+				}
+				st.Skipped["media_objek_tak_ada_sudah_di_v1"]++
+				alreadyGone = append(alreadyGone, key)
+				// Tetap didaftarkan sebagai legacy_url tanpa media_id: URL
+				// lamanya tetap menjawab 410 (bukan 404), dan tidak ada
+				// media_assets yang menunjuk key tak ada.
+				if !o.dryRun {
+					if _, lerr := v2.Exec(ctx, `INSERT INTO legacy_urls (old_url, object_key)
+						VALUES ($1,$2) ON CONFLICT (old_url) DO NOTHING`, url, key); lerr != nil {
+						slog.Error("gagal mencatat legacy_url", "url", url, "err", lerr)
+					}
+				}
 				continue
 			}
 			if s, err := ix.checksum(ctx, key); err == nil {
@@ -466,11 +510,19 @@ func migrateMediaRefs(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o 
 
 		if !o.dryRun {
 			var mid string
+			// ON CONFLICT (object_key) DO UPDATE + RETURNING: migrasi harus
+			// idempoten. Dengan DO NOTHING, baris yang sudah ada tidak
+			// mengembalikan id -> kolom kosong -> setiap media terhitung
+			// "fallback" dan migrasi gagal padahal job-nya sudah beres.
 			err := v2.QueryRow(ctx, `INSERT INTO media_assets
 				(owner_id, purpose, object_key, mime, size_bytes, checksum_sha256, status)
-				SELECT u.id, 'document', $1, $2, $3, $4, 'confirmed'
+				SELECT u.id, $2, $1, $3, $4, $5, 'confirmed'
 				FROM users u WHERE u.username='admin' LIMIT 1
-				ON CONFLICT DO NOTHING RETURNING id::text`, key, mime, size, sum).Scan(&mid)
+				ON CONFLICT (object_key) DO UPDATE SET
+					mime=EXCLUDED.mime,
+					size_bytes=EXCLUDED.size_bytes,
+					checksum_sha256=EXCLUDED.checksum_sha256
+				RETURNING id::text`, key, purposeFromKey(key), mime, size, sum).Scan(&mid)
 			if err == nil && mid != "" {
 				_, _ = v2.Exec(ctx, `INSERT INTO legacy_urls (old_url, media_id, object_key)
 					VALUES ($1,$2,$3) ON CONFLICT (old_url) DO UPDATE SET media_id=EXCLUDED.media_id`,
@@ -494,7 +546,17 @@ func migrateMediaRefs(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o 
 	}
 	slog.Info("URL lama terdaftar",
 		"count", len(urls), "registered", st.MediaRegistered, "fallback", st.MediaFallback,
-		"objek_tidak_ada", len(missing))
+		"objek_tidak_ada", len(missing), "sudah_hilang_di_v1", len(alreadyGone))
+	if len(alreadyGone) > 0 {
+		// Sudah hilang sebelum migrasi (gambarnya rusak di v1 juga). Bukan
+		// kegagalan migrasi — tapi harus terlihat, jangan diam.
+		sample := alreadyGone
+		if len(sample) > 5 {
+			sample = sample[:5]
+		}
+		slog.Warn("objek yang sudah hilang di v1 (bukan kerusakan migrasi)",
+			"jumlah", len(alreadyGone), "contoh", sample)
+	}
 	if st.MediaFallback > 0 {
 		return fmt.Errorf("%d objek storage tidak bisa didaftarkan sebagai media_assets", st.MediaFallback)
 	}
@@ -504,7 +566,7 @@ func migrateMediaRefs(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o 
 		if len(sample) > 10 {
 			sample = sample[:10]
 		}
-		return fmt.Errorf("%d objek yang dirujuk tidak ada di storage baru (contoh: %v)",
+		return fmt.Errorf("%d objek yang ada di v1 hilang di storage baru — MIRROR GAGAL (contoh: %v)",
 			len(missing), sample)
 	}
 	return nil

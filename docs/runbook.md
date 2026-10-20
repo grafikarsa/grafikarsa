@@ -252,14 +252,32 @@ Setelah mirror selesai:
 
 ```bash
 # daftarkan objek storage jadi media_assets + legacy_urls
-go run ./cmd/tools/migrate-old --v1 ... --v2 ... --execute --migrate-media
+go run ./cmd/tools/migrate-old --v1 ... --v2 ... --execute --migrate-media \
+  --v1-manifest ./mirror-manifest-<timestamp>.txt
 ```
+
+`tools/storage-mirror.sh` menulis **manifest key sumber**
+(`mirror-manifest-<timestamp>.txt` ✓) — daftar key yang ada di storage v1
+sebelum disalin ✓. Manifest dipakai untuk membedakan dua jenis objek yang
+hilang:
+
+| Keadaan | Arti | Hasil |
+|---|---|---|
+| Ada di manifest, hilang di storage baru | **mirror gagal** — objek hilang saat disalin | **FATAL** ✗ migration berhenti |
+| Tidak ada di manifest | memang sudah hilang di v1 (gambarnya sudah rusak sebelum migrasi) | peringatan ✓, URL lama tetap 410 |
+
+Tanpa `--v1-manifest`, objek yang hilang hanya jadi peringatan (bukan fatal)
+✓ — jadi **selalu pakai manifest** saat go-live ✓.
+
+Ternyata ada **2 objek yang memang sudah hilang di v1** (dua gambar dalam satu
+karya portfolio, key-nya tanpa ekstensi) — jadi di v1 pun gambarnya sudah
+rusak ✓. Dengan manifest, migrasi tetap lancar ✓.
 
 `--migrate-media` membaca **storage baru** (dari `S3_*` di `.env`, atau
 `--storage-host`): setiap objek dicek keberadaannya, dan metadata yang
 disimpan adalah yang ASLI — mime (dari ekstensi), ukuran, dan sha256 objek.
 
-Dua hal yang bikin ini penting:
+Tiga hal yang bikin ini penting:
 
 - **Mime menentukan cara browser menampilkan file.** Handler `by-key` memakai
   `media_assets.mime` sebagai Content-Type. Kalau mime-nya
@@ -269,16 +287,19 @@ Dua hal yang bikin ini penting:
   produksi ada 2.110 blok dengan URL `/storage/` di dalam JSON-nya. Kalau
   tidak ikut dikumpulkan, URL lamanya tidak terdaftar di `legacy_urls` dan
   berakhir **410 Gone** — gambar di karya yang sudah tayang rusak.
-
-Kalau ada objek yang dirujuk tapi tidak ada di storage baru, migrasi **gagal**
-(exit non-zero) dan menyebut contoh key-nya. Jangan diabaikan: itu artinya
-mirror storage tidak lengkap → ulangi `tools/storage-mirror.sh` dulu.
+- **Purpose media harus benar.** Semua media dulu dilabeli "document";
+  sekarang diturunkan dari awalan key (avatars/ → avatar, thumbnails/ →
+  thumbnail, portfolio-images/ → block_image, banners/ → banner,
+  documents/ → document) ✓.
 
 Hasil yang diharapkan (data produksi, 20 Okt 2026):
 
 ```
-URL lama terdaftar: count 3987 · registered 3987 · fallback 0 · objek_tidak_ada 0
-media_registered 3987
+URL lama terdaftar: count 4351 · registered 4349 · fallback 0
+                    objek_tidak_ada 0 · sudah_hilang_di_v1 2
+media_assets: block_image 2033 · thumbnail 1478 · avatar 410
+              banner 364 · document 64
+legacy_urls 4351 (4349 punya media_id)
 ```
 
 ## Migrasi DB v1 → v2 di server (go-live)
