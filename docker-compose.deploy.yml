@@ -133,6 +133,18 @@ services:
         condition: service_healthy
       storage:
         condition: service_healthy
+    # WAJIB ada: service `web` bergantung pada api dengan
+    # condition: service_healthy. Tanpa healthcheck di sini, compose menolak
+    # start web:
+    #   dependency failed to start: container grafikarsa-api has no healthcheck
+    #   configured
+    # …lalu proxy (yang bergantung pada web) juga ikut tidak start.
+    healthcheck:
+      test: ["CMD", "/api", "-healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     networks:
       - grafikarsa-network
 
@@ -174,11 +186,20 @@ services:
       - INTERNAL_API_URL=http://api:8080/v1
       # Dipakai BFF untuk origin check mutasi.
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      # Next.js standalone memakai env HOSTNAME sebagai alamat bind. Di Docker,
+      # HOSTNAME otomatis berisi id container, jadi server hanya listen di IP
+      # container itu saja — healthcheck "localhost:3000" selalu connection
+      # refused dan container ditandai unhealthy, padahal trafik lewat nama
+      # service (web:3000) lancar. Dengan 0.0.0.0, keduanya bekerja.
+      - HOSTNAME=0.0.0.0
     depends_on:
       api:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      # Pakai 127.0.0.1, bukan "localhost": di container, "localhost" bisa
+      # resolve ke ::1 (IPv6) lebih dulu, sedangkan Next.js listen di IPv4 —
+      # healthcheck jadi connection refused padahal servenya jalan.
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/"]
       interval: 15s
       timeout: 5s
       retries: 5
