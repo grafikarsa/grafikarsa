@@ -42,12 +42,24 @@ services:
     # snapshot_cron: simpan snapshot cache tiap 5 menit. Tanpa ini snapshot
     # hanya terjadi saat shutdown, jadi crash = semua counter rate-limit,
     # blacklist JTI, dan agregat view counter hilang sekaligus.
-    command: >-
-      --maxmemory=256mb --proactor_threads=1
-      --cache_mode
-      --dir=/data
-      --dbfilename=dump
-      --snapshot_cron=*/5 * * * *
+    #
+    # PENTING: nilai cron harus tetap SATU argumen. Bentuk string (>) memecah
+    # "--snapshot_cron=*/5 * * * *" menjadi beberapa argv, sehingga flag-nya
+    # hanya menerima "*/5" dan dragonfly menolak start:
+    #   ERROR: Illegal value '*/5' specified for flag 'snapshot_cron'
+    # Kalau dragonfly gagal start, `api` (depends_on: service_healthy) ikut
+    # tidak start — `make dev` gagal total.
+    #
+    # Formatnya crontab 5 field (menit jam hari bulan hari-dalam-minggu).
+    # Catatan: pesan error dragonfly menyebut "six fields", padahal 6 field
+    # justru yang DITOLAK — sudah diuji langsung ke binary-nya.
+    command:
+      - --maxmemory=256mb
+      - --proactor_threads=1
+      - --cache_mode
+      - --dir=/data
+      - --dbfilename=dump
+      - "--snapshot_cron=*/5 * * * *"
     ports:
       - "${DRAGONFLY_PORT:-6390}:6379"
     volumes:
