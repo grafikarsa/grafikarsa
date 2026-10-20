@@ -25,8 +25,6 @@ package main
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -388,11 +386,6 @@ func saveMap(ctx context.Context, v2 *pgxpool.Pool, dry bool, srcTable, srcID, t
 	_, err := v2.Exec(ctx, `INSERT INTO legacy_id_map (source_table, source_id, target_table, target_id) VALUES ($1,$2,$3,$4)
 		ON CONFLICT (source_table, source_id) DO NOTHING`, srcTable, srcID, targetTable, targetID)
 	return err
-}
-
-func sha256str(s string) string {
-	h := sha256.Sum256([]byte(s))
-	return hex.EncodeToString(h[:])
 }
 
 // nowYear dipakai untuk aturan alumni (tahun_masuk+3 <= now).

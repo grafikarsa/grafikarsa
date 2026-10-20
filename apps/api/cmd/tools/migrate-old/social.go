@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"grafikarsa/api/internal/config"
 )
 
 // migrateSocial memindahkan likes/follows/comments/notifications 1:1.
@@ -363,7 +364,34 @@ func migrateFeedbackChangelog(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1sc
 // migrateMediaRefs mendaftarkan URL lama menjadi media_assets + legacy_urls.
 // Dipanggil SETELAH `mc mirror` (PRD §16.3): objek sudah ada di storage baru
 // dengan layout key yang sama, jadi tool hanya mencatat metadata.
+//
+// Metadata yang disimpanharus ASLI: mime, ukuran, dan checksum objek di
+// storage baru. Handler by-key memakai media_assets.mime sebagai Content-Type
+// — kalau mime-nya application/octet-stream, browser mengunduh tiap gambar
+// sebagai ganti menampilkannya.
+//
+// Kalau storage baru tidak bisa dihubungi (mis. --storage-host kosong),
+// migrasi tetap jalan TAPI memperingatkan: metadata akan generik dan
+// keberadaan objek tidak terverifikasi.
 func migrateMediaRefs(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o options, st *stats) error {
+	// Index storage baru: metadata asli + verifikasi keberadaan objek.
+	// Kalau storage tidak bisa dihubungi, migrasi tetap jalan dengan
+	// metadata generik — tapi itu berarti metadata & keberadaan objek TIDAK
+	// terverifikasi, jadi harus ada di log.
+	var ix *storageIndex
+	var missing []string
+	if cfg, err := config.Load(); err != nil {
+		slog.Warn("config tidak bisa dimuat; metadata media generik", "err", err)
+	} else {
+		if o.storageHost != "" {
+			cfg.S3.Endpoint = o.storageHost
+		}
+		if ix, err = newStorageIndex(ctx, cfg); err != nil {
+			slog.Warn("storage baru tidak bisa dihubungi; metadata media generik & keberadaan objek tak terverifikasi", "err", err)
+			ix = nil
+		}
+	}
+
 	// Kumpulkan semua URL /storage/ dari v1.
 	urls := map[string]string{} // url -> pemilik (username) bila diketahui
 	collect := func(table, urlCol, ownerCol string) {
@@ -398,17 +426,51 @@ func migrateMediaRefs(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o 
 			}
 		}
 	}
+	// URL gambar di dalam payload JSON blok portfolio (2.110 blok di
+	// produksi) tidak ada di kolom URL — kalau tidak dikumpulkan, URL lamanya
+	// tidak terdaftar dan berakhir 410 Gone.
+	jsonURLs := map[string]bool{}
+	for _, t := range []string{"content_blocks", "portfolio_blocks", "blocks"} {
+		collectJSONURLs(ctx, v1, s, t, "payload", jsonURLs)
+	}
+	for u := range jsonURLs {
+		if _, ok := urls[u]; !ok {
+			urls[u] = "payload"
+		}
+	}
 	for url := range urls {
 		key := keyFromStorageURL(url)
 		owner := urls[url]
 		_ = owner
+
+		// Metadata asli dari storage baru (kalau bisa dihubungi).
+		mime := mimeByExt(key)
+		var size int64
+		sum := ""
+		if ix != nil {
+			size = ix.size(key)
+			if size == 0 {
+				// Objek tidak ada di storage baru: URL lama akan diarahkan
+				// ke key yang tidak ada — gambar rusak. Dihitung dan
+				// menggagalkan migrasi, bukan lolos diam-diam.
+				st.Skipped["media_objek_tidak_ada"]++
+				missing = append(missing, key)
+				continue
+			}
+			if s, err := ix.checksum(ctx, key); err == nil {
+				sum = s
+			} else {
+				slog.Warn("gagal menghitung checksum objek", "key", key, "err", err)
+			}
+		}
+
 		if !o.dryRun {
 			var mid string
 			err := v2.QueryRow(ctx, `INSERT INTO media_assets
 				(owner_id, purpose, object_key, mime, size_bytes, checksum_sha256, status)
-				SELECT u.id, 'document', $1, 'application/octet-stream', 0, $2, 'confirmed'
+				SELECT u.id, 'document', $1, $2, $3, $4, 'confirmed'
 				FROM users u WHERE u.username='admin' LIMIT 1
-				ON CONFLICT DO NOTHING RETURNING id::text`, key, sha256str(url)).Scan(&mid)
+				ON CONFLICT DO NOTHING RETURNING id::text`, key, mime, size, sum).Scan(&mid)
 			if err == nil && mid != "" {
 				_, _ = v2.Exec(ctx, `INSERT INTO legacy_urls (old_url, media_id, object_key)
 					VALUES ($1,$2,$3) ON CONFLICT (old_url) DO UPDATE SET media_id=EXCLUDED.media_id`,
@@ -431,9 +493,19 @@ func migrateMediaRefs(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o 
 		}
 	}
 	slog.Info("URL lama terdaftar",
-		"count", len(urls), "registered", st.MediaRegistered, "fallback", st.MediaFallback)
+		"count", len(urls), "registered", st.MediaRegistered, "fallback", st.MediaFallback,
+		"objek_tidak_ada", len(missing))
 	if st.MediaFallback > 0 {
 		return fmt.Errorf("%d objek storage tidak bisa didaftarkan sebagai media_assets", st.MediaFallback)
+	}
+	if len(missing) > 0 {
+		// Tampilkan sebagian kecil saja supaya log tidak membanjiri.
+		sample := missing
+		if len(sample) > 10 {
+			sample = sample[:10]
+		}
+		return fmt.Errorf("%d objek yang dirujuk tidak ada di storage baru (contoh: %v)",
+			len(missing), sample)
 	}
 	return nil
 }

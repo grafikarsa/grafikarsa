@@ -218,6 +218,32 @@ Setelah mirror selesai:
 go run ./cmd/tools/migrate-old --v1 ... --v2 ... --execute --migrate-media
 ```
 
+`--migrate-media` membaca **storage baru** (dari `S3_*` di `.env`, atau
+`--storage-host`): setiap objek dicek keberadaannya, dan metadata yang
+disimpan adalah yang ASLI — mime (dari ekstensi), ukuran, dan sha256 objek.
+
+Dua hal yang bikin ini penting:
+
+- **Mime menentukan cara browser menampilkan file.** Handler `by-key` memakai
+  `media_assets.mime` sebagai Content-Type. Kalau mime-nya
+  `application/octet-stream`, browser **mengunduh** tiap gambar sebagai ganti
+  menampilkannya — seluruh gambar di situs jadi rusak.
+- **URL gambar di dalam payload JSON blok portfolio ikut dipetakan.** Di
+  produksi ada 2.110 blok dengan URL `/storage/` di dalam JSON-nya. Kalau
+  tidak ikut dikumpulkan, URL lamanya tidak terdaftar di `legacy_urls` dan
+  berakhir **410 Gone** — gambar di karya yang sudah tayang rusak.
+
+Kalau ada objek yang dirujuk tapi tidak ada di storage baru, migrasi **gagal**
+(exit non-zero) dan menyebut contoh key-nya. Jangan diabaikan: itu artinya
+mirror storage tidak lengkap → ulangi `tools/storage-mirror.sh` dulu.
+
+Hasil yang diharapkan (data produksi, 20 Okt 2026):
+
+```
+URL lama terdaftar: count 3987 · registered 3987 · fallback 0 · objek_tidak_ada 0
+media_registered 3987
+```
+
 ## Migrasi DB v1 → v2 di server (go-live)
 
 Skema v1 dan v2 **berbeda total** — jadi migrasi bukan "jalanin migration
