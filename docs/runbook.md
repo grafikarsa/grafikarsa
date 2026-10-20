@@ -17,11 +17,32 @@
 
 ## Deploy & rollback
 
-Alur `deploy.yml` (push ke `main`): build image (`sha-<commit>` + `latest`) →
-scan Trivy → backup DB di server → tulis `IMAGE_TAG` ke `.env` → `goose up` →
-`up -d` → healthcheck 30×10 detik → seed idempoten → prune image lama. Bila
-healthcheck gagal, workflow mengembalikan `IMAGE_TAG` ke tag sebelumnya dan
-menjalankan `up -d` lagi.
+Alur `deploy.yml`: build image (`sha-<commit>` + `latest`) → scan Trivy →
+backup DB di server → tulis `IMAGE_TAG` ke `.env` → `goose up` → `up -d` →
+healthcheck 30×10 detik → seed idempoten → prune image lama. Bila
+healthcheck gagal, workflow mengembalikan **image dan skema** ke versi
+sebelumnya lalu menjalankan `up -d` lagi.
+
+**Kapan workflow ini jalan:** hanya dari **tag versi** (`v2.0.0`) atau
+**manual** (`workflow_dispatch`).
+
+Push ke `main` sengaja **tidak** men-deploy. Alasannya: go-live v2 punya
+prasyarat yang harus selesai lebih dulu — storage mirror 5,1 GB, migrasi
+DB v1→v2 di server, jendela maintenance, dan restore drill. Volume v2
+(`postgres_data`, `storage_data`) berbeda nama dari volume yang sedang jalan
+(`grafikarsa_postgres_data`, `grafikarsa_minio_data`), jadi data v1 tidak ikut
+terhapus — tapi kalau stack v2 start sebelum dimigrasi, **situsnya kosong**.
+Deploy karena itu harus tindakan yang disengaja, bukan efek samping merge.
+
+Untuk go-live:
+
+```bash
+# 1. Maintenance mode aktif (v1 menulis beku) + storage mirror + migrasi DB.
+#    Lihat bagian "Mirror storage saat go-live" dan prosedur migrasi.
+# 2. Deploy (setelah migrasi selesai & diverifikasi):
+git tag v2.0.0 && git push origin v2.0.0
+#    atau manual: gh workflow run deploy.yml
+```
 
 Rollback manual:
 
