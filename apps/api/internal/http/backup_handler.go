@@ -29,7 +29,7 @@ func (a *App) handleBackupDump(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal menyiapkan direktori backup.", r))
 		return
 	}
-	stamp := time.Now().UTC().Format("20060102-150405")
+	stamp := a.now().UTC().Format("20060102-150405")
 	out := filepath.Join(dir, fmt.Sprintf("db-%s.dump", stamp))
 
 	timeout := a.Cfg.Backup.TimeoutPgDump

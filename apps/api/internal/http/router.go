@@ -24,6 +24,8 @@ func baseMiddleware() *chi.Mux {
 // status, durasi) tanpa mencatat body/PII.
 func requestLogger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Jam sistem (bukan App.Clock) sengaja dipakai di sini: yang
+		// diukur adalah durasi request yang sebenarnya.
 		start := time.Now()
 		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 		next.ServeHTTP(ww, r)

@@ -66,7 +66,7 @@ func viewDirtyKey(day string) string            { return "views:dirty:" + day }
 // dirty agar worker mem-flush agregatnya. TTL HLL 40 hari (cukup untuk statistik
 // 30 hari), dirty set 2 hari.
 func (a *App) recordViewHLL(ctx context.Context, portfolioID, viewerKey string) {
-	day := time.Now().Format("2006-01-02")
+	day := a.now().Format("2006-01-02")
 	key := viewHLLKey(portfolioID, day)
 	if err := a.Cache.PFAdd(ctx, key, viewerKey); err != nil {
 		return

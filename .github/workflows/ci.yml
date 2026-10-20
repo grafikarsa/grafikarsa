@@ -23,6 +23,18 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      # Redis untuk test sliding-window rate limit. Redis (bukan Dragonfly)
+      # dipakai karena test butuh perintah ZSET (ZCARD/ZADD/ZREMRANGEBYSCORE)
+      # yang sama persis di keduanya.
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -62,6 +74,7 @@ jobs:
         working-directory: apps/api
         env:
           TEST_DATABASE_URL: postgres://grafikarsa:test@127.0.0.1:5432/grafikarsa_test?sslmode=disable
+          TEST_REDIS_ADDR: 127.0.0.1:6379
         run: go test -race ./...
       - name: go build
         working-directory: apps/api

@@ -164,14 +164,13 @@ func clearCookie(w http.ResponseWriter, name string, secure bool) {
 
 // CSRF token = HMAC(secret, hari + user_id). Terikat ke user (bukan global),
 // tetap berotasi harian; terima H-1 agar sesi lintas tengah malam tetap jalan.
-func newCSRFToken(secret, userID string) string {
+func newCSRFToken(secret, userID string, now time.Time) string {
 	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write([]byte(time.Now().UTC().Format("2006-01-02") + ":" + userID))
+	mac.Write([]byte(now.UTC().Format("2006-01-02") + ":" + userID))
 	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 }
 
-func verifyCSRFToken(secret, userID, token string) bool {
-	now := time.Now().UTC()
+func verifyCSRFToken(secret, userID, token string, now time.Time) bool {
 	for _, day := range []time.Time{now, now.Add(-24 * time.Hour)} {
 		mac := hmac.New(sha256.New, []byte(secret))
 		mac.Write([]byte(day.Format("2006-01-02") + ":" + userID))

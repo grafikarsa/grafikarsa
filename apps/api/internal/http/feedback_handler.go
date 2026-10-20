@@ -73,16 +73,16 @@ func (a *App) handleCreateFeedback(w http.ResponseWriter, r *http.Request) {
 	// Guest tidak punya sesi: beri token follow-up (?t=) agar bisa membuka
 	// kembali thread-nya tanpa login. Token = HMAC(secret, thread_id).
 	if uid == "" {
-		resp["follow_up_token"] = feedbackFollowUpToken(a.Cfg.JWT.CSRFSecret(), uuidStr(id))
-		resp["follow_up_url"] = "/feedback?t=" + feedbackFollowUpToken(a.Cfg.JWT.CSRFSecret(), uuidStr(id))
+		resp["follow_up_token"] = feedbackFollowUpToken(a.Cfg.JWT.CSRFSecret(), uuidStr(id), a.now())
+		resp["follow_up_url"] = "/feedback?t=" + feedbackFollowUpToken(a.Cfg.JWT.CSRFSecret(), uuidStr(id), a.now())
 	}
 	writeJSON(w, http.StatusCreated, ok(resp, r))
 }
 
 // feedbackFollowUpToken: token akses guest untuk satu thread, berlaku 6 bulan
 // (format "<exp>.<hmac>"). Guest memakainya lewat ?t= untuk membuka thread.
-func feedbackFollowUpToken(secret, threadID string) string {
-	exp := time.Now().AddDate(0, 6, 0).Unix()
+func feedbackFollowUpToken(secret, threadID string, now time.Time) string {
+	exp := now.AddDate(0, 6, 0).Unix()
 	return strconv.FormatInt(exp, 10) + "." + feedbackTokenMAC(secret, threadID, exp)
 }
 
@@ -92,13 +92,13 @@ func feedbackTokenMAC(secret, threadID string, exp int64) string {
 	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 }
 
-func feedbackFollowUpValid(secret, threadID, token string) bool {
+func feedbackFollowUpValid(secret, threadID, token string, now time.Time) bool {
 	parts := strings.SplitN(token, ".", 2)
 	if len(parts) != 2 {
 		return false
 	}
 	exp, err := strconv.ParseInt(parts[0], 10, 64)
-	if err != nil || time.Now().Unix() > exp {
+	if err != nil || now.Unix() > exp {
 		return false
 	}
 	return hmac.Equal([]byte(parts[1]), []byte(feedbackTokenMAC(secret, threadID, exp)))
@@ -142,7 +142,7 @@ func (a *App) handleGetFeedback(w http.ResponseWriter, r *http.Request) {
 	// Thread privat hanya untuk pelapor, moderator, atau pemegang token guest.
 	canTriage := UserRole(r) == "admin" || UserPerms(r)["feedback.triage"]
 	isReporter := t.ReporterID.Valid && uuidStr(t.ReporterID) == UserID(r)
-	hasGuestToken := feedbackFollowUpValid(a.Cfg.JWT.CSRFSecret(), uuidStr(t.ID), r.URL.Query().Get("t"))
+	hasGuestToken := feedbackFollowUpValid(a.Cfg.JWT.CSRFSecret(), uuidStr(t.ID), r.URL.Query().Get("t"), a.now())
 	if !t.IsPublic && !canTriage && !isReporter && !hasGuestToken {
 		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Thread tidak ditemukan.", r))
 		return
@@ -188,7 +188,7 @@ func (a *App) handleReplyFeedback(w http.ResponseWriter, r *http.Request) {
 	// Thread privat hanya untuk pelapor, moderator, atau pemegang token guest.
 	canTriage := UserRole(r) == "admin" || UserPerms(r)["feedback.triage"]
 	isReporter := t.ReporterID.Valid && uuidStr(t.ReporterID) == UserID(r)
-	hasGuestToken := feedbackFollowUpValid(a.Cfg.JWT.CSRFSecret(), uuidStr(t.ID), r.URL.Query().Get("t"))
+	hasGuestToken := feedbackFollowUpValid(a.Cfg.JWT.CSRFSecret(), uuidStr(t.ID), r.URL.Query().Get("t"), a.now())
 	if !t.IsPublic && !canTriage && !isReporter && !hasGuestToken {
 		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Thread tidak ditemukan.", r))
 		return
@@ -308,7 +308,7 @@ func (a *App) handleCreateChangelog(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		publishAt = pgtype.Timestamptz{Time: t, Valid: true}
-		if t.After(time.Now()) {
+		if t.After(a.now()) {
 			status = "scheduled"
 		}
 	}
@@ -351,7 +351,7 @@ func (a *App) handleChangelogDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	isManager := UserRole(r) == "admin" || UserPerms(r)["changelog.manage"]
-	visible := c.Status == "published" && (!c.PublishAt.Valid || !c.PublishAt.Time.After(time.Now()))
+	visible := c.Status == "published" && (!c.PublishAt.Valid || !c.PublishAt.Time.After(a.now()))
 	if !visible && !isManager {
 		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Changelog tidak ditemukan.", r))
 		return
@@ -591,7 +591,7 @@ func (a *App) handleChangelogByVersion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	isManager := UserRole(r) == "admin" || UserPerms(r)["changelog.manage"]
-	visible := c.Status == "published" && (!c.PublishAt.Valid || !c.PublishAt.Time.After(time.Now()))
+	visible := c.Status == "published" && (!c.PublishAt.Valid || !c.PublishAt.Time.After(a.now()))
 	if !visible && !isManager {
 		writeJSON(w, http.StatusNotFound, fail("NOT_FOUND", "Changelog tidak ditemukan.", r))
 		return
