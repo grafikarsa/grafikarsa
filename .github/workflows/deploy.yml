@@ -120,8 +120,23 @@ jobs:
           # Versi skema SEBELUM migrasi dicatat dulu: kalau image baru nanti
           # gagal, skemanya juga harus dikembalikan — mengembalikan image saja
           # tidak cukup kalau migrasi barunya tidak backward-compatible.
-          PREV_SCHEMA=$($DC run --rm --entrypoint /migrate api version 2>/dev/null | tr -dc '0-9')
-          echo "Versi skema sebelum deploy: ${PREV_SCHEMA:-tidak diketahui}"
+          # Ambil versi skema dari baris "db version: N" secara spesifik.
+          # Dulu dipakai `tr -dc '0-9'` (semua angka di output) — rapuh:
+          # satu baris log bertimestamp atau nomor request akan ikut
+          # terambil dan PREV_SCHEMA jadi sampah, sehingga rollback skema
+          # gagal diam-diam (hanya "WARN").
+          PREV_SCHEMA=$($DC run --rm --entrypoint /migrate api version 2>/dev/null \
+            | sed -n 's/^db version: *\([0-9][0-9]*\).*/\1/p' | head -n 1)
+          if [ -z "${PREV_SCHEMA:-}" ]; then
+            # Kemungkinan image baru sendiri yang rusak (bukan cuma
+            # aplikasinya) — lalu versi skema tak bisa dibaca dari image itu.
+            # Rolls back skema otomatis jadi tidak mungkin; jaring pengaman
+            # terakhirnya restore dari backup pre-deploy (lihat langkah 6).
+            echo "PERINGATAN: versi skema pra-deploy tidak terbaca; rollback skema otomatis TIDAK bisa dilakukan."
+            echo "  Kalau deploy gagal, restore manual dari backup pre-deploy (lihat langkah 6)."
+          else
+            echo "Versi skema sebelum deploy: $PREV_SCHEMA"
+          fi
           $DC run --rm --entrypoint /migrate api up || { echo "FAIL: migrate"; exit 1; }
 
           # 3b. Migrasi baru saja mengubah skema sementara image LAMA masih
@@ -154,14 +169,21 @@ jobs:
           # 6. Rollback bila gagal: image DAN skema.
           if [ "$ok" != "1" ]; then
             echo "FAIL: healthcheck; rollback ke $PREV_TAG"
+            # Skema dulu, baru image: image LAMA dijalankan dengan skema LAMA.
+            # Kalau dibalik, image lama akan berjalan dengan skema baru — itu
+            # justru penyebab rollback tidak berhasil.
             if [ -n "${PREV_SCHEMA:-}" ] && [ "$PREV_SCHEMA" != "0" ]; then
               echo "Kembalikan skema ke versi $PREV_SCHEMA"
               $DC run --rm --entrypoint /migrate api down-to "$PREV_SCHEMA" || echo "WARN: rollback skema gagal"
+            else
+              echo "PERINGATAN: versi skema pra-deploy tidak diketahui, skema TIDAK dikembalikan."
+              echo "  Restore manual dari backup pre-deploy:"
+              echo "    ls -t backup/pre-deploy-*.dump | head -1"
+              echo "    $DC exec -T db pg_restore -U \"\${DB_USER:-grafikarsa}\" -d \"\${DB_NAME:-grafikarsa}\" --clean --if-exists < \$(ls -t backup/pre-deploy-*.dump | head -1)"
             fi
             sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=$PREV_TAG|" .env
             $DC up -d
-            # Restore dari backup pre-deploy sebagai jaring pengaman terakhir
-            # kalau skema tidak bisa dikembalikan.
+            # Verifikasi skema setelah rollback: harus kembali ke versi pra-deploy.
             if [ -n "${PREV_SCHEMA:-}" ] && [ "$PREV_SCHEMA" != "0" ]; then
               echo "Cek skema setelah rollback:"; $DC run --rm --entrypoint /migrate api version || true
             fi
