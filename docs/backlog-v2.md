@@ -155,9 +155,14 @@
   - Status: ⬜
 - [ ] **P2-13** OTel tracing tidak ada — PRD §13.1, §17
   - Status: ⬜
-- [ ] **P2-14** Sliding-window rate limit tidak ada (fixed window `IncrWithExpire`) — PRD §6.2
-  - Status: ⬜
-- [ ] **P2-15** `clock` injectable tidak ada (`time.Now()` langsung di 7 file handler) — PRD §13.2
+- [x] **P2-14** Sliding-window rate limit (sebelumnya fixed window `IncrWithExpire`) — PRD §6.2
+  - ✅ Sprint 3 (commit `9d6efb2`) — key fixed window (`rl:{id}:{menit}`) bisa dipakai penuh **dua kali berturut-turut** di batas menit → 200 request dalam ~1 detik
+  - Sekarang sorted set (ZSET): ZREMRANGEBYSCORE + ZADD + ZCARD dalam satu pipeline (tetap 1 round-trip), jendela & batas dari env (`RATE_LIMIT_REQUESTS`, `RATE_LIMIT_WINDOW`)
+  - 5 test sliding window dengan Redis sungguhan (CI sekarang punya service Redis + `TEST_REDIS_ADDR`)
+- [x] **P2-15** `clock` injectable (sebelumnya `time.Now()` langsung di 8 file handler) — PRD §13.2
+  - ✅ Sprint 3 (commit `9d6efb2`) — package `internal/clock` (`System`/`Fixed`/`Func`); handler memakai `a.now()`
+  - Yang ter-clock: expiry & rotasi refresh token, token CSRF (termasuk aturan H-1), token follow-up feedback, `publish_at` changelog, counter view HLL, stempel backup, modtime serve media
+  - Pengecualian disengaja: durasi request di router tetap pakai jam sistem
 - [x] **P2-17** ~~CSP memakai nonce + strict-dynamic memblokir semua script~~ → **SUDAH DIPERBAIKI** (commit `62a99a6`)
   - Next.js hanya menyuntik nonce ke halaman yang di-render DINAMIS; halaman hasil prerender (landing, /login, /feed, halaman ber-`revalidate`) tidak punya nonce sama sekali → 26 dari 26 `<script>` diblokir → aplikasi tidak ter-hydrate, form login tak pernah muncul
   - Fix: CSP tanpa nonce (`script-src 'self' 'unsafe-inline'`), mengikuti panduan resmi Next.js untuk aplikasi yang tidak butuh nonce
