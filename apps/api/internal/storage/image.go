@@ -7,8 +7,10 @@ import (
 	"image/jpeg"
 	"image/png"
 	"io"
+	"log/slog"
 
 	"github.com/disintegration/imaging"
+	"github.com/gen2brain/webp"
 	_ "golang.org/x/image/webp"
 )
 
@@ -24,6 +26,14 @@ type ProcessedImage struct {
 
 // ProcessImage mendekode gambar apa pun yang didukung, membuang metadata
 // (EXIF/GPS) dengan menulis ulang pixel, lalu menghasilkan varian lebar.
+//
+// Hasilnya dikodekan ulang ke WebP (PRD §7.1: "server re-encode webp q80").
+// WebP chosen karena ukurannya sekitar 35% dari JPEG q82 pada foto yang sama —
+// hemat bandwidth untuk gambar yang paling sering dibuka (avatar, thumbnail),
+// dan semua browser modern sudah mendukungnya.
+//
+// Kalau encoder WebP gagal, ada fallback ke JPEG/PNG supaya upload tidak
+// gagal hanya karena encoder.
 func ProcessImage(raw []byte, maxWidth int, variantWidths []int) (*ProcessedImage, error) {
 	src, _, err := image.Decode(bytes.NewReader(raw))
 	if err != nil {
@@ -36,39 +46,60 @@ func ProcessImage(raw []byte, maxWidth int, variantWidths []int) (*ProcessedImag
 		w, h = src.Bounds().Dx(), src.Bounds().Dy()
 	}
 
-	// PNG dengan transparansi tetap PNG; selain itu JPEG (lebih kecil).
-	mime := "image/jpeg"
-	var buf bytes.Buffer
-	if hasAlpha(src) {
-		mime = "image/png"
-		if err := png.Encode(&buf, src); err != nil {
-			return nil, err
-		}
-	} else {
-		if err := jpeg.Encode(&buf, src, &jpeg.Options{Quality: 82}); err != nil {
-			return nil, err
-		}
+	mime, main, err := encodeImage(src, webpQuality)
+	if err != nil {
+		return nil, err
 	}
 
-	out := &ProcessedImage{Data: buf.Bytes(), Mime: mime, Width: w, Height: h, Variants: map[int][]byte{}}
+	out := &ProcessedImage{Data: main, Mime: mime, Width: w, Height: h, Variants: map[int][]byte{}}
 	for _, vw := range variantWidths {
 		if vw <= 0 || vw >= w {
 			continue
 		}
 		resized := imaging.Resize(src, vw, 0, imaging.Lanczos)
-		var vb bytes.Buffer
-		if mime == "image/png" {
-			if err := png.Encode(&vb, resized); err != nil {
-				return nil, err
-			}
-		} else {
-			if err := jpeg.Encode(&vb, resized, &jpeg.Options{Quality: 80}); err != nil {
-				return nil, err
-			}
+		_, variant, err := encodeImage(resized, webpQualityVariant)
+		if err != nil {
+			return nil, err
 		}
-		out.Variants[vw] = vb.Bytes()
+		out.Variants[vw] = variant
 	}
 	return out, nil
+}
+
+// webpQuality adalah kualitas WebP untuk gambar utama.
+// webpQualityVariant sedikit lebih rendah untuk varian kecil — pada lebar
+// kecil perbedaan hardly terlihat, tapi ukuran byte tetap berkurang.
+const (
+	webpQuality        = 80
+	webpQualityVariant = 75
+)
+
+// encodeImage mengodekan gambar ke WebP, dengan fallback ke JPEG (atau PNG
+// kalau punya transparansi).
+//
+// Encoder WebP yang dipakai berjalan sebagai WASM (libwebp di dalam WASM),
+// jadi tidak butuh cgo — penting karena image API dibangun dengan
+// CGO_ENABLED=0 di Alpine.
+func encodeImage(src image.Image, quality int) (string, []byte, error) {
+	var buf bytes.Buffer
+	if err := webp.Encode(&buf, src, webp.Options{Quality: quality}); err == nil {
+		return "image/webp", buf.Bytes(), nil
+	} else {
+		// Fallback: jangan gagalkan upload hanya karena encoder.
+		slog.Warn("encoder webp gagal, fallback ke jpeg/png", "err", err)
+	}
+
+	var fb bytes.Buffer
+	if hasAlpha(src) {
+		if err := png.Encode(&fb, src); err != nil {
+			return "", nil, err
+		}
+		return "image/png", fb.Bytes(), nil
+	}
+	if err := jpeg.Encode(&fb, src, &jpeg.Options{Quality: quality}); err != nil {
+		return "", nil, err
+	}
+	return "image/jpeg", fb.Bytes(), nil
 }
 
 func hasAlpha(img image.Image) bool {
