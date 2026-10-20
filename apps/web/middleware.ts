@@ -113,26 +113,14 @@ const MAINTENANCE_HTML = `<!DOCTYPE html>
 </body></html>`;
 
 export function middleware(req: NextRequest) {
-  // Rute /api/* dilayani BFF (app/api/[...path]/route.ts). Next.js tidak
-  // pernah mendispatch method TRACE ke route handler, jadi TRACE ke /api/*
-  // berakhir 500 — padahal 405 (Method Not Allowed) yang benar. 500 untuk
-  // method yang memang tidak didukung menyesatkan: ia terlihat seperti
-  // server error saat triase insiden.
+  // Rute /api/* dilayani BFF (app/api/[...path]/route.ts). Path lain
+  // dilewati saja: routing & CSP ditangani BFF/router.
   //
-  // Di sini TRACE (dan method yang tidak didukung BFF) diintercept dulu,
-  // sebelum BFF sempat menjawab.
+  // Catatan TRACE: Next.js melempar "HTTP method is unsupported" di
+  // intinya, sebelum middleware sempat jalan, jadi request TRACE
+  // berakhir 500. Jawaban 405 yang benar diberikan Caddy di edge
+  // (lihat Caddyfile).
   if (req.nextUrl.pathname.startsWith("/api/")) {
-    if (req.method === "TRACE") {
-      return NextResponse.json(
-        {
-          success: false,
-          error: { code: "METHOD_NOT_ALLOWED", message: "Metode tidak didukung." },
-        },
-        { status: 405 },
-      );
-    }
-    // Routing & CSP ditangani oleh BFF/router; middleware ini hanya
-    // lewat untuk path lain.
     return NextResponse.next();
   }
 

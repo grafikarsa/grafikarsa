@@ -47,6 +47,13 @@ DIFF="$WORK/diff.txt"
 log() { echo "[$(date +%H:%M:%S)] $*"; }
 
 # ---------- 1. alias ----------
+# `mc alias set` menyimpan kredensial ke konfigurasi mc milik operator
+# (~/.mc/config.json) — di luar direktori sementara, dan tidak ikut terhapus
+# kalau skrip gagal di tengah jalan. Arahkan ke direktori privat di bawah
+# $WORK supaya seluruh kredensial ikut hilang saat exit trap berjalan.
+export MC_CONFIG_DIR="$WORK/mc"
+mkdir -p "$MC_CONFIG_DIR"
+chmod 700 "$MC_CONFIG_DIR"
 log "set up alias mc"
 # --api S3v4 WAJIB: mc secara default memakai S3v2, yang ditolak MinIO
 # modern & RustFS ("The Access Key Id you provided does not exist in our

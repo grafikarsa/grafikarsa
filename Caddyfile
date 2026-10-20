@@ -32,6 +32,18 @@
 		X-Frame-Options "SAMEORIGIN"
 	}
 
+	# Method yang tidak didukung aplikasi.
+	#
+	# Next.js melempar TypeError "'TRACE' HTTP method is unsupported" di
+	# intinya — sebelum middleware sempat jalan — sehingga request TRACE
+	# berakhir 500 (Internal Server Error). Itu menyesatkan: 500 berarti
+	# "server rusak", padahal yang benar 405 (Method Not Allowed).
+	#
+	# Ditolak di sini, di edge, supaya klien dapat jawaban yang benar dan
+	# log Next.js tidak penuh error.
+	@unsupported_method method TRACE
+	respond @unsupported_method 405
+
 	# Frontend — satu-satunya upstream publik
 	handle {
 		reverse_proxy web:3000

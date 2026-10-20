@@ -111,4 +111,7 @@ export const PUT = handler;
 export const PATCH = handler;
 export const DELETE = handler;
 export const OPTIONS = handler;
-export const TRACE = handler;
+// TRACE sengaja TIDAK diekspor: Next.js tidak mendukung method itu sebagai
+// route handler ("'TRACE' HTTP method is unsupported") dan akan menjawab
+// 500. TRACE sudah diintercept lebih dulu di middleware, yang menjawab 405
+// (Method Not Allowed) — jawaban yang benar.

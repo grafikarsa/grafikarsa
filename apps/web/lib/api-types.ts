@@ -6644,7 +6644,15 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": {
+                    query?: string;
+                    q?: string;
+                };
+                "text/plain": string;
+            };
+        };
         responses: {
             /** @description Berhasil */
             200: {

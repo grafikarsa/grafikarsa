@@ -454,6 +454,7 @@ func render(routes []route) string {
 			}
 			writePathParams(&b, r.path)
 			writeRequiredQueryParams(&b, r.path)
+			writeRequestBody(&b, r.method, r.path)
 			writeResponses(&b, r)
 		}
 	}
@@ -559,6 +560,46 @@ func skipPublicPath(path string) bool {
 		return true
 	}
 	return false
+}
+
+// requestBodies: deskripsi body request untuk endpoint yang punya body.
+//
+// Generator tidak memodelkan body secara umum, jadi endpoint yang butuh body
+// didaftarkan di sini.
+//
+// Penting: PRD §5 menyebut "POST /search — query dikirim di body agar
+// panjang/UTF-8 aman", dan endpoint itu memang menerima body JSON
+// {query|q}. Tanpa deskripsi body di spec, klien hasil generate tidak bisa
+// merepresentasikan request itu — dan contract test menganggap request yang
+// tidak sesuai spec "ditolak".
+//
+// Kuncinya "METHOD path" — bukan path saja: /search punya GET (query di URL)
+// dan POST (query di body). Kalau requestBody ditempel ke pathnya, GET juga
+// diklaim punya body — dan schemathesis lalu mengirim body ke GET yang
+// diaplikasinya mengabaikan, sehingga request itu dianggap melanggar skema
+// padahal server tidak pernah memcion body itu.
+var requestBodies = map[string]string{
+	"POST /api/v1/search": `      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query: { type: string, minLength: 2 }
+                q: { type: string, minLength: 2 }
+          text/plain:
+            schema: { type: string }
+`,
+}
+
+// writeRequestBody menulis blok requestBody untuk operasi yang punya body.
+func writeRequestBody(b *strings.Builder, method, path string) {
+	body, ok := requestBodies[method+" "+path]
+	if !ok {
+		return
+	}
+	b.WriteString(body)
 }
 
 // pathParams mengembalikan daftar nama parameter path pada sebuah path,
