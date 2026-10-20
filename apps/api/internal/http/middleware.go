@@ -17,15 +17,17 @@ import (
 )
 
 type App struct {
-	Cfg     *config.Config
-	Q       *repo.Queries
-	Cache   *cache.Cache
-	Storage *storage.Storage
+	Cfg   *config.Config
+	Q     *repo.Queries
+	Cache *cache.Cache
+	// Storage dipakai lewat interface (PRD §7.5 ayat 3): handler tidak
+	// boleh tahu apa pun soal kode S3 di baliknya.
+	Storage storage.Store
 	Secure  bool
 	Tx      *txRunner
 }
 
-func NewApp(cfg *config.Config, q *repo.Queries, c *cache.Cache, st *storage.Storage) *App {
+func NewApp(cfg *config.Config, q *repo.Queries, c *cache.Cache, st storage.Store) *App {
 	return &App{Cfg: cfg, Q: q, Cache: c, Storage: st, Secure: cfg.AppEnv == "production"}
 }
 

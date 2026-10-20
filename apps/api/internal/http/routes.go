@@ -15,7 +15,7 @@ import (
 type Deps struct {
 	Pool    *pgxpool.Pool
 	Cache   *cache.Cache
-	Storage *storage.Storage
+	Storage storage.Store
 }
 
 func (a *App) routes() http.Handler {

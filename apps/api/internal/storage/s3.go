@@ -18,7 +18,11 @@ import (
 //nolint:misspell // "Implementasi" adalah kata Indonesia, bukan salah ketik.
 type Storage struct {
 	client *s3.Client
-	bucket string
+	// presign hanya dipakai untuk kebutuhan internal/tooling (PRD §7.5
+	// ayat 3): URL ke browser tetap lewat BFF, tidak pernah langsung ke
+	// object storage.
+	presign *s3.PresignClient
+	bucket  string
 }
 
 func New(cfg *config.Config) *Storage {
@@ -28,7 +32,11 @@ func New(cfg *config.Config) *Storage {
 		BaseEndpoint: aws.String(cfg.S3.Endpoint),
 		UsePathStyle: cfg.S3.UsePathStyle,
 	})
-	return &Storage{client: client, bucket: cfg.S3.Bucket}
+	return &Storage{
+		client:  client,
+		presign: s3.NewPresignClient(client),
+		bucket:  cfg.S3.Bucket,
+	}
 }
 
 // EnsureBucket membuat bucket bila belum ada dan mengaktifkan versioning.
