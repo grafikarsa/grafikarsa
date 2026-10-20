@@ -177,8 +177,10 @@
 
 ## P3 — Tooling & Quality Gate (10)
 
-- [ ] **P3-01** `golangci-lint` tidak ada (cuma gofmt + go vet) — PRD §2.2, §13.3
-- [ ] **P3-02** `prettier` tidak ada — PRD §2.2
+- [x] **P3-01** `golangci-lint` sebagai gate CI — config `apps/api/.golangci.yml` (errcheck, govet, ineffassign, staticcheck, unused, bodyclose, errorlint, misspell, unconvert, wastedassign), versi v2.15.0
+  - ✅ Sprint 3 (commit `de11524`) — menemukan 9 masalah nyata (termasuk `INSERT user_roles` yang gagal diam-diam di tool migrasi) + 7 fungsi mati. `shadow` dimatikan dengan alasan tertulis. Hasil: 0 issue
+- [x] **P3-02** `prettier` sebagai gate format — config `.prettierrc.json` (gaya shadcn: 2 spasi, double quote, semi, printWidth 100), `.prettierignore` untuk file hasil generate
+  - ✅ Sprint 3 (commit `7f4db0b`) — 69 file diformat, `pnpm format`/`format:check`, CI menjalankan `prettier --check .`
 - [x] **P3-03** Integration test dengan Postgres asli (bukan SQLite — skema v2 pakai citext/pg_trgm/tsvector/partial unique index)
   - Helper `internal/dbtest` (skip graceful tanpa `TEST_DATABASE_URL`) + test query media & permission expiry
   - ✅ Sprint 2 (commit `9f40b1e`) · CI: job `api` menyalakan service postgres + jalankan migrasi (commit `ci(api): jalankan integration test dengan Postgres service`)
@@ -186,13 +188,15 @@
   - ✅ Sprint 3 (commit `3db02d5`) — **menemukan 2 bug produksi**: CSP memblokir semua script, dan `/me` selalu redirect ke login
 - [x] **P3-05** A11y test (axe, WCAG AA) — audit pada landing, login, feed; serious/critical memblokir build
   - ✅ Sprint 3 (commit `3db02d5`) — menemukan halaman tanpa `<h1>` (/login, /feed, /admin/dashboard) → diperbaiki di `93d9af9`
-- [ ] **P3-06** Contract test (schemathesis) tidak masuk CI — PRD §14.3
-- [ ] **P3-07** Load test (k6) tidak masuk CI — PRD §14.3, §18
+- [x] **P3-06** Contract test (schemathesis) di CI — job `contract`: postgres + migrasi + seed + API hidup → `tools/contract-test.sh`
+  - ✅ Sprint 3 (commit `1643b5f`) — sekaligus memperbaiki `tools/schemathesis.sh` yang rusak (flag v3 → v4). Hasil: 1329 test case lulus
+- [x] **P3-07** Load test (k6) di CI — bagian dari job `contract` (k6 smoke: 10 VU publik + 5 VU terautentikasi, 30 detik)
+  - ✅ Sprint 3 (commit `1643b5f`) — sekaligus memperbaiki `tools/k6/smoke.js` yang rusak: threshold `p95<800` tidak valid di k6 v2 (jadi `p(95)<800`), dan login di dalam loop memicu lockout brute-force (sekarang sekali di `setup()`)
 - [ ] **P3-08** Coverage test FE tipis (1 file: `block-form.test.ts`) — PRD §14.3
   - Prioritas: `lib/api.ts` (single-flight refresh), `block-logic.ts`, `deepLink`
 - [ ] **P3-09** Test Go domain kritis belum ada (auth rotation, RBAC scope, promotion, outbox, upload)
   - Ada: `formula_test.go`, `contract_blocks_test.go`, `config_test.go`, `router_test.go`, `gen-openapi`, `migrate-old`
-- [ ] **P3-10** `next-sitemap` tidak dipakai (sitemap manual — fungsional, boleh tetap)
+- [x] **P3-10** ~~`next-sitemap` tidak dipakai~~ → **deviasi terdokumentasi**: `app/sitemap.ts` manual sudah fungsional (revalidate 3600, mencakup portfolio published + profil user + changelog), jadi tidak perlu dependensi tambahan
 - [x] **P3-11** `pnpm/action-setup@v4` tanpa input `version` (repo tak punya package.json di root) → job `web` crash sebelum menjalankan kode
   - Fix: `version: 10` (sama dengan `apps/web/Dockerfile`) — ✅ Sprint 1 (commit `038bd4e`)
 - [x] **P3-12** `gitleaks/gitleaks-action@v2` mewajibkan `GITLEAKS_LICENSE` untuk repo organisasi → job `secrets-scan` crash
@@ -239,7 +243,9 @@
 - [ ] **P6-01** 🔴 Rollback deploy tidak rollback skema
   - Evidence: `.github/workflows/deploy.yml:130-137` — hanya `sed IMAGE_TAG` + `up -d`, tanpa `goose down`
 - [ ] **P6-02** 🔴 Jendela backward-compat: `migrate up` jalan **sebelum** `up -d` → container lama jalan dengan skema baru
-- [ ] **P6-03** Migrasi v1→v2 belum pernah di dry-run terhadap dump prod — PRD §16
+- [x] **P6-03** Migrasi v1→v2 di dry-run & execute terhadap dump produksi (1.688 user, 1.723 portfolio, 6.970 block) — PRD §16
+  - ✅ Sprint 3 (commit `1f740a6`) — dry-run menemukan **6 bug** yang membuat hampir semua data hilang (portfolio, block, like, follow, comment, notification, assessment). Setelah diperbaiki: **100%** user/portfolio/like/follow/comment/notification/feedback termigrasi, 5.939/6.970 block (+1.031 karantina dengan alasan sah)
+  - Hasil akhir di DB bersih: users 1688 · portfolios 1723 · blocks 5939 · likes 740 · follows 4341 · comments 79 · notifications 6946 · feedback 17 · skipped `{}`
 - [ ] **P6-04** Storage mirror 5,1 GB belum dilakukan — PRD §16.3 (`tools/backup.sh` sudah ada `rclone sync`)
 - [ ] **P6-05** k6 p95 belum diverifikasi di VPS 4GB — PRD §14.1, §18 gate
 - [ ] **P6-06** Restore drill belum pernah — PRD §17, §18 gate
