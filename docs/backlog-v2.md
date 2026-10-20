@@ -130,13 +130,16 @@
 - [ ] **P2-04** WebP encoding tidak ada (selalu JPEG q82/PNG) — PRD §7.1
   - Evidence: `internal/storage/image.go`; `golang.org/x/image/webp` import blank (decoder saja)
   - Status: ⬜
-- [ ] **P2-05** Object key pakai uuid4 + format generik, bukan uuid7 + path per-entity — PRD §7.1
-  - Evidence: `internal/http/media_upload.go:233`
-  - Status: ⬜
-- [ ] **P2-06** `DeleteObjects` / `ListObjectsV2` tidak ada di storage wrapper — PRD §7.5
-  - Status: ⬜
-- [ ] **P2-07** Guard "hanya operasi S3 yang diizinkan" — PRD §7.5 (konvensi saja, tanpa enforcement)
-  - Status: ⬜
+- [x] **P2-05** Object key pakai uuid4 + format generik → **uuid7 + path per-entity** — PRD §7.1
+  - ✅ Sprint 3 (commit `6bf51d7`) — `mediaObjectKey(purpose, owner, entity, ext)`: `thumbnails/{portfolio_id}/{uuid7}.jpg`, `avatars/{user_id}/{uuid7}.webp`, dst.
+  - Field multipart opsional `entity_id` (portfolio / thread feedback), **divalidasi kepemilikannya** (403 kalau bukan miliknya) dan segmen path disanitasi (422 untuk `../../etc`)
+  - FE mengirim `entity_id` dari halaman edit karya
+  - Kenapa uuid7: terurut waktu → listing objek per folder bisa dipaginasi dengan batas atas, bukan full scan
+- [x] **P2-06** `DeleteObjects` / `ListObjectsV2` ada di storage wrapper — PRD §7.5
+  - ✅ Sprint 3 (commit `b89223e`) — `DeleteObjects` (dipecah otomatis pada batas 1000 key/request), `ListObjectsV2` (paginator, seluruh hasil), plus `PresignGet` untuk kebutuhan internal/tooling
+  - Interface `storage.Store` dipakai handler, bukan implementasi konkret
+- [x] **P2-07** Guard "hanya operasi S3 yang diizinkan" **ditegakkan** (bukan sekadar konvensi) — PRD §7.5
+  - ✅ Sprint 3 (commit `b89223e`) — `internal/storage/guard_test.go` gagal kalau: ada import SDK S3 / SDK vendor di luar `internal/storage`; ada operasi S3 di luar daftar PRD §7.5 ayat 2; ada env `*_RUSTFS_*`/`*_MINIO_*` di `.env.example`/CI/blok compose selain `storage:`; atau handler memakai `*storage.Storage` (implementasi konkret) alih-alih interface
 - [ ] **P2-08** `nuqs` + DataTable server-side di halaman admin — PRD §12.3
   - Evidence: `nuqs` tidak ada di `package.json`; `/admin/users|classes|portfolios` filter klien, tanpa pagination server-side
   - Status: ⬜
