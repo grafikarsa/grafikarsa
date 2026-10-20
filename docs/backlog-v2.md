@@ -151,12 +151,14 @@
 - [ ] **P2-08** `nuqs` + DataTable server-side di halaman admin — PRD §12.3
   - Evidence: `nuqs` tidak ada di `package.json`; `/admin/users|classes|portfolios` filter klien, tanpa pagination server-side
   - Status: ⬜
-- [ ] **P2-09** OG image per portfolio + JSON-LD `CreativeWork` — PRD §14.3
-  - Evidence: `app/(main)/[username]/[slug]/page.tsx` tidak punya `openGraph.images` / JSON-LD
-  - Status: ⬜
-- [ ] **P2-10** `next/image` tidak dipakai sama sekali (0 file) — PRD §7.3
-  - Evidence: `next.config.ts` `remotePatterns` hanya `http://localhost`
-  - Status: ⬜
+- [x] **P2-09** OG image per portfolio + JSON-LD `CreativeWork` — PRD §14.3
+  - ✅ Sprint 3 (commit `6400ccb`) — `opengraph-image.tsx` di segmen `[username]/[slug]`: gambar OG 1200×630 dibuat on-the-fly (ImageResponse) berisi judul & pembuatnya
+  - JSON-LD `schema.org/CreativeWork`: nama, URL, penulis, penerbit, tanggal terbit, jumlah suka/komentar
+  - `metadataBase` diset di root layout — tanpa itu URL gambar OG diselesaikan terhadap `localhost`, jadi crawler tidak bisa mengambilnya
+- [x] **P2-10** `next/image` dipakai (sebelumnya 0 file) — PRD §7.3
+  - ✅ Sprint 3 (commit `6400ccb`) — loader khusus `lib/image-loader.ts` menambahkan `w` & `q` ke `/api/v1/media/:id`
+  - Lebar **dibulatkan ke varian yang benar-benar ada** (320/800). Tanpa itu Next meminta lebar yang tidak punya varian → API menyajikan file asli yang jauh lebih besar untuk setiap request
+  - `deviceSizes`/`imageSizes` dikecilkan ke dua lebar itu → srcset pendek
 - [ ] **P2-11** Package `internal/service/`, `internal/iam/`, `internal/jobs/`, `dto/`, `errors.go` tidak ada — PRD §13.1
   - Status: ⬜
 - [ ] **P2-12** RFC7807 `problem+json` tidak dipakai (pakai envelope `success/data/error`) — PRD §5
