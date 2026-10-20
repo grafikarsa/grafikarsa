@@ -235,12 +235,29 @@ jobs:
       JWT_ACCESS_SECRET: ci-contract-access-secret-value
       JWT_REFRESH_SECRET: ci-contract-refresh-secret-value
       CSRF_SECRET: ci-contract-csrf-secret-value
+      # Contract test menembak ribuan request dalam hitungan detik. Dengan
+      # batas default, sebagian besar request dibalas 429 dan yang diuji
+      # bukan perilakunya, tapi rate limiter-nya.
+      RATE_LIMIT_REQUESTS: "1000000"
+      INTERNAL_API_URL: http://127.0.0.1:8080/v1
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version: "1.26"
           cache-dependency-path: apps/api/go.sum
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+      - name: Install dependensi web
+        working-directory: apps/web
+        run: pnpm install --frozen-lockfile
       - name: Siapkan skema + seed
         working-directory: apps/api
         run: |
@@ -258,6 +275,25 @@ jobs:
             sleep 1
           done
           curl -sf http://127.0.0.1:8080/health || { echo "API gagal start"; cat /tmp/api.log; exit 1; }
+      - name: Build web (standalone)
+        working-directory: apps/web
+        run: |
+          pnpm build
+          # Samakan dengan Dockerfile: server standalone butuh folder static
+          # di dalam dirinya sendiri.
+          mkdir -p .next/standalone/.next
+          cp -r .next/static .next/standalone/.next/static
+      - name: Jalankan web (BFF)
+        working-directory: apps/web/.next/standalone
+        run: |
+          nohup node server.js > /tmp/web.log 2>&1 &
+          for i in $(seq 1 40); do
+            if curl -sf http://127.0.0.1:3000/ >/dev/null; then
+              echo "Web siap"; break
+            fi
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:3000/ >/dev/null || { echo "Web gagal start"; cat /tmp/web.log; exit 1; }
       - name: Pasang schemathesis
         run: pipx install schemathesis
       - name: Contract test (schemathesis) + load test (k6)
@@ -267,10 +303,12 @@ jobs:
           # brute-force setelah 10 percobaan dan seluruh skenario gagal.
           USER: admin
           PASS: AdminContractTest123
-        run: ./tools/contract-test.sh http://127.0.0.1:8080
-      - name: Log API
+        run: ./tools/contract-test.sh http://127.0.0.1:3000 http://127.0.0.1:8080
+      - name: Log API & web
         if: failure()
-        run: cat /tmp/api.log
+        run: |
+          cat /tmp/api.log || true
+          cat /tmp/web.log || true
 
   e2e:
     # E2E Playwright + audit a11y axe (PRD §14.3).

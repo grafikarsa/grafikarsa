@@ -28,6 +28,12 @@ func (a *App) routes() http.Handler {
 	r.Route("/v1", func(r chi.Router) {
 		// Rate limit per IP (gate ganti-password ada di authRequired).
 		r.Use(a.rateLimit)
+		// Validasi parameter UUID. Didaftarkan DI DALAM grup /v1, bukan
+		// di mux root: middleware grup baru jalan setelah route-nya
+		// cocok, jadi pola route (dan nama parameternya) sudah diketahui.
+		// Di mux root, middleware jalan sebelum routing sub-router —
+		// polanya masih kosong.
+		r.Use(validateUUIDParams)
 		r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusOK, ok(map[string]string{"status": "ok"}, r))
 		})

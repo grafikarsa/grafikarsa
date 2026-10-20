@@ -25,9 +25,33 @@ type loginRequest struct {
 	CaptchaToken string `json:"captcha_token"`
 }
 
+// invalidUUIDError adalah panic yang sengaja dipakai untuk menandai UUID
+// tak valid pada input pengguna (path param atau body).
+type invalidUUIDError struct {
+	Value  string
+	Origin string
+}
+
+func (e invalidUUIDError) Error() string {
+	return "UUID tidak valid: " + e.Value
+}
+
+// mustUUID mengubah string menjadi UUID, atau panic kalau stringnya bukan
+// UUID.
+//
+// Sebelumnya kegagalan parse "ditelan": string yang bukan UUID menjadi UUID
+// nol (00000000-0000-0000-0000-000000000000) dan query tetap jalan. Akibatnya
+// "/portfolios/id/abc/comments" membalas 200 dengan daftar kosong — klien
+// menampilkan "belum ada komentar" untuk portofolio yang sebenarnya ada, dan
+// salah ketik tidak pernah ketahuan.
+//
+// Sekarang UUID tak valid jadi panic yang ditangkap recoverer, yang
+// diterjemahkan jadi 400 dengan pesan jelas.
 func mustUUID(s string) pgtype.UUID {
 	var v pgtype.UUID
-	_ = v.Scan(s)
+	if err := v.Scan(s); err != nil {
+		panic(invalidUUIDError{Value: s})
+	}
 	return v
 }
 

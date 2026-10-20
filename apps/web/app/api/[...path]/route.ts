@@ -5,7 +5,12 @@ import { NextRequest, NextResponse } from "next/server";
 // - response: set-cookie (WAJIB untuk __Host-rt/__Host-csrf), etag,
 //   cache-control, content-range/accept-ranges (media Range), disposition
 // Tanpa logika bisnis; error code dari backend tidak diubah.
-const METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
+// Method yang diteruskan ke API.
+//
+// OPTIONS & TRACE ikut: kalau tidak, Next.js tidak punya route handler untuk
+// method itu dan menjawab 500 — padahal 405 (Method Not Allowed) yang
+// benar. API yang menentukan statusnya, bukan BFF.
+const METHODS = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "TRACE"] as const;
 
 const FORWARD_REQ = [
   "cookie",
@@ -100,7 +105,10 @@ function handler(req: NextRequest, ctx: { params: Promise<{ path: string[] }> })
 }
 
 export const GET = handler;
+export const HEAD = handler;
 export const POST = handler;
 export const PUT = handler;
 export const PATCH = handler;
 export const DELETE = handler;
+export const OPTIONS = handler;
+export const TRACE = handler;

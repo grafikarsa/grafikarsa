@@ -113,6 +113,29 @@ const MAINTENANCE_HTML = `<!DOCTYPE html>
 </body></html>`;
 
 export function middleware(req: NextRequest) {
+  // Rute /api/* dilayani BFF (app/api/[...path]/route.ts). Next.js tidak
+  // pernah mendispatch method TRACE ke route handler, jadi TRACE ke /api/*
+  // berakhir 500 — padahal 405 (Method Not Allowed) yang benar. 500 untuk
+  // method yang memang tidak didukung menyesatkan: ia terlihat seperti
+  // server error saat triase insiden.
+  //
+  // Di sini TRACE (dan method yang tidak didukung BFF) diintercept dulu,
+  // sebelum BFF sempat menjawab.
+  if (req.nextUrl.pathname.startsWith("/api/")) {
+    if (req.method === "TRACE") {
+      return NextResponse.json(
+        {
+          success: false,
+          error: { code: "METHOD_NOT_ALLOWED", message: "Metode tidak didukung." },
+        },
+        { status: 405 },
+      );
+    }
+    // Routing & CSP ditangani oleh BFF/router; middleware ini hanya
+    // lewat untuk path lain.
+    return NextResponse.next();
+  }
+
   const isDev = process.env.NODE_ENV !== "production";
   // CSP tanpa nonce.
   //
@@ -190,7 +213,11 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
+  // `api` TIDAK dikecualikan lagi: middleware perlu menyelesaikan TRACE
+  // ke /api/* (lihat catatan di atas). Untuk path /api lain middleware
+  // ini langsung lewat, jadi tidak ada logika dan tidak ada header yang
+  // ditambahkan ke respons API.
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|webp|ico|txt|xml)).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|webp|ico|txt|xml)).*)",
   ],
 };
