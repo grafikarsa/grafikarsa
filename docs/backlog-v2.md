@@ -14,8 +14,8 @@
 | Sprint 1 | P0-01, P0-02, P0-03, P0-04, P0-05, P0-06, P0-10, P0-11, P1-01 | ✅ Selesai | 9 item — blocker & kebocoran privasi |
 | Sprint 2 | P0-07, P0-08, P0-09, P1-02…P1-06, P4-01…P4-07, P5-01…P5-08, P3-03 | ✅ Selesai | Skema `user_roles` + media retire + keamanan + sinkronisasi doc + hygiene |
 | Sprint 3 | P3-01, P3-02, P3-04…P3-10 | ✅ Selesai | golangci-lint + prettier + Playwright/axe + schemathesis/k6 + test domain |
-| Sprint 4 | P2-01…P2-15 | 🟡 8/15 selesai | Fitur PRD §7-§8 — sisa: WebP, nuqs+DataTable, restrukturisasi paket, RFC7807, OTel |
-| Sprint 5 | P6-01…P6-09 | 🟡 7/9 selesai | Go-live readiness (Fase 4) — tersisa P6-04 (storage mirror) |
+| Sprint 4 | P2-01…P2-16 | ✅ Selesai | Kontrak S3, object key per-entity, WebP, rate limit sliding window, OTel, DataTable server-side, struktur paket |
+| Sprint 5 | P6-01…P6-09 | ✅ Selesai | Go-live readiness (Fase 4) — eksekusi storage mirror dijadwalkan saat go-live |
 | — | — | ✅ Selesai | Keamanan & hygiene |
 
 ---
