@@ -152,31 +152,68 @@ mematikan scheduler. Jalankan satu job manual:
 
 ## Maintenance mode (jendela migrasi v1 → v2)
 
-Saat data dimindahkan, aplikasi v1 perlu di-*freeze* supaya tidak ada tulisan
-baru yang masuk selama migrasi berjalan. Pengunjung melihat halaman
-"Pindah ke v2" (HTTP 503, `Retry-After: 600`).
+Saat data dipindahkan, aplikasi v1 perlu di-*freeze* supaya tidak ada tulisan
+baru yang masuk selama migrasi berjalan.
 
-Dua cara menyalakannya:
+**Penting: v1 TIDAK punya fitur maintenance yang bisa dipakai.** Komponen
+`components/maintenance/maintenance-page.tsx` memang ada di bundle v1, tapi
+tidak pernah dirender (dead code) — tidak ada env var, tidak ada header, dan
+halaman yang mengembalikannya sama persis dengan normal. Header
+`x-maintenance-mode` yang disebut di PRD §16.1 **tidak berpengaruh** di v1
+(diverifikasi langsung ke container v1).
 
-| Cara | Kapan aktif | Catatan |
-|---|---|---|
-| `NEXT_PUBLIC_MAINTENANCE_MODE=true` saat build | saat build ulang | Nama flag yang dipakai PRD §16.1; perlu build + deploy ulang |
-| Header `x-maintenance-mode: on` dari reverse proxy | **sekali reload proxy** | Tanpa build ulang — dipakai untuk go-live |
-
-Contoh Caddy (reverse proxy di depan Next.js):
+Jadi maintenance dilakukan di **level proxy** — Caddy menjawab 503 sendiri,
+tanpa bergantung pada aplikasi v1 sama sekali.
 
 ```caddy
-# buka maintenance
-grafikarsa.com {
-    header x-maintenance-mode on
-    reverse_proxy web:3000
-}
-# tutup maintenance: hapus baris "header x-maintenance-mode on", lalu
-#   docker compose exec caddy caddy reload
+# /opt/grafikarsa/Caddyfile — tambahkan blok ini di dalam blok {$DOMAIN}
+
+	@write {
+		path /api/*
+		method POST PUT PATCH DELETE
+	}
+	handle @write {
+		header Retry-After 600
+		respond "Pindah ke v2 — migrasi sedang berjalan. Kembali sebentar lagi." 503
+	}
+
+	handle {
+		header Retry-After 600
+		respond "Pindah ke v2 — migrasi sedang berjalan. Kembali sebentar lagi." 503
+	}
 ```
 
-`/api/*` **tidak** disentuh maintenance — health check, BFF, dan API tetap
-hidup, jadi pod masih lolos health check dan rollback tetap mungkin.
+Blok `handle { ... }` yang terakhir **menggantikan** blok
+`handle { reverse_proxy web:3100 }` yang sudah ada (frontend v1) — jadi
+urutannya: blok maintenance diletakkan **setelah** `handle /storage/*` dan
+**sebelum** blok frontend ✓.
+
+Aktifkan (tanpa restart, tanpa downtime):
+
+```bash
+cd /opt/grafikarsa
+cp Caddyfile Caddyfile.premaintenance.bak   # kalau perlu balik
+# ... edit Caddyfile di atas ...
+docker exec grafikarsa-proxy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+# cek:
+curl -s -o /dev/null -w "GET / -> %{http_code}\n" https://DOMAIN/
+curl -s -o /dev/null -w "POST /api/x -> %{http_code}\n" -X POST https://DOMAIN/api/x
+```
+
+Yang harus berlaku setelah reload:
+
+| Request | Hasil |
+|---|---|
+| `GET /` | **503** + `Retry-After: 600` (pengunjung lihat halaman "Pindah ke v2") |
+| `POST/PUT/PATCH/DELETE /api/*` | **503** — tulisan baru **diblokir** |
+| `GET /api/*` | **200** — baca tetap jalan, health check tetap hijau, rollback tetap mungkin |
+
+Sintaks di atas sudah divalidasi (`caddy validate`) dan diuji nyata dengan
+Caddy 2: GET `/` → 503 + Retry-After, GET API → 200, POST API → 503.
+
+**Menutupnya:** blok `handle { ... }` (maintenance) dihapus dari Caddyfile
+lalu `caddy reload` lagi. Setelah go-live, deploy menimpa Caddyfile dengan
+yang versi v2 — sehingga maintenance otomatis hilang ✓.
 
 Aktifkan **H-1** (bukan saat migrasi dimulai) supaya orang tidak sempat
 menulis karya yang tidak ikut termigrasi.
@@ -397,6 +434,7 @@ ditimpa keduanya disalin:
 |---|---|
 | `/opt/grafikarsa/docker-compose.deploy.v1.yml` | compose stack v1 (volume `grafikarsa_postgres_data`, MinIO, Redis) |
 | `/opt/grafikarsa/.env.v1.bak` | `.env` v1 — termasuk `IMAGE_TAG` v1 yang sedang dipakai |
+| `/opt/grafikarsa/Caddyfile.v1.bak` | Caddyfile v1 (routing ke `web:3100` + `backend:8080` + MinIO) |
 
 Kembalikannya:
 
@@ -404,7 +442,9 @@ Kembalikannya:
 cd /opt/grafikarsa
 cp docker-compose.deploy.v1.yml docker-compose.deploy.yml
 cp .env.v1.bak .env
+cp Caddyfile.v1.bak Caddyfile
 docker compose -f docker-compose.deploy.yml up -d
+docker exec grafikarsa-proxy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
 ```
 
 Image v1 (backend + web, bertag SHA) tidak ikut terhapus oleh
