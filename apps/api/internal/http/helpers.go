@@ -113,6 +113,40 @@ func failDetails(code, message string, details []map[string]string, r *http.Requ
 	}
 }
 
+// Nama cookie sesi & CSRF.
+//
+// Prefix "__Host-" memberi jaminan tambahan (wajib Secure, Path=/, tanpa
+// Domain, jadi cookie tak bisa ditulis subdomain lain). TAPI browser
+// MENOLAK cookie "__Host-" yang tidak punya flag Secure — sedangkan di
+// development aplikasi berjalan di http://localhost sehingga cookie-nya
+// tidak Secure.
+//
+// Akibatnya, kalau nama "__Host-" tetap dipakai di dev, sesi login tidak
+// pernah tersimpan: user login, lalu langsung diminta login lagi.
+//
+// Jadi prefix hanya dipakai ketika cookie-nya memang Secure (produksi).
+// Di dev (http) dipakai nama polos.
+const (
+	secureSessionCookie = "__Host-rt"
+	secureCSRFCookie    = "__Host-csrf"
+	plainSessionCookie  = "rt"
+	plainCSRFCookie     = "csrf"
+)
+
+func sessionCookieName(secure bool) string {
+	if secure {
+		return secureSessionCookie
+	}
+	return plainSessionCookie
+}
+
+func csrfCookieName(secure bool) string {
+	if secure {
+		return secureCSRFCookie
+	}
+	return plainCSRFCookie
+}
+
 func setCookie(w http.ResponseWriter, name, value string, maxAge int, httpOnly bool, secure bool) {
 	parts := []string{name + "=" + value, "Path=/", fmt.Sprintf("Max-Age=%d", maxAge), "SameSite=Lax"}
 	if httpOnly {

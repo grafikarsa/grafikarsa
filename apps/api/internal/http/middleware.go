@@ -141,7 +141,7 @@ func (a *App) csrf(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		header := r.Header.Get("X-CSRF-Token")
-		cookie, _ := r.Cookie("__Host-csrf")
+		cookie, _ := r.Cookie(csrfCookieName(a.Secure))
 		if header == "" || cookie == nil || header != cookie.Value {
 			writeJSON(w, http.StatusForbidden, fail("CSRF_INVALID", "Token keamanan tidak valid.", r))
 			return
