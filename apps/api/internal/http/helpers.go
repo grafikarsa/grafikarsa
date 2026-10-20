@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/netip"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"grafikarsa/api/internal/auth"
 	"grafikarsa/api/internal/repo"
@@ -164,14 +166,13 @@ func clearCookie(w http.ResponseWriter, name string, secure bool) {
 
 // CSRF token = HMAC(secret, hari + user_id). Terikat ke user (bukan global),
 // tetap berotasi harian; terima H-1 agar sesi lintas tengah malam tetap jalan.
-func newCSRFToken(secret, userID string) string {
+func newCSRFToken(secret, userID string, now time.Time) string {
 	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write([]byte(time.Now().UTC().Format("2006-01-02") + ":" + userID))
+	mac.Write([]byte(now.UTC().Format("2006-01-02") + ":" + userID))
 	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 }
 
-func verifyCSRFToken(secret, userID, token string) bool {
-	now := time.Now().UTC()
+func verifyCSRFToken(secret, userID, token string, now time.Time) bool {
 	for _, day := range []time.Time{now, now.Add(-24 * time.Hour)} {
 		mac := hmac.New(sha256.New, []byte(secret))
 		mac.Write([]byte(day.Format("2006-01-02") + ":" + userID))
@@ -235,3 +236,18 @@ func audit(ctx context.Context, q *repo.Queries, userID, event, ip, ua string) {
 }
 
 func toPgInet(s string) *netip.Addr { return toPgIP(s) }
+
+// isUniqueViolation memeriksa apakah error dari Postgres adalah pelanggaran
+// unique constraint (SQLSTATE 23505).
+//
+// Dipakai supaya "slug sudah dipakai" dijawab 409 Conflict, bukan 500.
+// Pola lama di beberapa handler membalas 409 untuk APAPUN error, termasuk
+// kegagalan koneksi database — itu menyesatkan klien dan menutupi masalah
+// sungguhan.
+func isUniqueViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		return pgErr.Code == "23505"
+	}
+	return false
+}

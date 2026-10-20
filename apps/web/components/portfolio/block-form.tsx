@@ -38,11 +38,16 @@ export function useUpload() {
   async function upload(
     purpose: string,
     file: File,
+    entityId?: string,
   ): Promise<{ media_id: string; width?: number; height?: number }> {
     const { accessToken, csrfToken } = useAuthStore.getState();
     const fd = new FormData();
     fd.append("purpose", purpose);
     fd.append("file", file);
+    // entity_id (opsional): entitas induk file — portfolio untuk gambar
+    // block & dokumen. API memakainya untuk menyusun object key per-entitas
+    // (PRD §7.1) dan memverifikasi bahwa entitas itu milik kita.
+    if (entityId) fd.append("entity_id", entityId);
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open("POST", "/api/v1/media/upload");
@@ -79,12 +84,16 @@ export function BlockForm({
   onSubmit,
   onCancel,
   submitLabel,
+  entityId,
 }: {
   blockType: BlockType;
   initial?: Draft;
   busy?: boolean;
   onSubmit: (draft: Draft) => Promise<void> | void;
   onCancel?: () => void;
+  // Id portfolio induk. Dikirim sebagai entity_id supaya object key-nya
+  // mengikuti path per-entity (PRD §7.1).
+  entityId?: string;
   submitLabel?: string;
 }) {
   const init = initial ?? {};
@@ -99,7 +108,7 @@ export function BlockForm({
 
   async function handleUpload(file: File) {
     try {
-      const res = await upload(blockType === "pdf" ? "document" : "block_image", file);
+      const res = await upload(blockType === "pdf" ? "document" : "block_image", file, entityId);
       set("media_id", res.media_id);
       if (blockType === "image" && !draft.alt) {
         set("alt", `Gambar ${file.name.replace(/\.[a-z0-9]+$/i, "")}`.slice(0, 200));

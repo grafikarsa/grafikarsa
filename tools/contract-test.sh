@@ -13,13 +13,22 @@
 # ============================================================
 set -uo pipefail
 
-BASE="${1:-http://localhost:8091}"
+# BASE      = BFF (Next.js) — dipakai schemathesis, karena spec
+#             mendokumentasikan path publik /api/v1/... yang dilayani BFF.
+# API_BASE  = API Go langsung — dipakai k6, karena skrip k6 memanggil
+#             path /v1/... (tanpa prefix /api).
+BASE="${1:-http://localhost:3000}"
+API_BASE="${2:-http://localhost:8091}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 RC=0
 
 log() { echo "[$(date +%H:%M:%S)] $*"; }
 
 # ---------- 1. Contract test (schemathesis) ----------
+#
+# BASE di sini adalah BFF (Next.js), bukan API langsung: spec mendokumentasikan
+# path publik (/api/v1/...) yang memang dilayani BFF. k6 di bawah memakai
+# URL API secara langsung, karena skripnya memanggil path /v1/... .
 if command -v schemathesis >/dev/null 2>&1; then
   log "schemathesis terhadap $BASE"
   if "$ROOT/tools/schemathesis.sh" "$BASE"; then
@@ -34,8 +43,8 @@ fi
 
 # ---------- 2. Load test (k6) ----------
 if command -v k6 >/dev/null 2>&1 || docker image inspect grafana/k6:latest >/dev/null 2>&1; then
-  log "k6 smoke test terhadap $BASE"
-  K6_ARGS=(-e "BASE=$BASE")
+  log "k6 smoke test terhadap $API_BASE"
+  K6_ARGS=(-e "BASE=$API_BASE")
   [ -n "${USER:-}" ] && K6_ARGS+=(-e "USER=$USER")
   [ -n "${PASS:-}" ] && K6_ARGS+=(-e "PASS=$PASS")
   if command -v k6 >/dev/null 2>&1; then

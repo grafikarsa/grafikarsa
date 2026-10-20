@@ -13,13 +13,19 @@ const componentsYAML = `components:
         FE, bukan localStorage). Refresh token ada di cookie __Host-rt HttpOnly.
   responses:
     BadRequest:
-      description: Format request tidak dikenali (body JSON rusak, parameter tidak valid)
+      description: >-
+        Format request tidak dikenali (body JSON rusak, parameter tidak valid).
+        Content-Type bisa text/plain kalau framework menolak URL-nya sebelum
+        aplikasi sempat menjawab (mis. percent-encoding rusak).
       content:
         application/json:
           schema: { $ref: "#/components/schemas/ErrorEnvelope" }
           example:
             success: false
             error: { code: VALIDATION_ERROR, message: Body JSON tidak valid. }
+        text/plain:
+          schema: { type: string }
+          example: "400 Bad Request"
     NotFound:
       description: Sumber daya tidak ada (atau tidak terlihat oleh pemanggil)
       content:
@@ -28,6 +34,28 @@ const componentsYAML = `components:
           example:
             success: false
             error: { code: NOT_FOUND, message: Tidak ditemukan. }
+    MethodNotAllowed:
+      description: >-
+        Method HTTP tidak diizinkan untuk path ini. Router mengembalikan 405
+        kalau path-nya dikenali tapi method-nya tidak (mis. GET ke endpoint
+        yang hanya menerima POST).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example:
+            success: false
+            error: { code: METHOD_NOT_ALLOWED, message: Method tidak diizinkan. }
+    Gone:
+      description: >-
+        Sumber daya sudah tidak tersedia. Untuk route "/storage/*" ini berarti
+        URL lama v1 terdaftar, tapi file-nya sudah tidak ada (masa redirect
+        6 bulan berakhir).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example:
+            success: false
+            error: { code: GONE, message: File lama sudah tidak tersedia. }
     Conflict:
       description: Konflik dengan data yang sudah ada (duplikat)
       content:
@@ -157,8 +185,28 @@ const componentsYAML = `components:
         - TAG_IN_USE
         - METHOD_NOT_ALLOWED
         - INTERNAL_ERROR
+        - ALREADY_HAS_BLOCKS
+        - CANNOT_FOLLOW_SELF
+        - CLASS_NOT_EMPTY
+        - DUPLICATE_CLASS
+        - DUPLICATE_JOB
+        - DUPLICATE_MAJOR
+        - DUPLICATE_ROLE
+        - DUPLICATE_SLUG
+        - DUPLICATE_YEAR
+        - GONE
+        - NO_ACTIVE_YEAR
+        - OBJECT_MISSING
+        - SERVICE_UNAVAILABLE
+        - USERNAME_TAKEN
     PaginationMeta:
-      type: object
+      # Endpoint yang tidak berpaginasi (leaderboard, feed ringkas) mengirim
+      # meta: null.
+      #
+      # OpenAPI 3.1 memakai JSON Schema, dan nullable BUKAN keyword-nya
+      # (itu cara OpenAPI 3.0). Di 3.1, null ditulis sebagai salah satu
+      # tipe: type: [object, "null"].
+      type: [object, "null"]
       properties:
         page: { type: integer }
         per_page: { type: integer }

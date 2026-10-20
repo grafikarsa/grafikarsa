@@ -102,6 +102,43 @@ hidup, jadi pod masih lolos health check dan rollback tetap mungkin.
 Aktifkan **H-1** (bukan saat migrasi dimulai) supaya orang tidak sempat
 menulis karya yang tidak ikut termigrasi.
 
+## Mirror storage saat go-live (PRD §16.3)
+
+Bucket lama (MinIO v1) disalin ke bucket baru (RustFS/S3 v2) memakai
+`tools/storage-mirror.sh`. Layout key dipertahankan 100% — hanya host yang
+ganti — supaya mapping DB sesederhana mungkin.
+
+```bash
+# di server, setelah service storage baru menyala & maintenance mode aktif
+export SRC_ENDPOINT=http://127.0.0.1:9000   # bucket lama
+export SRC_KEY=... SRC_SECRET=...
+export DST_ENDPOINT=http://127.0.0.1:9020   # bucket baru
+export DST_KEY=... DST_SECRET=...
+export BUCKET=grafikarsa
+
+# 1. plan dulu (tidak menulis apa pun)
+MIRROR_DRY_RUN=1 ./tools/storage-mirror.sh
+
+# 2. eksekusi + verifikasi (15-30 mnt untuk 5,1 GB)
+./tools/storage-mirror.sh
+```
+
+Verifikasi di dalam skrip: `mc diff` (nama & ukuran semua objek) +
+checksum md5 pada sampel objek yang tersebar. Kalau script keluar dengan
+error, jangan lanjut ke migrasi DB — obyek yang tidak lengkap akan membuat sebagian gambar hilang di karya yang sudah tayang.
+
+**`mc` wajib memakai `--api S3v4`.** Tanpa itu mc memakai S3v2 yang ditolak
+MinIO modern & RustFS, dan pesannya ("The Access Key Id you provided does
+not exist in our records") tidak menyiratkannya bahwa masalahnya versi API.
+Flag ini sudah dipakai di dalam skrip.
+
+Setelah mirror selesai:
+
+```bash
+# daftarkan objek storage jadi media_assets + legacy_urls
+go run ./cmd/tools/migrate-old --v1 ... --v2 ... --execute --migrate-media
+```
+
 ## Sunset plan (P6-09)
 
 Rencana resmi membuang v1 setelah go-live. Tidak ada data v1 yang dihapus

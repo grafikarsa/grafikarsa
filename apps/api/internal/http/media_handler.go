@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -240,5 +239,5 @@ func (a *App) serveObject(w http.ResponseWriter, r *http.Request, key, mime, eta
 	if filename != "" {
 		w.Header().Set("Content-Disposition", "inline; filename=\"`+filename+`\"")
 	}
-	http.ServeContent(w, r, key, time.Now(), io.NewSectionReader(bodyReaderAt(body), 0, size))
+	http.ServeContent(w, r, key, a.now(), io.NewSectionReader(bodyReaderAt(body), 0, size))
 }

@@ -160,7 +160,10 @@ func TestListOrphanedConfirmedMedia(t *testing.T) {
 // Ini yang membuat fitur role berumur (PRD §1.1) benar-benar berlaku.
 func TestGetUserPermissionsRespectsExpiry(t *testing.T) {
 	pool := dbtest.Pool(t)
-	dbtest.Truncate(t, pool, "user_roles", "role_permissions", "permissions", "roles", "users")
+	// `roles` dan `permissions` TIDAK dikosongkan: isinya role & permission
+	// SISTEM dari migrasi. Test ini membuat role & permission sendiri lalu
+	// membersihkannya, jadi tidak perlu mengosongkan tabel master.
+	dbtest.Truncate(t, pool, "user_roles", "users")
 	q := repo.New(pool)
 	ctx := context.Background()
 
@@ -168,22 +171,37 @@ func TestGetUserPermissionsRespectsExpiry(t *testing.T) {
 
 	// Dua permission + satu role.
 	var permLive, permExpired uuid.UUID
+	// Key permission & slug role dibuat unik per eksekusi, lalu dihapus
+	// setelah test — supaya test bisa dijalankan berulang pada database yang
+	// sama tanpa bentrok, dan tanpa menyentuh data master.
+	suffix := uuid.New().String()[:8]
+	// Key permission harus dinamis: nama key-nya unik per eksekusi supaya
+	// test bisa dijalankan berulang di database yang sama. Assertion di bawah
+	// memakai key yang sama.
+	keyLive := "test.live." + suffix
+	keyExpired := "test.expired." + suffix
 	if err := pool.QueryRow(ctx,
 		`INSERT INTO permissions (id, key, permission_group, description)
-		 VALUES ($1, 'test.live', 'test', '') RETURNING id`, uuid.New()).Scan(&permLive); err != nil {
+		 VALUES ($1, $2, 'test', '') RETURNING id`, uuid.New(), keyLive).Scan(&permLive); err != nil {
 		t.Fatalf("seed permission live: %v", err)
 	}
 	if err := pool.QueryRow(ctx,
 		`INSERT INTO permissions (id, key, permission_group, description)
-		 VALUES ($1, 'test.expired', 'test', '') RETURNING id`, uuid.New()).Scan(&permExpired); err != nil {
+		 VALUES ($1, $2, 'test', '') RETURNING id`, uuid.New(), keyExpired).Scan(&permExpired); err != nil {
 		t.Fatalf("seed permission expired: %v", err)
 	}
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(), `DELETE FROM permissions WHERE id = ANY($1)`, []uuid.UUID{permLive, permExpired})
+	})
 	var roleID uuid.UUID
 	if err := pool.QueryRow(ctx,
 		`INSERT INTO roles (id, slug, name, scope_type, is_system)
-		 VALUES ($1, 'test_role', 'Test', 'global', false) RETURNING id`, uuid.New()).Scan(&roleID); err != nil {
+		 VALUES ($1, $2, 'Test', 'global', false) RETURNING id`, uuid.New(), "test_role_"+suffix).Scan(&roleID); err != nil {
 		t.Fatalf("seed role: %v", err)
 	}
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(), `DELETE FROM roles WHERE id = $1`, roleID)
+	})
 	_, _ = pool.Exec(ctx, `INSERT INTO role_permissions (role_id, permission_id) VALUES ($1, $2), ($1, $3)`, roleID, permLive, permExpired)
 
 	// Assignment yang masih berlaku.
@@ -195,7 +213,7 @@ func TestGetUserPermissionsRespectsExpiry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetUserPermissions: %v", err)
 	}
-	if !contains(keys, "test.live") {
+	if !contains(keys, keyLive) {
 		t.Errorf("permission yang masih berlaku harus diberikan, dapat %v", keys)
 	}
 

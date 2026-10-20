@@ -61,7 +61,12 @@ type stats struct {
 	Assessments              int
 	Feedback, Changelogs     int
 	MediaRegistered          int
-	Skipped                  map[string]int
+	// MediaFallback: URL yang TIDAK bisa didaftarkan sebagai media_assets
+	// (hanya masuk legacy_urls tanpa media_id). Ini berarti ada objek yang
+	// tidak terikat ke media — harus menggagalkan migrasi, bukan cuma
+	// logged sebagai warning.
+	MediaFallback int
+	Skipped       map[string]int
 }
 
 func newStats() *stats { return &stats{Skipped: map[string]int{}} }
@@ -138,7 +143,12 @@ func main() {
 	}
 	if o.migrateMedia {
 		if err := migrateMediaRefs(ctx, v1, v2, introspect, o, st); err != nil {
-			slog.Warn("migrate media dilewati sebagian", "err", err)
+			// Fase media tidak boleh "dilewati sebagian": kalau gagal,
+			// operator harus tahu dan memperbaiki sebelum go-live. Kalau
+			// hanya di-warn, migrasi tetap exit 0 padahal sebagian objek
+			// tidak terikat ke media — dan itu baru ketahuan setelah
+			// pengguna membuka karya yang gambarnya hilang.
+			fatal("migrate media gagal: %v", err)
 		}
 	}
 

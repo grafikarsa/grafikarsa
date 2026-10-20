@@ -92,6 +92,34 @@ export async function apiGet<T>(path: string): Promise<T> {
   return request<T>(path, { headers: authHeaders(), cache: "no-store" });
 }
 
+// apiGetWithMeta: GET yang juga mengembalikan meta (page/total).
+//
+// Dipakai DataTable server-side (PRD §12.3) yang butuh jumlah total baris
+// untuk menghitung halaman — `apiGet` hanya mengembalikan bagian `data`.
+//
+// Sengaja tidak lewat `request()`: fungsi itu mengembalikan `json.data`,
+// sedangkan di sini meta dibutuhkan juga. Header auth tetap sama.
+export async function apiGetWithMeta<T>(
+  path: string,
+): Promise<{ data: T[]; meta: NonNullable<ApiSuccess<unknown>["meta"]> }> {
+  const res = await fetch(`/api/${path.replace(/^\//, "")}`, {
+    headers: authHeaders(),
+    cache: "no-store",
+  });
+  let json: (ApiSuccess<T[]> & { meta?: NonNullable<ApiSuccess<unknown>["meta"]> }) | ApiError;
+  try {
+    json = (await res.json()) as
+      (ApiSuccess<T[]> & { meta?: NonNullable<ApiSuccess<unknown>["meta"]> }) | ApiError;
+  } catch {
+    throw new ApiErrorWithCode("NETWORK_ERROR", `Server error ${res.status}.`);
+  }
+  if (!json.success) throw new ApiErrorWithCode(json.error.code, json.error.message);
+  return {
+    data: (Array.isArray(json.data) ? json.data : []) as T[],
+    meta: json.meta ?? { page: 1, per_page: 20, total: 0 },
+  };
+}
+
 // apiUpload: multipart (FormData) dengan CSRF + Authorization, tanpa
 // Content-Type manual (biar boundary diisi browser/Node).
 export async function apiUpload<T>(path: string, form: FormData, retry = true): Promise<T> {

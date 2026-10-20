@@ -83,6 +83,20 @@ export function publik() {
 // terautentikasi gagal bukan karena API rusak tapi karena proteksinya
 // bekerja. Login sekali di setup() juga lebih realistis: satu sesi,
 // banyak request.
+
+// csrfCookieName membaca nama+nilai cookie CSRF dari respons login.
+//
+// Server mengirim cookie CSRF dengan nama "__Host-csrf" di produksi
+// (HTTPS, cookie wajib Secure) dan "csrf" di development (HTTP — prefix
+// "__Host-" hanya sah kalau cookie-nya Secure, jadi di HTTP browser
+// menolaknya). Skrip ini harus ikut nama yang sebenarnya.
+function csrfCookieName(res) {
+  const raw = (res.headers && (res.headers["Set-Cookie"] || res.headers["set-cookie"])) || "";
+  const all = Array.isArray(raw) ? raw.join(";") : raw;
+  const m = all.match(/(__Host-csrf|csrf)=([^;]+)/);
+  return m ? m[0] : "";
+}
+
 export function setup() {
   const user = __ENV.USER;
   const pass = __ENV.PASS;
@@ -107,7 +121,14 @@ export function setup() {
       headers: {
         Authorization: `Bearer ${body.data.access_token}`,
         "X-CSRF-Token": body.data.csrf_token,
-        Cookie: `__Host-csrf=${body.data.csrf_token}`,
+        // Nama cookie CSRF ikut dikembalikan server lewat Set-Cookie:
+        // "__Host-csrf" di produksi (HTTPS) dan "csrf" di development
+        // (HTTP — prefix __Host- hanya sah kalau cookie-nya Secure).
+        //
+        // Kalau nama-nya ditulis mati di sini, request mutasi (PUT
+        // /feed/preferences) dibalas 403 CSRF_INVALID di environment
+        // development — dan tesnya gagal tanpa alasan yang jelas.
+        Cookie: csrfCookieName(login),
         "Content-Type": "application/json",
       },
     },

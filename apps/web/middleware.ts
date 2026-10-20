@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Middleware: CSP nonce + auth gate berbasis cookie __Host-rt.
-// - Nonce dipakai Next untuk script sendiri (tanpa unsafe-inline).
+// Middleware: CSP + auth gate berbasis cookie __Host-rt.
 // - Auth gate hanya cek keberadaan cookie (validasi token tetap di API).
 //
-// PUBLIC_PATHS hanya memuat rute yang BENAR-BENAR ada. Jalur yang tidak ada
-// (mis. /register, /forgot-password) sengaja tidak dicantumkan: mencantumkan
+// PUBLIC_PATHS hanya memuat rute yang BENAR-BENAR ada.
+//
+// Catatan desain: Grafikarsa TIDAK punya pendaftaran mandiri dan TIDAK punya
+// reset password oleh user — semua akun dibuat dan di-reset oleh admin.
+// Jadi /register, /forgot-password, dan /reset-password bukan "halaman yang
+// belum dibuat"; halaman-halaman itu memang tidak boleh ada. Kalau suatu
+// saat ditambahkan, keduanya harus tetap berupa halaman privat (butuh login
+// admin), bukan publik.
+//
+// Rute yang tidak ada juga sengaja tidak dicantumkan di sini: mencantumkan
 // membuat RESERVED ikut memuat kata-kata itu sehingga username sah seperti
 // "register" jadi tertolak tanpa alasan.
 const PUBLIC_PATHS = [
@@ -30,9 +37,18 @@ function isPublic(pathname: string): boolean {
     if (p !== "/" && pathname.startsWith(p + "/")) return true;
   }
   // Profil ({username}) dan karya ({username}/{slug}) — bukan jalur privat.
+  //
+  // Segmen PERTAMA yang bukan reserved berarti ini rute profil publik, dan
+  // seluruh turunannya juga publik. Kedalaman tidak dibatasi: route
+  // opengraph-image milik Next.js ada di /{username}/{slug}/opengraph-image
+  // dan HARUS bisa diakses tanpa sesi — crawler mesin pencari dan platform
+  // sosial mengambilnya tanpa cookie, jadi kalau terkunci, metadata OG-nya
+  // tidak pernah terbaca.
+  //
+  // Yang tetap privat: /admin, /me, /settings, /notifications — semuanya
+  // ada di RESERVED.
   const seg = pathname.split("/").filter(Boolean);
-  if (seg.length === 1 && !RESERVED.has(seg[0])) return true;
-  if (seg.length === 2 && !RESERVED.has(seg[0])) return true;
+  if (seg.length >= 1 && !RESERVED.has(seg[0])) return true;
   return false;
 }
 
@@ -97,6 +113,17 @@ const MAINTENANCE_HTML = `<!DOCTYPE html>
 </body></html>`;
 
 export function middleware(req: NextRequest) {
+  // Rute /api/* dilayani BFF (app/api/[...path]/route.ts). Path lain
+  // dilewati saja: routing & CSP ditangani BFF/router.
+  //
+  // Catatan TRACE: Next.js melempar "HTTP method is unsupported" di
+  // intinya, sebelum middleware sempat jalan, jadi request TRACE
+  // berakhir 500. Jawaban 405 yang benar diberikan Caddy di edge
+  // (lihat Caddyfile).
+  if (req.nextUrl.pathname.startsWith("/api/")) {
+    return NextResponse.next();
+  }
+
   const isDev = process.env.NODE_ENV !== "production";
   // CSP tanpa nonce.
   //
@@ -174,7 +201,11 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
+  // `api` TIDAK dikecualikan lagi: middleware perlu menyelesaikan TRACE
+  // ke /api/* (lihat catatan di atas). Untuk path /api lain middleware
+  // ini langsung lewat, jadi tidak ada logika dan tidak ada header yang
+  // ditambahkan ke respons API.
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|webp|ico|txt|xml)).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|webp|ico|txt|xml)).*)",
   ],
 };

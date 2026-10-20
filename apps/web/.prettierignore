@@ -1,15 +1,21 @@
-# File yang di-generate — jangan diformat (hasil generate ulang akan menimpa).
-lib/api-types.ts
-lib/api-contract.ts
+# Berkas ini di-generate — jangan diformat (hasil generate ulang akan menimpa).
+#
+# Pola ditulis dengan awalan "**/" karena path yang dicocokkan prettier
+# bersifat absolut-ish (diawali direktori project root), bukan relatif
+# terhadap file ini. Tanpa "**/" polanya tidak akan cocok.
+**/apps/web/lib/api-types.ts
+**/lib/api-types.ts
+**/apps/web/lib/api-contract.ts
+**/lib/api-contract.ts
 
 # dependensi & build
-node_modules
-.next
-out
-coverage
-pnpm-lock.yaml
+**/node_modules
+**/.next
+**/out
+**/coverage
+**/pnpm-lock.yaml
 
 # artefak Playwright (E2E): trace, screenshot, laporan, error-context
-test-results
-playwright-report
-blob-report
+**/test-results
+**/playwright-report
+**/blob-report

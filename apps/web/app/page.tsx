@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { jsonLdScript } from "@/lib/json-ld";
 
 export const metadata: Metadata = {
   title: "Grafikarsa — Katalog Portfolio SMKN 4 Malang",
@@ -78,7 +79,7 @@ export default async function LandingPage() {
     <main className="mx-auto flex max-w-3xl flex-col gap-8 p-8">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
       />
 
       <section className="text-center">

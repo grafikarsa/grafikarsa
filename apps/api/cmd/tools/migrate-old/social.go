@@ -415,14 +415,26 @@ func migrateMediaRefs(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o 
 					url, mid, key)
 				st.MediaRegistered++
 			} else {
-				_, _ = v2.Exec(ctx, `INSERT INTO legacy_urls (old_url, object_key)
-					VALUES ($1,$2) ON CONFLICT (old_url) DO NOTHING`, url, key)
+				// Insert media_assets gagal. Object key tetap dicatat di
+				// legacy_urls supaya URL lamanya tidak mati, tapi objeknya
+				// TIDAK terikat ke media — harus dihitung dan menggagalkan
+				// migrasi, bukan lolos diam-diam.
+				if _, lerr := v2.Exec(ctx, `INSERT INTO legacy_urls (old_url, object_key)
+					VALUES ($1,$2) ON CONFLICT (old_url) DO NOTHING`, url, key); lerr != nil {
+					slog.Error("gagal mencatat legacy_url", "url", url, "err", lerr)
+				}
+				st.MediaFallback++
+				slog.Warn("objek storage tidak terikat ke media_assets", "url", url, "key", key)
 			}
 		} else {
 			st.MediaRegistered++
 		}
 	}
-	slog.Info("URL lama terdaftar", "count", len(urls))
+	slog.Info("URL lama terdaftar",
+		"count", len(urls), "registered", st.MediaRegistered, "fallback", st.MediaFallback)
+	if st.MediaFallback > 0 {
+		return fmt.Errorf("%d objek storage tidak bisa didaftarkan sebagai media_assets", st.MediaFallback)
+	}
 	return nil
 }
 

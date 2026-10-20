@@ -432,6 +432,28 @@ Semua list: `page, per_page (max 50), sort, order`, validasi via `go-playground/
 - **Rotation + reuse-detection**: tiap `/refresh` → revoke token lama (`revoked_at`, `rotated_to=new_id`) + terbitkan pasangan baru dalam **satu transaksi**. Jika token yang sudah di-revoke dipakai lagi → **revoke seluruh family** + audit `reuse_detected` + paksa logout + notifikasi email (fase 2) / notifikasi in-app. Ini standar OWASP + yang dipakai v1, dipertahankan + ditambah `auth_audit`.
 - **Logout**: revoke per-sesi / per-family / semua (`logout-all`), blacklist `jti` access di Dragonfly 15 mnt (sisa umur) agar access yang dicuri tidak bisa dipakai walau belum expired.
 
+### 6.1.1 Pendaftaran & pengelolaan akun
+
+**Grafikarsa tidak punya pendaftaran mandiri dan tidak punya reset password oleh
+user.** Hanya satu jalur auth: `/login`.
+
+Semua akun dibuat, diubah, dinonaktifkan, dan di-reset passwordnya oleh **admin**
+(`POST /v1/admin/users`, `PATCH /v1/admin/users/{id}`,
+`POST /v1/admin/users/{id}/reset-password`, `POST /v1/admin/users/{id}/activate`).
+Seed awal hanya berisi master data (jurusan & tahun ajaran, katalog permission)
+dan **satu akun superadmin**.
+
+Konsekuensinya:
+
+- Tidak ada halaman `/register`, `/forgot-password`, `/reset-password`.
+- Tidak ada endpoint pendaftaran/reset-token, tidak ada tabel token reset,
+  tidak ada mailer.
+- Permukaan serang lebih kecil: tidak ada jalur membuat akun dari internet, dan
+  tidak ada jalur yang bisa "menagih" email orang untuk reset password.
+- User yang sudah login tetap bisa mengganti passwordnya sendiri
+  (`PATCH /v1/me/password`) — itu maintenance kredensial, bukan pemulihan
+  akun yang lupa password.
+
 ### 6.2 Password & brute-force
 
 - Hash baru: **Argon2id** (`memory 64MB, iterations 3, parallelism 2`). Hash lama bcrypt (v1) tetap diverifikasi saat login pertama, lalu **di-rehash otomatis** ke Argon2id dalam transaksi yang sama (migrasi tanpa reset password massal).

@@ -15,7 +15,7 @@ import (
 type Deps struct {
 	Pool    *pgxpool.Pool
 	Cache   *cache.Cache
-	Storage *storage.Storage
+	Storage storage.Store
 }
 
 func (a *App) routes() http.Handler {
@@ -28,6 +28,12 @@ func (a *App) routes() http.Handler {
 	r.Route("/v1", func(r chi.Router) {
 		// Rate limit per IP (gate ganti-password ada di authRequired).
 		r.Use(a.rateLimit)
+		// Validasi parameter UUID. Didaftarkan DI DALAM grup /v1, bukan
+		// di mux root: middleware grup baru jalan setelah route-nya
+		// cocok, jadi pola route (dan nama parameternya) sudah diketahui.
+		// Di mux root, middleware jalan sebelum routing sub-router —
+		// polanya masih kosong.
+		r.Use(validateUUIDParams)
 		r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusOK, ok(map[string]string{"status": "ok"}, r))
 		})
@@ -74,6 +80,8 @@ func (a *App) routes() http.Handler {
 					r.With(a.requireAnyPerm("portfolios.moderate", "portfolios.moderate_jurusan")).Post("/request-changes", a.csrf(a.handleRequestChanges))
 					r.With(a.requireAnyPerm("portfolios.moderate", "portfolios.moderate_jurusan")).Post("/reject", a.csrf(a.handleRejectPortfolio))
 					r.With(a.requireAnyPerm("portfolios.moderate")).Post("/restore", a.csrf(a.handleRestorePortfolio))
+					// Riwayat transisi status (PRD §8.1) — dibaca dari audit_logs.
+					r.Get("/status-history", a.handlePortfolioStatusHistory)
 				})
 			})
 			r.Route("/tags", func(r chi.Router) {

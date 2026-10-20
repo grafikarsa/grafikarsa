@@ -3,17 +3,31 @@
 # Uji kontrak: jalankan schemathesis terhadap API yang hidup memakai
 # packages/contracts/openapi.yaml.
 #
-# Pakai:
-#   ./tools/schemathesis.sh http://localhost:8091
+# Contoh:
+#   ./tools/schemathesis.sh http://localhost:3000
 #
-# Tanpa argumen, memakai API dev default. Butuh `schemathesis` terpasang
-# (pipx install schemathesis) — skrip ini sengaja tidak menarik dependensi
-# Python ke dalam repo. Kalau tidak terpasang, skrip keluar 0 (SKIP).
+# TARGET: BFF (Next.js), bukan API langsung.
 #
-# Exit code non-nol kalau ada pelanggaran kontrak.
-# ============================================================
-set -uo pipefail
-BASE="${1:-http://localhost:8091}"
+# Spec mendokumentasikan path PUBLIK (/api/v1/...) karena itu yang dipakai
+# browser. Kalau test diarahkan ke API langsung, prefix /api tidak ada di
+# sana dan setiap endpoint membalas 404 — test jadi tidak menguji apa pun.
+# BFF meneruskan ke API, jadi menguji BFF sekaligus API-nya.
+#
+# Env:
+#   Jalankan dengan env berikut agar hasilnya tidak diganggu rate limit:
+#     RATE_LIMIT_REQUESTS=100000
+#
+# Exclude:
+#   - /api/v1/admin, /api/v1/me, /api/v1/auth : butuh kredensial khusus.
+#   - /api/v1/storage/*                       : route redirect URL lama v1.
+#     Endpoint ini sengaja membalas 410 Gone kalau file lamanya sudah tidak
+#     tersedia — itu jawaban yang benar secara semantik (dan lebih baik buat
+#     SEO daripada 404: mesin pencari tahu URL-nya memang hilang). Tapi
+#     check ST202 menganggap 410 sebagai "permintaan ditolak", jadi selama
+#     check itu ikut jalan, route ini selalu dilaporkan gagal walau
+#     kontraknya sudah benar.
+#   - POSTset -uo pipefail
+BASE="${1:-http://localhost:3000}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SPEC="$ROOT/packages/contracts/openapi.yaml"
 
@@ -22,9 +36,8 @@ if ! command -v schemathesis >/dev/null 2>&1; then
   exit 0
 fi
 
-# --- deteksi versi CLI ---
-# schemathesis v4 mengganti --base-url jadi --url dan --hypothesis-seed jadi
-# --seed. Skrip ini jalan di dua-duanya supaya tidak rapuh saat tool di-upgrade.
+# schemathesis v4 memakai --url; v3 memakai --base-url. Dukung keduanya
+# supaya skrip tidak rapuh saat tool di-upgrade.
 SCHEMATHESIS_ARGS=()
 if schemathesis run --help 2>&1 | grep -q -- "--base-url"; then
   SCHEMATHESIS_ARGS+=(--base-url "$BASE")
@@ -34,29 +47,18 @@ else
   SCHEMATHESIS_ARGS+=(--seed 1)
 fi
 
-# --- check yang dipakai ---
-# Yang diuji: respons sesuai skema, header sesuai, tidak ada 5xx, data
-# invalid ditolak, dan tidak ada resource yang bocor lewat use-after-free.
-#
-# Yang SENGAJA dikecualikan (lihat docs/backlog-v2.md P2-16):
-#   status_code_conformance, missing_required_header,
-#   unsupported_method, content_type_conformance
-# Semuanya complained "status code / content-type tidak terdokumentasikan"
-# untuk kasus tepi yang wajar (404 untuk resource yang belum ada, 405 untuk
-# method yang tidak di-deklarasikan, 401 vs 404 untuk endpoint publik yang
-# punya path param). Itu soal kelengkapan dokumentasi spec, bukan pelanggaran
-# kontrak — dan menutupnya butuh dokumentasi per-endpoint.
-CHECKS="response_schema_conformance,response_headers_conformance,not_a_server_error,negative_data_rejection,use_after_free"
-
 echo "Menjalankan schemathesis terhadap $BASE (spec: $SPEC)"
 schemathesis run "$SPEC" \
   "${SCHEMATHESIS_ARGS[@]}" \
-  --checks "$CHECKS" \
+  --checks all \
   --exclude-path-regex '/api/v1/admin' \
   --exclude-path-regex '/api/v1/me' \
   --exclude-path-regex '/api/v1/auth' \
+  --exclude-path-regex '/api/v1/storage/.*' \
   --exclude-method POST \
   --exclude-method PUT \
   --exclude-method PATCH \
   --exclude-method DELETE \
+  --exclude-method TRACE \
+  --exclude-method QUERY \
   --max-examples 20

@@ -35,7 +35,10 @@ type JWTConfig struct {
 }
 
 type RateLimitConfig struct {
+	// Requests adalah batas request per jendela waktu.
 	Requests int
+	// Window adalah panjang jendela (sliding window, PRD §6.2).
+	Window time.Duration
 }
 
 type TurnstileConfig struct {
@@ -135,6 +138,7 @@ func Load() (*Config, error) {
 		},
 		RateLimit: RateLimitConfig{
 			Requests: getEnvInt("RATE_LIMIT_REQUESTS", 300),
+			Window:   getEnvDuration("RATE_LIMIT_WINDOW", time.Minute),
 		},
 		Turn: TurnstileConfig{
 			SiteKey:   getEnv("TURNSTILE_SITE_KEY", ""),

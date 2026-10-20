@@ -107,6 +107,53 @@ test.describe("halaman admin", () => {
     await page.goto("/admin/dashboard");
     await expect(page.getByRole("heading").first()).toBeVisible();
   });
+
+  // DataTable server-side (PRD §12.3): pencarian, pengurutan, dan
+  // pagination lewat query string. Kalau state ini tidak masuk URL,
+  // halaman tidak bisa di-share dan tombol back browser tidak bekerja.
+  test("tabel pengguna: pencarian & pengurutan masuk ke URL", async ({ page }) => {
+    await login(page);
+    await page.goto("/admin/users");
+    await expect(page.getByRole("heading", { name: /pengguna/i })).toBeVisible();
+    await expect(page.locator("tbody tr").first()).toBeVisible({ timeout: 15_000 });
+
+    // Pencarian mengubah URL.
+    await page.getByPlaceholder(/cari username/i).fill("admin");
+    await expect(page).toHaveURL(/\?q=admin/, { timeout: 15_000 });
+    // Dan tabel benar-benar difilter di server.
+    await expect(page.getByText(/total \d+ data/i)).toBeVisible({ timeout: 15_000 });
+
+    // Pengurutan juga masuk URL.
+    await page.getByPlaceholder(/cari username/i).fill("");
+    await page.getByRole("columnheader", { name: /nama/i }).click();
+    await expect(page).toHaveURL(/sort=name/, { timeout: 15_000 });
+  });
+
+  // Grafikarsa tidak punya pendaftaran mandiri: seluruh akun dibuat dari
+  // sini oleh admin. Kalau alur ini rusak, tidak ada cara menambah akun
+  // sama sekali.
+  test("admin bisa membuat akun pengguna", async ({ page }) => {
+    await login(page);
+    await page.goto("/admin/users");
+    await expect(page.getByRole("heading", { name: /pengguna/i })).toBeVisible();
+
+    await page.getByRole("button", { name: /tambah pengguna/i }).click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+
+    const username = `siswae2e${Date.now().toString().slice(-6)}`;
+    await page.getByLabel(/username/i).fill(username);
+    await page.getByLabel(/nama lengkap/i).fill("Siswa E2E");
+    await page.getByLabel(/email/i).fill(`${username}@test.local`);
+    await page.getByLabel(/password sementara/i).fill("PasswordE2EKuat123");
+    await page.getByRole("button", { name: /buat akun/i }).click();
+
+    // Akun baru harus muncul di tabel. Selector-nya ke sel tabel (bukan
+    // getByText): username juga muncul di toast, jadi getByText akan
+    // kena strict-mode violation.
+    await expect(page.getByRole("cell", { name: username })).toBeVisible({
+      timeout: 15_000,
+    });
+  });
 });
 
 // A11y (PRD §14.3: axe, WCAG AA).
