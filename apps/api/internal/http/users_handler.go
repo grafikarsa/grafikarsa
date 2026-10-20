@@ -278,7 +278,8 @@ func (a *App) handleUpdatePassword(w http.ResponseWriter, r *http.Request) {
 func (a *App) handleListUsers(w http.ResponseWriter, r *http.Request) {
 	limit, offset, page := pageParams(r)
 	rows, err := a.Q.ListUsersScoped(r.Context(), repo.ListUsersScopedParams{
-		Column1: "", Limit: limit, Offset: offset,
+		Scope: "", Search: "", SortBy: "username", SortDir: "asc",
+		Limit: limit, Offset: offset,
 	})
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal memuat user.", r))
@@ -301,7 +302,7 @@ func (a *App) handleListUsers(w http.ResponseWriter, r *http.Request) {
 	if out == nil {
 		out = []map[string]any{}
 	}
-	total, _ := a.Q.CountUsersScoped(r.Context(), "")
+	total, _ := a.Q.CountUsersScoped(r.Context(), repo.CountUsersScopedParams{Scope: "", Search: ""})
 	writeJSON(w, http.StatusOK, okMeta(out, meta(page, limit, total), r))
 }
 

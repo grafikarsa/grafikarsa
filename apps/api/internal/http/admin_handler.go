@@ -3,6 +3,7 @@ package http
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -35,14 +36,26 @@ func (a *App) handleAdminListUsers(w http.ResponseWriter, r *http.Request) {
 	limit, offset, page := pageParams(r)
 	// Row-level scope: admin_jurusan hanya melihat user jurusannya.
 	scope := scopeFilter(r, "users.view", "users.view_jurusan")
+	// Pencarian & pengurutan datang dari FE (DataTable server-side,
+	// PRD §12.3). Nilai yang tidak dikenal jatuh ke default supaya query
+	// tidak bisa diselipkan lewat parameter.
+	search := strings.TrimSpace(r.URL.Query().Get("search"))
+	sortBy := sortUsersColumn(r.URL.Query().Get("sort"))
+	sortDir := "asc"
+	if strings.EqualFold(r.URL.Query().Get("dir"), "desc") {
+		sortDir = "desc"
+	}
 	users, err := a.Q.ListUsersScoped(r.Context(), repo.ListUsersScopedParams{
-		Column1: scope, Limit: limit, Offset: offset,
+		Scope: scope, Search: search, SortBy: sortBy, SortDir: sortDir,
+		Limit: limit, Offset: offset,
 	})
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal memuat user.", r))
 		return
 	}
-	total, _ := a.Q.CountUsersScoped(r.Context(), scope)
+	total, _ := a.Q.CountUsersScoped(r.Context(), repo.CountUsersScopedParams{
+		Scope: scope, Search: search,
+	})
 	out := []map[string]any{}
 	for _, u := range users {
 		out = append(out, map[string]any{
@@ -341,4 +354,24 @@ func (a *App) handleUnassignRole(w http.ResponseWriter, r *http.Request) {
 	invalidatePerms(r.Context(), a.Cache, req.UserID)
 	auditLog(r, a, "roles.unassign", "user_roles", req.UserID, req.RoleSlug)
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "ok"}, r))
+}
+
+// sortUsersColumn memetakan parameter sort ke kolom yang boleh diurutkan.
+//
+// Nilai dari client tidak pernah dipakai langsung sebagai nama kolom —
+// hanya nilai dari daftar ini yang lolos, jadi tidak ada cara menyisipkan
+// SQL lewat query string.
+func sortUsersColumn(v string) string {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "name":
+		return "name"
+	case "role":
+		return "role"
+	case "status":
+		return "status"
+	case "created_at", "created":
+		return "created_at"
+	default:
+		return "username"
+	}
 }

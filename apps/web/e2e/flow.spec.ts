@@ -108,6 +108,27 @@ test.describe("halaman admin", () => {
     await expect(page.getByRole("heading").first()).toBeVisible();
   });
 
+  // DataTable server-side (PRD §12.3): pencarian, pengurutan, dan
+  // pagination lewat query string. Kalau state ini tidak masuk URL,
+  // halaman tidak bisa di-share dan tombol back browser tidak bekerja.
+  test("tabel pengguna: pencarian & pengurutan masuk ke URL", async ({ page }) => {
+    await login(page);
+    await page.goto("/admin/users");
+    await expect(page.getByRole("heading", { name: /pengguna/i })).toBeVisible();
+    await expect(page.locator("tbody tr").first()).toBeVisible({ timeout: 15_000 });
+
+    // Pencarian mengubah URL.
+    await page.getByPlaceholder(/cari username/i).fill("admin");
+    await expect(page).toHaveURL(/\?q=admin/, { timeout: 15_000 });
+    // Dan tabel benar-benar difilter di server.
+    await expect(page.getByText(/total \d+ data/i)).toBeVisible({ timeout: 15_000 });
+
+    // Pengurutan juga masuk URL.
+    await page.getByPlaceholder(/cari username/i).fill("");
+    await page.getByRole("columnheader", { name: /nama/i }).click();
+    await expect(page).toHaveURL(/sort=name/, { timeout: 15_000 });
+  });
+
   // Grafikarsa tidak punya pendaftaran mandiri: seluruh akun dibuat dari
   // sini oleh admin. Kalau alur ini rusak, tidak ada cara menambah akun
   // sama sekali.
