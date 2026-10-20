@@ -116,7 +116,30 @@ jobs:
           $DC pull || { echo "FAIL: pull"; exit 1; }
 
           # 3. Migrasi goose (one-off container, idempoten).
+          #
+          # Versi skema SEBELUM migrasi dicatat dulu: kalau image baru nanti
+          # gagal, skemanya juga harus dikembalikan — mengembalikan image saja
+          # tidak cukup kalau migrasi barunya tidak backward-compatible.
+          PREV_SCHEMA=$($DC run --rm --entrypoint /migrate api version 2>/dev/null | tr -dc '0-9')
+          echo "Versi skema sebelum deploy: ${PREV_SCHEMA:-tidak diketahui}"
           $DC run --rm --entrypoint /migrate api up || { echo "FAIL: migrate"; exit 1; }
+
+          # 3b. Migrasi baru saja mengubah skema sementara image LAMA masih
+          # berjalan. Kalau migrasi tidak backward-compatible, aplikasi yang
+          # sedang hidup bisa rusak. Periksa SEBELUM mengganti image, supaya
+          # tidak perlu menyentuh image baru sama sekali.
+          still_ok=0
+          for i in $(seq 1 10); do
+            if $DC exec -T api /api -healthcheck >/dev/null 2>&1; then still_ok=1; break; fi
+            sleep 3
+          done
+          if [ "$still_ok" != "1" ]; then
+            echo "FAIL: aplikasi yang sedang berjalan rusak setelah migrasi; kembalikan skema"
+            if [ -n "${PREV_SCHEMA:-}" ] && [ "$PREV_SCHEMA" != "0" ]; then
+              $DC run --rm --entrypoint /migrate api down-to "$PREV_SCHEMA" || echo "WARN: rollback skema gagal"
+            fi
+            exit 1
+          fi
 
           # 4. Naikkan service.
           $DC up -d || { echo "FAIL: up"; exit 1; }
@@ -128,11 +151,20 @@ jobs:
             sleep 10
           done
 
-          # 6. Rollback bila gagal.
+          # 6. Rollback bila gagal: image DAN skema.
           if [ "$ok" != "1" ]; then
             echo "FAIL: healthcheck; rollback ke $PREV_TAG"
+            if [ -n "${PREV_SCHEMA:-}" ] && [ "$PREV_SCHEMA" != "0" ]; then
+              echo "Kembalikan skema ke versi $PREV_SCHEMA"
+              $DC run --rm --entrypoint /migrate api down-to "$PREV_SCHEMA" || echo "WARN: rollback skema gagal"
+            fi
             sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=$PREV_TAG|" .env
             $DC up -d
+            # Restore dari backup pre-deploy sebagai jaring pengaman terakhir
+            # kalau skema tidak bisa dikembalikan.
+            if [ -n "${PREV_SCHEMA:-}" ] && [ "$PREV_SCHEMA" != "0" ]; then
+              echo "Cek skema setelah rollback:"; $DC run --rm --entrypoint /migrate api version || true
+            fi
             exit 1
           fi
 
