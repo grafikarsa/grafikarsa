@@ -63,12 +63,24 @@ services:
     # snapshot_cron: simpan snapshot cache tiap 5 menit. Tanpa ini snapshot
     # hanya terjadi saat shutdown, jadi crash = semua counter rate-limit,
     # blacklist JTI, dan agregat view counter hilang sekaligus.
-    command: >-
-      --maxmemory=256mb --proactor_threads=1
-      --cache_mode
-      --dir=/data
-      --dbfilename=dump
-      --snapshot_cron=*/5 * * * *
+    #
+    # PENTING: nilai cron harus tetap SATU argumen. Bentuk string (>) memecah
+    # "--snapshot_cron=*/5 * * * *" menjadi beberapa argv, sehingga flag-nya
+    # hanya menerima "*/5" dan dragonfly menolak start:
+    #   ERROR: Illegal value '*/5' specified for flag 'snapshot_cron'
+    # Kalau dragonfly gagal start, `api` (depends_on: service_healthy) tidak
+    # akan pernah start juga.
+    #
+    # Formatnya crontab 5 field (menit jam hari bulan hari-dalam-minggu).
+    # Catatan: pesan error dragonfly menyebut "six fields", padahal 6 field
+    # justru yang DITOLAK — sudah diuji langsung ke binary-nya.
+    command:
+      - --maxmemory=256mb
+      - --proactor_threads=1
+      - --cache_mode
+      - --dir=/data
+      - --dbfilename=dump
+      - "--snapshot_cron=*/5 * * * *"
     volumes:
       - dragonfly_data:/data
     healthcheck:
@@ -175,12 +187,33 @@ services:
       - grafikarsa-network
 
 volumes:
+  # Nama volume ditulis EKSPLISIT, bukan mengandalkan nama project compose.
+  #
+  # Alasannya: stack v1 masih ada di server dan project name-nya juga
+  # "grafikarsa". Tanpa nama eksplisit, key `postgres_data` di compose v2
+  # akan resolve ke volume yang SAMA dengan v1 — `grafikarsa_postgres_data`,
+  # yang dibuat oleh postgres:15. Image v2 memakai postgres:16, dan
+  # postgres:16 MELEGAL start di data dir postgres:15 ("database files are
+  # incompatible with server"). Jadi bukan cuma "datanya kebaca", tapi
+  # container db-nya gagal start sama sekali.
+  #
+  # Volume v1 tetap utuh di disk setelah go-live (jaring pengaman untuk
+  # rollback), tapi tidak pernah disentuh stack v2.
   backup_data:
+    name: grafikarsa_v2_backup_data
   postgres_data:
+    name: grafikarsa_v2_postgres_data
   dragonfly_data:
+    name: grafikarsa_v2_dragonfly_data
   storage_data:
+    name: grafikarsa_v2_storage_data
+  # Caddy sengaja DIPAKAI BERSAMA dengan v1: volume ini menyimpan
+  # sertifikat TLS, jadi pergantian stack tidak perlu menerbitkan ulang
+  # sertifikat (dan tidak ada jendela di mana HTTPS gagal).
   caddy_data:
+    name: grafikarsa_caddy_data
   caddy_config:
+    name: grafikarsa_caddy_config
 
 networks:
   grafikarsa-network:
