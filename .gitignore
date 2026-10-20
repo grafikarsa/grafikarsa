@@ -19,3 +19,6 @@ test-results/
 playwright-report/
 blob-report/
 .playwright/
+
+# Binary hasil go build di dalam paket cmd/tools (nama tool sama dengan direktorinya).
+apps/api/cmd/tools/migrate-old/migrate-old
