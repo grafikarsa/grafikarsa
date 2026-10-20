@@ -112,6 +112,7 @@ func (a *App) moderate(w http.ResponseWriter, r *http.Request, status string, ne
 			return
 		}
 	}
+	fromStatus := p.Status
 	_ = a.Q.ModeratePortfolio(r.Context(), repo.ModeratePortfolioParams{
 		ID: p.ID, Status: status, ReviewNote: req.Note, ReviewedBy: mustUUID(UserID(r)),
 	})
@@ -127,7 +128,9 @@ func (a *App) moderate(w http.ResponseWriter, r *http.Request, status string, ne
 		Payload: notifPayload(map[string]string{"user_id": uuidStr(p.OwnerID), "portfolio_id": id, "note": req.Note}),
 	})
 	_ = a.Q.EnsurePortfolioStats(r.Context(), p.ID)
-	auditLog(r, a, "portfolio.moderate."+status, "portfolios", id, req.Note)
+	// Catat transisi from -> to supaya riwayat status bisa direkonstruksi
+	// dari audit_logs (PRD §8.1).
+	auditLogTransition(r, a, "portfolio.moderate."+status, "portfolios", id, fromStatus, status)
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": status}, r))
 }
 
@@ -171,8 +174,14 @@ func (a *App) handleBulkApprove(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) handleRestorePortfolio(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	// Status sebelum restore dicatat dulu: setelah restore, baris tidak
+	// bisa diambil lagi karena soft-delete disembunyikan query.
+	from := "deleted"
+	if p, err := a.Q.GetPortfolioByID(r.Context(), mustUUID(id)); err == nil {
+		from = p.Status
+	}
 	_ = a.Q.RestorePortfolio(r.Context(), mustUUID(id))
-	auditLog(r, a, "portfolio.restore", "portfolios", id, "")
+	auditLogTransition(r, a, "portfolio.restore", "portfolios", id, from, "restored")
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "restored"}, r))
 }
 

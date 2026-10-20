@@ -58,13 +58,19 @@ func (a *App) handleCreatePortfolio(w http.ResponseWriter, r *http.Request) {
 		OwnerID: mustUUID(uid), Title: req.Title, Slug: slug, SeriesID: seriesID,
 	})
 	if err != nil {
+		// Slug turunan dari judul, jadi judul yang sama inevitably bentrok.
+		// Answer itu 409, bukan 500: kliennya perlu tahu harus mengubah judul.
+		if isUniqueViolation(err) {
+			writeJSON(w, http.StatusConflict, fail("DUPLICATE_SLUG", "Karya dengan judul yang sama sudah ada.", r))
+			return
+		}
 		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal membuat portfolio.", r))
 		return
 	}
 	for _, tid := range req.TagIDs {
 		_ = a.Q.AddPortfolioTag(r.Context(), repo.AddPortfolioTagParams{PortfolioID: id, TagID: mustUUID(tid)})
 	}
-	auditLog(r, a, "portfolio.create", "portfolios", uuidStr(id), "")
+	auditLogTransition(r, a, "portfolio.create", "portfolios", uuidStr(id), "", "draft")
 	writeJSON(w, http.StatusCreated, ok(map[string]any{"id": uuidStr(id), "slug": slug}, r))
 }
 
@@ -281,7 +287,7 @@ func (a *App) handleDeletePortfolio(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_ = a.Q.SoftDeletePortfolio(r.Context(), p.ID)
-	auditLog(r, a, "portfolio.delete", "portfolios", id, "")
+	auditLogTransition(r, a, "portfolio.delete", "portfolios", id, p.Status, "deleted")
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "deleted"}, r))
 }
 
@@ -329,7 +335,7 @@ func (a *App) handleSubmitPortfolio(w http.ResponseWriter, r *http.Request) {
 	snap := buildSnapshot(r, a, p)
 	_ = a.Q.SubmitPortfolio(r.Context(), repo.SubmitPortfolioParams{ID: p.ID, SubmittedSnapshot: snap})
 	_, _ = a.Q.EnqueueOutbox(r.Context(), repo.EnqueueOutboxParams{Topic: "portfolio.submitted", Payload: []byte(`{"portfolio_id":"` + id + `"}`)})
-	auditLog(r, a, "portfolio.submit", "portfolios", id, "")
+	auditLogTransition(r, a, "portfolio.submit", "portfolios", id, p.Status, "pending_review")
 	writeJSON(w, http.StatusOK, ok(map[string]string{"status": "pending_review"}, r))
 }
 

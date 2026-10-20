@@ -74,6 +74,8 @@ func (a *App) routes() http.Handler {
 					r.With(a.requireAnyPerm("portfolios.moderate", "portfolios.moderate_jurusan")).Post("/request-changes", a.csrf(a.handleRequestChanges))
 					r.With(a.requireAnyPerm("portfolios.moderate", "portfolios.moderate_jurusan")).Post("/reject", a.csrf(a.handleRejectPortfolio))
 					r.With(a.requireAnyPerm("portfolios.moderate")).Post("/restore", a.csrf(a.handleRestorePortfolio))
+					// Riwayat transisi status (PRD §8.1) — dibaca dari audit_logs.
+					r.Get("/status-history", a.handlePortfolioStatusHistory)
 				})
 			})
 			r.Route("/tags", func(r chi.Router) {

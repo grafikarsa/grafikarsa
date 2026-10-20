@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/netip"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"grafikarsa/api/internal/auth"
 	"grafikarsa/api/internal/repo"
@@ -234,3 +236,18 @@ func audit(ctx context.Context, q *repo.Queries, userID, event, ip, ua string) {
 }
 
 func toPgInet(s string) *netip.Addr { return toPgIP(s) }
+
+// isUniqueViolation memeriksa apakah error dari Postgres adalah pelanggaran
+// unique constraint (SQLSTATE 23505).
+//
+// Dipakai supaya "slug sudah dipakai" dijawab 409 Conflict, bukan 500.
+// Pola lama di beberapa handler membalas 409 untuk APAPUN error, termasuk
+// kegagalan koneksi database — itu menyesatkan klien dan menutupi masalah
+// sungguhan.
+func isUniqueViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		return pgErr.Code == "23505"
+	}
+	return false
+}

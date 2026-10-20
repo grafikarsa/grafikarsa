@@ -1406,7 +1406,12 @@ WITH activity AS (
       COALESCE((SELECT MAX(pl.created_at) FROM portfolio_likes pl WHERE pl.portfolio_id = p.id), to_timestamp(0)),
       COALESCE((SELECT MAX(c.created_at) FROM comments c WHERE c.portfolio_id = p.id), to_timestamp(0)),
       COALESCE((SELECT MAX(v.updated_at) FROM portfolio_view_counts v WHERE v.portfolio_id = p.id), to_timestamp(0)),
-      COALESCE((SELECT MAX(pa.updated_at) FROM portfolio_assessments pa WHERE pa.portfolio_id = p.id), to_timestamp(0))
+      COALESCE((SELECT MAX(pa.updated_at) FROM portfolio_assessments pa WHERE pa.portfolio_id = p.id), to_timestamp(0)),
+      -- Edit karya juga harus memicu hitung ulang: quality bergantung pada
+      -- thumbnail & assessment, jadi menghapus thumbnail harus langsung
+      -- menurunkan skor. Tanpa p.updated_at di sini, karya yang hanya diedit
+      -- (tanpa interaksi baru) tidak pernah dihitung ulang sampai sweep penuh.
+      p.updated_at
     ) AS last_activity,
     COALESCE(ps.computed_at, to_timestamp(0)) AS stats_computed_at
   FROM portfolios p
