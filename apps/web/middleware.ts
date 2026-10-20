@@ -36,6 +36,66 @@ function isPublic(pathname: string): boolean {
   return false;
 }
 
+// Maintenance mode (PRD §16.1).
+//
+// Dipakai saat jendela migrasi v1 → v2: aplikasi ditulis freeze supaya
+// tidak ada perubahan data baru yang masuk ke v1 selama proses migrasi
+// berjalan. Pengunjung melihat halaman "Pindah ke v2", bukan error.
+//
+// Dua cara menyalakannya:
+//
+// 1. NEXT_PUBLIC_MAINTENANCE_MODE=true — flag build-time. Ini nama yang
+//    dipakai PRD. Mengaktifkannya berarti build ulang + deploy ulang.
+//
+// 2. Header "x-maintenance-mode: on" — flag runtime, dibaca dari request.
+//    Reverse proxy (Caddy/nginx) bisa menambah/melepas header itu lalu
+//    reload, sehingga jendela maintenance bisa dibuka & ditutup dalam
+//    hitungan detik tanpa build ulang. Untuk go-live, cara kedua jauh lebih
+//    aman: kalau ada masalah, flag bisa langsung dimatikan.
+//
+// Halaman /api/* TIDAK disentuh sama sekali (sudah di-exclude matcher),
+// sehingga health check, BFF, dan API tetap hidup selama maintenance.
+const MAINTENANCE_HEADER = "x-maintenance-mode";
+
+function maintenanceEnabled(req: NextRequest): boolean {
+  const flag = req.headers.get(MAINTENANCE_HEADER);
+  if (flag) {
+    const v = flag.trim().toLowerCase();
+    if (v === "on" || v === "true" || v === "1" || v === "yes") return true;
+  }
+  return process.env.NEXT_PUBLIC_MAINTENANCE_MODE === "true";
+}
+
+// Halaman maintenance bersifat mandiri: HTML inline tanpa JS dan tanpa
+// aset dari build. Alasannya: kalau build-nya yang bermasalah, halaman ini
+// tetap harus bisa tampil.
+const MAINTENANCE_HTML = `<!DOCTYPE html>
+<html lang="id"><head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="robots" content="noindex"/>
+<title>Grafikarsa — Sedang Pindah ke v2</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin:0; min-height:100vh; display:grid; place-items:center;
+         font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+         background:#fafafa; color:#18181b; }
+  @media (prefers-color-scheme: dark) { body { background:#09090b; color:#fafafa; } }
+  main { max-width:34rem; padding:2rem; text-align:center; }
+  h1 { font-size:1.5rem; margin:0 0 .75rem; letter-spacing:-.01em; }
+  p { margin:0 0 1rem; line-height:1.6; opacity:.8; font-size:.95rem; }
+  code { background:rgba(127,127,127,.15); padding:.15rem .4rem; border-radius:.3rem; font-size:.85em; }
+</style>
+</head><body>
+<main>
+  <h1>Grafikarsa sedang pindah ke v2</h1>
+  <p>Kami sedang memindahkan data dan menyempurnakan aplikasinya. DATA ANDA
+     TIDAK HILANG — semua karya, akun, dan interaksi tetap aman.</p>
+  <p>Kami akan mengumumkan lewat <code>changelog</code> begitu v2 siap dibuka.</p>
+  <p>Sampai jumpa.</p>
+</main>
+</body></html>`;
+
 export function middleware(req: NextRequest) {
   const isDev = process.env.NODE_ENV !== "production";
   // CSP tanpa nonce.
@@ -73,6 +133,20 @@ export function middleware(req: NextRequest) {
     "form-action 'self'",
     "frame-ancestors 'self'",
   ].join("; ");
+
+  // Maintenance mode dicek SEBELUM auth gate: kalau maintenance aktif,
+  // pengunjung tidak perlu login cuma untuk melihat halaman "&quot;Pindah ke v2&quot;".
+  if (maintenanceEnabled(req)) {
+    const res = new NextResponse(MAINTENANCE_HTML, {
+      status: 503,
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    });
+    res.headers.set("Content-Security-Policy", csp);
+    res.headers.set("Retry-After", "600");
+    res.headers.set("Cross-Origin-Opener-Policy", "same-origin");
+    res.headers.set("Cache-Control", "no-store");
+    return res;
+  }
 
   // Auth gate: tanpa cookie sesi, halaman privat dialihkan ke /login.
   // Yang dicek hanya KEHADIRAN cookie __Host-rt — validasi tokennya tetap

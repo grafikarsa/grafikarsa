@@ -71,6 +71,83 @@ digest 07:00 WIB · flush view 1 menit · decay minat 03:00 WIB · scan media
 mematikan scheduler. Jalankan satu job manual:
 `go run ./cmd/worker <outbox|stats|leaderboard|cleanup-media|publish-changelogs|retention|promotion-draft|digest>`.
 
+## Maintenance mode (jendela migrasi v1 → v2)
+
+Saat data dimindahkan, aplikasi v1 perlu di-*freeze* supaya tidak ada tulisan
+baru yang masuk selama migrasi berjalan. Pengunjung melihat halaman
+"Pindah ke v2" (HTTP 503, `Retry-After: 600`).
+
+Dua cara menyalakannya:
+
+| Cara | Kapan aktif | Catatan |
+|---|---|---|
+| `NEXT_PUBLIC_MAINTENANCE_MODE=true` saat build | saat build ulang | Nama flag yang dipakai PRD §16.1; perlu build + deploy ulang |
+| Header `x-maintenance-mode: on` dari reverse proxy | **sekali reload proxy** | Tanpa build ulang — dipakai untuk go-live |
+
+Contoh Caddy (reverse proxy di depan Next.js):
+
+```caddy
+# buka maintenance
+grafikarsa.com {
+    header x-maintenance-mode on
+    reverse_proxy web:3000
+}
+# tutup maintenance: hapus baris "header x-maintenance-mode on", lalu
+#   docker compose exec caddy caddy reload
+```
+
+`/api/*` **tidak** disentuh maintenance — health check, BFF, dan API tetap
+hidup, jadi pod masih lolos health check dan rollback tetap mungkin.
+
+Aktifkan **H-1** (bukan saat migrasi dimulai) supaya orang tidak sempat
+menulis karya yang tidak ikut termigrasi.
+
+## Sunset plan (P6-09)
+
+Rencana resmi membuang v1 setelah go-live. Tidak ada data v1 yang dihapus
+sebelum 30 hari.
+
+| Hari | Aksi | Pemeriksa |
+|---|---|---|
+| H-1 | Aktifkan maintenance mode v1 | ops |
+| H-0 | Migrasi DB + mirror storage, verifikasi | ops + migration dry-run (`migrate-old --dry-run` di staging dengan dump prod) |
+| H-0 | Go-live v2, redirect `/storage/*` → objek baru | ops |
+| H-0 + 1 jam | Matikan maintenance mode | ops |
+| H+1…H+6 | Monitor 404/500, latency p95, complain | ops + support |
+| H+7 | Review monitoring. Kalau bersih → lanjutkan | ops |
+| H+30 | **Hapus v1**: container, image, volume, dan backup lama di server | ops — butuh persetujuan tertulis |
+
+Syarat H+30: monitoring H+7 bersih (tanpa insiden 5xx selama 7 hari berturut),
+tidak ada request ke v1 yang tercatat di access log selama 7 hari, dan backup
+v2 sudah terverifikasi lewat restore drill.
+
+Sebelum dihapus, pastikan backup v2 (DB + storage) ada di **dua** tempat
+(server + mesin terpisah) dan sudah pernah di-restore-drill.
+
+## Integration test lokal
+
+Integration test memakai Postgres sungguhan (bukan SQLite — skema v2 memakai
+`citext`, `pg_trgm`, generated column `tsvector`, dan unique partial index).
+
+```bash
+# database test TERPISAH dari database dev
+docker exec -i gk-pg-test psql -U grafikarsa -d postgres \
+  -c 'CREATE DATABASE grafikarsa_test;'
+cd apps/api
+DB_HOST=127.0.0.1 DB_PORT=5439 DB_USER=grafikarsa DB_PASSWORD=test \
+  DB_NAME=grafikarsa_test go run ./cmd/tools/migrate up
+
+# jalankan test
+TEST_DATABASE_URL="postgres://grafikarsa:test@127.0.0.1:5439/grafikarsa_test?sslmode=disable" \
+  go test ./...
+```
+
+**Wajib pakai database terpisah.** Test ini menghapus isi tabel dengan
+`TRUNCATE`. Helper `internal/dbtest` menolak DSN yang nama databasenya tidak
+mengandung "test" — kalau tidak, satu `go test ./...` bisa menghapus seluruh
+user, portfolio, dan komentar di database dev/produksi tanpa jejak. Kalau
+memang disengaja, setel `ALLOW_DESTRUCTIVE_TEST_DB=1`.
+
 ## Catatan operasional
 
 - **Gate wajib ganti password**: user hasil import/seed hanya bisa memakai

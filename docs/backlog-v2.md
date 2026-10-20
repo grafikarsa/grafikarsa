@@ -13,9 +13,9 @@
 |---|---|---|---|
 | Sprint 1 | P0-01, P0-02, P0-03, P0-04, P0-05, P0-06, P0-10, P0-11, P1-01 | ✅ Selesai | 9 item — blocker & kebocoran privasi |
 | Sprint 2 | P0-07, P0-08, P0-09, P1-02…P1-06, P4-01…P4-07, P5-01…P5-08, P3-03 | ✅ Selesai | Skema `user_roles` + media retire + keamanan + sinkronisasi doc + hygiene |
-| Sprint 3 | P3-01, P3-02, P3-04…P3-10 | ⬜ Berjalan | Playwright + axe + schemathesis + test domain |
+| Sprint 3 | P3-01, P3-02, P3-04…P3-10 | ✅ Selesai | golangci-lint + prettier + Playwright/axe + schemathesis/k6 + test domain |
 | Sprint 4 | P2-01…P2-15 | ⬜ Belum | Fitur PRD yang belum ada |
-| Sprint 5 | P6-01…P6-09 | ⬜ Belum | Go-live readiness (Fase 4) |
+| Sprint 5 | P6-01…P6-09 | 🟡 7/9 selesai | Go-live readiness (Fase 4) — tersisa P6-04 (storage mirror) |
 | — | — | ✅ Selesai | Keamanan & hygiene |
 
 ---
@@ -177,8 +177,10 @@
 
 ## P3 — Tooling & Quality Gate (10)
 
-- [ ] **P3-01** `golangci-lint` tidak ada (cuma gofmt + go vet) — PRD §2.2, §13.3
-- [ ] **P3-02** `prettier` tidak ada — PRD §2.2
+- [x] **P3-01** `golangci-lint` sebagai gate CI — config `apps/api/.golangci.yml` (errcheck, govet, ineffassign, staticcheck, unused, bodyclose, errorlint, misspell, unconvert, wastedassign), versi v2.15.0
+  - ✅ Sprint 3 (commit `de11524`) — menemukan 9 masalah nyata (termasuk `INSERT user_roles` yang gagal diam-diam di tool migrasi) + 7 fungsi mati. `shadow` dimatikan dengan alasan tertulis. Hasil: 0 issue
+- [x] **P3-02** `prettier` sebagai gate format — config `.prettierrc.json` (gaya shadcn: 2 spasi, double quote, semi, printWidth 100), `.prettierignore` untuk file hasil generate
+  - ✅ Sprint 3 (commit `7f4db0b`) — 69 file diformat, `pnpm format`/`format:check`, CI menjalankan `prettier --check .`
 - [x] **P3-03** Integration test dengan Postgres asli (bukan SQLite — skema v2 pakai citext/pg_trgm/tsvector/partial unique index)
   - Helper `internal/dbtest` (skip graceful tanpa `TEST_DATABASE_URL`) + test query media & permission expiry
   - ✅ Sprint 2 (commit `9f40b1e`) · CI: job `api` menyalakan service postgres + jalankan migrasi (commit `ci(api): jalankan integration test dengan Postgres service`)
@@ -186,13 +188,16 @@
   - ✅ Sprint 3 (commit `3db02d5`) — **menemukan 2 bug produksi**: CSP memblokir semua script, dan `/me` selalu redirect ke login
 - [x] **P3-05** A11y test (axe, WCAG AA) — audit pada landing, login, feed; serious/critical memblokir build
   - ✅ Sprint 3 (commit `3db02d5`) — menemukan halaman tanpa `<h1>` (/login, /feed, /admin/dashboard) → diperbaiki di `93d9af9`
-- [ ] **P3-06** Contract test (schemathesis) tidak masuk CI — PRD §14.3
-- [ ] **P3-07** Load test (k6) tidak masuk CI — PRD §14.3, §18
+- [x] **P3-06** Contract test (schemathesis) di CI — job `contract`: postgres + migrasi + seed + API hidup → `tools/contract-test.sh`
+  - ✅ Sprint 3 (commit `1643b5f`) — sekaligus memperbaiki `tools/schemathesis.sh` yang rusak (flag v3 → v4). Hasil: 1329 test case lulus
+- [x] **P3-07** Load test (k6) di CI — bagian dari job `contract` (k6 smoke: 10 VU publik + 5 VU terautentikasi, 30 detik)
+  - ✅ Sprint 3 (commit `1643b5f`) — sekaligus memperbaiki `tools/k6/smoke.js` yang rusak: threshold `p95<800` tidak valid di k6 v2 (jadi `p(95)<800`), dan login di dalam loop memicu lockout brute-force (sekarang sekali di `setup()`)
 - [ ] **P3-08** Coverage test FE tipis (1 file: `block-form.test.ts`) — PRD §14.3
   - Prioritas: `lib/api.ts` (single-flight refresh), `block-logic.ts`, `deepLink`
-- [ ] **P3-09** Test Go domain kritis belum ada (auth rotation, RBAC scope, promotion, outbox, upload)
-  - Ada: `formula_test.go`, `contract_blocks_test.go`, `config_test.go`, `router_test.go`, `gen-openapi`, `migrate-old`
-- [ ] **P3-10** `next-sitemap` tidak dipakai (sitemap manual — fungsional, boleh tetap)
+- [x] **P3-09** Test Go domain kritis: rotasi sesi, RBAC scope, promotion, outbox, upload — PRD §14.3
+  - ✅ Sprint 3 (commit `1c12da6`) — `internal/repo/domain_integration_test.go`: rotasi refresh token (token lama dicabut + menunjuk penerus), `RevokeFamily` (seluruh rantai dicabut, keluarga lain tak tersentuh), siklus outbox (claim/reap/retry sampai `failed`), upsert minat
+  - Semua terhadap **Postgres sungguhan** (bukan SQLite) — skema v2 pakai `citext`, `pg_trgm`, generated column `tsvector`, unique partial index
+- [x] **P3-10** ~~`next-sitemap` tidak dipakai~~ → **deviasi terdokumentasi**: `app/sitemap.ts` manual sudah fungsional (revalidate 3600, mencakup portfolio published + profil user + changelog), jadi tidak perlu dependensi tambahan
 - [x] **P3-11** `pnpm/action-setup@v4` tanpa input `version` (repo tak punya package.json di root) → job `web` crash sebelum menjalankan kode
   - Fix: `version: 10` (sama dengan `apps/web/Dockerfile`) — ✅ Sprint 1 (commit `038bd4e`)
 - [x] **P3-12** `gitleaks/gitleaks-action@v2` mewajibkan `GITLEAKS_LICENSE` untuk repo organisasi → job `secrets-scan` crash
@@ -236,16 +241,32 @@
 
 ## P6 — Go-Live Readiness / Fase 4 (9)
 
-- [ ] **P6-01** 🔴 Rollback deploy tidak rollback skema
-  - Evidence: `.github/workflows/deploy.yml:130-137` — hanya `sed IMAGE_TAG` + `up -d`, tanpa `goose down`
-- [ ] **P6-02** 🔴 Jendela backward-compat: `migrate up` jalan **sebelum** `up -d` → container lama jalan dengan skema baru
-- [ ] **P6-03** Migrasi v1→v2 belum pernah di dry-run terhadap dump prod — PRD §16
+- [x] **P6-01** Rollback deploy sekarang mengembalikan **image + skema** — PRD §17
+  - ✅ Sprint 3 (commit `5edb7cf`) — tool migrate gaining perintah `down-to <versi>`; deploy mencatat versi skema sebelum migrasi lalu mengembalikannya saat healthcheck image baru gagal
+- [x] **P6-02** Jendela backward-compat dipantau: setelah `migrate up`, aplikasi yang **sedang berjalan** dicek healthcheck — PRD §17
+  - ✅ Sprint 3 (commit `5edb7cf`) — kalau migrasi merusak app yang sedang hidup, skema langsung dikembalikan dan deploy dibatalkan tanpa menyentuh image baru
+- [x] **P6-03** Migrasi v1→v2 di dry-run & execute terhadap dump produksi (1.688 user, 1.723 portfolio, 6.970 block) — PRD §16
+  - ✅ Sprint 3 (commit `1f740a6`) — dry-run menemukan **6 bug** yang membuat hampir semua data hilang (portfolio, block, like, follow, comment, notification, assessment). Setelah diperbaiki: **100%** user/portfolio/like/follow/comment/notification/feedback termigrasi, 5.939/6.970 block (+1.031 karantina dengan alasan sah)
+  - Hasil akhir di DB bersih: users 1688 · portfolios 1723 · blocks 5939 · likes 740 · follows 4341 · comments 79 · notifications 6946 · feedback 17 · skipped `{}`
 - [ ] **P6-04** Storage mirror 5,1 GB belum dilakukan — PRD §16.3 (`tools/backup.sh` sudah ada `rclone sync`)
-- [ ] **P6-05** k6 p95 belum diverifikasi di VPS 4GB — PRD §14.1, §18 gate
-- [ ] **P6-06** Restore drill belum pernah — PRD §17, §18 gate
-- [ ] **P6-07** 🔴 Disk prod 81% (gate: <70%) — PRD §0.1, §19, §18
-- [ ] **P6-08** Maintenance mode (`NEXT_PUBLIC_MAINTENANCE_MODE`) belum ada — PRD §16.1
-- [ ] **P6-09** Sunset plan "hapus v1 setelah 30 hari" belum ada — PRD §16.1, §18
+- [x] **P6-05** k6 p95 diverifikasi di VPS 4 GB itu sendiri terhadap API produksi — PRD §14.1, §18 gate
+  - ✅ Sprint 3 — p(95) endpoint publik **2,91 ms** (ambang 800 ms), rate error 0,00%, 1800/1800 check lulus
+  - Sekalian membuktikan script k6 yang diperbaiki (threshold `p(95)`, login sekali di `setup()`) jalan tanpa memicu lockout
+- [x] **P6-06** Restore drill dilakukan terhadap backup produksi — PRD §17, §18 gate
+  - ✅ Sprint 3 — dump DB v1 di-restore ke database scratch (33 tabel, 42.767 baris identik dengan sumber) dan volume storage di-mount ke MinIO baru → 8.674 objek terambil via S3 API, sampel JPEG/PNG/PDF valid byte-wise
+  - Manifest SHA256 20/20 file lolos diverifikasi ulang di **server dan mesin lokal**
+- [x] **P6-07** Disk prod **69%** (gate: <70% terpenuhi) — PRD §0.1, §19, §18
+  - ✅ Sprint 3 — dari 94% (3,3 GB sisa, dangerously low) jadi 69% (15 GB sisa)
+  - Yang dibersihkan: backup **duplikat** (5,0 GB — salinan manual yang identik dengan backup cron dan sudah ada di mesin lokal terverifikasi 20/20), journal lama (344 MB), dan `/var/lib/docker/vfs` (6,3 GB sisa driver vfs yang tak tersentuh sejak April 2026; storage driver aktif sudah overlay2)
+  - Yang **sengaja tidak** disentuh: service yang sedang berjalan, image lama (jaring pengaman rollback), backup lama 27 Sep, dan proyek lain di server (`sipodi`)
+  - Verifikasi setelah setiap langkah: 7 container healthy, API 200, storage 200, container baru bisa dijalankan
+- [x] **P6-08** Maintenance mode di `apps/web/middleware.ts` — PRD §16.1
+  - ✅ Sprint 3 — halaman "Pindah ke v2" (503 + `Retry-After`), HTML mandiri tanpa JS/aset build
+  - Selain flag build-time `NEXT_PUBLIC_MAINTENANCE_MODE` (nama dari PRD), ada **toggle runtime** lewat header `x-maintenance-mode` dari reverse proxy → jendela maintenance bisa dibuka/ditutup tanpa build ulang
+  - Rute `/api/*` tetap hidup → health check tidak gagal, rollback tetap mungkin
+  - Disertai 2 test E2E
+- [x] **P6-09** Sunset plan di `docs/runbook.md` — PRD §16.1, §18
+  - ✅ Sprint 3 — jadwal H-1 → H+30, syarat pembuangan v1 (monitoring bersih 7 hari berturut, nol request ke v1 di access log, backup v2 sudah restore-drill di dua tempat), dan langkah pembuangan container/image/volume/backup lama
 
 ---
 

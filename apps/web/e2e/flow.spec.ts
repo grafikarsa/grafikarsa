@@ -84,6 +84,23 @@ test.describe("halaman publik", () => {
   });
 });
 
+test.describe("maintenance mode (PRD §16.1)", () => {
+  test("header x-maintenance-mode menampilkan halaman 'Pindah ke v2'", async ({ page }) => {
+    await page.setExtraHTTPHeaders({ "x-maintenance-mode": "on" });
+    const res = await page.goto("/");
+    expect(res?.status(), "halaman maintenance harus 503").toBe(503);
+    await expect(page.getByRole("heading", { name: /pindah ke v2/i })).toBeVisible();
+    // Pesan wajib meny reassure pengguna bahwa datanya aman.
+    await expect(page.getByText(/tidak hilang/i)).toBeVisible();
+  });
+
+  test("tanpa header, halaman normal tetap hidup", async ({ page }) => {
+    const res = await page.goto("/");
+    expect(res?.status()).toBe(200);
+    await expect(page.getByRole("heading", { name: /pindah ke v2/i })).toHaveCount(0);
+  });
+});
+
 test.describe("halaman admin", () => {
   test("dashboard admin bisa diakses setelah login admin", async ({ page }) => {
     await login(page);
