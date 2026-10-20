@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/h2non/filetype"
 	"github.com/jackc/pgx/v5/pgtype"
 	"grafikarsa/api/internal/repo"
@@ -230,8 +229,23 @@ func (a *App) handleUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ext := extForMime(mime)
-	base := fmt.Sprintf("%ss/%s/%s", purpose, uid, uuid.NewString())
-	key := base + ext
+	// Object key memakai path per-entity (PRD §7.1): mis.
+	// thumbnails/{portfolio_id}/{uuid7}.webp. Entity id opsional — kalau
+	// tidak diberikan, path jatuh ke owner (user) supaya tetap jelas.
+	entityID := ""
+	if raw := strings.TrimSpace(r.FormValue("entity_id")); raw != "" {
+		seg, ok := sanitizeSegment(raw)
+		if !ok {
+			writeJSON(w, http.StatusUnprocessableEntity, fail("VALIDATION_ERROR", "entity_id tidak valid.", r))
+			return
+		}
+		if !a.ownsEntity(ctx, purpose, seg, uid) {
+			writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Entitas itu bukan milikmu.", r))
+			return
+		}
+		entityID = seg
+	}
+	key := mediaObjectKey(purpose, uid, entityID, ext)
 	if err := a.Storage.Put(ctx, key, mime, bytes.NewReader(data)); err != nil {
 		writeJSON(w, http.StatusInternalServerError, fail("INTERNAL_ERROR", "Gagal menyimpan file.", r))
 		return
@@ -239,7 +253,7 @@ func (a *App) handleUpload(w http.ResponseWriter, r *http.Request) {
 	// Varian disimpan di key berakhiran _<lebar><ext>.
 	variantKeys := map[string]string{}
 	for wpx, vdata := range variants {
-		vkey := fmt.Sprintf("%s_%d%s", base, wpx, ext)
+		vkey := mediaVariantKey(key, wpx, ext)
 		if err := a.Storage.Put(ctx, vkey, mime, bytes.NewReader(vdata)); err != nil {
 			continue
 		}

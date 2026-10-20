@@ -36,8 +36,10 @@ function SortableBlock({
   disabled,
   onDelete,
   onSave,
+  entityId,
 }: {
   b: Block;
+  entityId?: string;
   disabled: boolean;
   onDelete: () => void;
   onSave: (payload: Draft) => Promise<void>;
@@ -80,6 +82,7 @@ function SortableBlock({
             blockType={b.block_type as BlockType}
             initial={b.payload}
             busy={busy}
+            entityId={entityId}
             submitLabel="Simpan perubahan"
             onCancel={() => setEditing(false)}
             onSubmit={async (payload) => {
@@ -325,6 +328,7 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
                       key={b.id}
                       b={b}
                       disabled={readOnly}
+                      entityId={id}
                       onDelete={() => removeBlock(b.id)}
                       onSave={(payload) => saveBlock(b.id, payload)}
                     />
@@ -347,7 +351,7 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
                       options={BLOCK_TYPES.map((b) => ({ value: b.value, label: b.label }))}
                     />
                   </div>
-                  <BlockForm blockType={newType} onSubmit={addBlock} />
+                  <BlockForm blockType={newType} entityId={id} onSubmit={addBlock} />
                 </div>
               )}
             </CardContent>
