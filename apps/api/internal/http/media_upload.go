@@ -245,7 +245,7 @@ func (a *App) handleUpload(w http.ResponseWriter, r *http.Request) {
 		}
 		variantKeys[strconv.Itoa(wpx)] = vkey
 	}
-	vb, _ := json.Marshal(variantKeys)
+	vb := toJSONBytes(variantKeys)
 
 	mediaID, err := a.Q.CreateMedia(ctx, repo.CreateMediaParams{
 		OwnerID:        mustUUID(uid),
@@ -350,6 +350,10 @@ func (a *App) handleConfirmMedia(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "Bukan portfolio-mu.", r))
 			return
 		}
+		// Asset lama di-retire supaya objeknya tidak menumpuk di storage.
+		if b.AssetMediaID.Valid && uuidStr(b.AssetMediaID) != uuidStr(m.ID) {
+			a.retireMedia(r.Context(), b.AssetMediaID)
+		}
 		_ = a.Q.SetBlockAsset(r.Context(), repo.SetBlockAssetParams{ID: b.ID, AssetMediaID: m.ID})
 	default:
 		writeJSON(w, http.StatusUnprocessableEntity, fail("VALIDATION_ERROR", "link_to tidak valid.", r))
@@ -389,6 +393,12 @@ func (a *App) handleDeleteMedia(w http.ResponseWriter, r *http.Request) {
 // retireMedia menghapus objek + menandai media lama sebagai deleted ketika
 // digantikan (avatar/banner/thumbnail) supaya kuota & storage tidak menumpuk
 // (PRD §7.2). Aman dipanggil walau media sudah tidak ada.
+// retireMedia: hapus objek (dan variannya) dari storage lalu tandai media
+// sebagai 'deleted'.
+//
+// Semua FK yang menunjuk media ini juga dilepas. Kalau tidak, kolom FK masih
+// menunjuk media yang objeknya sudah hilang: profile/portfolio masih
+// "memiliki" file yang tidak bisa di-serve, dan pembacaan berikutnya rusak.
 func (a *App) retireMedia(ctx context.Context, mediaID pgtype.UUID) {
 	if !mediaID.Valid {
 		return
@@ -405,6 +415,9 @@ func (a *App) retireMedia(ctx context.Context, mediaID pgtype.UUID) {
 		}
 	}
 	_ = a.Q.ClearUserAvatarIfMedia(ctx, m.ID)
+	_ = a.Q.ClearUserBannerIfMedia(ctx, m.ID)
+	_ = a.Q.ClearPortfolioThumbnailIfMedia(ctx, m.ID)
+	_ = a.Q.ClearBlockAssetIfMedia(ctx, m.ID)
 	_ = a.Q.MarkMediaDeleted(ctx, m.ID)
 }
 

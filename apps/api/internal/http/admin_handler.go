@@ -309,6 +309,13 @@ func (a *App) handleAssignRole(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusForbidden, fail("FORBIDDEN_SCOPE", "User di luar jurusanmu.", r))
 		return
 	}
+	// Satu user hanya boleh punya satu scope per role (users.major_id juga
+	// kolom tunggal). Assignment lama dengan scope berbeda dibuang supaya
+	// tidak ada dua baris yang saling bertentangan — dan supaya perpindahan
+	// scope tidak terlihat diam-diam.
+	_ = a.Q.DeleteUserRoleOtherScope(r.Context(), repo.DeleteUserRoleOtherScopeParams{
+		UserID: u.ID, RoleID: role.ID, ScopeMajorID: scope,
+	})
 	_ = a.Q.AssignUserRole(r.Context(), repo.AssignUserRoleParams{
 		UserID: u.ID, RoleID: role.ID, ScopeMajorID: scope, AssignedBy: mustUUID(UserID(r)),
 	})

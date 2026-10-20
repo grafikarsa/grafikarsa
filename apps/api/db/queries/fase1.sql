@@ -106,8 +106,21 @@ INSERT INTO role_permissions (role_id, permission_id)
 SELECT $1, id FROM permissions WHERE key = $2 ON CONFLICT DO NOTHING;
 
 -- name: AssignUserRole :exec
+-- Upsert pada (user_id, role_id, scope_major_id). Assignment dengan scope
+-- yang sama diperpanjang (assigned_by + expires_at diperbarui); assignment
+-- dengan scope berbeda menjadi baris baru, bukan menimpa scope lama diam-diam.
 INSERT INTO user_roles (user_id, role_id, scope_major_id, assigned_by, expires_at)
-VALUES ($1, $2, $3, $4, $5) ON CONFLICT (user_id, role_id) DO UPDATE SET scope_major_id = EXCLUDED.scope_major_id, expires_at = EXCLUDED.expires_at;
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (user_id, role_id, scope_major_id) DO UPDATE
+  SET assigned_by = EXCLUDED.assigned_by, expires_at = EXCLUDED.expires_at;
+
+-- name: DeleteUserRoleOtherScope :exec
+-- Assignment role yang sama dengan scope lain dibuang. Satu user hanya boleh
+-- punya satu scope per role: users.major_id juga kolom tunggal, jadi dua
+-- scope untuk role yang sama akan saling bertentangan (hanya satu yang bisa
+-- dipakai untuk row-level filtering).
+DELETE FROM user_roles
+WHERE user_id = $1 AND role_id = $2 AND scope_major_id IS DISTINCT FROM $3;
 
 -- name: UnassignUserRole :exec
 DELETE FROM user_roles WHERE user_id = $1 AND role_id = $2;
@@ -151,6 +164,48 @@ UPDATE portfolio_blocks SET asset_media_id = $2 WHERE id = $1;
 -- name: ClearUserAvatarIfMedia :exec
 UPDATE users SET avatar_media_id = NULL WHERE avatar_media_id = $1;
 
+-- name: ClearUserBannerIfMedia :exec
+UPDATE users SET banner_media_id = NULL WHERE banner_media_id = $1;
+
+-- name: ClearPortfolioThumbnailIfMedia :exec
+UPDATE portfolios SET thumbnail_media_id = NULL WHERE thumbnail_media_id = $1;
+
+-- name: ClearBlockAssetIfMedia :exec
+UPDATE portfolio_blocks SET asset_media_id = NULL WHERE asset_media_id = $1;
+
+-- name: ListOrphanedConfirmedMedia :many
+-- Media SUDAH confirmed tapi tidak direferensikan siapa pun: sudah diganti
+-- (avatar/banner/thumbnail) atau blok yang memakainya dihapus. Media seperti ini
+-- tidak akan pernah disentuh ListPendingMedia (yang hanya membersihkan status
+-- 'pending'), sehingga objeknya menumpuk di storage selamanya.
+--
+-- Syaratnya sengaja konservatif:
+--   - confirmed (media 'pending' ditangani ListPendingMedia)
+--   - sudah lebih tua dari 1 jam, jangan berebut dengan upload yang baru saja
+--     dikonfirmasi (media baru bisa belum sempat di-link ke block-nya)
+--   - purpose dibatasi ke asset yangreferensinya selalu berupa FK atau payload
+--     block. 'document', 'feedback', dan 'changelog_cover' TIDAK ikut karena
+--     bisa dirujuk dari body/markdown yang tidak terindeks FK.
+SELECT m.id, m.object_key, m.variants FROM media_assets m
+WHERE m.status = 'confirmed'
+  AND m.purpose IN ('avatar', 'banner', 'thumbnail', 'block_image')
+  AND m.created_at < NOW() - INTERVAL '1 hour'
+  AND NOT EXISTS (SELECT 1 FROM users u WHERE u.avatar_media_id = m.id OR u.banner_media_id = m.id)
+  AND NOT EXISTS (SELECT 1 FROM portfolios p WHERE p.thumbnail_media_id = m.id)
+  AND NOT EXISTS (
+    SELECT 1 FROM portfolio_blocks b
+    WHERE b.asset_media_id = m.id
+       -- media gambar block disimpan di payload, bukan asset_media_id
+       OR b.payload->>'media_id' = m.id::text
+  )
+  -- media yang jadi preview milik media lain (halaman-1 PDF) ikut terpakai.
+  -- Hanya media induk yang MASIH hidup yang memegang preview-nya: kalau induknya
+  -- sudah 'deleted', preview-nya ikut orphan dan boleh dihapus.
+  AND NOT EXISTS (SELECT 1 FROM media_assets o WHERE o.preview_media_id = m.id AND o.status <> 'deleted')
+  AND NOT EXISTS (SELECT 1 FROM media_assets o WHERE o.id = m.preview_media_id AND o.status = 'deleted')
+ORDER BY m.created_at ASC
+LIMIT 100;
+
 -- name: DeleteMediaRow :exec
 DELETE FROM media_assets WHERE id = $1;
 
@@ -190,11 +245,16 @@ SELECT id, actor_id, action, entity, entity_id, created_at FROM audit_logs ORDER
 
 
 -- name: GetUserScope :one
+-- Scope jurusan efektif. Kalau user punya lebih dari satu assignment, yang
+-- dipakai adalah assignment role admin_jurusan dulu, lalu yang paling lama
+-- (created_at) — supaya hasilnya deterministik dan tidak berganti-ganti
+-- antar request.
 SELECT COALESCE(
   (SELECT ur.scope_major_id FROM user_roles ur
    JOIN roles r ON r.id = ur.role_id
    WHERE ur.user_id = u.id AND ur.scope_major_id IS NOT NULL
      AND (ur.expires_at IS NULL OR ur.expires_at > NOW())
+   ORDER BY (r.slug = 'admin_jurusan') DESC, ur.created_at ASC, ur.scope_major_id ASC
    LIMIT 1),
   CASE WHEN u.role_primary = 'admin_jurusan' THEN u.major_id ELSE NULL END
 )::uuid AS scope_major_id

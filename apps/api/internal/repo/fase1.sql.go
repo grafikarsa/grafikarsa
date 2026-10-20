@@ -44,7 +44,9 @@ func (q *Queries) AddSocialLink(ctx context.Context, arg AddSocialLinkParams) er
 
 const assignUserRole = `-- name: AssignUserRole :exec
 INSERT INTO user_roles (user_id, role_id, scope_major_id, assigned_by, expires_at)
-VALUES ($1, $2, $3, $4, $5) ON CONFLICT (user_id, role_id) DO UPDATE SET scope_major_id = EXCLUDED.scope_major_id, expires_at = EXCLUDED.expires_at
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (user_id, role_id, scope_major_id) DO UPDATE
+  SET assigned_by = EXCLUDED.assigned_by, expires_at = EXCLUDED.expires_at
 `
 
 type AssignUserRoleParams struct {
@@ -55,6 +57,9 @@ type AssignUserRoleParams struct {
 	ExpiresAt    pgtype.Timestamptz `json:"expires_at"`
 }
 
+// Upsert pada (user_id, role_id, scope_major_id). Assignment dengan scope
+// yang sama diperpanjang (assigned_by + expires_at diperbarui); assignment
+// dengan scope berbeda menjadi baris baru, bukan menimpa scope lama diam-diam.
 func (q *Queries) AssignUserRole(ctx context.Context, arg AssignUserRoleParams) error {
 	_, err := q.db.Exec(ctx, assignUserRole,
 		arg.UserID,
@@ -82,12 +87,39 @@ func (q *Queries) CheckUsernameTaken(ctx context.Context, arg CheckUsernameTaken
 	return count, err
 }
 
+const clearBlockAssetIfMedia = `-- name: ClearBlockAssetIfMedia :exec
+UPDATE portfolio_blocks SET asset_media_id = NULL WHERE asset_media_id = $1
+`
+
+func (q *Queries) ClearBlockAssetIfMedia(ctx context.Context, assetMediaID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, clearBlockAssetIfMedia, assetMediaID)
+	return err
+}
+
+const clearPortfolioThumbnailIfMedia = `-- name: ClearPortfolioThumbnailIfMedia :exec
+UPDATE portfolios SET thumbnail_media_id = NULL WHERE thumbnail_media_id = $1
+`
+
+func (q *Queries) ClearPortfolioThumbnailIfMedia(ctx context.Context, thumbnailMediaID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, clearPortfolioThumbnailIfMedia, thumbnailMediaID)
+	return err
+}
+
 const clearUserAvatarIfMedia = `-- name: ClearUserAvatarIfMedia :exec
 UPDATE users SET avatar_media_id = NULL WHERE avatar_media_id = $1
 `
 
 func (q *Queries) ClearUserAvatarIfMedia(ctx context.Context, avatarMediaID pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, clearUserAvatarIfMedia, avatarMediaID)
+	return err
+}
+
+const clearUserBannerIfMedia = `-- name: ClearUserBannerIfMedia :exec
+UPDATE users SET banner_media_id = NULL WHERE banner_media_id = $1
+`
+
+func (q *Queries) ClearUserBannerIfMedia(ctx context.Context, bannerMediaID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, clearUserBannerIfMedia, bannerMediaID)
 	return err
 }
 
@@ -340,6 +372,26 @@ func (q *Queries) DeleteTagIfUnused(ctx context.Context, id pgtype.UUID) (pgtype
 	var id_2 pgtype.UUID
 	err := row.Scan(&id_2)
 	return id_2, err
+}
+
+const deleteUserRoleOtherScope = `-- name: DeleteUserRoleOtherScope :exec
+DELETE FROM user_roles
+WHERE user_id = $1 AND role_id = $2 AND scope_major_id IS DISTINCT FROM $3
+`
+
+type DeleteUserRoleOtherScopeParams struct {
+	UserID       pgtype.UUID `json:"user_id"`
+	RoleID       pgtype.UUID `json:"role_id"`
+	ScopeMajorID pgtype.UUID `json:"scope_major_id"`
+}
+
+// Assignment role yang sama dengan scope lain dibuang. Satu user hanya boleh
+// punya satu scope per role: users.major_id juga kolom tunggal, jadi dua
+// scope untuk role yang sama akan saling bertentangan (hanya satu yang bisa
+// dipakai untuk row-level filtering).
+func (q *Queries) DeleteUserRoleOtherScope(ctx context.Context, arg DeleteUserRoleOtherScopeParams) error {
+	_, err := q.db.Exec(ctx, deleteUserRoleOtherScope, arg.UserID, arg.RoleID, arg.ScopeMajorID)
+	return err
 }
 
 const findMediaByChecksum = `-- name: FindMediaByChecksum :one
@@ -847,12 +899,17 @@ SELECT COALESCE(
    JOIN roles r ON r.id = ur.role_id
    WHERE ur.user_id = u.id AND ur.scope_major_id IS NOT NULL
      AND (ur.expires_at IS NULL OR ur.expires_at > NOW())
+   ORDER BY (r.slug = 'admin_jurusan') DESC, ur.created_at ASC, ur.scope_major_id ASC
    LIMIT 1),
   CASE WHEN u.role_primary = 'admin_jurusan' THEN u.major_id ELSE NULL END
 )::uuid AS scope_major_id
 FROM users u WHERE u.id = $1
 `
 
+// Scope jurusan efektif. Kalau user punya lebih dari satu assignment, yang
+// dipakai adalah assignment role admin_jurusan dulu, lalu yang paling lama
+// (created_at) — supaya hasilnya deterministik dan tidak berganti-ganti
+// antar request.
 func (q *Queries) GetUserScope(ctx context.Context, id pgtype.UUID) (pgtype.UUID, error) {
 	row := q.db.QueryRow(ctx, getUserScope, id)
 	var scope_major_id pgtype.UUID
@@ -909,6 +966,66 @@ func (q *Queries) ListConfirmedMediaForScan(ctx context.Context, limit int32) ([
 			&i.ChecksumSha256,
 			&i.SizeBytes,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listOrphanedConfirmedMedia = `-- name: ListOrphanedConfirmedMedia :many
+SELECT m.id, m.object_key, m.variants FROM media_assets m
+WHERE m.status = 'confirmed'
+  AND m.purpose IN ('avatar', 'banner', 'thumbnail', 'block_image')
+  AND m.created_at < NOW() - INTERVAL '1 hour'
+  AND NOT EXISTS (SELECT 1 FROM users u WHERE u.avatar_media_id = m.id OR u.banner_media_id = m.id)
+  AND NOT EXISTS (SELECT 1 FROM portfolios p WHERE p.thumbnail_media_id = m.id)
+  AND NOT EXISTS (
+    SELECT 1 FROM portfolio_blocks b
+    WHERE b.asset_media_id = m.id
+       -- media gambar block disimpan di payload, bukan asset_media_id
+       OR b.payload->>'media_id' = m.id::text
+  )
+  -- media yang jadi preview milik media lain (halaman-1 PDF) ikut terpakai.
+  -- Hanya media induk yang MASIH hidup yang memegang preview-nya: kalau induknya
+  -- sudah 'deleted', preview-nya ikut orphan dan boleh dihapus.
+  AND NOT EXISTS (SELECT 1 FROM media_assets o WHERE o.preview_media_id = m.id AND o.status <> 'deleted')
+  AND NOT EXISTS (SELECT 1 FROM media_assets o WHERE o.id = m.preview_media_id AND o.status = 'deleted')
+ORDER BY m.created_at ASC
+LIMIT 100
+`
+
+type ListOrphanedConfirmedMediaRow struct {
+	ID        pgtype.UUID `json:"id"`
+	ObjectKey string      `json:"object_key"`
+	Variants  []byte      `json:"variants"`
+}
+
+// Media SUDAH confirmed tapi tidak direferensikan siapa pun: sudah diganti
+// (avatar/banner/thumbnail) atau blok yang memakainya dihapus. Media seperti ini
+// tidak akan pernah disentuh ListPendingMedia (yang hanya membersihkan status
+// 'pending'), sehingga objeknya menumpuk di storage selamanya.
+//
+// Syaratnya sengaja konservatif:
+//   - confirmed (media 'pending' ditangani ListPendingMedia)
+//   - sudah lebih tua dari 1 jam, jangan berebut dengan upload yang baru saja
+//     dikonfirmasi (media baru bisa belum sempat di-link ke block-nya)
+//   - purpose dibatasi ke asset yangreferensinya selalu berupa FK atau payload
+//     block. 'document', 'feedback', dan 'changelog_cover' TIDAK ikut karena
+//     bisa dirujuk dari body/markdown yang tidak terindeks FK.
+func (q *Queries) ListOrphanedConfirmedMedia(ctx context.Context) ([]ListOrphanedConfirmedMediaRow, error) {
+	rows, err := q.db.Query(ctx, listOrphanedConfirmedMedia)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListOrphanedConfirmedMediaRow{}
+	for rows.Next() {
+		var i ListOrphanedConfirmedMediaRow
+		if err := rows.Scan(&i.ID, &i.ObjectKey, &i.Variants); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

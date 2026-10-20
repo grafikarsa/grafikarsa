@@ -354,7 +354,7 @@ func (a *App) handleUpdateSystemSetting(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 	}
-	raw, _ := json.Marshal(req.Value)
+	raw := toJSONBytes(req.Value)
 	_ = a.Q.UpsertSystemSetting(r.Context(), repo.UpsertSystemSettingParams{
 		Key: key, Value: raw, UpdatedBy: mustUUID(UserID(r)),
 	})
@@ -423,7 +423,7 @@ func (a *App) handleApplySeries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for i, t := range templates {
-		payload, _ := json.Marshal(map[string]string{"instruction": t.Instruction, "markdown": ""})
+		payload := toJSONBytes(map[string]string{"instruction": t.Instruction, "markdown": ""})
 		_, _ = a.Q.CreateBlockFromSeries(r.Context(), repo.CreateBlockFromSeriesParams{
 			PortfolioID: p.ID, BlockType: t.BlockType, Position: int32(i), Payload: payload,
 		})

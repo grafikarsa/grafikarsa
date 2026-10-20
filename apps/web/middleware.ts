@@ -3,13 +3,26 @@ import { NextRequest, NextResponse } from "next/server";
 // Middleware: CSP nonce + auth gate berbasis cookie __Host-rt.
 // - Nonce dipakai Next untuk script sendiri (tanpa unsafe-inline).
 // - Auth gate hanya cek keberadaan cookie (validasi token tetap di API).
-const PUBLIC_PATHS = ["/", "/login", "/register", "/forgot-password", "/reset-password", "/portfolios", "/users", "/search", "/changelog", "/changelogs", "/feedback", "/leaderboards", "/feed"];
+//
+// PUBLIC_PATHS hanya memuat rute yang BENAR-BENAR ada. Jalur yang tidak ada
+// (mis. /register, /forgot-password) sengaja tidak dicantumkan: mencantumkan
+// membuat RESERVED ikut memuat kata-kata itu sehingga username sah seperti
+// "register" jadi tertolak tanpa alasan.
+const PUBLIC_PATHS = [
+  "/",
+  "/login",
+  "/portfolios",
+  "/users",
+  "/search",
+  "/changelog",
+  "/feedback",
+  "/leaderboards",
+  "/feed",
+];
 
 // Kata yang TIDAK boleh diperlakukan sebagai username (jalur privat).
-const RESERVED = new Set([
-  "admin", "me", "settings", "notifications", "api", "_next",
-  ...PUBLIC_PATHS.filter((p) => p !== "/").map((p) => p.slice(1)),
-]);
+// Hanya path privat yang benar-benar ada di app router.
+const RESERVED = new Set(["admin", "me", "settings", "notifications", "api", "_next"]);
 
 function isPublic(pathname: string): boolean {
   if (PUBLIC_PATHS.includes(pathname)) return true;

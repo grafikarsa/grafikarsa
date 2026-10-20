@@ -23,8 +23,13 @@ RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /api ./cmd/api \
 # Runtime: alpine (bukan distroless) karena worker memerlukan pdftoppm untuk
 # pratinjau PDF. Dijalankan sebagai user non-root; hanya satu port internal.
 FROM alpine:3.22 AS production
-RUN apk add --no-cache poppler-utils ca-certificates tzdata \
-  && addgroup -S app && adduser -S -G app app
+# postgresql-client: pg_dump untuk endpoint backup manual (system.backup).
+# poppler-utils: pratinjau halaman-1 PDF (job worker pdf-preview).
+RUN apk add --no-cache poppler-utils postgresql16-client ca-certificates tzdata \
+  && addgroup -S app && adduser -S -G app app \
+  # Direktori backup: fresh named volume mewarisi kepemilikan dari image,
+  # jadi user non-root tetap bisa menulis ke dalamnya.
+  && mkdir -p /var/backups/grafikarsa && chown -R app:app /var/backups/grafikarsa
 COPY --from=builder /api /api
 COPY --from=builder /migrate /migrate
 COPY --from=builder /worker /worker

@@ -48,7 +48,7 @@ func (a *App) handlePromotionPreview(w http.ResponseWriter, r *http.Request) {
 		"naik": counts, "lulus": lulus, "total": len(enrolls),
 		"kelas_baru_dibuat": len(counts), "warnings": warn,
 	}
-	b, _ := json.Marshal(result)
+	b := toJSONBytes(result)
 	id, err := a.Q.CreatePromotionJob(r.Context(), repo.CreatePromotionJobParams{
 		FromYearID: mustUUID(req.FromYearID), ToYearID: mustUUID(req.ToYearID), DryrunResult: b,
 	})
@@ -88,7 +88,7 @@ func (a *App) handlePromotionApprove(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &req) {
 		return
 	}
-	b, _ := json.Marshal(req.Exceptions)
+	b := toJSONBytes(req.Exceptions)
 	if b == nil {
 		b = []byte("[]")
 	}

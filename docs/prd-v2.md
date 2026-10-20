@@ -9,7 +9,7 @@
 > `cmd/tools/migrate-old` (dry-run/`--execute`/`--migrate-media`, idempotent via
 > `legacy_id_map`, block gagal masuk `quarantine_blocks`), tabel `legacy_urls`,
 > redirect 301 `/v1/storage/*` -> `/v1/media/by-key/*`, dan status `quarantined`.
-> Kontrak `packages/contracts/openapi.yaml` (114 path/142 operasi) di-generate
+> Kontrak `packages/contracts/openapi.yaml` (118 path/146 operasi) di-generate
 > dari `routes.go`; invariant dijaga test `gen-openapi/main_test.go` dan
 > `internal/http/contract_blocks_test.go`; JSON Schema blok ada di
 > `packages/contracts/blocks/*.json`. Fitur lanjutan sudah terpasang:
@@ -435,7 +435,7 @@ Semua list: `page, per_page (max 50), sort, order`, validasi via `go-playground/
 ### 6.2 Password & brute-force
 
 - Hash baru: **Argon2id** (`memory 64MB, iterations 3, parallelism 2`). Hash lama bcrypt (v1) tetap diverifikasi saat login pertama, lalu **di-rehash otomatis** ke Argon2id dalam transaksi yang sama (migrasi tanpa reset password massal).
-- Login rate-limit: 5 gagal / 10 mnt per `username+IP` (Dragonfly sliding-window Lua), lalu wajib **Cloudflare Turnstile** (ganti captcha matematika v1 yang bisa di-OCR). Setelah 10 gagal, kunci 30 mnt + audit.
+- Login rate-limit: 5 gagal / 10 mnt per `username+IP` (Dragonfly **fixed-window**, bukan sliding), lalu wajib **Cloudflare Turnstile** (ganti captcha matematika v1 yang bisa di-OCR). Setelah 10 gagal, kunci 15 mnt + audit. Counter gagal **hanya naik saat password benar-benar salah** — kalau tidak, penyerang bisa mengunci akun orang lain. Batas tambahan: 50 percobaan / 10 mnt per IP.
 - Validasi: username `^[a-z0-9._-]{3,30}$`, password min 10 char + zxcvbn score ≥ 3 untuk akun baru (siswa import pakai password acak 12 char + wajib ganti saat login pertama via `must_change_password`).
 
 ### 6.3 CSRF & XSS & headers
@@ -655,7 +655,7 @@ Edge yang ditangani: siswa pindahan (enrollment `transferred` + buat enrollment 
 
 ## 10. Notifikasi (8 tipe, fan-out via worker)
 
-Tipe: `new_follower, portfolio_liked, portfolio_approved, portfolio_changes_requested, portfolio_rejected, new_comment, reply_comment, feedback_updated` (+ `promotion_result`, `leaderboard_ranked`, `changelog_published` via tipe generik `announcement` dengan `data.kind`).
+Tipe: `new_follower, portfolio_liked, portfolio_approved, portfolio_changes_requested, portfolio_rejected, new_comment, reply_comment, feedback_updated` + `announcement` (dipakai untuk `promotion_result`, `changelog_published`, dll. lewat `data.kind`) + `digest` + `leaderboard_ranked`. Total **11 tipe** — sama persis dengan enum `Notification.type` di kontrak OpenAPI.
 
 - Tulis notif via **outbox** dalam transaksi yang sama dengan aksi (like/comment/approve) → worker kirim (insert `notifications` + invalidasi `notifications:count:<user>` di Dragonfly). Tidak ada `go routine` liar di handler (masalah v1).
 - Deep-link: `new_follower→/{username}`, `liked/approved/rejected/changes→/me/portfolios?highlight=<id>`, `comment→/{owner}/{slug}#comment-<id>`, `feedback→/settings/feedback#<id>`, `promotion→/me`, `leaderboard→/leaderboards`.
@@ -747,7 +747,12 @@ Aturan: handler ≤100 baris, tanpa SQL mentah, tanpa `json.Marshal` manual (via
 
 ### 13.2 Middleware Chi (urutan)
 
-`RequestID → RealIP → Logger(slog) → Recoverer → Timeout(30s) → CORS(same-origin, praktis off karena BFF) → RateLimit(Dragonfly sliding 100/mnt/IP, 5000/mnt global) → AuthOptional/Required (JWT verify + blacklist check) → LoadPermissions (cache) → RequirePermission per-route → Validate Body (Zod-equivalent) → Handler → Audit (untuk mutasi admin)`.
+`RequestID → Recoverer → requestLogger(slog) → Timeout(30s) → RateLimit(Dragonfly fixed-window 300/mnt per user atau IP asli) → AuthOptional/AuthRequired (JWT verify + blacklist JTI + status user) → LoadPermissions (cache Dragonfly 5 mnt, dipanggil DI DALAM authRequired) → RequirePermission per-route → CSRF (double-submit) → Validate Body → Handler → Audit (mutasi admin)`.
+
+Catatan penyimpangan dari rancangan awal PRD:
+- **Tidak ada middleware `RealIP`.** Implementasi memakai helper `clientIP()` sendiri: memprioritaskan header `x-client-ip` yang di-set BFF, fallback ke entri **terakhir** `X-Forwarded-For`. Chi's `RealIP` justru mengambil entri **pertama**, yang bisa dipalsukan klien — jadi `clientIP()` lebih aman.
+- **Tidak ada CORS.** Semua request browser lewat BFF pada origin yang sama, jadi CORS tidak perlu (dan CORS yang longgar justru menambah permukaan serangan).
+- **`LoadPermissions` bukan middleware terpisah**, melainkan dipanggil di dalam `authRequired` supaya permission sudah siap saat `requirePerm` dijalankan.
 
 ### 13.3 Config & DX backend
 

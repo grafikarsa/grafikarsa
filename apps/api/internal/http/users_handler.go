@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
+	"github.com/trustelem/zxcvbn"
 	"grafikarsa/api/internal/auth"
 	"grafikarsa/api/internal/repo"
 )
@@ -26,23 +27,34 @@ type updatePasswordRequest struct {
 	New     string `json:"new_password" validate:"required,min=10,max=128"`
 }
 
-func passwordStrong(pw string) (bool, string) {
+// passwordStrong: minimal 10 karakter + zxcvbn score >= 3 (PRD §6.2).
+//
+// Aturan lama ("harus ada huruf besar, kecil, dan angka") jauh terlalu lemah:
+// "Password1" dan "password123" lolos padahalamong paling mudah ditebak.
+// zxcvbn mengukur kekuatan sebenarnya: membandingkan dengan kamus password
+// umum, pola keyboard (qwerty, asdf), urutan/number, dan pengulangan karakter.
+//
+// userInputs dipakai untuk menolak password yang memuat username/email user
+// sendiri ("budi2024" untuk user "budi") — pola yang paling sering dipakai
+// siswa.
+//
+// Catatan performa: ~0,3-1,2 ms per panggilan, hanya dipanggil di jalur
+// ganti/set password, bukan di hot path.
+//
+// Keterbatasan yang perlu diketahui: kamus zxcvbn berbahasa Inggris, jadi
+// password umum berbahasa Indonesia (mis. "Pendidikan1") tidak dikenali
+// sebagai lemah. Aturan ini karena itu tidak menggantikan zxcvbn atau
+// daftar password lemah berbahasa Indonesia sendiri.
+func passwordStrong(pw string, userInputs ...string) (bool, string) {
 	if len(pw) < 10 {
 		return false, "Minimal 10 karakter."
 	}
-	var hasUpper, hasLower, hasDigit bool
-	for _, r := range pw {
-		switch {
-		case r >= 'A' && r <= 'Z':
-			hasUpper = true
-		case r >= 'a' && r <= 'z':
-			hasLower = true
-		case r >= '0' && r <= '9':
-			hasDigit = true
-		}
+	if len(pw) > 128 {
+		return false, "Maksimal 128 karakter."
 	}
-	if !hasUpper || !hasLower || !hasDigit {
-		return false, "Harus ada huruf besar, kecil, dan angka."
+	res := zxcvbn.PasswordStrength(pw, userInputs)
+	if res.Score < 3 {
+		return false, "Password terlalu lemah. Hindari pola umum (mis. 'password123', 'qwerty') dan gabungkan beberapa kata unik."
 	}
 	return true, ""
 }
@@ -239,13 +251,15 @@ func (a *App) handleUpdatePassword(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusUnprocessableEntity, failDetails("VALIDATION_ERROR", "Password tidak valid.", []map[string]string{{"field": "new_password", "message": "Minimal 10 karakter."}}, r))
 		return
 	}
-	if ok, msg := passwordStrong(req.New); !ok {
-		writeJSON(w, http.StatusUnprocessableEntity, failDetails("VALIDATION_ERROR", "Password lemah.", []map[string]string{{"field": "new_password", "message": msg}}, r))
-		return
-	}
+	// User diambil lebih dulu supaya username & email-nya bisa dipakai sebagai
+	// userInput zxcvbn: password yang memuat username sendiri ditolak.
 	u, err := a.Q.GetUserByID(r.Context(), mustUUID(UserID(r)))
 	if err != nil {
 		writeJSON(w, http.StatusUnauthorized, fail("UNAUTHORIZED", "Sesi berakhir.", r))
+		return
+	}
+	if ok, msg := passwordStrong(req.New, u.Username, u.Email); !ok {
+		writeJSON(w, http.StatusUnprocessableEntity, failDetails("VALIDATION_ERROR", "Password lemah.", []map[string]string{{"field": "new_password", "message": msg}}, r))
 		return
 	}
 	if !auth.VerifyPassword(req.Current, u.PasswordHash) && !checkBcrypt(req.Current, u.PasswordHash) {

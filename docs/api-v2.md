@@ -9,7 +9,7 @@ make openapi-check  # verifikasi kontrak tidak drift (dipakai CI)
 ```
 
 Kontrak OpenAPI (semua endpoint, security, permission, CSRF):
-`packages/contracts/openapi.yaml` — 100 path / 126 operasi.
+`packages/contracts/openapi.yaml` — 118 path / 146 operasi.
 
 ## Topologi
 

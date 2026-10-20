@@ -39,11 +39,15 @@ services:
     image: ghcr.io/dragonflydb/dragonfly:latest
     container_name: grafikarsa-dragonfly-dev
     restart: unless-stopped
+    # snapshot_cron: simpan snapshot cache tiap 5 menit. Tanpa ini snapshot
+    # hanya terjadi saat shutdown, jadi crash = semua counter rate-limit,
+    # blacklist JTI, dan agregat view counter hilang sekaligus.
     command: >-
       --maxmemory=256mb --proactor_threads=1
       --cache_mode
       --dir=/data
       --dbfilename=dump
+      --snapshot_cron=*/5 * * * *
     ports:
       - "${DRAGONFLY_PORT:-6390}:6379"
     volumes:
@@ -97,11 +101,14 @@ services:
       - DRAGONFLY_PORT=6379
       - S3_ENDPOINT=http://storage:9000
       - INTERNAL_API_URL=http://api:8080/v1
+      # Backup manual (permission system.backup) menulis ke volume persisten.
+      - BACKUP_DIR=/var/backups/grafikarsa
     ports:
       - "${API_PORT:-8091}:8080"
     volumes:
       - ./apps/api:/app
       - /app/tmp
+      - backup_data:/var/backups/grafikarsa
     depends_on:
       db:
         condition: service_healthy
@@ -143,6 +150,7 @@ services:
       - grafikarsa-network
 
 volumes:
+  backup_data:
   postgres_data:
   dragonfly_data:
   storage_data:

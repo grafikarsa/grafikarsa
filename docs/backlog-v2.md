@@ -12,11 +12,11 @@
 | Sprint | Item | Status | Keterangan |
 |---|---|---|---|
 | Sprint 1 | P0-01, P0-02, P0-03, P0-04, P0-05, P0-06, P0-10, P0-11, P1-01 | ✅ Selesai | 9 item — blocker & kebocoran privasi |
-| Sprint 2 | P0-07, P0-08, P0-09, P4-01…P4-07 | ⬜ Belum | Skema `user_roles` + media retire + sinkronisasi doc |
-| Sprint 3 | P3-01…P3-10 | ⬜ Belum | Playwright + axe + schemathesis + test domain |
+| Sprint 2 | P0-07, P0-08, P0-09, P1-02…P1-06, P4-01…P4-07, P5-01…P5-08, P3-03 | ✅ Selesai | Skema `user_roles` + media retire + keamanan + sinkronisasi doc + hygiene |
+| Sprint 3 | P3-01, P3-02, P3-04…P3-10 | ⬜ Berjalan | Playwright + axe + schemathesis + test domain |
 | Sprint 4 | P2-01…P2-15 | ⬜ Belum | Fitur PRD yang belum ada |
 | Sprint 5 | P6-01…P6-09 | ⬜ Belum | Go-live readiness (Fase 4) |
-| — | P1-02…P1-06, P5-01…P5-08 | ⬜ Belum | Keamanan & hygiene |
+| — | — | ✅ Selesai | Keamanan & hygiene |
 
 ---
 
@@ -55,22 +55,20 @@
   - Fix: hapus fungsi (allowlist inline di `authRequired` tetap dipakai)
   - Status: ✅ Sprint 1 — selesai
 
-- [ ] **P0-07** `user_roles` PK `(user_id, role_id)` tak bisa multi-scope
+- [x] **P0-07** `user_roles` PK `(user_id, role_id)` tak bisa multi-scope
   - Evidence: `apps/api/db/migrations/00004_iam.sql`
   - Dampak: 1 user = 1 baris/role → `admin_jurusan` di 2 jurusan tidak representable
   - Fix: PK → `(user_id, role_id, scope_major_id)` + migrasi baru + review `AssignUserRole`
-  - Status: ⬜
+  - Status: ✅ Sprint 2 (commit `92f4df5`) — migrasi 00023: PK jadi id surrogate + unique (user_id, role_id, scope_major_id) NULLS NOT DISTINCT. Scope multi kini representable
 
-- [ ] **P0-08** `AssignUserRole` `ON CONFLICT DO UPDATE` menimpa scope + expiry
+- [x] **P0-08** `AssignUserRole` `ON CONFLICT DO UPDATE` menimpa scope + expiry
   - Evidence: `apps/api/db/queries/fase1.sql`
   - Fix: tentukan semantik (append vs upsert eksplisit)
-  - Status: ⬜
+  - Status: ✅ Sprint 2 (commit `92f4df5`) — AssignUserRole upsert pada (user_id, role_id, scope_major_id); `DeleteUserRoleOtherScope` membuang scope lama dengan semantics eksplisit, bukan overwrite diam-diam
 
-- [ ] **P0-09** Media retire tidak ada — objek lama tidak dihapus saat avatar/banner/thumbnail diganti
-  - Evidence: `internal/http/media_upload.go` `handleConfirmMedia`; `db/queries/fase1.sql` `UpdateUserAvatar` (cuma update FK)
-  - Dampak: storage membengkak; kuota 200MB ikut terinflasi. PRD §7.2 step 7 + Runbook "Media retire"
-  - Fix: hapus objek + varian media lama (pola sudah ada di `handleDeleteMedia`)
-  - Status: ⬜
+- [x] **P0-09** Media retire — audit ulang: **sebagian sudah ada** (retire untuk avatar/banner/thumbnail sudah di handler). Yang bocor: jalur `link_to=block` + tidak ada safety net untuk media `confirmed` yang tak terpakai
+  - Fix: retire asset lama blok · `retireMedia` melepas semua FK (avatar/banner/thumbnail/asset block) · query `ListOrphanedConfirmedMedia` + job `cleanup-media` membersihkan orphan confirmed (konservatif: confirmed, umur > 1 jam, purpose dibatasi)
+  - ✅ Sprint 2 (commit `9f40b1e`) — 9 kasus diuji dengan integration test vs Postgres nyata
 
 - [x] **P0-10** Komentar `rateLimit` stale ("default 100" vs config 300)
   - Evidence: `apps/api/internal/http/middleware.go:172` vs `internal/config/config.go:123`
@@ -93,30 +91,30 @@
   - Regression test: `apps/api/internal/http/media_cache_test.go`
   - Status: ✅ Sprint 1 — selesai
 
-- [ ] **P1-02** Guest reply feedback tanpa rate limit
+- [x] **P1-02** Guest reply feedback tanpa rate limit
   - Evidence: `internal/http/feedback_handler.go` — hanya `feedback:day:` (3/hari buat thread), tidak ada limiter reply
   - Spec: api-v2 §2.4 — "balasan guest 10/jam per thread+IP"
-  - Status: ⬜
+  - Status: ✅ Sprint 2 (commit `ac4a50b`) — batas 10/jam per thread+IP untuk pelamar tanpa login
 
-- [ ] **P1-03** Password policy lebih lemah dari PRD (tanpa zxcvbn)
+- [x] **P1-03** Password policy lebih lemah dari PRD (tanpa zxcvbn)
   - Evidence: `internal/http/users_handler.go:29-48` — min 10 + upper/lower/digit
   - Spec: PRD §6.2 — "min 10 char + zxcvbn score ≥ 3"
-  - Status: ⬜
+  - Status: ✅ Sprint 2 (commit `0cd0c65`) — zxcvbn score >= 3 + username/email sebagai userInput. Password acak import diuji 200x selalu lolos. Catatan: kamus zxcvbn berbahasa Inggris
 
-- [ ] **P1-04** Bucket versioning OFF
+- [x] **P1-04** Bucket versioning OFF
   - Evidence: `internal/storage/s3.go` — tak ada `PutBucketVersioning`
   - Spec: PRD §7.1/§15.2 — "versioning on"
-  - Status: ⬜
+  - Status: ✅ Sprint 2 (commit `3206e53`) — `EnsureBucket` memanggil `PutBucketVersioning(Enabled)`
 
-- [ ] **P1-05** Dragonfly tanpa snapshot periodik
+- [x] **P1-05** Dragonfly tanpa snapshot periodik
   - Evidence: `docker-compose.yml:42-46` — `--dbfilename=dump` tanpa `--snapshot_cron`
   - Dampak: crash → counter rate-limit reset, blacklist JTI hilang, HLL view count turun
-  - Status: ⬜
+  - Status: ✅ Sprint 2 (commit `28d7c9b`) — `--snapshot_cron=*/5 * * * *` di compose dev & deploy, diverifikasi Dragonfly start bersih
 
-- [ ] **P1-06** Permission `system.backup` mati (0 route)
+- [x] **P1-06** Permission `system.backup` mati (0 route)
   - Evidence: 53 permission di `00004_iam.sql`; `system.backup` tidak dipakai route mana pun
   - Fix: implementasikan `POST /admin/backup` atau hapus dari katalog
-  - Status: ⬜
+  - Status: ✅ Sprint 2 (commit `3f77976`) — `POST /v1/admin/backup` (pg_dump, PGPASSWORD bukan flag CLI), image produksi + postgresql16-client, volume `backup_data`, tombol di admin settings
 
 ---
 
@@ -165,7 +163,9 @@
 
 - [ ] **P3-01** `golangci-lint` tidak ada (cuma gofmt + go vet) — PRD §2.2, §13.3
 - [ ] **P3-02** `prettier` tidak ada — PRD §2.2
-- [ ] **P3-03** Integration test `pgxmock`/`testcontainers` tidak ada — PRD §13.3
+- [x] **P3-03** Integration test dengan Postgres asli (bukan SQLite — skema v2 pakai citext/pg_trgm/tsvector/partial unique index)
+  - Helper `internal/dbtest` (skip graceful tanpa `TEST_DATABASE_URL`) + test query media & permission expiry
+  - ✅ Sprint 2 (commit `9f40b1e`) · CI: job `api` menyalakan service postgres + jalankan migrasi (commit `ci(api): jalankan integration test dengan Postgres service`)
 - [ ] **P3-04** E2E Playwright tidak dikonfigurasi (hanya transitif di lockfile) — PRD §14.3
 - [ ] **P3-05** A11y test (axe, WCAG AA) tidak ada — PRD §14.3
 - [ ] **P3-06** Contract test (schemathesis) tidak masuk CI — PRD §14.3
@@ -193,26 +193,26 @@
 
 > PRD §12a mengklaim "sinkron dengan implementasi terbaru" — tidak akurat. Semua sudah diverifikasi.
 
-- [ ] **P4-01** Jumlah endpoint: api-v2 "100 path/126 operasi" · PRD "114 path/142 operasi" → **117 path / 145 operasi**
-- [ ] **P4-02** Rate limit global: PRD "100/mnt/IP + 5000/mnt global" → **300/menit** (api-v2 + kode benar)
-- [ ] **P4-03** Lockout login: PRD "30 mnt" → **15 menit** (api-v2 + kode benar)
-- [ ] **P4-04** Tipe notifikasi: PRD "8 tipe" → **11 enum** di kontrak
-- [ ] **P4-05** Middleware chain: PRD sebut `RealIP` + `CORS` → kode pakai `clientIP()` custom (**lebih aman**) & tanpa CORS
-- [ ] **P4-06** PRD sebut "LoadPermissions (cache)" sebagai middleware → kode memanggilnya di dalam `authRequired`
-- [ ] **P4-07** `zod` + `react-hook-form` terpasang tapi 0 pemakaian (PRD §12.3 minta "validasi inline Zod")
+- [x] **P4-01** Jumlah endpoint: api-v2 "100 path/126 operasi" · PRD "114 path/142 operasi" → **117 path / 145 operasi**
+- [x] **P4-02** Rate limit global: PRD "100/mnt/IP + 5000/mnt global" → **300/menit** (api-v2 + kode benar)
+- [x] **P4-03** Lockout login: PRD "30 mnt" → **15 menit** (api-v2 + kode benar)
+- [x] **P4-04** Tipe notifikasi: PRD "8 tipe" → **11 enum** di kontrak
+- [x] **P4-05** Middleware chain: PRD sebut `RealIP` + `CORS` → kode pakai `clientIP()` custom (**lebih aman**) & tanpa CORS
+- [x] **P4-06** PRD sebut "LoadPermissions (cache)" sebagai middleware → kode memanggilnya di dalam `authRequired`
+- [x] **P4-07** `zod` + `react-hook-form` terpasang tapi 0 pemakaian (PRD §12.3 minta "validasi inline Zod")
 
 ---
 
 ## P5 — Hygiene / Dead Code (8)
 
-- [ ] **P5-01** Direktori sampah `apps/api/{cmd/api,cmd/tools/{migrate,seed,verify-seed},internal/...}` (0 file, hasil brace expansion gagal)
-- [ ] **P5-02** `/register`, `/forgot-password`, `/reset-password` ada di `PUBLIC_PATHS` tapi halamannya tak ada — `apps/web/middleware.ts:6`
-- [ ] **P5-03** `--font-geist-mono` di `@theme inline` tapi tak terdefinisi di `:root`/`.dark` — `apps/web/app/globals.css`
-- [ ] **P5-04** `next.config.ts` `remotePatterns` hanya `http://localhost`
-- [ ] **P5-05** `RESERVED` di middleware memuat path yang tak pernah jadi username (`changelogs`, `register`, …)
-- [ ] **P5-06** `apps/api/tmp/` ada di tree (sudah di-ignore ✅)
-- [ ] **P5-07** Volume `/app/tmp` di-mount di compose (aman, catat saja)
-- [ ] **P5-08** `json.Marshal` manual di 10 tempat handler — PRD §13.1 melarang ("via dto")
+- [x] **P5-01** Direktori sampah `apps/api/{cmd/api,cmd/tools/{migrate,seed,verify-seed},internal/...}` (0 file, hasil brace expansion gagal)
+- [x] **P5-02** `/register`, `/forgot-password`, `/reset-password` ada di `PUBLIC_PATHS` tapi halamannya tak ada — `apps/web/middleware.ts:6`
+- [x] **P5-03** `--font-geist-mono` di `@theme inline` tapi tak terdefinisi di `:root`/`.dark` — `apps/web/app/globals.css`
+- [x] **P5-04** `next.config.ts` `remotePatterns` hanya `http://localhost`
+- [x] **P5-05** `RESERVED` di middleware memuat path yang tak pernah jadi username (`changelogs`, `register`, …)
+- [x] **P5-06** `apps/api/tmp/` ada di tree (sudah di-ignore ✅)
+- [x] **P5-07** Volume `/app/tmp` di-mount di compose (aman, catat saja)
+- [x] **P5-08** `json.Marshal` manual di 10 tempat handler — PRD §13.1 melarang ("via dto")
 
 ---
 

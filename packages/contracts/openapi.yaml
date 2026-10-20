@@ -21,6 +21,7 @@ servers:
 tags:
   - name: admin-assessments
   - name: admin-audit-logs
+  - name: admin-backup
   - name: admin-changelogs
   - name: admin-classes
   - name: admin-dashboard
@@ -246,6 +247,33 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  "/api/v1/admin/backup":
+    post:
+      tags: [admin-backup]
+      operationId: post_admin_backup
+      summary: "inline (butuh login, permission: system.backup, wajib CSRF)"
+      x-handler: inline
+      security:
+        - bearerAuth: []
+      x-permissions: [system.backup]
+      x-csrf: required
+      responses:
+        "200":
+          description: Berhasil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "429":

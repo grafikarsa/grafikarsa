@@ -1,7 +1,6 @@
 package http
 
 import (
-	"encoding/json"
 	"net/http"
 	neturl "net/url"
 	"regexp"
@@ -318,14 +317,6 @@ func (a *App) handleGetSeries(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, ok(map[string]any{
 		"id": s.ID, "slug": s.Slug, "name": s.Name, "description": s.Description, "blocks": bout,
 	}, r))
-}
-
-func toJSONBytes(m map[string]any) []byte {
-	b, _ := json.Marshal(m)
-	if b == nil {
-		return []byte("{}")
-	}
-	return b
 }
 
 var _ = uuid.NewString

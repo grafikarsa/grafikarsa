@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { login } from "@/lib/api";
+import { firstIssueMessage, loginSchema } from "@/lib/validation";
 import { Turnstile } from "@/components/security/turnstile";
 
 function LoginInner() {
@@ -20,6 +21,12 @@ function LoginInner() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    // Validasi klien (zod) sebelum ke server — server tetap sumber kebenaran.
+    const parsed = loginSchema.safeParse({ username, password });
+    if (!parsed.success) {
+      toast.error(firstIssueMessage(parsed.error));
+      return;
+    }
     setLoading(true);
     try {
       await login(username, password, captcha || undefined);
