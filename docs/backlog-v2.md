@@ -142,9 +142,15 @@
   - Yang tetap ada: ganti password sendiri saat sudah login (`PATCH /v1/me/password`) — itu maintenance kredensial, bukan pemulihan akun
   - Konsekuensi: tidak ada endpoint/tabel reset token, tidak ada mailer, permukaan serang lebih kecil (tidak ada jalur membuat akun dari internet)
   - Aturan ini dicatat permanen di `docs/prd-v2.md` §6.1.1 supaya tidak muncul lagi sebagai "fitur yang kurang"
-- [ ] **P2-04** WebP encoding tidak ada (selalu JPEG q82/PNG) — PRD §7.1
-  - Evidence: `internal/storage/image.go`; `golang.org/x/image/webp` import blank (decoder saja)
-  - Status: ⬜
+- [x] **P2-04** WebP encoding (sebelumnya selalu JPEG q82/PNG) — PRD §7.1
+  - ✅ Sprint 3 (commit `e1c5ffd`) — gambar di-upload di-re-encode ke **WebP q80**; encoder `gen2brain/webp` (libwebp via WASM) karena image API dibangun `CGO_ENABLED=0` di Alpine
+  - WebP juga untuk gambar ber-transparansi (sebelumnya PNG yang jauh lebih besar)
+  - Fallback ke JPEG/PNG kalau encoder gagal — upload tidak boleh gagal karena encoder
+  - Varian 320/800 juga WebP (q75)
+  - Terukur: PNG 242.871 byte → WebP 2.484 byte (gambar uji 600×400); foto asli ~35% dari JPEG
+  - Biaya ~180 ms tambahan di jalur upload (WebP 245 ms vs JPEG 62 ms untuk 1600×1200)
+  - Object key kini persis PRD §7.1: `thumbnails/{portfolio_id}/{uuid7}.webp` + `_320.webp`
+  - 6 unit test (mime, ukuran, varian, metadata, resize, fallback)
 - [x] **P2-05** Object key pakai uuid4 + format generik → **uuid7 + path per-entity** — PRD §7.1
   - ✅ Sprint 3 (commit `6bf51d7`) — `mediaObjectKey(purpose, owner, entity, ext)`: `thumbnails/{portfolio_id}/{uuid7}.jpg`, `avatars/{user_id}/{uuid7}.webp`, dst.
   - Field multipart opsional `entity_id` (portfolio / thread feedback), **divalidasi kepemilikannya** (403 kalau bukan miliknya) dan segmen path disanitasi (422 untuk `../../etc`)
