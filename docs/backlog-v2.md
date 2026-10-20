@@ -125,8 +125,13 @@
   - Status: ⬜
 - [ ] **P2-02** Tabel `portfolio_status_history` tidak ada (pakai `audit_logs`) — PRD §8.1
   - Status: ⬜
-- [ ] **P2-03** Halaman `/register`, `/forgot-password`, `/reset-password` tidak ada (API reset password juga tidak ada) — PRD §12.3
-  - Status: ⬜
+- [x] **P2-03** ~~Halaman `/register`, `/forgot-password`, `/reset-password`~~ → **tidak ada by design** — akun dikelola admin
+  - ✅ Sprint 3 — konfirmasi owner produk: Grafikarsa **tidak punya** pendaftaran mandiri maupun reset password oleh user. Satu-satunya jalur auth adalah `/login`.
+  - Semua akun dibuat/diubah/di-reset oleh **admin**: `POST /v1/admin/users`, `PATCH /v1/admin/users/{id}`, `POST /v1/admin/users/{id}/reset-password`, `POST /v1/admin/users/{id}/activate`
+  - Seed = master data (jurusan & tahun ajaran, katalog permission) + **satu akun superadmin**
+  - Yang tetap ada: ganti password sendiri saat sudah login (`PATCH /v1/me/password`) — itu maintenance kredensial, bukan pemulihan akun
+  - Konsekuensi: tidak ada endpoint/tabel reset token, tidak ada mailer, permukaan serang lebih kecil (tidak ada jalur membuat akun dari internet)
+  - Aturan ini dicatat permanen di `docs/prd-v2.md` §6.1.1 supaya tidak muncul lagi sebagai "fitur yang kurang"
 - [ ] **P2-04** WebP encoding tidak ada (selalu JPEG q82/PNG) — PRD §7.1
   - Evidence: `internal/storage/image.go`; `golang.org/x/image/webp` import blank (decoder saja)
   - Status: ⬜

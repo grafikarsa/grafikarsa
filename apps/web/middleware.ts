@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Middleware: CSP nonce + auth gate berbasis cookie __Host-rt.
-// - Nonce dipakai Next untuk script sendiri (tanpa unsafe-inline).
+// Middleware: CSP + auth gate berbasis cookie __Host-rt.
 // - Auth gate hanya cek keberadaan cookie (validasi token tetap di API).
 //
-// PUBLIC_PATHS hanya memuat rute yang BENAR-BENAR ada. Jalur yang tidak ada
-// (mis. /register, /forgot-password) sengaja tidak dicantumkan: mencantumkan
+// PUBLIC_PATHS hanya memuat rute yang BENAR-BENAR ada.
+//
+// Catatan desain: Grafikarsa TIDAK punya pendaftaran mandiri dan TIDAK punya
+// reset password oleh user — semua akun dibuat dan di-reset oleh admin.
+// Jadi /register, /forgot-password, dan /reset-password bukan "halaman yang
+// belum dibuat"; halaman-halaman itu memang tidak boleh ada. Kalau suatu
+// saat ditambahkan, keduanya harus tetap berupa halaman privat (butuh login
+// admin), bukan publik.
+//
+// Rute yang tidak ada juga sengaja tidak dicantumkan di sini: mencantumkan
 // membuat RESERVED ikut memuat kata-kata itu sehingga username sah seperti
 // "register" jadi tertolak tanpa alasan.
 const PUBLIC_PATHS = [
