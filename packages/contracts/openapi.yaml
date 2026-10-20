@@ -59,72 +59,6 @@ tags:
   - name: tags
   - name: users
 paths:
-  "/api/health":
-    get:
-      tags: [system]
-      operationId: get_api_health
-      summary: "inline (publik)"
-      x-handler: inline
-      security: []
-      responses:
-        "200":
-          description: Berhasil
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SuccessEnvelope"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "429":
-          $ref: "#/components/responses/TooManyRequests"
-        "500":
-          $ref: "#/components/responses/InternalError"
-  "/api/metrics":
-    get:
-      tags: [system]
-      operationId: get_api_metrics
-      summary: "inline (publik)"
-      x-handler: inline
-      security: []
-      responses:
-        "200":
-          description: Berhasil
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SuccessEnvelope"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "429":
-          $ref: "#/components/responses/TooManyRequests"
-        "500":
-          $ref: "#/components/responses/InternalError"
-  "/api/ready":
-    get:
-      tags: [system]
-      operationId: get_api_ready
-      summary: "inline (publik)"
-      x-handler: inline
-      security: []
-      responses:
-        "200":
-          description: Berhasil
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SuccessEnvelope"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "429":
-          $ref: "#/components/responses/TooManyRequests"
-        "500":
-          $ref: "#/components/responses/InternalError"
   "/api/v1/admin/assessments":
     get:
       tags: [admin-assessments]
@@ -149,6 +83,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -177,6 +113,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -213,6 +151,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -248,6 +188,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -291,6 +233,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -319,6 +263,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -356,6 +302,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -384,6 +332,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -420,6 +370,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -464,6 +416,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -499,6 +453,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -542,6 +498,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -584,6 +542,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -628,6 +588,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -672,6 +634,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -700,6 +664,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -736,6 +702,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -773,6 +741,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -811,6 +781,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -846,6 +818,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -874,6 +848,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -902,6 +878,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -937,6 +915,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -981,6 +961,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1019,6 +1001,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1056,6 +1040,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1084,6 +1070,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1121,6 +1109,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1149,6 +1139,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1185,6 +1177,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1213,6 +1207,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1257,6 +1253,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1285,6 +1283,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1322,6 +1322,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1350,6 +1352,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1385,6 +1389,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1429,6 +1435,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1473,6 +1481,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1517,6 +1527,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1561,6 +1573,45 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  "/api/v1/admin/portfolios/{id}/status-history":
+    get:
+      tags: [admin-portfolios]
+      operationId: get_admin_portfolios_id_status_history
+      summary: "inline (butuh login, permission: portfolios.moderate_jurusan|portfolios.view_all)"
+      x-handler: inline
+      security:
+        - bearerAuth: []
+      x-permissions: [portfolios.moderate_jurusan, portfolios.view_all]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Berhasil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1589,6 +1640,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1626,6 +1679,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1670,6 +1725,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1714,6 +1771,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1742,6 +1801,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1778,6 +1839,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1809,6 +1872,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1845,6 +1910,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1873,6 +1940,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1909,6 +1978,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1953,6 +2024,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1981,6 +2054,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -1999,7 +2074,7 @@ paths:
         - name: key
           in: path
           required: true
-          schema: { type: string }
+          schema: { type: string, minLength: 1 }
       responses:
         "200":
           description: Berhasil
@@ -2019,6 +2094,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2047,6 +2124,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2083,6 +2162,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2121,6 +2202,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2158,6 +2241,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2186,6 +2271,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2222,6 +2309,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2260,6 +2349,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2294,6 +2385,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2331,6 +2424,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2375,6 +2470,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2419,6 +2516,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2447,6 +2546,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2483,6 +2584,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2527,6 +2630,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2557,6 +2662,8 @@ paths:
           $ref: "#/components/responses/ValidationError"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2593,6 +2700,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2629,6 +2738,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2659,6 +2770,8 @@ paths:
           $ref: "#/components/responses/ValidationError"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2684,6 +2797,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2721,6 +2836,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2758,6 +2875,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2794,6 +2913,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2818,6 +2939,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2840,8 +2963,12 @@ paths:
                 $ref: "#/components/schemas/SuccessEnvelope"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2878,6 +3005,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2903,6 +3032,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2920,7 +3051,7 @@ paths:
         - name: version
           in: path
           required: true
-          schema: { type: string }
+          schema: { type: string, pattern: "^[0-9]+\\.[0-9]+$" }
       responses:
         "200":
           description: Berhasil
@@ -2934,6 +3065,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -2965,6 +3098,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3008,6 +3143,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3032,6 +3169,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3069,6 +3208,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3093,6 +3234,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3118,6 +3261,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3147,6 +3292,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3172,6 +3319,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3203,6 +3352,8 @@ paths:
           $ref: "#/components/responses/ValidationError"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3235,6 +3386,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3278,6 +3431,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3321,6 +3476,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3343,6 +3500,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3367,6 +3526,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3391,6 +3552,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3416,6 +3579,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3445,6 +3610,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3470,6 +3637,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3495,6 +3664,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3524,6 +3695,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3554,6 +3727,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3579,6 +3754,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3609,6 +3786,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3631,8 +3810,12 @@ paths:
                 $ref: "#/components/schemas/SuccessEnvelope"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3670,6 +3853,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3707,6 +3892,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3737,6 +3924,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3780,6 +3969,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3805,6 +3996,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3830,6 +4023,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3866,6 +4061,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3903,6 +4100,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3940,6 +4139,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3962,6 +4163,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -3998,6 +4201,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -4009,6 +4214,15 @@ paths:
       summary: "inline (publik)"
       x-handler: inline
       security: []
+      parameters:
+        - name: username
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: slug
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
       responses:
         "200":
           description: Berhasil
@@ -4018,8 +4232,12 @@ paths:
                 $ref: "#/components/schemas/SuccessEnvelope"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -4057,6 +4275,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -4085,6 +4305,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -4121,6 +4343,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -4164,6 +4388,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -4207,6 +4433,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -4250,6 +4478,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -4281,6 +4511,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -4323,6 +4555,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -4360,6 +4594,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -4402,6 +4638,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -4445,6 +4683,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -4488,6 +4728,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -4513,6 +4755,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -4556,6 +4800,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -4593,6 +4839,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -4606,6 +4854,11 @@ paths:
       security:
         - bearerAuth: []
         - {}
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, minLength: 2, pattern: ".*[a-zA-Z0-9].*" }
       responses:
         "200":
           description: Berhasil
@@ -4617,6 +4870,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -4629,6 +4884,11 @@ paths:
       security:
         - bearerAuth: []
         - {}
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, minLength: 2, pattern: ".*[a-zA-Z0-9].*" }
       responses:
         "201":
           description: Berhasil dibuat
@@ -4648,6 +4908,8 @@ paths:
           $ref: "#/components/responses/ValidationError"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -4672,6 +4934,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -4703,6 +4967,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -4725,8 +4991,18 @@ paths:
                 $ref: "#/components/schemas/SuccessEnvelope"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "301":
+          description: Permanen dialihkan ke media baru
+          headers:
+            Location: { type: string }
+        "410":
+          $ref: "#/components/responses/Gone"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -4751,6 +5027,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -4775,6 +5053,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -4792,7 +5072,7 @@ paths:
         - name: username
           in: path
           required: true
-          schema: { type: string }
+          schema: { type: string, pattern: "^[a-z0-9._-]{3,30}$" }
       responses:
         "200":
           description: Berhasil
@@ -4806,6 +5086,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -4823,7 +5105,7 @@ paths:
         - name: username
           in: path
           required: true
-          schema: { type: string }
+          schema: { type: string, pattern: "^[a-z0-9._-]{3,30}$" }
       responses:
         "200":
           description: Berhasil
@@ -4843,6 +5125,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -4859,7 +5143,7 @@ paths:
         - name: username
           in: path
           required: true
-          schema: { type: string }
+          schema: { type: string, pattern: "^[a-z0-9._-]{3,30}$" }
       responses:
         "201":
           description: Berhasil dibuat
@@ -4885,6 +5169,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -4902,7 +5188,7 @@ paths:
         - name: username
           in: path
           required: true
-          schema: { type: string }
+          schema: { type: string, pattern: "^[a-z0-9._-]{3,30}$" }
       responses:
         "200":
           description: Berhasil
@@ -4916,6 +5202,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -4933,7 +5221,7 @@ paths:
         - name: username
           in: path
           required: true
-          schema: { type: string }
+          schema: { type: string, pattern: "^[a-z0-9._-]{3,30}$" }
       responses:
         "200":
           description: Berhasil
@@ -4947,6 +5235,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
@@ -4962,13 +5252,19 @@ components:
         FE, bukan localStorage). Refresh token ada di cookie __Host-rt HttpOnly.
   responses:
     BadRequest:
-      description: Format request tidak dikenali (body JSON rusak, parameter tidak valid)
+      description: >-
+        Format request tidak dikenali (body JSON rusak, parameter tidak valid).
+        Content-Type bisa text/plain kalau framework menolak URL-nya sebelum
+        aplikasi sempat menjawab (mis. percent-encoding rusak).
       content:
         application/json:
           schema: { $ref: "#/components/schemas/ErrorEnvelope" }
           example:
             success: false
             error: { code: VALIDATION_ERROR, message: Body JSON tidak valid. }
+        text/plain:
+          schema: { type: string }
+          example: "400 Bad Request"
     NotFound:
       description: Sumber daya tidak ada (atau tidak terlihat oleh pemanggil)
       content:
@@ -4977,6 +5273,28 @@ components:
           example:
             success: false
             error: { code: NOT_FOUND, message: Tidak ditemukan. }
+    MethodNotAllowed:
+      description: >-
+        Method HTTP tidak diizinkan untuk path ini. Router mengembalikan 405
+        kalau path-nya dikenali tapi method-nya tidak (mis. GET ke endpoint
+        yang hanya menerima POST).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example:
+            success: false
+            error: { code: METHOD_NOT_ALLOWED, message: Method tidak diizinkan. }
+    Gone:
+      description: >-
+        Sumber daya sudah tidak tersedia. Untuk route "/storage/*" ini berarti
+        URL lama v1 terdaftar, tapi file-nya sudah tidak ada (masa redirect
+        6 bulan berakhir).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example:
+            success: false
+            error: { code: GONE, message: File lama sudah tidak tersedia. }
     Conflict:
       description: Konflik dengan data yang sudah ada (duplikat)
       content:
@@ -5106,8 +5424,26 @@ components:
         - TAG_IN_USE
         - METHOD_NOT_ALLOWED
         - INTERNAL_ERROR
+        - ALREADY_HAS_BLOCKS
+        - CANNOT_FOLLOW_SELF
+        - CLASS_NOT_EMPTY
+        - DUPLICATE_CLASS
+        - DUPLICATE_JOB
+        - DUPLICATE_MAJOR
+        - DUPLICATE_ROLE
+        - DUPLICATE_SLUG
+        - DUPLICATE_YEAR
+        - GONE
+        - NO_ACTIVE_YEAR
+        - OBJECT_MISSING
+        - SERVICE_UNAVAILABLE
+        - USERNAME_TAKEN
     PaginationMeta:
+      # Nullable: endpoint yang tidak berpaginasi (leaderboard, feed ringkas)
+      # mengirim meta: null. Kalau tidak nullable, contract test menandai
+      # "null is not of type object" padahal itu perilaku yang disengaja.
       type: object
+      nullable: true
       properties:
         page: { type: integer }
         per_page: { type: integer }
