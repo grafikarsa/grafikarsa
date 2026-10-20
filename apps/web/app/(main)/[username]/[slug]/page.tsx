@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { PortfolioDetail } from "@/components/portfolio/portfolio-detail";
 import { creativeWorkJsonLd, getPortfolio } from "./data";
+import { jsonLdScript } from "@/lib/json-ld";
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -52,7 +53,7 @@ export default async function PortfolioPage({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
       />
       <PortfolioDetail initial={p} />
     </>

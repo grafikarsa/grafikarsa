@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { jsonLdScript } from "@/lib/json-ld";
 
 type Section = { kind: string; title: string; body_md: string };
 type Detail = {
@@ -72,7 +73,7 @@ export default async function ChangelogVersionPage({
     <main className="mx-auto flex max-w-2xl flex-col gap-4 p-4">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
       />
       <Link href="/changelog" className="text-sm underline">
         ← Semua changelog
