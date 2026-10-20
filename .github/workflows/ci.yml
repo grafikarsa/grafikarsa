@@ -168,16 +168,25 @@ jobs:
           # Nilai kosong TIDAK dipindai gitleaks, jadi self-test akan gagal
           # secara acak. Karena itu pipe-nya ditutup di ujung (tr), bukan di head,
           # dan panjang secret-nya diverifikasi sebelum dipakai.
+          # Formatnya PERSIS "ghp_" + 36 karakter (aturan github-pat gitleaks).
+          # Format itu dipilih karena aturannya mencocokkan POLA, bukan entropi
+          # -- jadi self-test tidak pernah gagal secara acak.
+          #
+          # Sebelumnya dipakai "api_key = <random base64>", yang hanya
+          # dicocokkan aturan generic-api-key berbasis ENTROPI. Itu pernah
+          # gagal sekali di CI: gitleaks melaporkan "tidak menemukan secret"
+          # padahal rules-nya aktif -- build merah yang penyebabnya acak dan
+          # tidak bisa direproduksi. Self-test harus membuktikan hal yang pasti.
           if command -v openssl >/dev/null 2>&1; then
-            SECRET="$(openssl rand -base64 32 | tr -dc 'A-Za-z0-9')"
+            SECRET="ghp_$(openssl rand -hex 18 | tr 'a-f' 'A-F')"
           else
-            SECRET="$(cat /dev/urandom | base64 | tr -dc 'A-Za-z0-9')"
+            SECRET="ghp_$(cat /dev/urandom | od -An -tx1 | tr -dc 'a-f' | tr 'a-f' 'A-F' | cut -c1-36)"
           fi
-          if [ "${#SECRET}" -lt 32 ]; then
+          if [ "${#SECRET}" -lt 40 ]; then
             echo "FATAL: gagal membuat secret self-test (panjang=${#SECRET})"
             exit 1
           fi
-          printf 'api_key = "%s"\n' "$SECRET" > planted-secret.txt
+          printf 'github_token = "%s"\n' "$SECRET" > planted-secret.txt
           # Pastikan secret benar-benar tertulis sebelum dipindai.
           grep -qF "$SECRET" planted-secret.txt || {
             echo "FATAL: secret self-test tidak tertulis ke file"; exit 1; }
@@ -197,6 +206,12 @@ jobs:
           if [ "$rc" -eq 0 ]; then
             echo "FATAL: gitleaks TIDAK menemukan secret yang disisipkan."
             echo "       Rules kemungkinan tidak aktif — cek [extend] useDefault di .gitleaks.toml"
+            # Cetak log gitleaks & isi file self-test (nilai disamarkan).
+            # Tanpa ini, kegagalan tidak bisa didiagnosis dari log CI.
+            echo "---- log gitleaks ----"
+            cat "$T/gitleaks.log" || true
+            echo "---- isi file self-test (nilai disamarkan) ----"
+            sed -e 's/ghp_[A-Za-z0-9]*/ghp_<REDACTED>/' planted-secret.txt || true
             exit 1
           elif [ "$rc" -ne 99 ]; then
             echo "FATAL: gitleaks error (exit=$rc), bukan temuan:"
