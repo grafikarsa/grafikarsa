@@ -246,6 +246,35 @@ media_registered 3987
 
 ## Migrasi DB v1 → v2 di server (go-live)
 
+### Prayarat: kapasitas disk
+
+Disk server **50 GB** dengan **±15 GB bebas** (per 20 Okt 2026). Go-live
+menambah sekurangnya:
+
+| Kebutuhan | Ukuran | Keterangan |
+|---|---|---|
+| Storage baru (RustFS) | 5,2 GB | volume `grafikarsa_v2_storage_data` |
+| Image v2 (api + web) | ±0,5 GB | image v1 tetap ada (bertag → tidak kena prune) |
+| DB v2 + `v1_src` | ±0,2 GB | dump v1 4,3 MB |
+| Backup harian (sementara 2 salinan) | 5,0 GB | retensi KEEP=1: yang lama dihapus **setelah** yang baru terverifikasi |
+
+Total ±10,9 GB dari 15 GB bebas → **mepet** ⚠️. Kalau `df -h /` menunjukkan
+sisa < 8 GB, bersihkan dulu (backup lama, image dangling) — jangan mulai
+go-live dengan sisa disk tipis, karena mirror storage 5,1 GB butuh ruang.
+
+Storage v1 (5,2 GB) **tidak** dihapus saat go-live (baru dibersihkan di
+sunset plan, PRD §16.5).
+
+Cek sebelum mulai:
+
+```bash
+df -h / | tail -1
+docker image prune -f --filter "until=168h"   # image tanpa tag
+du -sh /opt/grafikarsa/backup
+```
+
+### Kendala yang menentukan bentuknya
+
 Skema v1 dan v2 **berbeda total** — jadi migrasi bukan "jalanin migration
 goose di atas data v1", tapi: buat DB v2 kosong → jalankan migrasi goose v2 →
 salin data dari DB v1 ke DB v2 dengan `migrate-old`.
@@ -377,6 +406,12 @@ cp docker-compose.deploy.v1.yml docker-compose.deploy.yml
 cp .env.v1.bak .env
 docker compose -f docker-compose.deploy.yml up -d
 ```
+
+Image v1 (backend + web, bertag SHA) tidak ikut terhapus oleh
+`docker image prune` di deploy — prune hanya menghapus image tanpa tag ✓.
+Kalau suatu saat image-nya hilang dari registry, image v1 ada di volume
+`grafikarsa_*` (tapi image container tidak disimpan di volume ✗) — artinya
+v1 lalu harus dibangun ulang dari tag di registry.
 
 `cp -n` dipakai saat menyalin, jadi deploy berikutnya tidak menimpa salinan
 v1. Volume v1 tidak pernah dihapus, jadi data v1 masih utuh.
