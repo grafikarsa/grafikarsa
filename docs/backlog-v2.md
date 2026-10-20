@@ -14,7 +14,7 @@
 | Sprint 1 | P0-01, P0-02, P0-03, P0-04, P0-05, P0-06, P0-10, P0-11, P1-01 | ✅ Selesai | 9 item — blocker & kebocoran privasi |
 | Sprint 2 | P0-07, P0-08, P0-09, P1-02…P1-06, P4-01…P4-07, P5-01…P5-08, P3-03 | ✅ Selesai | Skema `user_roles` + media retire + keamanan + sinkronisasi doc + hygiene |
 | Sprint 3 | P3-01, P3-02, P3-04…P3-10 | ✅ Selesai | golangci-lint + prettier + Playwright/axe + schemathesis/k6 + test domain |
-| Sprint 4 | P2-01…P2-15 | ⬜ Belum | Fitur PRD yang belum ada |
+| Sprint 4 | P2-01…P2-15 | 🟡 8/15 selesai | Fitur PRD §7-§8 — sisa: WebP, nuqs+DataTable, restrukturisasi paket, RFC7807, OTel |
 | Sprint 5 | P6-01…P6-09 | 🟡 7/9 selesai | Go-live readiness (Fase 4) — tersisa P6-04 (storage mirror) |
 | — | — | ✅ Selesai | Keamanan & hygiene |
 
@@ -126,6 +126,10 @@
     - transisi status dicatat dengan **from → to** di diff audit_logs (sebelumnya cuma `{"note": ...}`, jadi riwayatnya tidak bisa direkonstruksi)
     - `p.updated_at` masuk perhitungan `last_activity` → karya yang **hanya diedit** (mis. thumbnail dihapus → quality turun) sekarang ikut dihitung ulang, sebelumnya hanya interaksi yang memicu
   - Endpoint `GET /v1/admin/portfolios/{id}/status-history` untuk membaca riwayatnya
+- [x] **P2-02** Riwayat status (`portfolio_status_history`) — PRD §8.1
+  - ✅ Sprint 3 (commit `1561cb4`) — PRD §8.1 menyebut "implisit via audit_logs + kolom reviewed_by/at/note", jadi **tidak** dibuat tabel terpisah; yang dibuat adalah implementasi implisitnya yang benar-benar bisa dibaca
+  - `auditLogTransition` menyimpan from/to; query `ListPortfolioStatusHistory` + `GET /v1/admin/portfolios/{id}/status-history`
+  - Diverifikasi: `"" -> draft`, `draft -> published`, `published -> changes_requested`
 - [x] **P2-21** UI admin **belum bisa membuat akun** — padahal itu satu-satunya cara menambah akun (tidak ada pendaftaran mandiri)
   - ✅ Sprint 3 (commit `834172b`) — dialog "Tambah pengguna" di `/admin/users` (username, nama, email, role, password sementara) → `POST /v1/admin/users`
   - Akun baru ditandai `must_change_password = true`; username divalidasi dengan pola yang sama dengan CHECK constraint database
