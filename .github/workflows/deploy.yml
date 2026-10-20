@@ -101,8 +101,15 @@ jobs:
         run: |
           ssh -p "${{ secrets.SSH_PORT }}" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
             "mkdir -p /opt/grafikarsa && chmod 700 /opt/grafikarsa"
-          scp -P "${{ secrets.SSH_PORT }}" docker-compose.deploy.yml Caddyfile tools/backup.sh \
+          # tools/gk-backup.sh (bukan tools/backup.sh) karena crontab server
+          # memanggil path itu: 0 2 * * * /opt/grafikarsa/gk-backup.sh
+          # Kalau nama filenya berbeda, cron diam-diam tetap menjalankan
+          # script lama — backup harian berhenti tanpa error yang terlihat.
+          scp -P "${{ secrets.SSH_PORT }}" docker-compose.deploy.yml Caddyfile \
+            tools/gk-backup.sh tools/verify-backup.sh \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/grafikarsa/"
+          ssh -p "${{ secrets.SSH_PORT }}" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "chmod 700 /opt/grafikarsa/gk-backup.sh /opt/grafikarsa/verify-backup.sh"
           ssh -p "${{ secrets.SSH_PORT }}" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
             "mkdir -p /opt/grafikarsa/infra/postgres/init"
           scp -P "${{ secrets.SSH_PORT }}" -r infra/postgres/init/. \
