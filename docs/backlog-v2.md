@@ -247,11 +247,18 @@
   - ✅ Sprint 3 (commit `1f740a6`) — dry-run menemukan **6 bug** yang membuat hampir semua data hilang (portfolio, block, like, follow, comment, notification, assessment). Setelah diperbaiki: **100%** user/portfolio/like/follow/comment/notification/feedback termigrasi, 5.939/6.970 block (+1.031 karantina dengan alasan sah)
   - Hasil akhir di DB bersih: users 1688 · portfolios 1723 · blocks 5939 · likes 740 · follows 4341 · comments 79 · notifications 6946 · feedback 17 · skipped `{}`
 - [ ] **P6-04** Storage mirror 5,1 GB belum dilakukan — PRD §16.3 (`tools/backup.sh` sudah ada `rclone sync`)
-- [ ] **P6-05** k6 p95 belum diverifikasi di VPS 4GB — PRD §14.1, §18 gate
+- [x] **P6-05** k6 p95 diverifikasi di VPS 4 GB itu sendiri terhadap API produksi — PRD §14.1, §18 gate
+  - ✅ Sprint 3 — p(95) endpoint publik **2,91 ms** (ambang 800 ms), rate error 0,00%, 1800/1800 check lulus
+  - Sekalian membuktikan script k6 yang diperbaiki (threshold `p(95)`, login sekali di `setup()`) jalan tanpa memicu lockout
 - [ ] **P6-06** Restore drill belum pernah — PRD §17, §18 gate
 - [ ] **P6-07** 🔴 Disk prod 81% (gate: <70%) — PRD §0.1, §19, §18
-- [ ] **P6-08** Maintenance mode (`NEXT_PUBLIC_MAINTENANCE_MODE`) belum ada — PRD §16.1
-- [ ] **P6-09** Sunset plan "hapus v1 setelah 30 hari" belum ada — PRD §16.1, §18
+- [x] **P6-08** Maintenance mode di `apps/web/middleware.ts` — PRD §16.1
+  - ✅ Sprint 3 — halaman "Pindah ke v2" (503 + `Retry-After`), HTML mandiri tanpa JS/aset build
+  - Selain flag build-time `NEXT_PUBLIC_MAINTENANCE_MODE` (nama dari PRD), ada **toggle runtime** lewat header `x-maintenance-mode` dari reverse proxy → jendela maintenance bisa dibuka/ditutup tanpa build ulang
+  - Rute `/api/*` tetap hidup → health check tidak gagal, rollback tetap mungkin
+  - Disertai 2 test E2E
+- [x] **P6-09** Sunset plan di `docs/runbook.md` — PRD §16.1, §18
+  - ✅ Sprint 3 — jadwal H-1 → H+30, syarat pembuangan v1 (monitoring bersih 7 hari berturut, nol request ke v1 di access log, backup v2 sudah restore-drill di dua tempat), dan langkah pembuangan container/image/volume/backup lama
 
 ---
 
