@@ -3,7 +3,7 @@
 # Backup harian Grafikarsa v2 (server prod)
 #   - PostgreSQL (compose service "db") -> pg_dump -Fc
 #   - Object storage (RustFS)          -> tar.gz volume (read-only)
-#   - Dragonfly (cache)                -> dump.rdb (opsional, best effort)
+#   - Dragonfly (cache)                -> snapshot (opsional, best effort)
 #   - Konfigurasi deploy               -> .env, compose, Caddyfile
 #   - Inventaris + manifest             -> row counts, daftar object, sha256
 #
@@ -17,6 +17,7 @@
 #   DB_SERVICE     service postgres         (default db)
 #   STORAGE_CONTAINER container object store (default grafikarsa-storage)
 #   STORAGE_MOUNT  titik mount di container (default /data)
+#   CACHE_CONTAINER container cache         (default grafikarsa-dragonfly)
 #
 # Catatan: script ini TIDAK memakai rclone (tidak terpasang di server) dan
 # TIDAK menyentuh volume lewat nama — titik mount diambil dari container
@@ -31,6 +32,7 @@ KEEP="${KEEP:-1}"
 DB_SERVICE="${DB_SERVICE:-db}"
 STORAGE_CONTAINER="${STORAGE_CONTAINER:-grafikarsa-storage}"
 STORAGE_MOUNT="${STORAGE_MOUNT:-/data}"
+CACHE_CONTAINER="${CACHE_CONTAINER:-grafikarsa-dragonfly}"
 
 TS="$(date +%Y%m%d-%H%M%S)"
 DEST="$BACKUP_ROOT/$TS"
@@ -53,15 +55,21 @@ DB_USER="$(env_value DB_USER grafikarsa)"
 DB_NAME="$(env_value DB_NAME grafikarsa)"
 S3_BUCKET="$(env_value S3_BUCKET grafikarsa)"
 
-# ---- retensi: hapus backup lama SEBELUM membuat yang baru ----
-if [ -d "$BACKUP_ROOT" ]; then
-  OLD=$(ls -1d "$BACKUP_ROOT"/[0-9]* 2>/dev/null | sort | head -n -"$KEEP" 2>/dev/null)
-  for o in $OLD; do
+# ---- retensi: hapus backup lama, tapi SETELAH backup baru selesai & terverifikasi ----
+# Kalau backup lama dihapus lebih dulu dan backup baru ternyata gagal, server
+# berakhir tanpa backup sama sekali — jaring pengaman terakhir ikut hilang
+# justru di saat paling dibutuhkan. Jadi retensi baru dijalankan setelah
+# backup baru dinyatakan sehat.
+apply_retention() {
+  [ -d "$BACKUP_ROOT" ] || return 0
+  local old
+  old=$(ls -1d "$BACKUP_ROOT"/[0-9]* 2>/dev/null | sort | head -n -"$KEEP" 2>/dev/null)
+  for o in $old; do
     [ "$o" = "$DEST" ] && continue
     log "retensi: hapus backup lama $o"
     rm -rf "$o"
   done
-fi
+}
 
 mkdir -p "$DEST"/{db,storage,cache,config,inventory} || fail "gagal membuat $DEST"
 chmod 700 "$DEST" "$DEST"/*
@@ -121,15 +129,15 @@ log "    arsip OK ($(du -h "$DEST/storage/storage-data-$TS.tar.gz" | cut -f1))"
 # ---------- 3. Dragonfly (cache, best effort) ----------
 log "3/7 dump cache (dragonfly) ..."
 CACHE_OK=0
-if docker ps --format '{{.Names}}' | grep -q 'grafikarsa-dragonfly'; then
+if docker ps --format '{{.Names}}' | grep -qx "$CACHE_CONTAINER"; then
   # Paksa snapshot dulu (selalu ada, walau cron-nya belum jatuh tempo).
   # Dragonfly menyediakan antarmuka Redis, jadi redis-cli bisa dipakai.
-  if docker exec grafikarsa-dragonfly redis-cli BGSAVE >/dev/null 2>&1; then
+  if docker exec "$CACHE_CONTAINER" redis-cli BGSAVE >/dev/null 2>&1; then
     sleep 3
     # Dragonfly TIDAK menulis dump.rdb seperti Redis: format snapshot-nya
     # sendiri (dump-0000.dfs + dump-summary.dfs). Karena itu seluruh isi
     # /data disalin, bukan satu file.
-    if docker cp grafikarsa-dragonfly:/data/. "$DEST/cache/" >/dev/null 2>&1 \
+    if docker cp "$CACHE_CONTAINER":/data/. "$DEST/cache/" >/dev/null 2>&1 \
        && [ -n "$(ls -A "$DEST/cache" 2>/dev/null)" ]; then
       CACHE_OK=1
       log "    snapshot cache OK"
@@ -220,6 +228,10 @@ df -h / | tail -1
 # tidak cocok — jaring pengaman terakhir justru يقول "aman".
 if [ "$VERIFY_FAIL" != "0" ]; then
   log "VERIFIKASI GAGAL — backup ini TIDAK bisa dipercaya (lihat $DEST/VERIFY.txt)"
+  log "Backup lama sengaja TIDAK dihapus, jadi masih ada cadangan."
   exit 1
 fi
+
+# Baru sekarang aman retiring backup lama: ada yang baru DAN sudah terverifikasi.
+apply_retention
 log "SELESAI -> $DEST"
