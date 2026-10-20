@@ -12,6 +12,30 @@ const componentsYAML = `components:
         Access token 15 menit dari POST /api/v1/auth/login (disimpan di memori
         FE, bukan localStorage). Refresh token ada di cookie __Host-rt HttpOnly.
   responses:
+    BadRequest:
+      description: Format request tidak dikenali (body JSON rusak, parameter tidak valid)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example:
+            success: false
+            error: { code: VALIDATION_ERROR, message: Body JSON tidak valid. }
+    NotFound:
+      description: Sumber daya tidak ada (atau tidak terlihat oleh pemanggil)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example:
+            success: false
+            error: { code: NOT_FOUND, message: Tidak ditemukan. }
+    Conflict:
+      description: Konflik dengan data yang sudah ada (duplikat)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example:
+            success: false
+            error: { code: DUPLICATE_USER, message: Sudah ada. }
     Unauthorized:
       description: Belum login atau token kedaluwarsa
       content:
