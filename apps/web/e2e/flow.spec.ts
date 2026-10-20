@@ -50,7 +50,13 @@ test.describe("alur autentikasi", () => {
     await page.getByRole("button", { name: /masuk/i }).click();
 
     // Pesan error dari server harus tampil (bukan diam-diam).
-    await expect(page.getByText(/salah|invalid|credential/i).first()).toBeVisible();
+    //
+    // Selector memakai atribut data-sonner-toast milik komponen toast, bukan
+    // teksnya: teks toast bisa berubah (kode error vs pesan) dan toast
+    // hilang sendiri, jadi pencarian teks rawan flake.
+    const toast = page.locator("[data-sonner-toast]").first();
+    await expect(toast).toBeVisible({ timeout: 20_000 });
+    await expect(toast).toContainText(/salah|invalid|gagal|credential/i);
   });
 
   test("login admin berhasil lalu /me bisa diakses", async ({ page }) => {
