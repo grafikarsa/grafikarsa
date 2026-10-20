@@ -17,11 +17,24 @@ kompatibel-S3 (default RustFS).
 ## Mulai cepat (dev)
 
 ```bash
-cp .env.example .env      # isi secret lokal (dev punya default aman)
+make dev-init             # .env + secret acak (idempotent)
 make dev                  # db + dragonfly + storage + api + worker
 make dev-web              # terminal 2: Next.js HMR di :3020
 make migrate-up && make seed
 make verify-seed
+```
+
+`make dev-init` wajib jalan pertama kali: `.env.example` sengaja berisi
+placeholder (`<rand: ...>`), dan kalau dipakai apa adanya maka DB, JWT, dan
+object storage memakai password placeholder yang sama — yang bikin errornya
+saja kriptik ("password authentication failed") kalau `.env` diganti
+belakangan.
+
+Kalau volume DB sudah ada dari run sebelumnya sementara `.env` sudah diganti,
+passwordnya tidak cocok. Reset volumenya:
+
+```bash
+docker compose -f docker-compose.yml down -v && make dev
 ```
 
 Port dev (bisa diubah lewat `.env`): web `3020`, api `8091`, db `5439`,
