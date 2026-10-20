@@ -61,6 +61,10 @@ type stats struct {
 	Assessments              int
 	Feedback, Changelogs     int
 	MediaRegistered          int
+	// Akademik v1 -> v2.
+	Majors, MajorsCreated int
+	Classes               int
+	Enrollments           int
 	// MediaFallback: URL yang TIDAK bisa didaftarkan sebagai media_assets
 	// (hanya masuk legacy_urls tanpa media_id). Ini berarti ada objek yang
 	// tidak terikat ke media — harus menggagalkan migrasi, bukan cuma
@@ -123,11 +127,20 @@ func main() {
 	slog.Info("skema v1 terdeteksi", "tables", strings.Join(names, ","))
 
 	st := newStats()
-	if err := migrateUsers(ctx, v1, v2, introspect, o, st); err != nil {
+	// Akademik (jurusan -> majors, kelas -> classes) harus lebih dulu:
+	// user menunjuk kelas lewat UUID v1, dan mapping-nya baru ada setelah
+	// langkah ini. Kalau dibalik, semua user dapat class_id/major_id NULL.
+	classMajor, err := migrateAcademics(ctx, v1, v2, introspect, o, st)
+	if err != nil {
+		fatal("migrate academics: %v", err)
+	}
+	if err := migrateUsers(ctx, v1, v2, introspect, o, st, classMajor); err != nil {
 		fatal("migrate users: %v", err)
 	}
-	if err := migrateAcademics(ctx, v1, v2, introspect, o, st); err != nil {
-		slog.Warn("migrate academics dilewati sebagian", "err", err)
+	// Enrollments setelah users: enrollment meng_acuan user (foreign key),
+	// jadi user-nya harus sudah ada di v2.
+	if err := migrateEnrollments(ctx, v1, v2, introspect, o, st); err != nil {
+		slog.Warn("migrate enrollments dilewati sebagian", "err", err)
 	}
 	if err := migratePortfolios(ctx, v1, v2, introspect, o, st); err != nil {
 		fatal("migrate portfolios: %v", err)
@@ -155,6 +168,8 @@ func main() {
 	slog.Info("migrasi selesai",
 		"dry_run", o.dryRun,
 		"users", st.Users, "users_skipped", st.UsersSkipped,
+		"majors", st.Majors, "majors_baru", st.MajorsCreated,
+		"classes", st.Classes, "enrollments", st.Enrollments,
 		"portfolios", st.Portfolios, "blocks", st.Blocks,
 		"blocks_quarantined", st.BlocksQuarantined,
 		"likes", st.Likes, "follows", st.Follows, "comments", st.Comments,

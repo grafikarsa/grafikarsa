@@ -447,6 +447,17 @@ func verifyMigration(ctx context.Context, v1, v2 *pgxpool.Pool, st *stats) error
 	}{
 		{"users", `SELECT count(*) FROM users`, `SELECT count(*) FROM users WHERE email NOT LIKE '%@migrated.local'`},
 		{"portfolios", `SELECT count(*) FROM portfolios`, `SELECT count(*) FROM portfolios`},
+		// Akademik: kelas & jurusan v1 wajib utuh di v2. Tanpa ini, kelas
+		// bisa hilang diam-diam — semua user jadi class_id NULL dan
+		// enrollments kosong, tapi migrasi tetap melaporkan "OK".
+		//
+		// Dicek lewat legacy_id_map (bukan hitung baris tabel v2): v2 bisa
+		// sudah punya baris dari seed atau migrasi sebelumnya, sementara
+		// yang wajib sama adalah "setiap baris v1 punya padanan di v2".
+		{"classes", `SELECT count(*) FROM kelas`, `SELECT count(*) FROM legacy_id_map WHERE source_table='classes' AND target_table='classes'`},
+		{"majors", `SELECT count(*) FROM jurusan`, `SELECT count(*) FROM legacy_id_map WHERE source_table='majors' AND target_table='majors'`},
+		{"enrollments", `SELECT count(*) FROM users WHERE kelas_id IS NOT NULL`, `SELECT count(*) FROM enrollments`},
+		{"user_dengan_kelas", `SELECT count(*) FROM users WHERE kelas_id IS NOT NULL`, `SELECT count(*) FROM users WHERE class_id IS NOT NULL`},
 	}
 	for _, c := range checks {
 		var a, b int64
