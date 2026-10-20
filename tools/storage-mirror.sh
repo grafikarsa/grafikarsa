@@ -93,14 +93,21 @@ log "mirror selesai"
 
 # ---------- 5. verifikasi: mc diff ----------
 log "verifikasi: mc diff (nama & ukuran objek)"
-if mc diff "${PREFIX}src/${BUCKET}" "${PREFIX}dst/${BUCKET}" > "$DIFF" 2>&1; then
+# PENTING: `mc diff` mengembalikan exit 0 kalau perbandingan selesai —
+# termasuk kalau ADA perbedaan. Jadi exit code-nya tidak bisa dipakai
+# sebagai penentu; yang diperiksa isi keluarannya. Kalau tidak, skrip
+# menulis "tidak ada perbedaan" padahal ada objek yang hilang di tujuan.
+mc diff "${PREFIX}src/${BUCKET}" "${PREFIX}dst/${BUCKET}" > "$DIFF" 2>&1 || true
+# wc -l (bukan grep -c): grep -c keluar dengan status 1 kalau tidak ada
+# pencocokan, dan kalau dipanggil dengan "|| echo 0" hasilnya jadi dua
+# baris ("0\n0") yang tidak bisa dipakai di test numerik.
+DIFF_COUNT=$(wc -l < "$DIFF" | tr -d ' ')
+if [ "$DIFF_COUNT" -eq 0 ]; then
   log "mc diff: tidak ada perbedaan ✓"
 else
   log "mc diff menemukan perbedaan:"
   head -20 "$DIFF"
-  echo "  total baris beda: $(wc -l < "$DIFF")"
-  # Difference tidak selalu berarti kegagalan: kalau ada perubahan di
-  # sumber yang terjadi setelah mirror, itu hal wajar.
+  echo "  total baris beda: $DIFF_COUNT"
   exit 1
 fi
 
@@ -118,8 +125,15 @@ CHECKED=0
 MISMATCH=0
 while IFS= read -r line; do
   [ -n "$line" ] || continue
-  # Format mc ls: "[2024-01-01 10:00:00 UTC]     1234B  path/to/obj"
-  path=$(echo "$line" | awk '{print $NF}')
+  # Format mc ls: "[2024-01-01 10:00:00 UTC]  20KiB  STANDARD  path/to/obj"
+  #
+  # Key bisa mengandung spasi ("portfolios/final image.jpg"), jadi field
+  # terakhir (awk $NF) TIDAK boleh dipakai — hasilnya cuma "image.jpg"
+  # dan mc cat membaca path yang salah (lalu skrip keluar padahal mirror
+  # sebenarnya benar).
+  #
+  # Yang dibuang: [timestamp], ukuran, dan kolom class (opsional).
+  path=$(echo "$line" | sed -E 's/^\[[^]]*\][[:space:]]+[^[:space:]]+[[:space:]]+([A-Z0-9]+[[:space:]]+)?//')
   [ -n "$path" ] || continue
   src_sum=$(mc cat "${PREFIX}src/${BUCKET}/${path}" 2>/dev/null | md5sum | cut -d' ' -f1)
   dst_sum=$(mc cat "${PREFIX}dst/${BUCKET}/${path}" 2>/dev/null | md5sum | cut -d' ' -f1)
