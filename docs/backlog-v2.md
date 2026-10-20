@@ -179,8 +179,13 @@
   - Status: ⬜
 - [ ] **P2-12** RFC7807 `problem+json` tidak dipakai (pakai envelope `success/data/error`) — PRD §5
   - Status: ⬜
-- [ ] **P2-13** OTel tracing tidak ada — PRD §13.1, §17
-  - Status: ⬜
+- [x] **P2-13** Tracing OpenTelemetry — PRD §13.1, §17
+  - ✅ Sprint 3 (commit `92940fc`) — span per request di `internal/observability/trace.go`, dipasang sebagai middleware di router
+  - Aktif hanya kalau `OTEL_EXPORTER_OTLP_ENDPOINT` di-set; kalau kosong tracing no-op (PRD §17: "fase 1 cukup log file + docker logs") → nol overhead, aplikasi tetap jalan
+  - Env: `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`, `OTEL_TRACES_SAMPLER_RATIO` (default 1 = trace lengkap untuk request lambat)
+  - Trace id dikembalikan di header `X-Trace-Id` (log lokal bisa dikorelasikan dengan collector) + W3C Trace Context untuk penelusuran lintas service
+  - Nama span pakai pola route chi, bukan path mentah (path mentah = ribuan span untuk satu endpoint, collector jadi mahal)
+  - 6 unit test
 - [x] **P2-14** Sliding-window rate limit (sebelumnya fixed window `IncrWithExpire`) — PRD §6.2
   - ✅ Sprint 3 (commit `9d6efb2`) — key fixed window (`rl:{id}:{menit}`) bisa dipakai penuh **dua kali berturut-turut** di batas menit → 200 request dalam ~1 detik
   - Sekarang sorted set (ZSET): ZREMRANGEBYSCORE + ZADD + ZCARD dalam satu pipeline (tetap 1 round-trip), jendela & batas dari env (`RATE_LIMIT_REQUESTS`, `RATE_LIMIT_WINDOW`)
