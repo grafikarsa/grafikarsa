@@ -207,7 +207,7 @@ grafikarsa-v2/
   infra/
     caddy/Caddyfile*  postgres/init/  storage/init/  dragonfly/dragonfly.conf
   tools/
-    backup.sh  restore.sh  server-init.sh
+    gk-backup.sh  verify-backup.sh  storage-mirror.sh  server-init.sh
   docs/prd-v2.md (file ini)  docs/api-v2.md  docs/runbook.md
   .github/workflows/ci.yml  .github/workflows/deploy.yml
 ```

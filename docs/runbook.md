@@ -66,8 +66,9 @@ localhost, dan `NEXT_PUBLIC_APP_URL` localhost yang membuat semua mutasi 403).
 | Health/readiness | `curl -s https://DOMAIN/api/v1/health`, `curl -s http://api:8080/ready` |
 | Metrics | `curl -s -H "Authorization: Bearer <token admin>" http://api:8080/metrics` (butuh permission `system.jobs`) |
 | Log | `docker compose logs -f api worker` (JSON via slog, ada `request_id`) |
-| Backup manual | `cd /opt/grafikarsa && ./backup.sh` (pg_dump + mirror storage + retensi + warning disk) |
-| Backup terjadwal | crontab: `0 2 * * * /opt/grafikarsa/backup.sh >> /var/log/grafikarsa-backup.log 2>&1` |
+| Backup manual | `cd /opt/grafikarsa && ./gk-backup.sh` (pg_dump + arsip volume storage + cache + inventaris + manifest sha256 + retensi + warning disk) |
+| Backup terjadwal | crontab: `0 2 * * * /opt/grafikarsa/gk-backup.sh >> /var/log/grafikarsa-backup.log 2>&1` |
+| Verifikasi backup | `cd /opt/grafikarsa && ./verify-backup.sh backup/<timestamp>` (checksum, arsip storage terbaca, dump pg bisa dilist — read-only) |
 | Restore DB | `docker exec -i grafikarsa-db pg_restore -c -U grafikarsa -d grafikarsa < backup/db-YYYY-MM-DD.dump` |
 | Recompute leaderboard | `POST /api/v1/admin/leaderboards/recompute` (permission `system.jobs`, maks 1×/jam) |
 | Re-run promotion | UI `/admin/promotion` → Preview → Setujui → ketik tahun tujuan → Eksekusi |
@@ -82,6 +83,59 @@ localhost, dan `NEXT_PUBLIC_APP_URL` localhost yang membuat semua mutasi 403).
 | Preview PDF | `docker compose exec worker /worker pdf-preview` (butuh poppler-utils) |
 | Uji beban (k6) | `make test-load` |
 | Uji kontrak (schemathesis) | `make test-contract` |
+
+## Backup & restore (v2)
+
+Backup harian dijalankan cron: `0 2 * * * /opt/grafikarsa/gk-backup.sh`.
+Script-nya ada di repo (`tools/gk-backup.sh`) dan disalin ke server saat
+deploy — nama file di server **harus** `gk-backup.sh` karena itu yang dipanggil
+crontab.
+
+Isi satu backup (direktori `backup/<timestamp>/`):
+
+| Isi | Keterangan |
+|---|---|
+| `db/<db>-<ts>.dump` | `pg_dump -Fc` (format custom, bisa dipulihkan per tabel) |
+| `storage/storage-data-<ts>.tar.gz` | seluruh volume object storage (data bucket + metadata RustFS) |
+| `cache/` | snapshot Dragonfly (best effort — cache disposable) |
+| `config/` | `.env`, compose, Caddyfile, daftar image yang jalan |
+| `inventory/` | row count per tabel + daftar objek storage (ukuran & path) |
+| `MANIFEST.txt` | checksum sha256 semua file (dicek saat restore drill) |
+
+Volume object storage dibaca dari **dalam container helper**, bukan lewat path
+host (`/var/lib/docker/volumes/...` mode 700 root). Jadi script jalan sebagai
+user mana pun yang punya akses docker, dan image yang dipakai adalah image
+milik service storage itu sendiri — tidak perlu menarik image tambahan.
+
+Verifikasi (read-only, tidak menyentuh data asli):
+
+```bash
+cd /opt/grafikarsa && ./verify-backup.sh backup/<timestamp>
+```
+
+Restore drill — buktikan backup benar-benar bisa dipulihkan, jangan hanya
+"exit 0":
+
+```bash
+DC="docker compose -f docker-compose.deploy.yml"
+
+# 1. DB ke database baru (TIDAK ADA database lama yang disentuh)
+$DC exec -T db psql -U "$DB_USER" -d postgres -c "create database restore_test owner $DB_USER;"
+$DC exec -T db pg_restore -U "$DB_USER" -d restore_test --no-owner --no-privileges \
+  < backup/<timestamp>/db/*.dump
+
+# 2. Object storage ke direktori sementara
+mkdir -p /tmp/gk-restore && tar -xzf backup/<timestamp>/storage/*.tar.gz -C /tmp/gk-restore
+ls -la /tmp/gk-restore/grafikarsa/
+
+# 3. Bandingkan jumlah objek dengan inventaris
+cat backup/<timestamp>/inventory/object-count-*.txt
+find /tmp/gk-restore/grafikarsa -type f | wc -l
+```
+
+Kalau jumlah objek tidak sama, **jangan** pakai backup itu — cari sumber lain.
+Restore DB yang gagal di tengah jalan tidak merusak data asli: database
+sasaran baru dibuang dan diulang dari dump.
 
 ## Job terjadwal
 
@@ -174,6 +228,19 @@ dump (bukan dibaca dari container yang hidup).
 
 Semua perintah dijalankan di server (`/opt/grafikarsa`).
 
+| Volume | v1 (sekarang) | v2 (setelah go-live) |
+|---|---|---|
+| PostgreSQL | `grafikarsa_postgres_data` (postgres:**15**) | `grafikarsa_v2_postgres_data` (postgres:**16**) |
+| Object storage | `grafikarsa_minio_data` (MinIO) | `grafikarsa_v2_storage_data` (RustFS) |
+| Cache | `grafikarsa_redis_data` | `grafikarsa_v2_dragonfly_data` |
+| TLS Caddy | `grafikarsa_caddy_data` | `grafikarsa_caddy_data` (**sengaja sama** — sertifikat tidak perlu diterbitkan ulang) |
+
+Nama volume v2 ditulis eksplisit di compose. Kalau tidak, key `postgres_data`
+resolve ke volume yang sama dengan v1 — dan image postgres:16 **menolak
+start** di data dir postgres:15 ("database files are incompatible with
+server"). Jadi volume v1 bukan sekadar "dibaca" oleh v2: container db-nya
+gagal start sama sekali.
+
 ```bash
 DC="docker compose -f docker-compose.deploy.yml"
 
@@ -188,8 +255,10 @@ ls -la /tmp/v1-pre-migrate.dump
 #    data v1 tetap utuh sebagai jaring pengaman.
 $DC down
 
-# 3. Nyalakan DB v2 (volume postgres_data, kosong) + pulihkan dump v1 ke
-#    database terpisah di container yang sama, sebagai sumber migrasi.
+# 3. Nyalakan DB v2 (volume grafikarsa_v2_postgres_data, kosong) + pulihkan
+#    dump v1 ke database terpisah di container yang sama, sebagai sumber
+#    migrasi. v1_src hidup di DB v2, tapi TIDAK disruptif: schema-nya milik
+#    v1 dan dibaca sebagai data biasa.
 $DC up -d db
 $DC exec -T db psql -U "$DB_USER" -d postgres -c "CREATE DATABASE v1_src OWNER $DB_USER;"
 $DC exec -T db pg_restore -U "$DB_USER" -d v1_src --no-owner --no-privileges \
