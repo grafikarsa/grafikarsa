@@ -305,6 +305,28 @@ Kalau migrasi gagal di tengah jalan, ulangi dari langkah 3 — database v2
 dibuang dan dibuat ulang. Data v1 tidak pernah hilang: ada di
 `grafikarsa_postgres_data` **dan** di `/tmp/v1-pre-migrate.dump`.
 
+### Kembali ke stack v1 (kalau go-live v2 dibatalkan)
+
+Deploy menimpa `docker-compose.deploy.yml` dan `.env` di server, jadi sebelum
+ditimpa keduanya disalin:
+
+| File | Isi |
+|---|---|
+| `/opt/grafikarsa/docker-compose.deploy.v1.yml` | compose stack v1 (volume `grafikarsa_postgres_data`, MinIO, Redis) |
+| `/opt/grafikarsa/.env.v1.bak` | `.env` v1 — termasuk `IMAGE_TAG` v1 yang sedang dipakai |
+
+Kembalikannya:
+
+```bash
+cd /opt/grafikarsa
+cp docker-compose.deploy.v1.yml docker-compose.deploy.yml
+cp .env.v1.bak .env
+docker compose -f docker-compose.deploy.yml up -d
+```
+
+`cp -n` dipakai saat menyalin, jadi deploy berikutnya tidak menimpa salinan
+v1. Volume v1 tidak pernah dihapus, jadi data v1 masih utuh.
+
 Yang **tidak** boleh dilewati: langkah 5 (dry-run) dan langkah 6. Tool
 `migrate-old` sekarang gagal keras kalau ada objek storage yang tidak
 terdaftar sebagai media — jadi "migrasi sukses" tidak lagi bisa berarti
