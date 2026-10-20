@@ -276,15 +276,36 @@ $DC exec -T db pg_restore -U "$DB_USER" -d v1_src --no-owner --no-privileges \
 $DC exec -T db psql -U "$DB_USER" -d postgres -c "CREATE DATABASE $DB_NAME OWNER $DB_USER;"
 $DC run --rm --entrypoint /migrate -e DB_NAME="$DB_NAME" api up
 
+# 4b. SEED — WAJIB, sebelum migrate-old.
+#
+# academic_years & majors v2 adalah DATA REFERENSI yang diisi seed, bukan
+# hasil migrasi. Tanpa seed:
+#   - academic_years kosong -> kelas v1 tak bisa dipetakan (migrate-old
+#     berhenti dengan error "academic_years v2 kosong")
+#   - majors kosong -> major yang tak ada di seed dibuat saat migrasi, tapi
+#     tahun akademiknya tetap tidak ada
+# Seed juga mengisi role & permission, jadi harus jalan sebelum user.
+$DC run --rm --entrypoint /seed -e DB_NAME="$DB_NAME" api
+$DC exec -T db psql -U "$DB_USER" -d "$DB_NAME" -tAc \
+  "select 'academic_years=' || (select count(*) from academic_years) || ' majors=' || (select count(*) from majors);"
+
 # 5. Salin data v1 -> v2. KERINGKASAN dulu (wajib):
 $DC run --rm --entrypoint /migrate-old \
   -e DB_NAME="$DB_NAME" api \
   --v1 "postgres://$DB_USER:$DB_PASSWORD@db:5432/v1_src?sslmode=disable" \
   --v2 "postgres://$DB_USER:$DB_PASSWORD@db:5432/$DB_NAME?sslmode=disable" \
   --dry-run
-#    Periksa hitungannya: users 1688 · portfolios 1723 · blocks 5939
-#    (+1031 karantina) · likes 740 · follows 4341 · comments 79
-#    · notifications 6946 · feedback 17 · skipped {}
+#    Periksa hitungannya (angka dari data produksi, 20 Okt 2026):
+#      users 1688 · majors 8 (4 baru dibuat) · classes 49 · enrollments 1687
+#      portfolios 1724 · blocks 5943 (+1031 karantina) · likes 740
+#      · follows 4341 · comments 79 · notifications 6946 · feedback 17
+#      · skipped {assessment_empty: 901}
+#
+#    "assessment_empty: 901" itu normal: 901 baris assessment v1 bernilai
+#    NULL (view v_portfolio_assessments) — sengaja tidak dibuat supaya antrean
+#    penilaian admin tidak tergotori skor 0.
+#
+#    classes/enrollments yang 0 berarti kelas tidak termigrasi — JANGAN lanjut.
 #    Kalau ada yang tidak cocok, JANGAN lanjut.
 $DC run --rm --entrypoint /migrate-old -e DB_NAME="$DB_NAME" api \
   --v1 "postgres://$DB_USER:$DB_PASSWORD@db:5432/v1_src?sslmode=disable" \
@@ -295,11 +316,18 @@ $DC run --rm --entrypoint /migrate-old -e DB_NAME="$DB_NAME" api \
 #    dikarantina). Cek juga `legacy_urls` terisi.
 $DC exec -T db psql -U "$DB_USER" -d "$DB_NAME" -c \
   "select (select count(*) from users) users, (select count(*) from portfolios) portfolios,
-          (select count(*) from portfolio_blocks) blocks, (select count(*) from follows) follows;"
+          (select count(*) from portfolio_blocks) blocks, (select count(*) from follows) follows,
+          (select count(*) from classes) classes, (select count(*) from enrollments) enrollments,
+          (select count(*) from users where class_id is not null) users_dengan_kelas;"
 
 # 7. Nyalakan sisa stack v2 + deploy (tag versi / workflow_dispatch).
 $DC up -d
 ```
+
+`migrate-old` sudah memverifikasi sendiri setelah menulis (users, portfolios,
+classes, majors, enrollments, user_dengan_kelas) dan keluar non-zero kalau ada
+yang tidak sama — jadi "MIGRATE OK" di log berarti angka-angka di atas sudah
+dicek, bukan cuma "tidak error".
 
 Kalau migrasi gagal di tengah jalan, ulangi dari langkah 3 — database v2
 dibuang dan dibuat ulang. Data v1 tidak pernah hilang: ada di
