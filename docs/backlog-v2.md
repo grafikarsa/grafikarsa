@@ -123,8 +123,11 @@
 - [ ] **P2-01** `pending_changes` (edit-after-publish → draft turunan) — PRD §8.1
   - Evidence: kolom `parent_version_id` ada di DB (`internal/repo/models.go:363`) tapi 0 pemakaian
   - Status: ⬜
-- [ ] **P2-02** Tabel `portfolio_status_history` tidak ada (pakai `audit_logs`) — PRD §8.1
-  - Status: ⬜
+- [x] **P2-21** UI admin **belum bisa membuat akun** — padahal itu satu-satunya cara menambah akun (tidak ada pendaftaran mandiri)
+  - ✅ Sprint 3 (commit `834172b`) — dialog "Tambah pengguna" di `/admin/users` (username, nama, email, role, password sementara) → `POST /v1/admin/users`
+  - Akun baru ditandai `must_change_password = true`; username divalidasi dengan pola yang sama dengan CHECK constraint database
+  - Diverifikasi: buat akun → 201 · login user baru → 200 · duplikat → 409 · password lemah → 422
+  - Disertai test E2E "admin bisa membuat akun pengguna"
 - [x] **P2-03** ~~Halaman `/register`, `/forgot-password`, `/reset-password`~~ → **tidak ada by design** — akun dikelola admin
   - ✅ Sprint 3 — konfirmasi owner produk: Grafikarsa **tidak punya** pendaftaran mandiri maupun reset password oleh user. Satu-satunya jalur auth adalah `/login`.
   - Semua akun dibuat/diubah/di-reset oleh **admin**: `POST /v1/admin/users`, `PATCH /v1/admin/users/{id}`, `POST /v1/admin/users/{id}/reset-password`, `POST /v1/admin/users/{id}/activate`
