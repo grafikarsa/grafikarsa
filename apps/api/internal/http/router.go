@@ -15,6 +15,9 @@ func baseMiddleware() *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Recoverer)
+	// Tracing OpenTelemetry (PRD §13.1): span per request. Tracing no-op
+	// kalau collector tidak dikonfigurasi, jadi tidak ada overhead berarti.
+	r.Use(observability.TraceMiddleware)
 	r.Use(requestLogger)
 	r.Use(middleware.Timeout(30 * time.Second))
 	return r

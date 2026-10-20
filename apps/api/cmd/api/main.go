@@ -14,6 +14,7 @@ import (
 	"grafikarsa/api/internal/config"
 	"grafikarsa/api/internal/db"
 	apiphttp "grafikarsa/api/internal/http"
+	"grafikarsa/api/internal/observability"
 	"grafikarsa/api/internal/repo"
 	"grafikarsa/api/internal/storage"
 )
@@ -42,6 +43,23 @@ func main() {
 		os.Exit(1)
 	}
 	ctx := context.Background()
+
+	// Tracing OpenTelemetry (PRD §13.1, §17). Aktif hanya kalau
+	// OTEL_EXPORTER_OTLP_ENDPOINT di-set; kalau tidak, tracing no-op dan
+	// aplikasi jalan seperti biasa. Trace id tetap dikembalikan di header
+	// X-Trace-Id supaya log lokal bisa dikorelasikan.
+	svcName, otelEndpoint, sampleRatio := observability.TracingConfig()
+	shutdownTracing, err := observability.InitTracing(ctx, svcName, otelEndpoint, sampleRatio)
+	if err != nil {
+		slog.Error("tracing", "err", err)
+	}
+	defer func() {
+		sctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := shutdownTracing(sctx); err != nil {
+			slog.Warn("shutdown tracing", "err", err)
+		}
+	}()
 
 	pool, err := db.NewPgxPool(ctx, cfg)
 	if err != nil {
