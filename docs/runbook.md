@@ -117,6 +117,10 @@ Restore drill — buktikan backup benar-benar bisa dipulihkan, jangan hanya
 "exit 0":
 
 ```bash
+# DB_USER & DB_PASSWORD ada di .env server. Compose membacanya sendiri,
+# tapi perintah psql di bawah dibaca dari shell — jadi .env harus di-load.
+set -a; . ./.env; set +a
+
 DC="docker compose -f docker-compose.deploy.yml"
 
 # 1. DB ke database baru (TIDAK ADA database lama yang disentuh)
@@ -242,6 +246,10 @@ server"). Jadi volume v1 bukan sekadar "dibaca" oleh v2: container db-nya
 gagal start sama sekali.
 
 ```bash
+# .env di-load supaya $DB_USER & $DB_PASSWORD tersedia di shell
+# (compose membacanya sendiri, tapi perintah psql/pg_dump di bawah tidak).
+set -a; . ./.env; set +a
+
 DC="docker compose -f docker-compose.deploy.yml"
 
 # 0. Maintenance mode v1 aktif (v1 tidak boleh menerima tulisan baru selama

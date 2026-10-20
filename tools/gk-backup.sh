@@ -69,14 +69,25 @@ log "Mulai backup -> $DEST"
 
 # ---------- 1. PostgreSQL ----------
 log "1/7 pg_dump database '$DB_NAME' ..."
-if $DC exec -T "$DB_SERVICE" pg_dump -U "$DB_USER" -Fc "$DB_NAME" > "$DEST/db/$DB_NAME-$TS.dump" 2>"$DEST/db/pg_dump.err"; then
-  # pg_dump keluar 0 walau menulis 0 byte ke stdout? cek ukurannya.
-  if [ ! -s "$DEST/db/$DB_NAME-$TS.dump" ]; then
-    fail "pg_dump menghasilkan dump kosong (lihat $DEST/db/pg_dump.err)"
+# Coba beberapa kali: kalau DB sedang restart (mis. jadwal cron kebetulan
+# menabrak restart container), backup tetap bisa jalan begitu DB siap.
+DUMP_OK=0
+for attempt in 1 2 3; do
+  if $DC exec -T "$DB_SERVICE" pg_dump -U "$DB_USER" -Fc "$DB_NAME" \
+      > "$DEST/db/$DB_NAME-$TS.dump" 2>"$DEST/db/pg_dump.err"; then
+    # pg_dump keluar 0 walau menulis 0 byte ke stdout? cek ukurannya.
+    if [ -s "$DEST/db/$DB_NAME-$TS.dump" ]; then
+      DUMP_OK=1
+      break
+    fi
   fi
+  log "    percobaan $attempt gagal ($(tail -1 "$DEST/db/pg_dump.err" 2>/dev/null | cut -c1-120))"
+  [ "$attempt" = "3" ] || sleep 10
+done
+if [ "$DUMP_OK" = "1" ]; then
   log "    dump OK ($(du -h "$DEST/db/$DB_NAME-$TS.dump" | cut -f1))"
 else
-  fail "pg_dump gagal (lihat $DEST/db/pg_dump.err)"
+  fail "pg_dump gagal setelah 3 percobaan (lihat $DEST/db/pg_dump.err)"
 fi
 
 # ---------- 2. Object storage (RustFS) ----------
@@ -165,19 +176,27 @@ fi
 
 # ---------- 7. Manifest + verifikasi ----------
 log "7/7 manifest sha256 + verifikasi ..."
+VERIFY_FAIL=0
 ( cd "$DEST" && find . -type f ! -name 'MANIFEST.txt' -print0 | sort -z | xargs -0 sha256sum > MANIFEST.txt )
-( cd "$DEST" && sha256sum -c MANIFEST.txt > SHA256SUMS.check 2>&1 \
-    && echo "SHA256: OK semua checksum cocok" > VERIFY.txt \
-  || echo "SHA256: GAGAL" > VERIFY.txt )
+if ( cd "$DEST" && sha256sum -c MANIFEST.txt > SHA256SUMS.check 2>&1 ); then
+  echo "SHA256: OK semua checksum cocok" > "$DEST/VERIFY.txt"
+else
+  echo "SHA256: GAGAL" > "$DEST/VERIFY.txt"
+  VERIFY_FAIL=1
+fi
 # Validasi dump: pg_restore hanya ada di dalam container postgres.
 if $DC exec -T "$DB_SERVICE" pg_restore -l < "$DEST/db/$DB_NAME-$TS.dump" >/dev/null 2>&1; then
   echo "pg_dump: VALID (pg_restore -l OK)" >> "$DEST/VERIFY.txt"
 else
   echo "pg_dump: TIDAK valid" >> "$DEST/VERIFY.txt"
+  VERIFY_FAIL=1
 fi
-tar -tzf "$DEST/storage/storage-data-$TS.tar.gz" >/dev/null 2>&1 \
-  && echo "tar storage: valid" >> "$DEST/VERIFY.txt" \
-  || echo "tar storage: TIDAK valid" >> "$DEST/VERIFY.txt"
+if tar -tzf "$DEST/storage/storage-data-$TS.tar.gz" >/dev/null 2>&1; then
+  echo "tar storage: valid" >> "$DEST/VERIFY.txt"
+else
+  echo "tar storage: TIDAK valid" >> "$DEST/VERIFY.txt"
+  VERIFY_FAIL=1
+fi
 
 {
   echo "Backup Grafikarsa v2"
@@ -192,7 +211,15 @@ tar -tzf "$DEST/storage/storage-data-$TS.tar.gz" >/dev/null 2>&1 \
 } > "$DEST/SUMMARY.txt"
 
 chmod -R go-rwx "$DEST"
-log "SELESAI -> $DEST"
 cat "$DEST/SUMMARY.txt"
 cat "$DEST/VERIFY.txt" 2>/dev/null
 df -h / | tail -1
+
+# Verifikasi yang gagal harus membuat script keluar non-zero. Kalau tidak,
+# cron menganggap backup sukses padahal arsipnya rusak atau checksumnya
+# tidak cocok — jaring pengaman terakhir justru يقول "aman".
+if [ "$VERIFY_FAIL" != "0" ]; then
+  log "VERIFIKASI GAGAL — backup ini TIDAK bisa dipercaya (lihat $DEST/VERIFY.txt)"
+  exit 1
+fi
+log "SELESAI -> $DEST"

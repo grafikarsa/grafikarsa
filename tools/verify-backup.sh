@@ -9,6 +9,7 @@ set -uo pipefail
 DIR="${1:-.}"
 cd "$DIR" || { echo "FAIL: tidak bisa masuk $DIR"; exit 1; }
 fail=0
+warn=0
 
 echo "=== 1. checksum ==="
 # MANIFEST.txt = daftar checksum (dipakai sha256sum -c).
@@ -29,8 +30,16 @@ fi
 echo "=== 2. arsip object storage ==="
 TAR=$(ls storage/*.tar.gz 2>/dev/null | head -1)
 if [ -n "$TAR" ]; then
-  n=$(tar -tzf "$TAR" 2>/dev/null | grep -c . )
-  if [ "$n" -gt 0 ]; then echo "  OK: $n entri dalam $TAR"; else echo "  FAIL: arsip tidak terbaca"; fail=1; fi
+  # Exit status tar harus dicek: arsip yang terpotong masih bisa menghasilkan
+  # beberapa entri sebelum tar gagal, jadi menghitung entri saja tidak cukup.
+  LIST=$(mktemp)
+  if tar -tzf "$TAR" > "$LIST" 2>/dev/null; then
+    n=$(grep -c . "$LIST")
+    if [ "$n" -gt 0 ]; then echo "  OK: $n entri dalam $TAR"; else echo "  FAIL: arsip kosong"; fail=1; fi
+  else
+    echo "  FAIL: arsip tidak terbaca (tar keluar non-zero — arsip terpotong, atau tool dekompresi tidak ada di host)"; fail=1
+  fi
+  rm -f "$LIST"
 else
   echo "  FAIL: arsip storage tidak ditemukan"; fail=1
 fi
@@ -41,10 +50,17 @@ if [ -n "$DUMP" ]; then
   sz=$(stat -c%s "$DUMP")
   echo "  ukuran: $sz byte"
   if command -v pg_restore >/dev/null 2>&1; then
-    pg_restore -l "$DUMP" >/dev/null 2>&1 && echo "  OK: pg_restore -l sukses" || { echo "  FAIL: pg_restore -l gagal"; fail=1; }
+    if pg_restore -l "$DUMP" >/dev/null 2>&1; then
+      echo "  OK: pg_restore -l sukses"
+    else
+      echo "  FAIL: pg_restore -l gagal"; fail=1
+    fi
   else
-    echo "  (pg_restore tidak ada di host — validasi lewat container:"
-    echo "   docker cp $DUMP grafikarsa-db:/tmp/v.dump && docker exec grafikarsa-db pg_restore -l /tmp/v.dump)"
+    # Dump yang cocok dengan manifest tapi belum bisa dibaca pg_restore TIDAK
+    # boleh dilaporkan sebagai "backup sehat" — statusnya: perlu validasi manual.
+    echo "  PERLU VALIDASI MANUAL: pg_restore tidak ada di host."
+    echo "   docker cp $DUMP grafikarsa-db:/tmp/v.dump && docker exec grafikarsa-db pg_restore -l /tmp/v.dump"
+    warn=1
   fi
 else
   echo "  FAIL: dump tidak ditemukan"; fail=1
@@ -56,5 +72,12 @@ echo "=== 4. inventaris ==="
 [ -f SUMMARY.txt ] && echo && cat SUMMARY.txt
 
 echo
-[ "$fail" -eq 0 ] && echo "HASIL: BACKUP SEHAT ✓" || echo "HASIL: ADA MASALAH ✗"
-exit $fail
+if [ "$fail" -ne 0 ]; then
+  echo "HASIL: ADA MASALAH ✗"
+  exit 1
+elif [ "$warn" -ne 0 ]; then
+  echo "HASIL: PERLU VALIDASI MANUAL (dump belum diuji pg_restore)"
+  exit 2
+fi
+echo "HASIL: BACKUP SEHAT ✓"
+exit 0
