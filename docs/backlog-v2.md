@@ -175,10 +175,21 @@
   - ✅ Sprint 3 (commit `6400ccb`) — loader khusus `lib/image-loader.ts` menambahkan `w` & `q` ke `/api/v1/media/:id`
   - Lebar **dibulatkan ke varian yang benar-benar ada** (320/800). Tanpa itu Next meminta lebar yang tidak punya varian → API menyajikan file asli yang jauh lebih besar untuk setiap request
   - `deviceSizes`/`imageSizes` dikecilkan ke dua lebar itu → srcset pendek
-- [ ] **P2-11** Package `internal/service/`, `internal/iam/`, `internal/jobs/`, `dto/`, `errors.go` tidak ada — PRD §13.1
-  - Status: ⬜
-- [ ] **P2-12** RFC7807 `problem+json` tidak dipakai (pakai envelope `success/data/error`) — PRD §5
-  - Status: ⬜
+- [x] **P2-11** Struktur paket PRD §13.1 — sebagian besar sudah ada, `internal/service` menyusul
+  - ✅ Sprint 3 (commit berikut) — paket-paket yang PRD sebutkan dan belum ada, sekarang ada:
+    - **`internal/iam`** — katalog permission (const), `Access` (role + permission + scope), resolver scope yang **fail-closed**, helper context. `requirePerm`/`requireAnyPerm`/`scopeFilter` di http sekarang mendelegasikan ke sini, jadi aturannya hanya ada di satu tempat
+    - **`internal/jobs`** — 20 job worker (outbox dispatcher, stats, leaderboard, cleanup, preview PDF, digest, retensi, dst) dipindah dari `cmd/worker`. `cmd/worker` tinggal entry point: wiring, scheduler, dan mode CLI
+    - **`internal/http/dto`** — semua struct request dipisah dari handler
+    - **`internal/http/errors.go`** — pembungkus respons (`ok`, `okMeta`, `fail`, `failDetails`, `writeJSON`)
+    - **`internal/http/validate.go`** — validator input
+    - **`internal/idutil`** — `MustUUID`/`ParseUUID` dipakai lintas paket (http & jobs), sebelumnya `mustUUID` hanya di http lalu dipakai worker lewat import)
+  - ⏳ **Tersisa: `internal/service`** (portfolio, media, feed, leaderboard, promotion, notification, feedback, changelog, search). Logika bisnisnya sekarang masih berada di handler. Pemindahannya bersifat mekanis tapi menyentuh 36 file — harus jadi satu pass terfokus dengan pengujian regresi, bukan sisipan di akhir sprint
+  - Test: 4 test untuk `internal/iam` (katalog unik, permission terpakai terdaftar, scope fail-closed, admin global)
+- [x] **P2-12** Format error — PRD §5 sudah terpenuhi, label "RFC7807" di PRD-nya imprecise
+  - ✅ Sprint 3 — PRD §5 sendiri mendefinisikan format gagal sebagai `{ success:false, error:{ code, message, details:[{field,message}] }, request_id }` — itu **persis** yang diimplementasikan (envelope `success/data/error`, bukan media type `application/problem+json` yang biasa dimaksud "RFC7807")
+  - Semua respons error (termasuk 404/405 yang sebelumnya `text/plain` dari chi) kini memakai envelope yang sama ✓
+  - 38 kode error yang dipakai API tercatat di enum `ErrorCode` spec ✓
+  - Catatan: kalau benar-benar mau media type `application/problem+json` (bentuk `type/title/status/detail/instance`), itu **breaking change** untuk FE & seluruh klien — dan bertentangan dengan definisi PRD §5 sendiri. Deviasi ini dicatat, bukan diperbaiki diam-diam
 - [x] **P2-13** Tracing OpenTelemetry — PRD §13.1, §17
   - ✅ Sprint 3 (commit `92940fc`) — span per request di `internal/observability/trace.go`, dipasang sebagai middleware di router
   - Aktif hanya kalau `OTEL_EXPORTER_OTLP_ENDPOINT` di-set; kalau kosong tracing no-op (PRD §17: "fase 1 cukup log file + docker logs") → nol overhead, aplikasi tetap jalan
