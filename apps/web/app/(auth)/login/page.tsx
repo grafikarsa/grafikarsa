@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { login } from "@/lib/api";
@@ -45,7 +45,10 @@ function LoginInner() {
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center p-8">
       <Card>
         <CardHeader>
-          <CardTitle>Masuk Grafikarsa</CardTitle>
+          {/* CardTitle dirender sebagai <div>, jadi halaman ini perlu <h1>
+              sendiri — selain struktur dokumen yang benar, ini yang
+              membuat test E2E/a11y bisa menemukan judul halaman. */}
+          <h1 className="text-lg font-semibold">Masuk Grafikarsa</h1>
         </CardHeader>
         <CardContent>
           <form onSubmit={submit} className="flex flex-col gap-4">

@@ -44,6 +44,9 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* CardTitle dirender sebagai <div>; halaman ini butuh <h1> sendiri
+          supaya struktur dokumennya benar. */}
+      <h1 className="text-2xl font-bold">Dashboard Admin</h1>
       <Card>
         <CardHeader>
           <CardTitle>Ringkasan</CardTitle>

@@ -100,6 +100,9 @@ export function FeedList() {
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-4 p-4">
+      {/* Halaman ini butuh heading sendiri: struktur dokumen yang benar
+          (dan test E2E/a11y bisa menemukan judul halaman). */}
+      <h1 className="text-2xl font-bold">Feed</h1>
       <Tabs value={algo} onValueChange={changeAlgo}>
         <TabsList>
           <TabsTrigger value="smart" disabled={!user}>
