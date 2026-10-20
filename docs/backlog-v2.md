@@ -284,7 +284,12 @@
 - [x] **P6-03** Migrasi v1→v2 di dry-run & execute terhadap dump produksi (1.688 user, 1.723 portfolio, 6.970 block) — PRD §16
   - ✅ Sprint 3 (commit `1f740a6`) — dry-run menemukan **6 bug** yang membuat hampir semua data hilang (portfolio, block, like, follow, comment, notification, assessment). Setelah diperbaiki: **100%** user/portfolio/like/follow/comment/notification/feedback termigrasi, 5.939/6.970 block (+1.031 karantina dengan alasan sah)
   - Hasil akhir di DB bersih: users 1688 · portfolios 1723 · blocks 5939 · likes 740 · follows 4341 · comments 79 · notifications 6946 · feedback 17 · skipped `{}`
-- [ ] **P6-04** Storage mirror 5,1 GB belum dilakukan — PRD §16.3 (`tools/backup.sh` sudah ada `rclone sync`)
+- [x] **P6-04** Storage mirror 5,1 GB — PRD §16.3
+  - ✅ Sprint 3 (commit `6c49cc8`) — `tools/storage-mirror.sh`: `mc mirror` + verifikasi 2 lapis (`mc diff` nama & ukuran semua objek, plus checksum md5 pada sampel objek yang tersebar)
+  - **Divalidasi end-to-end** dengan dua RustFS lokal: 45 objek (9,35 MiB) ter-mirror, `mc diff` bersih, 12 checksum cocok
+  - Detail yang dulu bikin gagal: `mc alias set` wajib `--api S3v4` (default-nya S3v2 ditolak MinIO modern & RustFS, dan pesannya tidak menyiratakkan soal versi API)
+  - Layout key dipertahankan 100% (cuma ganti host), sesuai PRD §16.3 — media hasil migrasi tetap memakai key v1; key format baru (uuid7 + path per-entity) hanya untuk upload baru
+  - ⏳ **Eksekusi penuh (5,1 GB) saat go-live**: butuh storage baru menyala + maintenance mode aktif, dan server prod tidak boleh disentuh sekarang. Prosedur lengkap di `docs/runbook.md`
 - [x] **P6-05** k6 p95 diverifikasi di VPS 4 GB itu sendiri terhadap API produksi — PRD §14.1, §18 gate
   - ✅ Sprint 3 — p(95) endpoint publik **2,91 ms** (ambang 800 ms), rate error 0,00%, 1800/1800 check lulus
   - Sekalian membuktikan script k6 yang diperbaiki (threshold `p(95)`, login sekali di `setup()`) jalan tanpa memicu lockout
