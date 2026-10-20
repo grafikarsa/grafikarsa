@@ -84,16 +84,24 @@ func migrateMajors(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o opt
 			return err
 		}
 		src := uuidString(srcID)
-		k := strings.ToLower(strings.TrimSpace(fmt.Sprint(kode)))
-		n := strings.ToLower(strings.TrimSpace(fmt.Sprint(nama)))
-		if n == "" || n == "<nil>" {
+		// Nilai v1 bisa NULL. fmt.Sprint(nil) menghasilkan "<nil>", yang
+		// kalau tidak dibersihkan jadi kode "nil" dan nama "<nil>".
+		kodeOrig := cleanText(kode)
+		namaOrig := cleanText(nama)
+		k := strings.ToLower(kodeOrig)
+		displayName := namaOrig
+		if displayName == "" {
+			displayName = kodeOrig
+		}
+		n := strings.ToLower(displayName)
+		if n == "" {
 			n = k
 		}
-		if k == "" || k == "<nil>" {
+		if k == "" {
 			// v2 majors.code NOT NULL -> pakai slug dari nama.
 			k = slugify(n)
 		}
-		if k == "" || n == "" {
+		if k == "" || displayName == "" {
 			st.Skipped["major_tanpa_nama"]++
 			continue
 		}
@@ -110,7 +118,7 @@ func migrateMajors(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o opt
 				if err := v2.QueryRow(ctx,
 					`INSERT INTO majors (code, name) VALUES ($1,$2)
 					 ON CONFLICT (code) DO UPDATE SET name=EXCLUDED.name
-					 RETURNING id::text`, k, n).Scan(&targetID); err != nil {
+					 RETURNING id::text`, k, displayName).Scan(&targetID); err != nil {
 					return fmt.Errorf("buat major %s: %w", k, err)
 				}
 				byCode[k] = targetID
@@ -332,6 +340,20 @@ func migrateEnrollments(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, 
 	}
 	slog.Info("enrollments dibuat dari users.kelas_id", "count", made, "dilewati", skipped)
 	return rows.Err()
+}
+
+// cleanText mengubah nilai DB (yang bisa NULL) menjadi teks. NULL dan
+// "<nil>" (hasil fmt.Sprint(nil)) dianggap kosong — kalau tidak, baris v1
+// yang kosong akan jadi major dengan kode "nil" dan nama "<nil>".
+func cleanText(v any) string {
+	if v == nil {
+		return ""
+	}
+	s := strings.TrimSpace(fmt.Sprint(v))
+	if s == "<nil>" {
+		return ""
+	}
+	return s
 }
 
 // validClassGrade cek CHECK constraint v2 (grade = 10/11/12).

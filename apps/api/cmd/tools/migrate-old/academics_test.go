@@ -32,6 +32,27 @@ func TestValidClassGroup(t *testing.T) {
 	}
 }
 
+// TestCleanTextMajor v1 bisa punya kolom NULL. fmt.Sprint(nil) = "<nil>",
+// yang kalau tidak dibersihkan jadi kode "nil" dan nama "<nil>".
+func TestCleanText(t *testing.T) {
+	cases := []struct {
+		in   any
+		want string
+	}{
+		{nil, ""},
+		{"<nil>", ""},
+		{"  <nil>  ", ""},
+		{"", ""},
+		{"  tg  ", "tg"},
+		{"Teknik Grafika", "Teknik Grafika"},
+	}
+	for _, c := range cases {
+		if got := cleanText(c.in); got != c.want {
+			t.Fatalf("cleanText(%v) = %q, mau %q", c.in, got, c.want)
+		}
+	}
+}
+
 // TestSlugifyMajor v2 punya majors.code NOT NULL. Kalau satu jurusan v1 punya
 // kode kosong, slug dari nama dipakai supaya majors itu tetap tersimpan.
 func TestSlugifyMajor(t *testing.T) {
