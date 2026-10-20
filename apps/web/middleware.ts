@@ -37,9 +37,18 @@ function isPublic(pathname: string): boolean {
     if (p !== "/" && pathname.startsWith(p + "/")) return true;
   }
   // Profil ({username}) dan karya ({username}/{slug}) — bukan jalur privat.
+  //
+  // Segmen PERTAMA yang bukan reserved berarti ini rute profil publik, dan
+  // seluruh turunannya juga publik. Kedalaman tidak dibatasi: route
+  // opengraph-image milik Next.js ada di /{username}/{slug}/opengraph-image
+  // dan HARUS bisa diakses tanpa sesi — crawler mesin pencari dan platform
+  // sosial mengambilnya tanpa cookie, jadi kalau terkunci, metadata OG-nya
+  // tidak pernah terbaca.
+  //
+  // Yang tetap privat: /admin, /me, /settings, /notifications — semuanya
+  // ada di RESERVED.
   const seg = pathname.split("/").filter(Boolean);
-  if (seg.length === 1 && !RESERVED.has(seg[0])) return true;
-  if (seg.length === 2 && !RESERVED.has(seg[0])) return true;
+  if (seg.length >= 1 && !RESERVED.has(seg[0])) return true;
   return false;
 }
 

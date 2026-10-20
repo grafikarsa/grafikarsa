@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -17,18 +18,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { apiGet, apiSend } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
-
-type Block = { id: string; block_type: string; position: number; payload: Record<string, unknown> };
-type Portfolio = {
-  id: string;
-  title: string;
-  slug: string;
-  status: string;
-  blocks: Block[];
-  like_count: number;
-  comment_count: number;
-  is_liked: boolean;
-};
+import type { Block, Portfolio } from "@/lib/portfolio-types";
 
 type Comment = {
   id: string;
@@ -171,7 +161,13 @@ function BlockView({ b }: { b: Block }) {
       if (!src) return null;
       return (
         <figure className="flex flex-col gap-1">
-          <img src={src} alt={p.alt ?? ""} className="rounded" loading="lazy" />
+          <Image
+            src={src}
+            alt={p.alt ?? ""}
+            width={800}
+            height={600}
+            className="h-auto w-full rounded"
+          />
           {p.caption && (
             <figcaption className="text-muted-foreground text-xs">{p.caption}</figcaption>
           )}
@@ -239,11 +235,12 @@ function BlockView({ b }: { b: Block }) {
         <div className="flex flex-col gap-2">
           {previewSrc && (
             <a href={fileHref} target="_blank" rel="noreferrer">
-              <img
+              <Image
                 src={previewSrc}
                 alt="Pratinjau dokumen PDF"
-                className="max-h-96 rounded border object-contain"
-                loading="lazy"
+                width={800}
+                height={600}
+                className="max-h-96 w-auto rounded border object-contain"
               />
             </a>
           )}

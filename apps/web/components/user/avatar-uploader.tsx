@@ -1,5 +1,9 @@
 "use client";
 
+// Alias: "Image" di file ini dipakai sebagai constructor DOM (untuk crop),
+// jadi komponen Next.js diimpor dengan nama lain.
+import NextImage from "next/image";
+
 import Cropper from "react-easy-crop";
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -85,9 +89,11 @@ export function AvatarUploader({
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-3">
         {currentMediaID && (
-          <img
+          <NextImage
             src={`/api/v1/media/${currentMediaID}?w=320`}
             alt="Avatar sekarang"
+            width={64}
+            height={64}
             className="size-16 rounded-full object-cover"
           />
         )}
