@@ -205,12 +205,17 @@
   - Fix: `/me` jadi client component memakai `apiGet("v1/me")`
 - [x] **P2-20** ~~Path parameter tidak dideklarasikan + status code tak lengkap di OpenAPI~~ → **SUDAH DIPERBAIKI** (commit `4c9aac7`)
   - 16 "Schema Error: Path parameter 'id' is not defined" + status (400/404/409/201/403) tak terdokumentasi
-- [ ] **P2-16** Empat check schemathesis dikecualikan dari contract test: `status_code_conformance`, `missing_required_header`, `unsupported_method`, `content_type_conformance`
-  - Semua complained **kelengkapan dokumentasi spec**, bukan pelanggaran kontrak: 404 untuk resource yang belum ada, 405 untuk method yang tidak di-deklarasikan, 401-vs-404 untuk endpoint publik berpath param
-  - Menutupnya butuh dokumentasi status per-endpoint (generator tidak tahu perilaku tiap handler)
-  - Check yang **tetap diuji** (semua lulus): `response_schema_conformance`, `response_headers_conformance`, `not_a_server_error`, `negative_data_rejection`, `use_after_free`
-  - Ditemukan saat menyiapkan job CI contract test (Sprint 3)
-  - Status: ⬜
+- [x] **P2-16** Empat check schemathesis yang dikecualikan → **sekarang AKTIF dan LOLOS** — PRD §14.3
+  - ✅ Sprint 3 (commit `1d69113`) — **1302 test case, 1302 lulus, 0 failure** (sebelumnya 110 failure)
+  - Yang diperbaiki (banyak bug nyata, bukan cuma dokumen):
+    - `mustUUID` menelan kegagalan parse → UUID tak valid jadi UUID nol → **200 dengan daftar kosong** (sekarang **400** dengan pesan jelas)
+    - 404/405 dibalas `text/plain` padahal kontrak janji `application/json` (sekarang envelope JSON)
+    - recoverer chi menulis log non-JSON (sekarang recoverer sendiri)
+    - BFF: TRACE/QUERY **tidak didukung Next.js** → 500 (sekarang 405); HEAD/OPTIONS juga 500 (sekarang lengkap)
+    - skrip k6: nama cookie CSRF ditulis mati `__Host-csrf` → `PUT /feed/preferences` gagal **150/150** (sekarang dibaca dari respons login)
+  - Spec OpenAPI diperbarui: parameter path lengkap (dengan pola), parameter query wajib, respons 404/405/301/410, `PaginationMeta` nullable, 14 kode error yang hilang dari enum `ErrorCode`, 400 juga `text/plain`
+  - Contract test sekarang ditargeting ke **BFF** (path publik `/api/v1/...` memang dilayani BFF; kalau ke API langsung setiap endpoint membalas 404 dan tesnya tidak menguji apa pun). Job CI `contract` menjalankan API + web
+  - Pengecualian tersisa hanya 2, dengan alasan tercatat: TRACE/QUERY (tidak didukung Next.js) & `/api/v1/storage/*` (sengaja balas 410 Gone — lebih benar buat SEO, tapi ST202 menganggap 410 "ditolak")
 
 ---
 
