@@ -1,7 +1,19 @@
 name: deploy
 on:
+  # Deploy ke produksi TIDAK lagi otomatis tiap push ke main.
+  #
+  # Grafikarsa masih menjalankan stack v1 di server, dan go-live v2 punya
+  # prasyarat yang belum dipenuhi: storage mirror 5,1 GB, migrasi DB v1→v2
+  # di server, jendela maintenance, dan restore drill. Kalau push ke main
+  # otomatis men-deploy, satu merge bisa mengganti situs produksi dengan stack
+  # v2 yang datanya belum dimigrasi -> situsnya kosong.
+  #
+  # Deploy sekarang jadi tindakan yang disengaja: tag versi (v2.0.0) atau
+  # manual lewat workflow_dispatch. Itu juga cocok dengan prosedur go-live
+  # PRD §16: jendela maintenance, backup, migrasi, verifikasi.
   push:
-    branches: [main]
+    tags:
+      - "v*"
   workflow_dispatch:
 
 env:
@@ -62,7 +74,12 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Trivy scan (blocking on HIGH/CRITICAL fixable)
-        uses: aquasecurity/trivy-action@v0.28.0
+        # v0.28.0 rusak: composite action-nya mereferensikan
+        # aquasecurity/setup-trivy@v0.2.1, dan tag itu sudah dihapus dari
+        # upstream -> workflow gagal saat "Prepare all required actions" dengan
+        # "unable to find version 'v0.2.1'". Versi yang lebih baru mengunci
+        # setup-trivy by commit SHA, jadi selalu bisa di-resolve.
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/grafikarsa-api:sha-${{ github.sha }}
           severity: HIGH,CRITICAL
