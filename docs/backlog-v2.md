@@ -161,9 +161,12 @@
   - Interface `storage.Store` dipakai handler, bukan implementasi konkret
 - [x] **P2-07** Guard "hanya operasi S3 yang diizinkan" **ditegakkan** (bukan sekadar konvensi) — PRD §7.5
   - ✅ Sprint 3 (commit `b89223e`) — `internal/storage/guard_test.go` gagal kalau: ada import SDK S3 / SDK vendor di luar `internal/storage`; ada operasi S3 di luar daftar PRD §7.5 ayat 2; ada env `*_RUSTFS_*`/`*_MINIO_*` di `.env.example`/CI/blok compose selain `storage:`; atau handler memakai `*storage.Storage` (implementasi konkret) alih-alih interface
-- [ ] **P2-08** `nuqs` + DataTable server-side di halaman admin — PRD §12.3
-  - Evidence: `nuqs` tidak ada di `package.json`; `/admin/users|classes|portfolios` filter klien, tanpa pagination server-side
-  - Status: ⬜
+- [x] **P2-08** `nuqs` + DataTable server-side di halaman admin — PRD §12.3
+  - ✅ Sprint 3 (commit `5e07fea`) — komponen `DataTable` server-side (pencarian, pengurutan, pagination) dengan state di URL lewat `nuqs`: bisa di-share, tombol back/forward browser bekerja, refresh tidak kehilangan posisi
+  - API `ListUsersScoped`/`CountUsersScoped` menerima `search` (username/nama/email) + `sort`/`dir`; nama kolom dari client tidak pernah dipakai langsung (daftar putih) sehingga tidak bisa disisipkan lewat query string
+  - Sebelumnya halaman admin menarik SELURUH user lalu memfilter di browser — tidak layak untuk sekolah dengan ribuan akun di VPS 4 GB
+  - `apiGetWithMeta` mengembalikan `meta` (page/total) sekaligus data
+  - Test E2E: pencarian & pengurutan masuk ke URL
 - [x] **P2-09** OG image per portfolio + JSON-LD `CreativeWork` — PRD §14.3
   - ✅ Sprint 3 (commit `6400ccb`) — `opengraph-image.tsx` di segmen `[username]/[slug]`: gambar OG 1200×630 dibuat on-the-fly (ImageResponse) berisi judul & pembuatnya
   - JSON-LD `schema.org/CreativeWork`: nama, URL, penulis, penerbit, tanggal terbit, jumlah suka/komentar
