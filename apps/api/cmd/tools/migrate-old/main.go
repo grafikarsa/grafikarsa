@@ -25,8 +25,6 @@ package main
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -49,6 +47,7 @@ type options struct {
 	dryRun       bool
 	migrateMedia bool
 	storageHost  string
+	v1Manifest   string
 	batchSize    int
 }
 
@@ -61,6 +60,10 @@ type stats struct {
 	Assessments              int
 	Feedback, Changelogs     int
 	MediaRegistered          int
+	// Akademik v1 -> v2.
+	Majors, MajorsCreated int
+	Classes               int
+	Enrollments           int
 	// MediaFallback: URL yang TIDAK bisa didaftarkan sebagai media_assets
 	// (hanya masuk legacy_urls tanpa media_id). Ini berarti ada objek yang
 	// tidak terikat ke media — harus menggagalkan migrasi, bukan cuma
@@ -80,6 +83,7 @@ func main() {
 	flag.BoolVar(&execute, "execute", false, "Tulis ke v2 (menonaktifkan dry-run)")
 	flag.BoolVar(&o.migrateMedia, "migrate-media", false, "Daftarkan objek storage jadi media_assets + legacy_urls")
 	flag.StringVar(&o.storageHost, "storage-host", "", "Host S3 baru (untuk verifikasi objek, opsional)")
+	flag.StringVar(&o.v1Manifest, "v1-manifest", "", "Manifest key storage v1 (dari tools/storage-mirror.sh)")
 	flag.IntVar(&o.batchSize, "batch", 500, "Ukuran batch insert")
 	flag.Parse()
 
@@ -123,11 +127,20 @@ func main() {
 	slog.Info("skema v1 terdeteksi", "tables", strings.Join(names, ","))
 
 	st := newStats()
-	if err := migrateUsers(ctx, v1, v2, introspect, o, st); err != nil {
+	// Akademik (jurusan -> majors, kelas -> classes) harus lebih dulu:
+	// user menunjuk kelas lewat UUID v1, dan mapping-nya baru ada setelah
+	// langkah ini. Kalau dibalik, semua user dapat class_id/major_id NULL.
+	classMajor, err := migrateAcademics(ctx, v1, v2, introspect, o, st)
+	if err != nil {
+		fatal("migrate academics: %v", err)
+	}
+	if err := migrateUsers(ctx, v1, v2, introspect, o, st, classMajor); err != nil {
 		fatal("migrate users: %v", err)
 	}
-	if err := migrateAcademics(ctx, v1, v2, introspect, o, st); err != nil {
-		slog.Warn("migrate academics dilewati sebagian", "err", err)
+	// Enrollments setelah users: enrollment meng_acuan user (foreign key),
+	// jadi user-nya harus sudah ada di v2.
+	if err := migrateEnrollments(ctx, v1, v2, introspect, o, st); err != nil {
+		slog.Warn("migrate enrollments dilewati sebagian", "err", err)
 	}
 	if err := migratePortfolios(ctx, v1, v2, introspect, o, st); err != nil {
 		fatal("migrate portfolios: %v", err)
@@ -155,6 +168,8 @@ func main() {
 	slog.Info("migrasi selesai",
 		"dry_run", o.dryRun,
 		"users", st.Users, "users_skipped", st.UsersSkipped,
+		"majors", st.Majors, "majors_baru", st.MajorsCreated,
+		"classes", st.Classes, "enrollments", st.Enrollments,
 		"portfolios", st.Portfolios, "blocks", st.Blocks,
 		"blocks_quarantined", st.BlocksQuarantined,
 		"likes", st.Likes, "follows", st.Follows, "comments", st.Comments,
@@ -373,11 +388,6 @@ func saveMap(ctx context.Context, v2 *pgxpool.Pool, dry bool, srcTable, srcID, t
 	_, err := v2.Exec(ctx, `INSERT INTO legacy_id_map (source_table, source_id, target_table, target_id) VALUES ($1,$2,$3,$4)
 		ON CONFLICT (source_table, source_id) DO NOTHING`, srcTable, srcID, targetTable, targetID)
 	return err
-}
-
-func sha256str(s string) string {
-	h := sha256.Sum256([]byte(s))
-	return hex.EncodeToString(h[:])
 }
 
 // nowYear dipakai untuk aturan alumni (tahun_masuk+3 <= now).

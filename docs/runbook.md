@@ -66,8 +66,9 @@ localhost, dan `NEXT_PUBLIC_APP_URL` localhost yang membuat semua mutasi 403).
 | Health/readiness | `curl -s https://DOMAIN/api/v1/health`, `curl -s http://api:8080/ready` |
 | Metrics | `curl -s -H "Authorization: Bearer <token admin>" http://api:8080/metrics` (butuh permission `system.jobs`) |
 | Log | `docker compose logs -f api worker` (JSON via slog, ada `request_id`) |
-| Backup manual | `cd /opt/grafikarsa && ./backup.sh` (pg_dump + mirror storage + retensi + warning disk) |
-| Backup terjadwal | crontab: `0 2 * * * /opt/grafikarsa/backup.sh >> /var/log/grafikarsa-backup.log 2>&1` |
+| Backup manual | `cd /opt/grafikarsa && ./gk-backup.sh` (pg_dump + arsip volume storage + cache + inventaris + manifest sha256 + retensi + warning disk) |
+| Backup terjadwal | crontab: `0 2 * * * /opt/grafikarsa/gk-backup.sh >> /var/log/grafikarsa-backup.log 2>&1` |
+| Verifikasi backup | `cd /opt/grafikarsa && ./verify-backup.sh backup/<timestamp>` (checksum, arsip storage terbaca, dump pg bisa dilist — read-only) |
 | Restore DB | `docker exec -i grafikarsa-db pg_restore -c -U grafikarsa -d grafikarsa < backup/db-YYYY-MM-DD.dump` |
 | Recompute leaderboard | `POST /api/v1/admin/leaderboards/recompute` (permission `system.jobs`, maks 1×/jam) |
 | Re-run promotion | UI `/admin/promotion` → Preview → Setujui → ketik tahun tujuan → Eksekusi |
@@ -83,6 +84,63 @@ localhost, dan `NEXT_PUBLIC_APP_URL` localhost yang membuat semua mutasi 403).
 | Uji beban (k6) | `make test-load` |
 | Uji kontrak (schemathesis) | `make test-contract` |
 
+## Backup & restore (v2)
+
+Backup harian dijalankan cron: `0 2 * * * /opt/grafikarsa/gk-backup.sh`.
+Script-nya ada di repo (`tools/gk-backup.sh`) dan disalin ke server saat
+deploy — nama file di server **harus** `gk-backup.sh` karena itu yang dipanggil
+crontab.
+
+Isi satu backup (direktori `backup/<timestamp>/`):
+
+| Isi | Keterangan |
+|---|---|
+| `db/<db>-<ts>.dump` | `pg_dump -Fc` (format custom, bisa dipulihkan per tabel) |
+| `storage/storage-data-<ts>.tar.gz` | seluruh volume object storage (data bucket + metadata RustFS) |
+| `cache/` | snapshot Dragonfly (best effort — cache disposable) |
+| `config/` | `.env`, compose, Caddyfile, daftar image yang jalan |
+| `inventory/` | row count per tabel + daftar objek storage (ukuran & path) |
+| `MANIFEST.txt` | checksum sha256 semua file (dicek saat restore drill) |
+
+Volume object storage dibaca dari **dalam container helper**, bukan lewat path
+host (`/var/lib/docker/volumes/...` mode 700 root). Jadi script jalan sebagai
+user mana pun yang punya akses docker, dan image yang dipakai adalah image
+milik service storage itu sendiri — tidak perlu menarik image tambahan.
+
+Verifikasi (read-only, tidak menyentuh data asli):
+
+```bash
+cd /opt/grafikarsa && ./verify-backup.sh backup/<timestamp>
+```
+
+Restore drill — buktikan backup benar-benar bisa dipulihkan, jangan hanya
+"exit 0":
+
+```bash
+# DB_USER & DB_PASSWORD ada di .env server. Compose membacanya sendiri,
+# tapi perintah psql di bawah dibaca dari shell — jadi .env harus di-load.
+set -a; . ./.env; set +a
+
+DC="docker compose -f docker-compose.deploy.yml"
+
+# 1. DB ke database baru (TIDAK ADA database lama yang disentuh)
+$DC exec -T db psql -U "$DB_USER" -d postgres -c "create database restore_test owner $DB_USER;"
+$DC exec -T db pg_restore -U "$DB_USER" -d restore_test --no-owner --no-privileges \
+  < backup/<timestamp>/db/*.dump
+
+# 2. Object storage ke direktori sementara
+mkdir -p /tmp/gk-restore && tar -xzf backup/<timestamp>/storage/*.tar.gz -C /tmp/gk-restore
+ls -la /tmp/gk-restore/grafikarsa/
+
+# 3. Bandingkan jumlah objek dengan inventaris
+cat backup/<timestamp>/inventory/object-count-*.txt
+find /tmp/gk-restore/grafikarsa -type f | wc -l
+```
+
+Kalau jumlah objek tidak sama, **jangan** pakai backup itu — cari sumber lain.
+Restore DB yang gagal di tengah jalan tidak merusak data asli: database
+sasaran baru dibuang dan diulang dari dump.
+
 ## Job terjadwal
 
 Outbox 30 detik · stats 5 menit · publish changelog 5 menit · cleanup media 1 jam ·
@@ -94,31 +152,68 @@ mematikan scheduler. Jalankan satu job manual:
 
 ## Maintenance mode (jendela migrasi v1 → v2)
 
-Saat data dimindahkan, aplikasi v1 perlu di-*freeze* supaya tidak ada tulisan
-baru yang masuk selama migrasi berjalan. Pengunjung melihat halaman
-"Pindah ke v2" (HTTP 503, `Retry-After: 600`).
+Saat data dipindahkan, aplikasi v1 perlu di-*freeze* supaya tidak ada tulisan
+baru yang masuk selama migrasi berjalan.
 
-Dua cara menyalakannya:
+**Penting: v1 TIDAK punya fitur maintenance yang bisa dipakai.** Komponen
+`components/maintenance/maintenance-page.tsx` memang ada di bundle v1, tapi
+tidak pernah dirender (dead code) — tidak ada env var, tidak ada header, dan
+halaman yang mengembalikannya sama persis dengan normal. Header
+`x-maintenance-mode` yang disebut di PRD §16.1 **tidak berpengaruh** di v1
+(diverifikasi langsung ke container v1).
 
-| Cara | Kapan aktif | Catatan |
-|---|---|---|
-| `NEXT_PUBLIC_MAINTENANCE_MODE=true` saat build | saat build ulang | Nama flag yang dipakai PRD §16.1; perlu build + deploy ulang |
-| Header `x-maintenance-mode: on` dari reverse proxy | **sekali reload proxy** | Tanpa build ulang — dipakai untuk go-live |
-
-Contoh Caddy (reverse proxy di depan Next.js):
+Jadi maintenance dilakukan di **level proxy** — Caddy menjawab 503 sendiri,
+tanpa bergantung pada aplikasi v1 sama sekali.
 
 ```caddy
-# buka maintenance
-grafikarsa.com {
-    header x-maintenance-mode on
-    reverse_proxy web:3000
-}
-# tutup maintenance: hapus baris "header x-maintenance-mode on", lalu
-#   docker compose exec caddy caddy reload
+# /opt/grafikarsa/Caddyfile — tambahkan blok ini di dalam blok {$DOMAIN}
+
+	@write {
+		path /api/*
+		method POST PUT PATCH DELETE
+	}
+	handle @write {
+		header Retry-After 600
+		respond "Pindah ke v2 — migrasi sedang berjalan. Kembali sebentar lagi." 503
+	}
+
+	handle {
+		header Retry-After 600
+		respond "Pindah ke v2 — migrasi sedang berjalan. Kembali sebentar lagi." 503
+	}
 ```
 
-`/api/*` **tidak** disentuh maintenance — health check, BFF, dan API tetap
-hidup, jadi pod masih lolos health check dan rollback tetap mungkin.
+Blok `handle { ... }` yang terakhir **menggantikan** blok
+`handle { reverse_proxy web:3100 }` yang sudah ada (frontend v1) — jadi
+urutannya: blok maintenance diletakkan **setelah** `handle /storage/*` dan
+**sebelum** blok frontend ✓.
+
+Aktifkan (tanpa restart, tanpa downtime):
+
+```bash
+cd /opt/grafikarsa
+cp Caddyfile Caddyfile.premaintenance.bak   # kalau perlu balik
+# ... edit Caddyfile di atas ...
+docker exec grafikarsa-proxy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+# cek:
+curl -s -o /dev/null -w "GET / -> %{http_code}\n" https://DOMAIN/
+curl -s -o /dev/null -w "POST /api/x -> %{http_code}\n" -X POST https://DOMAIN/api/x
+```
+
+Yang harus berlaku setelah reload:
+
+| Request | Hasil |
+|---|---|
+| `GET /` | **503** + `Retry-After: 600` (pengunjung lihat halaman "Pindah ke v2") |
+| `POST/PUT/PATCH/DELETE /api/*` | **503** — tulisan baru **diblokir** |
+| `GET /api/*` | **200** — baca tetap jalan, health check tetap hijau, rollback tetap mungkin |
+
+Sintaks di atas sudah divalidasi (`caddy validate`) dan diuji nyata dengan
+Caddy 2: GET `/` → 503 + Retry-After, GET API → 200, POST API → 503.
+
+**Menutupnya:** blok `handle { ... }` (maintenance) dihapus dari Caddyfile
+lalu `caddy reload` lagi. Setelah go-live, deploy menimpa Caddyfile dengan
+yang versi v2 — sehingga maintenance otomatis hilang ✓.
 
 Aktifkan **H-1** (bukan saat migrasi dimulai) supaya orang tidak sempat
 menulis karya yang tidak ikut termigrasi.
@@ -157,10 +252,86 @@ Setelah mirror selesai:
 
 ```bash
 # daftarkan objek storage jadi media_assets + legacy_urls
-go run ./cmd/tools/migrate-old --v1 ... --v2 ... --execute --migrate-media
+go run ./cmd/tools/migrate-old --v1 ... --v2 ... --execute --migrate-media \
+  --v1-manifest ./mirror-manifest-<timestamp>.txt
+```
+
+`tools/storage-mirror.sh` menulis **manifest key sumber**
+(`mirror-manifest-<timestamp>.txt` ✓) — daftar key yang ada di storage v1
+sebelum disalin ✓. Manifest dipakai untuk membedakan dua jenis objek yang
+hilang:
+
+| Keadaan | Arti | Hasil |
+|---|---|---|
+| Ada di manifest, hilang di storage baru | **mirror gagal** — objek hilang saat disalin | **FATAL** ✗ migration berhenti |
+| Tidak ada di manifest | memang sudah hilang di v1 (gambarnya sudah rusak sebelum migrasi) | peringatan ✓, URL lama tetap 410 |
+
+Tanpa `--v1-manifest`, objek yang hilang hanya jadi peringatan (bukan fatal)
+✓ — jadi **selalu pakai manifest** saat go-live ✓.
+
+Ternyata ada **2 objek yang memang sudah hilang di v1** (dua gambar dalam satu
+karya portfolio, key-nya tanpa ekstensi) — jadi di v1 pun gambarnya sudah
+rusak ✓. Dengan manifest, migrasi tetap lancar ✓.
+
+`--migrate-media` membaca **storage baru** (dari `S3_*` di `.env`, atau
+`--storage-host`): setiap objek dicek keberadaannya, dan metadata yang
+disimpan adalah yang ASLI — mime (dari ekstensi), ukuran, dan sha256 objek.
+
+Tiga hal yang bikin ini penting:
+
+- **Mime menentukan cara browser menampilkan file.** Handler `by-key` memakai
+  `media_assets.mime` sebagai Content-Type. Kalau mime-nya
+  `application/octet-stream`, browser **mengunduh** tiap gambar sebagai ganti
+  menampilkannya — seluruh gambar di situs jadi rusak.
+- **URL gambar di dalam payload JSON blok portfolio ikut dipetakan.** Di
+  produksi ada 2.110 blok dengan URL `/storage/` di dalam JSON-nya. Kalau
+  tidak ikut dikumpulkan, URL lamanya tidak terdaftar di `legacy_urls` dan
+  berakhir **410 Gone** — gambar di karya yang sudah tayang rusak.
+- **Purpose media harus benar.** Semua media dulu dilabeli "document";
+  sekarang diturunkan dari awalan key (avatars/ → avatar, thumbnails/ →
+  thumbnail, portfolio-images/ → block_image, banners/ → banner,
+  documents/ → document) ✓.
+
+Hasil yang diharapkan (data produksi, 20 Okt 2026):
+
+```
+URL lama terdaftar: count 4351 · registered 4349 · fallback 0
+                    objek_tidak_ada 0 · sudah_hilang_di_v1 2
+media_assets: block_image 2033 · thumbnail 1478 · avatar 410
+              banner 364 · document 64
+legacy_urls 4351 (4349 punya media_id)
 ```
 
 ## Migrasi DB v1 → v2 di server (go-live)
+
+### Prayarat: kapasitas disk
+
+Disk server **50 GB** dengan **±15 GB bebas** (per 20 Okt 2026). Go-live
+menambah sekurangnya:
+
+| Kebutuhan | Ukuran | Keterangan |
+|---|---|---|
+| Storage baru (RustFS) | 5,2 GB | volume `grafikarsa_v2_storage_data` |
+| Image v2 (api + web) | ±0,5 GB | image v1 tetap ada (bertag → tidak kena prune) |
+| DB v2 + `v1_src` | ±0,2 GB | dump v1 4,3 MB |
+| Backup harian (sementara 2 salinan) | 5,0 GB | retensi KEEP=1: yang lama dihapus **setelah** yang baru terverifikasi |
+
+Total ±10,9 GB dari 15 GB bebas → **mepet** ⚠️. Kalau `df -h /` menunjukkan
+sisa < 8 GB, bersihkan dulu (backup lama, image dangling) — jangan mulai
+go-live dengan sisa disk tipis, karena mirror storage 5,1 GB butuh ruang.
+
+Storage v1 (5,2 GB) **tidak** dihapus saat go-live (baru dibersihkan di
+sunset plan, PRD §16.5).
+
+Cek sebelum mulai:
+
+```bash
+df -h / | tail -1
+docker image prune -f --filter "until=168h"   # image tanpa tag
+du -sh /opt/grafikarsa/backup
+```
+
+### Kendala yang menentukan bentuknya
 
 Skema v1 dan v2 **berbeda total** — jadi migrasi bukan "jalanin migration
 goose di atas data v1", tapi: buat DB v2 kosong → jalankan migrasi goose v2 →
@@ -174,7 +345,24 @@ dump (bukan dibaca dari container yang hidup).
 
 Semua perintah dijalankan di server (`/opt/grafikarsa`).
 
+| Volume | v1 (sekarang) | v2 (setelah go-live) |
+|---|---|---|
+| PostgreSQL | `grafikarsa_postgres_data` (postgres:**15**) | `grafikarsa_v2_postgres_data` (postgres:**16**) |
+| Object storage | `grafikarsa_minio_data` (MinIO) | `grafikarsa_v2_storage_data` (RustFS) |
+| Cache | `grafikarsa_redis_data` | `grafikarsa_v2_dragonfly_data` |
+| TLS Caddy | `grafikarsa_caddy_data` | `grafikarsa_caddy_data` (**sengaja sama** — sertifikat tidak perlu diterbitkan ulang) |
+
+Nama volume v2 ditulis eksplisit di compose. Kalau tidak, key `postgres_data`
+resolve ke volume yang sama dengan v1 — dan image postgres:16 **menolak
+start** di data dir postgres:15 ("database files are incompatible with
+server"). Jadi volume v1 bukan sekadar "dibaca" oleh v2: container db-nya
+gagal start sama sekali.
+
 ```bash
+# .env di-load supaya $DB_USER & $DB_PASSWORD tersedia di shell
+# (compose membacanya sendiri, tapi perintah psql/pg_dump di bawah tidak).
+set -a; . ./.env; set +a
+
 DC="docker compose -f docker-compose.deploy.yml"
 
 # 0. Maintenance mode v1 aktif (v1 tidak boleh menerima tulisan baru selama
@@ -188,8 +376,10 @@ ls -la /tmp/v1-pre-migrate.dump
 #    data v1 tetap utuh sebagai jaring pengaman.
 $DC down
 
-# 3. Nyalakan DB v2 (volume postgres_data, kosong) + pulihkan dump v1 ke
-#    database terpisah di container yang sama, sebagai sumber migrasi.
+# 3. Nyalakan DB v2 (volume grafikarsa_v2_postgres_data, kosong) + pulihkan
+#    dump v1 ke database terpisah di container yang sama, sebagai sumber
+#    migrasi. v1_src hidup di DB v2, tapi TIDAK disruptif: schema-nya milik
+#    v1 dan dibaca sebagai data biasa.
 $DC up -d db
 $DC exec -T db psql -U "$DB_USER" -d postgres -c "CREATE DATABASE v1_src OWNER $DB_USER;"
 $DC exec -T db pg_restore -U "$DB_USER" -d v1_src --no-owner --no-privileges \
@@ -199,15 +389,36 @@ $DC exec -T db pg_restore -U "$DB_USER" -d v1_src --no-owner --no-privileges \
 $DC exec -T db psql -U "$DB_USER" -d postgres -c "CREATE DATABASE $DB_NAME OWNER $DB_USER;"
 $DC run --rm --entrypoint /migrate -e DB_NAME="$DB_NAME" api up
 
+# 4b. SEED — WAJIB, sebelum migrate-old.
+#
+# academic_years & majors v2 adalah DATA REFERENSI yang diisi seed, bukan
+# hasil migrasi. Tanpa seed:
+#   - academic_years kosong -> kelas v1 tak bisa dipetakan (migrate-old
+#     berhenti dengan error "academic_years v2 kosong")
+#   - majors kosong -> major yang tak ada di seed dibuat saat migrasi, tapi
+#     tahun akademiknya tetap tidak ada
+# Seed juga mengisi role & permission, jadi harus jalan sebelum user.
+$DC run --rm --entrypoint /seed -e DB_NAME="$DB_NAME" api
+$DC exec -T db psql -U "$DB_USER" -d "$DB_NAME" -tAc \
+  "select 'academic_years=' || (select count(*) from academic_years) || ' majors=' || (select count(*) from majors);"
+
 # 5. Salin data v1 -> v2. KERINGKASAN dulu (wajib):
 $DC run --rm --entrypoint /migrate-old \
   -e DB_NAME="$DB_NAME" api \
   --v1 "postgres://$DB_USER:$DB_PASSWORD@db:5432/v1_src?sslmode=disable" \
   --v2 "postgres://$DB_USER:$DB_PASSWORD@db:5432/$DB_NAME?sslmode=disable" \
   --dry-run
-#    Periksa hitungannya: users 1688 · portfolios 1723 · blocks 5939
-#    (+1031 karantina) · likes 740 · follows 4341 · comments 79
-#    · notifications 6946 · feedback 17 · skipped {}
+#    Periksa hitungannya (angka dari data produksi, 20 Okt 2026):
+#      users 1688 · majors 8 (4 baru dibuat) · classes 49 · enrollments 1687
+#      portfolios 1724 · blocks 5943 (+1031 karantina) · likes 740
+#      · follows 4341 · comments 79 · notifications 6946 · feedback 17
+#      · skipped {assessment_empty: 901}
+#
+#    "assessment_empty: 901" itu normal: 901 baris assessment v1 bernilai
+#    NULL (view v_portfolio_assessments) — sengaja tidak dibuat supaya antrean
+#    penilaian admin tidak tergotori skor 0.
+#
+#    classes/enrollments yang 0 berarti kelas tidak termigrasi — JANGAN lanjut.
 #    Kalau ada yang tidak cocok, JANGAN lanjut.
 $DC run --rm --entrypoint /migrate-old -e DB_NAME="$DB_NAME" api \
   --v1 "postgres://$DB_USER:$DB_PASSWORD@db:5432/v1_src?sslmode=disable" \
@@ -218,15 +429,53 @@ $DC run --rm --entrypoint /migrate-old -e DB_NAME="$DB_NAME" api \
 #    dikarantina). Cek juga `legacy_urls` terisi.
 $DC exec -T db psql -U "$DB_USER" -d "$DB_NAME" -c \
   "select (select count(*) from users) users, (select count(*) from portfolios) portfolios,
-          (select count(*) from portfolio_blocks) blocks, (select count(*) from follows) follows;"
+          (select count(*) from portfolio_blocks) blocks, (select count(*) from follows) follows,
+          (select count(*) from classes) classes, (select count(*) from enrollments) enrollments,
+          (select count(*) from users where class_id is not null) users_dengan_kelas;"
 
 # 7. Nyalakan sisa stack v2 + deploy (tag versi / workflow_dispatch).
 $DC up -d
 ```
 
+`migrate-old` sudah memverifikasi sendiri setelah menulis (users, portfolios,
+classes, majors, enrollments, user_dengan_kelas) dan keluar non-zero kalau ada
+yang tidak sama — jadi "MIGRATE OK" di log berarti angka-angka di atas sudah
+dicek, bukan cuma "tidak error".
+
 Kalau migrasi gagal di tengah jalan, ulangi dari langkah 3 — database v2
 dibuang dan dibuat ulang. Data v1 tidak pernah hilang: ada di
 `grafikarsa_postgres_data` **dan** di `/tmp/v1-pre-migrate.dump`.
+
+### Kembali ke stack v1 (kalau go-live v2 dibatalkan)
+
+Deploy menimpa `docker-compose.deploy.yml` dan `.env` di server, jadi sebelum
+ditimpa keduanya disalin:
+
+| File | Isi |
+|---|---|
+| `/opt/grafikarsa/docker-compose.deploy.v1.yml` | compose stack v1 (volume `grafikarsa_postgres_data`, MinIO, Redis) |
+| `/opt/grafikarsa/.env.v1.bak` | `.env` v1 — termasuk `IMAGE_TAG` v1 yang sedang dipakai |
+| `/opt/grafikarsa/Caddyfile.v1.bak` | Caddyfile v1 (routing ke `web:3100` + `backend:8080` + MinIO) |
+
+Kembalikannya:
+
+```bash
+cd /opt/grafikarsa
+cp docker-compose.deploy.v1.yml docker-compose.deploy.yml
+cp .env.v1.bak .env
+cp Caddyfile.v1.bak Caddyfile
+docker compose -f docker-compose.deploy.yml up -d
+docker exec grafikarsa-proxy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+```
+
+Image v1 (backend + web, bertag SHA) tidak ikut terhapus oleh
+`docker image prune` di deploy — prune hanya menghapus image tanpa tag ✓.
+Kalau suatu saat image-nya hilang dari registry, image v1 ada di volume
+`grafikarsa_*` (tapi image container tidak disimpan di volume ✗) — artinya
+v1 lalu harus dibangun ulang dari tag di registry.
+
+`cp -n` dipakai saat menyalin, jadi deploy berikutnya tidak menimpa salinan
+v1. Volume v1 tidak pernah dihapus, jadi data v1 masih utuh.
 
 Yang **tidak** boleh dilewati: langkah 5 (dry-run) dan langkah 6. Tool
 `migrate-old` sekarang gagal keras kalau ada objek storage yang tidak

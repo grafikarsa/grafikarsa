@@ -351,7 +351,13 @@ func registerLegacyURL(ctx context.Context, v2 *pgxpool.Pool, oldURL string, o o
 
 func keyFromStorageURL(u string) string {
 	if i := strings.Index(u, "/storage/"); i >= 0 {
-		return strings.TrimPrefix(u[i+len("/storage/"):], "grafikarsa/")
+		key := strings.TrimPrefix(u[i+len("/storage/"):], "grafikarsa/")
+		// Buang query string & fragment: key objek storage tidak punya
+		// keduanya, dan sisa-sisanya akan dianggap "objek tidak ada".
+		if j := strings.IndexAny(key, "?#"); j >= 0 {
+			key = key[:j]
+		}
+		return key
 	}
 	return u
 }

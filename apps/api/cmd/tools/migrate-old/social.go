@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"github.com/microcosm-cc/bluemonday"
 	"log/slog"
+	"os"
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"grafikarsa/api/internal/config"
 )
 
 // migrateSocial memindahkan likes/follows/comments/notifications 1:1.
@@ -363,7 +365,54 @@ func migrateFeedbackChangelog(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1sc
 // migrateMediaRefs mendaftarkan URL lama menjadi media_assets + legacy_urls.
 // Dipanggil SETELAH `mc mirror` (PRD §16.3): objek sudah ada di storage baru
 // dengan layout key yang sama, jadi tool hanya mencatat metadata.
+//
+// Metadata yang disimpanharus ASLI: mime, ukuran, dan checksum objek di
+// storage baru. Handler by-key memakai media_assets.mime sebagai Content-Type
+// — kalau mime-nya application/octet-stream, browser mengunduh tiap gambar
+// sebagai ganti menampilkannya.
+//
+// Kalau storage baru tidak bisa dihubungi (mis. --storage-host kosong),
+// migrasi tetap jalan TAPI memperingatkan: metadata akan generik dan
+// keberadaan objek tidak terverifikasi.
 func migrateMediaRefs(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o options, st *stats) error {
+	// Index storage baru: metadata asli + verifikasi keberadaan objek.
+	// Kalau storage tidak bisa dihubungi, migrasi tetap jalan dengan
+	// metadata generik — tapi itu berarti metadata & keberadaan objek TIDAK
+	// terverifikasi, jadi harus ada di log.
+	var ix *storageIndex
+	var missing []string
+	var alreadyGone []string
+	// Manifest key v1 (dari tools/storage-mirror.sh). Kalau ada, kita bisa
+	// membedakan "objek hilang karena mirror gagal" (fatal) dari "objek memang
+	// sudah hilang di v1" (bukan kerusakan migrasi).
+	var v1Keys map[string]struct{}
+	if o.v1Manifest != "" {
+		raw, err := os.ReadFile(o.v1Manifest)
+		if err != nil {
+			slog.Warn("manifest v1 tidak bisa dibaca; objek hilang hanya jadi peringatan", "file", o.v1Manifest, "err", err)
+		} else {
+			v1Keys = map[string]struct{}{}
+			for _, line := range strings.Split(string(raw), "\n") {
+				k := strings.TrimSpace(line)
+				if k != "" {
+					v1Keys[k] = struct{}{}
+				}
+			}
+			slog.Info("manifest v1 dimuat", "file", o.v1Manifest, "key", len(v1Keys))
+		}
+	}
+	if cfg, err := config.Load(); err != nil {
+		slog.Warn("config tidak bisa dimuat; metadata media generik", "err", err)
+	} else {
+		if o.storageHost != "" {
+			cfg.S3.Endpoint = o.storageHost
+		}
+		if ix, err = newStorageIndex(ctx, cfg); err != nil {
+			slog.Warn("storage baru tidak bisa dihubungi; metadata media generik & keberadaan objek tak terverifikasi", "err", err)
+			ix = nil
+		}
+	}
+
 	// Kumpulkan semua URL /storage/ dari v1.
 	urls := map[string]string{} // url -> pemilik (username) bila diketahui
 	collect := func(table, urlCol, ownerCol string) {
@@ -388,6 +437,10 @@ func migrateMediaRefs(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o 
 		rows.Close()
 	}
 	collect("users", colOr(s, "users", "avatar_url", "avatar", "photo_url"), "users")
+	// Banner terpisah dari avatar: di v1 ada users.banner_url (364 gambar di
+	// produksi). Kalau hanya avatar yang dipindai, URL banner lama tidak
+	// terdaftar dan berakhir 410 Gone.
+	collect("users", colOr(s, "users", "banner_url", "cover_url"), "users")
 	for _, t := range []string{"portfolios", "content_blocks", "portfolio_blocks", "blocks"} {
 		if !s.tables[t] {
 			continue
@@ -398,17 +451,78 @@ func migrateMediaRefs(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o 
 			}
 		}
 	}
+	// URL gambar di dalam payload JSON blok portfolio (2.110 blok di
+	// produksi) tidak ada di kolom URL — kalau tidak dikumpulkan, URL lamanya
+	// tidak terdaftar dan berakhir 410 Gone.
+	jsonURLs := map[string]bool{}
+	for _, t := range []string{"content_blocks", "portfolio_blocks", "blocks"} {
+		collectJSONURLs(ctx, v1, s, t, "payload", jsonURLs)
+	}
+	for u := range jsonURLs {
+		if _, ok := urls[u]; !ok {
+			urls[u] = "payload"
+		}
+	}
 	for url := range urls {
 		key := keyFromStorageURL(url)
 		owner := urls[url]
 		_ = owner
+
+		// Metadata asli dari storage baru (kalau bisa dihubungi).
+		mime := mimeByExt(key)
+		var size int64
+		sum := ""
+		if ix != nil {
+			size = ix.size(key)
+			if size == 0 {
+				// Objek tidak ada di storage baru. Dua kemungkinan:
+				//   a) ada di manifest v1 -> mirror GAGAL (objek hilang saat
+				//      disalin) -> fatal, jangan lanjut
+				//   b) tidak ada di manifest v1 -> memang sudah hilang di v1
+				//      (gambarnya sudah rusak sebelum migrasi) -> bukan
+				//      kerusakan hasil migrasi, cukup dicatat
+				if v1Keys != nil {
+					if _, wasThere := v1Keys[key]; wasThere {
+						st.Skipped["media_objek_hilang_setelah_mirror"]++
+						missing = append(missing, key)
+						continue
+					}
+				}
+				st.Skipped["media_objek_tak_ada_sudah_di_v1"]++
+				alreadyGone = append(alreadyGone, key)
+				// Tetap didaftarkan sebagai legacy_url tanpa media_id: URL
+				// lamanya tetap menjawab 410 (bukan 404), dan tidak ada
+				// media_assets yang menunjuk key tak ada.
+				if !o.dryRun {
+					if _, lerr := v2.Exec(ctx, `INSERT INTO legacy_urls (old_url, object_key)
+						VALUES ($1,$2) ON CONFLICT (old_url) DO NOTHING`, url, key); lerr != nil {
+						slog.Error("gagal mencatat legacy_url", "url", url, "err", lerr)
+					}
+				}
+				continue
+			}
+			if s, err := ix.checksum(ctx, key); err == nil {
+				sum = s
+			} else {
+				slog.Warn("gagal menghitung checksum objek", "key", key, "err", err)
+			}
+		}
+
 		if !o.dryRun {
 			var mid string
+			// ON CONFLICT (object_key) DO UPDATE + RETURNING: migrasi harus
+			// idempoten. Dengan DO NOTHING, baris yang sudah ada tidak
+			// mengembalikan id -> kolom kosong -> setiap media terhitung
+			// "fallback" dan migrasi gagal padahal job-nya sudah beres.
 			err := v2.QueryRow(ctx, `INSERT INTO media_assets
 				(owner_id, purpose, object_key, mime, size_bytes, checksum_sha256, status)
-				SELECT u.id, 'document', $1, 'application/octet-stream', 0, $2, 'confirmed'
+				SELECT u.id, $2, $1, $3, $4, $5, 'confirmed'
 				FROM users u WHERE u.username='admin' LIMIT 1
-				ON CONFLICT DO NOTHING RETURNING id::text`, key, sha256str(url)).Scan(&mid)
+				ON CONFLICT (object_key) DO UPDATE SET
+					mime=EXCLUDED.mime,
+					size_bytes=EXCLUDED.size_bytes,
+					checksum_sha256=EXCLUDED.checksum_sha256
+				RETURNING id::text`, key, purposeFromKey(key), mime, size, sum).Scan(&mid)
 			if err == nil && mid != "" {
 				_, _ = v2.Exec(ctx, `INSERT INTO legacy_urls (old_url, media_id, object_key)
 					VALUES ($1,$2,$3) ON CONFLICT (old_url) DO UPDATE SET media_id=EXCLUDED.media_id`,
@@ -431,9 +545,29 @@ func migrateMediaRefs(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o 
 		}
 	}
 	slog.Info("URL lama terdaftar",
-		"count", len(urls), "registered", st.MediaRegistered, "fallback", st.MediaFallback)
+		"count", len(urls), "registered", st.MediaRegistered, "fallback", st.MediaFallback,
+		"objek_tidak_ada", len(missing), "sudah_hilang_di_v1", len(alreadyGone))
+	if len(alreadyGone) > 0 {
+		// Sudah hilang sebelum migrasi (gambarnya rusak di v1 juga). Bukan
+		// kegagalan migrasi — tapi harus terlihat, jangan diam.
+		sample := alreadyGone
+		if len(sample) > 5 {
+			sample = sample[:5]
+		}
+		slog.Warn("objek yang sudah hilang di v1 (bukan kerusakan migrasi)",
+			"jumlah", len(alreadyGone), "contoh", sample)
+	}
 	if st.MediaFallback > 0 {
 		return fmt.Errorf("%d objek storage tidak bisa didaftarkan sebagai media_assets", st.MediaFallback)
+	}
+	if len(missing) > 0 {
+		// Tampilkan sebagian kecil saja supaya log tidak membanjiri.
+		sample := missing
+		if len(sample) > 10 {
+			sample = sample[:10]
+		}
+		return fmt.Errorf("%d objek yang ada di v1 hilang di storage baru — MIRROR GAGAL (contoh: %v)",
+			len(missing), sample)
 	}
 	return nil
 }
@@ -447,6 +581,17 @@ func verifyMigration(ctx context.Context, v1, v2 *pgxpool.Pool, st *stats) error
 	}{
 		{"users", `SELECT count(*) FROM users`, `SELECT count(*) FROM users WHERE email NOT LIKE '%@migrated.local'`},
 		{"portfolios", `SELECT count(*) FROM portfolios`, `SELECT count(*) FROM portfolios`},
+		// Akademik: kelas & jurusan v1 wajib utuh di v2. Tanpa ini, kelas
+		// bisa hilang diam-diam — semua user jadi class_id NULL dan
+		// enrollments kosong, tapi migrasi tetap melaporkan "OK".
+		//
+		// Dicek lewat legacy_id_map (bukan hitung baris tabel v2): v2 bisa
+		// sudah punya baris dari seed atau migrasi sebelumnya, sementara
+		// yang wajib sama adalah "setiap baris v1 punya padanan di v2".
+		{"classes", `SELECT count(*) FROM kelas`, `SELECT count(*) FROM legacy_id_map WHERE source_table='classes' AND target_table='classes'`},
+		{"majors", `SELECT count(*) FROM jurusan`, `SELECT count(*) FROM legacy_id_map WHERE source_table='majors' AND target_table='majors'`},
+		{"enrollments", `SELECT count(*) FROM users WHERE kelas_id IS NOT NULL`, `SELECT count(*) FROM enrollments`},
+		{"user_dengan_kelas", `SELECT count(*) FROM users WHERE kelas_id IS NOT NULL`, `SELECT count(*) FROM users WHERE class_id IS NOT NULL`},
 	}
 	for _, c := range checks {
 		var a, b int64

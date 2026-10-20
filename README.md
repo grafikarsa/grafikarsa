@@ -51,7 +51,7 @@ apps/web           Next.js (BFF di app/api/[...path]/route.ts)
 packages/contracts openapi.yaml (hasil generate)
 docs/              prd-v2.md, api-v2.md, runbook.md
 infra/             init DB, config pendukung
-tools/             backup.sh, server-init.sh, deploy-check.sh
+tools/             gk-backup.sh, verify-backup.sh, server-init.sh, deploy-check.sh
 ```
 
 ## Dokumentasi

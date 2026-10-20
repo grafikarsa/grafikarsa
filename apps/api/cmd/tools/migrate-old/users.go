@@ -16,7 +16,7 @@ import (
 //   - role admin -> admin (hash bcrypt dipertahankan, rehash saat login)
 //   - role teacher -> guru
 //   - special_roles text[] -> role custom (best-effort, hanya yang dikenal)
-func migrateUsers(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o options, st *stats) error {
+func migrateUsers(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o options, st *stats, classMajor map[string]string) error {
 	if !s.tables["users"] {
 		st.Skipped["users"] = -1
 		return fmt.Errorf("tabel users tidak ada di v1")
@@ -76,8 +76,23 @@ func migrateUsers(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o opti
 			// Password tidak dikenali -> paksa ganti saat login pertama.
 			hash = mustHash("Migrated-" + un)
 		}
-		majorID := resolveMajor(fmt.Sprint(jurusan), majorByName)
-		classID := resolveClass(fmt.Sprint(kelas), classByName)
+		// class_id & major_id: pakai mapping UUID v1 -> UUID v2 dulu (dibuat
+		// oleh migrateAcademics). Fallback ke nama/kode dipakai kalau map-nya
+		// tidak ada — tanpa mapping, kedua kolom ini diam-diam jadi NULL.
+		//
+		// major_id diturunkan dari kelas: tabel users v1 TIDAK punya kolom
+		// jurusan_id, jadi major seorang siswa adalah major dari kelasnya.
+		majorID := resolveByID(ctx, v2, "majors", uuidString(jurusan))
+		if majorID == "" {
+			majorID = resolveMajor(fmt.Sprint(jurusan), majorByName)
+		}
+		classID := resolveByID(ctx, v2, "classes", uuidString(kelas))
+		if classID == "" {
+			classID = resolveClass(fmt.Sprint(kelas), classByName)
+		}
+		if majorID == "" {
+			majorID = classMajor[uuidString(kelas)]
+		}
 
 		var targetID string
 		if !o.dryRun {
@@ -262,41 +277,18 @@ func assignSpecialRoles(ctx context.Context, v2 *pgxpool.Pool, userID, spec stri
 	}
 }
 
-// migrateAcademics membangun enrollments dari users.kelas_id + riwayat kelas.
-func migrateAcademics(ctx context.Context, v1, v2 *pgxpool.Pool, s *v1schema, o options, st *stats) error {
-	if !s.tables["users"] {
-		return nil
+// migrateAcademics (yang lama) dipindah ke academics.go sebagai
+// migrateMajors + migrateClasses + migrateEnrollments — mapping kelas harus
+// ada SEBELUM user dimigrasi, dan itu hanya bisa kalau langkah ini jalan lebih
+// dulu.
+
+// resolveByID mencari mapping UUID v1 -> UUID v2 di legacy_id_map.
+func resolveByID(ctx context.Context, v2 *pgxpool.Pool, srcTable, srcID string) string {
+	if srcID == "" {
+		return ""
 	}
-	kelasCol := colOr(s, "users", "kelas_id", "class_id")
-	if kelasCol == "" {
-		return nil
+	if id, ok := mappedID(ctx, v2, srcTable, srcID, srcTable); ok {
+		return id
 	}
-	// Enrollments dibuat untuk user yang punya kelas dan sudah termigrasi.
-	rows, err := v1.Query(ctx, fmt.Sprintf(`SELECT id, %s FROM users WHERE %s IS NOT NULL`, kelasCol, kelasCol))
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-	var activeYear string
-	_ = v2.QueryRow(ctx, `SELECT id::text FROM academic_years WHERE is_active ORDER BY start_year DESC LIMIT 1`).Scan(&activeYear)
-	made := 0
-	for rows.Next() {
-		var srcID, kelas any
-		if err := rows.Scan(&srcID, &kelas); err != nil {
-			return err
-		}
-		targetID, ok := mappedID(ctx, v2, "users", uuidString(srcID), "users")
-		if !ok || o.dryRun || activeYear == "" {
-			continue
-		}
-		classV2, ok := mappedID(ctx, v2, "classes", fmt.Sprint(kelas), "classes")
-		if !ok {
-			continue
-		}
-		_, _ = v2.Exec(ctx, `INSERT INTO enrollments (user_id, class_id, academic_year_id, status, is_current)
-			VALUES ($1,$2,$3,'active',TRUE) ON CONFLICT DO NOTHING`, targetID, classV2, activeYear)
-		made++
-	}
-	slog.Info("enrollments dibuat dari users.kelas_id", "count", made)
-	return rows.Err()
+	return ""
 }
