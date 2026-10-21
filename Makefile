@@ -28,6 +28,13 @@ help: ## Tampilkan bantuan
 	@grep -h -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
 
 # ── DEV ───────────────────────────────────────
+dev-init: ## Siapkan .env lokal (secret acak, idempotent)
+	@bash tools/gen-env.sh
+	@echo ""
+	@echo "  .env siap. Kalau volume DB sudah ada dari run sebelumnya,"
+	@echo "  passwordnya bisa tidak cocok — reset volume:"
+	@echo "    docker compose -f docker-compose.yml down -v && make dev"
+
 dev: ## Up db + dragonfly + storage + api + worker (web native terpisah)
 	$(COMPOSE_DEV) up -d --build db dragonfly storage api worker
 	@echo ""
