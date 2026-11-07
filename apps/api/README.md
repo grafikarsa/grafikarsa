@@ -32,6 +32,26 @@ cd apps/api && go run ./cmd/migrate status
 cd apps/api && go run ./cmd/migrate version
 ```
 
+## Worker
+
+Proses `worker` menjalankan job River dari antrean `default`, `media`, dan `bulk`. Worker membaca
+environment yang sama dengan API dan menyediakan liveness check di
+`GK_WORKER_HEALTH_ADDR` (default `:8092`).
+
+```bash
+cd apps/api && go run ./cmd/worker
+# atau dari root repo
+make worker-run
+
+curl -s localhost:8092/healthz
+```
+
+Job di-enqueue di transaksi yang sama dengan perubahan data lewat klien insert-only
+(`internal/jobs.NewInsertClient`), sehingga perubahan yang di-commit selalu punya job dan perubahan
+yang di-rollback tidak meninggalkan job. Tipe argumen job didefinisikan di domain pemiliknya,
+misalnya `internal/domain/users/jobs.go`, dengan `Kind()` berformat `<domain>.<action>` dan
+`InsertOpts()` yang menentukan antrean serta `MaxAttempts`.
+
 ## Admin pertama
 
 Belum ada endpoint untuk membuat admin, jadi akun admin pertama dibuat lewat CLI. CLI membaca

@@ -1,3 +1,14 @@
+x-api-env: &api-env
+  GK_ENV: ${GK_ENV:-production}
+  GK_HTTP_ADDR: ":8091"
+  GK_LOG_LEVEL: info
+  GK_SECRET_KEY: ${GK_SECRET_KEY}
+  DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+  VALKEY_URL: redis://:${VALKEY_PASSWORD}@valkey:6379/0
+  S3_ENDPOINT: http://rustfs:9000
+  S3_ACCESS_KEY: ${RUSTFS_ACCESS_KEY}
+  S3_SECRET_KEY: ${RUSTFS_SECRET_KEY}
+
 services:
   caddy:
     image: caddy:2.11-alpine
@@ -35,22 +46,23 @@ services:
   api:
     build:
       context: ../../apps/api
-    environment:
-      GK_ENV: ${GK_ENV:-production}
-      GK_HTTP_ADDR: ":8091"
-      GK_LOG_LEVEL: info
-      GK_SECRET_KEY: ${GK_SECRET_KEY}
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
-      VALKEY_URL: redis://:${VALKEY_PASSWORD}@valkey:6379/0
-      S3_ENDPOINT: http://rustfs:9000
-      S3_ACCESS_KEY: ${RUSTFS_ACCESS_KEY}
-      S3_SECRET_KEY: ${RUSTFS_SECRET_KEY}
+    environment: *api-env
     depends_on:
       postgres:
         condition: service_healthy
       valkey:
         condition: service_healthy
       rustfs:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ../../apps/api
+    entrypoint: ["/worker"]
+    environment: *api-env
+    depends_on:
+      postgres:
         condition: service_healthy
     restart: unless-stopped
 

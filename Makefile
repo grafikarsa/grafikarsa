@@ -5,7 +5,7 @@ COMPOSE_PROD_LOCAL := docker compose --env-file .env -f infra/compose/prod.yml -
 API := cd apps/api &&
 
 .PHONY: help dev-init dev-up dev-down dev-reset dev-ps dev-logs db-shell valkey-cli \
-	migrate-up migrate-down migrate-status seed api-run web-dev sqlc openapi generate-check \
+	migrate-up migrate-down migrate-status seed api-run worker-run web-dev sqlc openapi generate-check \
 	test test-integration lint admin-create prod-local-up prod-local-down
 
 help: ## Tampilkan daftar target
@@ -58,6 +58,9 @@ admin-create: ## Buat admin pertama: make admin-create NAME="Nama" USERNAME=admi
 
 api-run: ## Jalankan API di :8091 (baca .env root)
 	$(API) go run ./cmd/api
+
+worker-run: ## Jalankan worker River
+	$(API) go run ./cmd/worker
 
 web-dev: ## Jalankan Next.js dev di :3020
 	pnpm --filter web dev
