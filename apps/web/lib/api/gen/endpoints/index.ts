@@ -1,2 +1,4 @@
+export * from './academic/academic';
+export * from './admin-academic/admin-academic';
 export * from './auth/auth';
 export * from './system/system';

@@ -255,6 +255,280 @@ paths:
           description: Sesi lain dicabut.
         default:
           $ref: "#/components/responses/Problem"
+  /majors:
+    get:
+      operationId: getMajors
+      tags: [academic]
+      summary: Daftar jurusan aktif
+      description: Publik. Hanya mengembalikan jurusan yang aktif beserta grup cerminnya.
+      responses:
+        "200":
+          description: Daftar jurusan aktif.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MajorList"
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/majors:
+    get:
+      operationId: getAdminMajors
+      tags: [admin-academic]
+      summary: Daftar seluruh jurusan
+      description: |
+        Butuh izin `academic.manage_majors`, `academic.manage_years`,
+        `academic.manage_classes`, atau `user.view`. Tanpa izin → 404.
+        Termasuk jurusan yang sudah tidak aktif.
+      responses:
+        "200":
+          description: Daftar seluruh jurusan.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MajorList"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: postAdminMajor
+      tags: [admin-academic]
+      summary: Buat jurusan
+      description: |
+        Membuat jurusan sekaligus grup cerminnya. Butuh izin `academic.manage_majors`.
+        Tanpa izin → 404. Kode jurusan duplikat → 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MajorCreate"
+      responses:
+        "201":
+          description: Jurusan dibuat.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Major"
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/majors/{id}:
+    patch:
+      operationId: patchAdminMajor
+      tags: [admin-academic]
+      summary: Ubah jurusan
+      description: |
+        Butuh izin `academic.manage_majors`. Tanpa izin → 404.
+        Menonaktifkan jurusan memindahkan grupnya ke riwayat.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MajorUpdate"
+      responses:
+        "200":
+          description: Jurusan diperbarui.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Major"
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/academic-years:
+    get:
+      operationId: getAdminAcademicYears
+      tags: [admin-academic]
+      summary: Daftar tahun ajaran
+      description: |
+        Butuh izin `academic.manage_majors`, `academic.manage_years`,
+        `academic.manage_classes`, atau `user.view`. Tanpa izin → 404.
+      responses:
+        "200":
+          description: Daftar tahun ajaran, terbaru lebih dulu.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AcademicYearList"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: postAdminAcademicYear
+      tags: [admin-academic]
+      summary: Buat tahun ajaran
+      description: |
+        Butuh izin `academic.manage_years`. Tanpa izin → 404.
+        Tahun ajaran duplikat → 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AcademicYearCreate"
+      responses:
+        "201":
+          description: Tahun ajaran dibuat.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AcademicYear"
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/academic-years/{id}:
+    patch:
+      operationId: patchAdminAcademicYear
+      tags: [admin-academic]
+      summary: Ubah tanggal tahun ajaran
+      description: |
+        Butuh izin `academic.manage_years`. Tanpa izin → 404.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AcademicYearUpdate"
+      responses:
+        "200":
+          description: Tahun ajaran diperbarui.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AcademicYear"
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/academic-years/{id}/set-current:
+    post:
+      operationId: postAdminAcademicYearSetCurrent
+      tags: [admin-academic]
+      summary: Tandai tahun ajaran sebagai tahun ajaran aktif
+      description: |
+        Butuh izin `academic.manage_years`. Tanpa izin → 404.
+        Hanya satu tahun ajaran yang aktif dalam satu waktu.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Tahun ajaran aktif diperbarui.
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/classes:
+    get:
+      operationId: getAdminClasses
+      tags: [admin-academic]
+      summary: Daftar kelas
+      description: |
+        Butuh izin `academic.manage_majors`, `academic.manage_years`,
+        `academic.manage_classes`, atau `user.view`. Tanpa izin → 404.
+      parameters:
+        - name: academicYearId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: majorId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Daftar kelas.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassList"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: postAdminClass
+      tags: [admin-academic]
+      summary: Buat kelas
+      description: |
+        Membuat kelas sekaligus grup cerminnya. Butuh izin `academic.manage_classes`
+        pada jurusan terkait. Tanpa izin → 404. Kelas duplikat → 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClassCreate"
+      responses:
+        "201":
+          description: Kelas dibuat.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Class"
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/classes/{id}:
+    patch:
+      operationId: patchAdminClass
+      tags: [admin-academic]
+      summary: Ubah rombel kelas
+      description: |
+        Butuh izin `academic.manage_classes` pada jurusan kelas terkait.
+        Tanpa izin → 404. Kelas duplikat → 409.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClassUpdate"
+      responses:
+        "200":
+          description: Kelas diperbarui.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Class"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: deleteAdminClass
+      tags: [admin-academic]
+      summary: Hapus kelas
+      description: |
+        Butuh izin `academic.manage_classes` pada jurusan kelas terkait.
+        Tanpa izin → 404. Kelas yang sudah punya siswa → 409.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Kelas dihapus.
+        default:
+          $ref: "#/components/responses/Problem"
 components:
   schemas:
     CsrfToken:
@@ -439,6 +713,210 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SessionDevice"
+    Major:
+      type: object
+      description: Data jurusan beserta grup cerminnya.
+      required: [id, code, name, shortName, isActive, sortOrder, groupId]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID jurusan.
+        code:
+          type: string
+          description: Kode unik jurusan (huruf kecil).
+        name:
+          type: string
+          description: Nama lengkap jurusan.
+        shortName:
+          type: string
+          description: Nama singkat jurusan untuk nama kelas.
+        isActive:
+          type: boolean
+          description: Apakah jurusan masih aktif.
+        sortOrder:
+          type: integer
+          description: Urutan tampil jurusan.
+        groupId:
+          type: string
+          format: uuid
+          description: ID grup yang mencerminkan jurusan ini.
+    MajorList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Major"
+    MajorCreate:
+      type: object
+      required: [code, name, shortName]
+      properties:
+        code:
+          type: string
+          description: Kode jurusan, huruf kecil tanpa spasi.
+        name:
+          type: string
+          description: Nama lengkap jurusan.
+        shortName:
+          type: string
+          description: Nama singkat jurusan (huruf kapital).
+        sortOrder:
+          type: integer
+          description: Urutan tampil jurusan. Default 0.
+    MajorUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Nama lengkap jurusan.
+        shortName:
+          type: string
+          description: Nama singkat jurusan (huruf kapital).
+        sortOrder:
+          type: integer
+          description: Urutan tampil jurusan.
+        isActive:
+          type: boolean
+          description: Aktif atau nonaktif.
+    AcademicYear:
+      type: object
+      description: Satu tahun ajaran.
+      required: [id, startYear, label, slug, startsOn, endsOn, isCurrent]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID tahun ajaran.
+        startYear:
+          type: integer
+          description: Tahun mulai, misalnya 2026.
+        label:
+          type: string
+          description: Label tahun ajaran, misalnya "2026/2027".
+        slug:
+          type: string
+          description: Slug tahun ajaran, misalnya "2026-2027".
+        startsOn:
+          type: string
+          format: date
+          description: Tanggal mulai tahun ajaran.
+        endsOn:
+          type: string
+          format: date
+          description: Tanggal selesai tahun ajaran.
+        isCurrent:
+          type: boolean
+          description: Apakah ini tahun ajaran yang aktif saat ini.
+    AcademicYearList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AcademicYear"
+    AcademicYearCreate:
+      type: object
+      required: [startYear, startsOn, endsOn]
+      properties:
+        startYear:
+          type: integer
+          description: Tahun mulai, misalnya 2026.
+        startsOn:
+          type: string
+          format: date
+          description: Tanggal mulai tahun ajaran.
+        endsOn:
+          type: string
+          format: date
+          description: Tanggal selesai tahun ajaran.
+    AcademicYearUpdate:
+      type: object
+      properties:
+        startsOn:
+          type: string
+          format: date
+          description: Tanggal mulai tahun ajaran.
+        endsOn:
+          type: string
+          format: date
+          description: Tanggal selesai tahun ajaran.
+    Class:
+      type: object
+      description: Satu rombel (kelas) pada tahun ajaran tertentu.
+      required: [id, academicYearId, majorId, majorCode, groupId, grade, section, name, slug, enrollmentCount]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID kelas.
+        academicYearId:
+          type: string
+          format: uuid
+          description: ID tahun ajaran kelas ini.
+        majorId:
+          type: string
+          format: uuid
+          description: ID jurusan kelas ini.
+        majorCode:
+          type: string
+          description: Kode jurusan kelas ini.
+        groupId:
+          type: string
+          format: uuid
+          description: ID grup yang mencerminkan kelas ini.
+        grade:
+          type: integer
+          description: Tingkat kelas (10, 11, atau 12).
+        section:
+          type: string
+          description: Rombel, misalnya "A".
+        name:
+          type: string
+          description: Nama tampilan kelas, misalnya "XI RPL B".
+        slug:
+          type: string
+          description: Slug kelas, misalnya "xi-rpl-b".
+        enrollmentCount:
+          type: integer
+          format: int64
+          description: Jumlah siswa yang terdaftar di kelas ini.
+    ClassList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Class"
+    ClassCreate:
+      type: object
+      required: [academicYearId, majorId, grade, section]
+      properties:
+        academicYearId:
+          type: string
+          format: uuid
+          description: ID tahun ajaran kelas ini.
+        majorId:
+          type: string
+          format: uuid
+          description: ID jurusan kelas ini.
+        grade:
+          type: integer
+          enum: [10, 11, 12]
+          description: Tingkat kelas (10, 11, atau 12).
+        section:
+          type: string
+          description: Rombel, 1–2 huruf kapital.
+    ClassUpdate:
+      type: object
+      required: [section]
+      properties:
+        section:
+          type: string
+          description: Rombel baru, 1–2 huruf kapital.
     Pong:
       type: object
       required:

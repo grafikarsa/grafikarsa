@@ -9,14 +9,28 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './academicYear';
+export * from './academicYearCreate';
+export * from './academicYearList';
+export * from './academicYearUpdate';
 export * from './accountStatus';
 export * from './accountType';
 export * from './activateRequest';
 export * from './changePasswordRequest';
+export * from './class';
+export * from './classCreate';
+export * from './classCreateGrade';
+export * from './classList';
+export * from './classUpdate';
 export * from './csrfToken';
 export * from './fieldError';
+export * from './getAdminClassesParams';
 export * from './getAuthUsernameAvailabilityParams';
 export * from './loginRequest';
+export * from './major';
+export * from './majorCreate';
+export * from './majorList';
+export * from './majorUpdate';
 export * from './nextStep';
 export * from './passwordConfirmation';
 export * from './pong';

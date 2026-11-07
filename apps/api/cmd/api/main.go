@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/academic"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/auth"
 	apirouter "github.com/grafikarsa/grafikarsa/apps/api/internal/http"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/health"
@@ -85,8 +86,9 @@ func main() {
 	}
 
 	limiter := ratelimit.New(rdb)
+	dataStore := dbstore.NewStore(pool)
 	authService, err := auth.NewService(
-		dbstore.NewStore(pool),
+		dataStore,
 		rdb,
 		password.NewHasher(password.DefaultParams, 0),
 		limiter,
@@ -100,12 +102,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	academicService := academic.NewService(dataStore)
+
 	srv := &http.Server{
 		Addr: cfg.HTTPAddr,
 		Handler: apirouter.NewRouter(apirouter.RouterDeps{
 			Logger:         log,
 			Checkers:       checkers,
 			Auth:           authService,
+			Academic:       academicService,
 			Limiter:        limiter,
 			AllowedOrigins: cfg.AllowedOrigins,
 		}),
