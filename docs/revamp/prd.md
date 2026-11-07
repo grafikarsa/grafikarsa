@@ -1,7 +1,12 @@
 # Grafikarsa Revamp — PRD (Product Requirements Document)
 
 > Status: **draft keputusan produk** · Branch: `revamp` · Dibangun ulang dari nol.
-> Dokumen ini memuat keputusan produk (§0–§13) dan tech stack & arsitektur (§14).
+> Dokumen ini memuat keputusan produk (§0–§13), tech stack & arsitektur (§14), dan keputusan detail (§15).
+>
+> Dokumen pendamping di folder ini:
+> [database.md](database.md) + [schema.sql](schema.sql) · [api.md](api.md) · [editor-blocks.md](editor-blocks.md) ·
+> [algorithms.md](algorithms.md) · [seed.md](seed.md) · [nfr.md](nfr.md) · [migration-v1.md](migration-v1.md) ·
+> [roadmap.md](roadmap.md)
 
 ---
 
@@ -68,7 +73,7 @@ Status akun: `aktif`, `alumni`, `mutasi`, `nonaktif`.
 |---|---|
 | **Member** | Default untuk semua tipe akun. Memegang capability `content.create` (bisa dicabut Admin per user) |
 | **Moderator** | Scope `global` atau `jurusan`. Memproses antrian konten dan laporan |
-| **Admin Jurusan** (Kaprog) | Kelola user & kelas di jurusannya, moderasi jurusannya, kelola grup di jurusannya |
+| **Admin Jurusan** (pengelola jurusan / Kaprog) | Kelola user & kelas di jurusannya, **bertanggung jawab memoderasi jurusannya**, kelola grup di jurusannya, menunjuk moderator jurusannya |
 | **Admin** | Akses penuh |
 
 Role bisa diberi `expires_at` opsional. Semua pemberian/pencabutan role masuk audit log.
@@ -236,6 +241,10 @@ jebol: submit versi aman, lolos, lalu isinya diganti.
 - Kategori alasan (dikelola Admin): konten tidak pantas, plagiarisme, SARA, data pribadi,
   spam, tidak sesuai tipe (mis. tulisan diposting sebagai portfolio), kualitas/kelengkapan, lainnya.
 - Setiap keputusan masuk audit log dan dinotifikasi ke **semua author**.
+- **Penanggung jawab**: **Admin** (antrian global + semua jurusan) dan **Admin Jurusan** (antrian jurusannya).
+  Role Moderator dipakai untuk menambah tenaga tanpa memberi akses admin.
+- **Target waktu tinjau: 2×24 jam** (setting `moderation.sla_hours`). Kasus yang lewat target ditonjolkan
+  di antrian global dan masuk ringkasan harian Admin/Admin Jurusan (algorithms.md §9).
 
 ---
 
@@ -441,10 +450,17 @@ sekolah (tinggal kelas, mutasi, pindah rombel, lulus ditunda).
 - Semua konten pre-moderasi. Profil, komentar, dan grup post-moderasi dengan filter + laporan.
 - Rate limit untuk komentar, apresiasi, undangan kolaborasi, laporan.
 - Strip metadata EXIF (termasuk lokasi) dari semua unggahan gambar.
+- **Persetujuan & sosialisasi**: platform sudah disosialisasikan ke siswa, guru, dan orang tua, dan
+  didukung. Persetujuan orang tua/wali atas pemrosesan data anak (UU No. 27/2022 tentang PDP) dikelola sekolah
+  lewat mekanisme administrasi sekolah. Platform menerapkan minimisasi data: tanpa email, nomor HP, alamat,
+  atau tanggal lahir.
+- **Hak atas data**: permintaan hapus akun diproses Admin sebagai anonimisasi (database.md §8).
 
 ---
 
 ## 11. Konsep model data (tingkat tinggi)
+
+> Skema lengkap: [schema.sql](schema.sql), penjelasan: [database.md](database.md). Ringkasan di bawah hanya peta kasar.
 
 ```
 users (nisn/nip, username, password_hash, status, must_change_password)   — tanpa email
@@ -499,7 +515,7 @@ assignments ── assignment_submissions ── assessments
 2. **Profil di `/@{username}`**.
 3. **URL konten tidak memuat username**, karena konten bisa multi-author dan kepemilikannya bisa
    dipindah. Format: `/karya/{slug}-{id}` dan `/blog/{slug}-{id}`.
-   - `{id}` adalah ID pendek (mis. `a7k2`) dan menjadi kunci lookup. `{slug}` hanya kosmetik.
+   - `{id}` adalah `public_id` 8 karakter (mis. `a7k2x9pq`) dan menjadi kunci lookup. `{slug}` hanya kosmetik.
    - Slug salah/lama (mis. judul berubah lewat revisi) → **301 redirect** ke slug kanonik.
 4. **Satu URL untuk semua status konten.**
    - `published` → semua orang.
@@ -810,7 +826,8 @@ Internet
 | Bagian | Pilihan |
 |---|---|
 | Framework | **Next.js** App Router, `output: standalone`. Halaman publik di-render di server (SEO, OG image) |
-| UI | **Tailwind CSS** + **shadcn/ui** |
+| UI | **Tailwind CSS** + **shadcn/ui**: **semua komponen umum dan blok UI memakai shadcn/ui** (termasuk blok/komponen dari registry shadcn). Komponen kustom hanya bila shadcn tidak punya, dibangun di atas primitif yang sama |
+| Font | **Inter** saja (via `next/font`, self-hosted, variable) |
 | Klien API | **orval** dari OpenAPI → hook **TanStack Query** + skema **zod** |
 | Form | react-hook-form + zod |
 | Editor blog | **TipTap** (ProseMirror JSON) |
@@ -969,3 +986,29 @@ docs/
 - **Domain produksi: `grafikarsa.com`** (satu domain, semua lewat Caddy).
 - Spek final VPS sekolah belum diketahui. Target minimal mengikuti §14.10. Stack observability
   dipasang jika RAM ≥ 8 GB, jika kurang ditunda.
+
+---
+
+## 15. Keputusan Detail
+
+| Topik | Keputusan |
+|---|---|
+| Reaksi | **Satu jenis: Apresiasi.** Tidak ada emoji ganda atau reaksi negatif. Sederhana, positif, dan mudah dihitung |
+| Komentar | Maks 1.000 karakter, balasan 1 level, mention `@username`. **Bisa diedit 15 menit** setelah dikirim (tampil label "diedit"). Dihapus oleh penulis atau pemilik konten (tampil "komentar dihapus" agar thread utuh) |
+| Simpan | Satu daftar **Tersimpan** per user (bukan banyak koleksi) |
+| Hak cipta karya | Hak cipta tetap milik para author. Dengan menerbitkan, author memberi Grafikarsa/SMKN 4 Malang izin non-eksklusif untuk menampilkan & mempromosikan karya **dengan kredit**. Tidak ada pilihan lisensi Creative Commons di fase 1 |
+| Kredit aset | Author wajib mencantumkan sumber aset pihak ketiga (bagian dari pedoman, alasan moderasi `hak-cipta`) |
+| Transfer kepemilikan | Pemilik lama otomatis menjadi Editor |
+| Guru yang juga alumni | Satu akun, tipe akun diubah Admin menjadi Guru. Riwayat enrollment sebagai siswa tetap (tetap tercatat di grup jurusan & entri pendidikan) |
+| Siswa pindahan masuk | Diimpor dengan enrollment tahun berjalan |
+| Pindah jurusan | Ditangani lewat kenaikan kelas (aksi "pindah rombel") atau Admin, enrollment baru |
+| Tab Jurusanku | Siswa & alumni: jurusan enrollment terakhir. Guru: jurusan yang diampu. Tendik tanpa jurusan: tab disembunyikan |
+| Hapus akun | Bukan self-service. Diproses Admin sebagai anonimisasi (database.md §8) |
+| URL konten | `/karya/{slug}-{public_id}` dan `/blog/{slug}-{public_id}`, `public_id` 8 karakter acak |
+| Format ID & teks DB | UUID v7, identifier DB bahasa Inggris, UI bahasa Indonesia |
+| Format API | JSON camelCase, error RFC 9457, paginasi cursor (api.md §1) |
+| Embed | Hanya allowlist provider (editor-blocks.md §3.3). HTML embed mentah tidak pernah disimpan |
+| Retensi notifikasi | Dibaca > 90 hari dihapus, belum dibaca > 180 hari dihapus |
+| Data v1 | Dimigrasi (migration-v1.md). Portfolio v1 yang tayang tetap tayang tanpa moderasi ulang. Yang pending/ditolak di v1 menjadi draft. User v1 bisa login dengan sandi lamanya |
+| Pemilik moderasi | Admin & Admin Jurusan (§4.4), target 2×24 jam |
+| Rollout ke sekolah | Diurus pemilik proyek, di luar dokumen ini |
