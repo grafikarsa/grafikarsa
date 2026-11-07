@@ -94,7 +94,7 @@ func main() {
 		rdb,
 		hasher,
 		limiter,
-		auth.Config{},
+		auth.Config{RecoverySecret: []byte(cfg.SecretKey)},
 		log,
 	)
 	if err != nil {

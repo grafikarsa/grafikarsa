@@ -40,7 +40,7 @@ func newAcademicEnv(t *testing.T) *academicEnv {
 		rdb,
 		hasher,
 		ratelimit.New(rdb),
-		auth.Config{},
+		auth.Config{RecoverySecret: testRecoverySecret},
 		logger,
 	)
 	if err != nil {

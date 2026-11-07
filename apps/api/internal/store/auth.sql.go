@@ -13,6 +13,34 @@ import (
 	"github.com/google/uuid"
 )
 
+const completeActivation = `-- name: CompleteActivation :exec
+UPDATE users
+SET recovery_codes_confirmed_at = now(),
+    activated_at = now()
+WHERE id = $1::uuid
+  AND username IS NOT NULL
+`
+
+func (q *Queries) CompleteActivation(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, completeActivation, id)
+	return err
+}
+
+const countActiveRecoveryCodes = `-- name: CountActiveRecoveryCodes :one
+SELECT count(*)
+FROM recovery_codes
+WHERE user_id = $1::uuid
+  AND used_at IS NULL
+  AND revoked_at IS NULL
+`
+
+func (q *Queries) CountActiveRecoveryCodes(ctx context.Context, userID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countActiveRecoveryCodes, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createSession = `-- name: CreateSession :one
 INSERT INTO sessions (user_id, token_hash, ip, user_agent, idle_expires_at, expires_at)
 VALUES (
@@ -70,6 +98,59 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (S
 		&i.RevokedReason,
 	)
 	return i, err
+}
+
+const createStaffUser = `-- name: CreateStaffUser :one
+INSERT INTO users (
+  account_type,
+  display_name,
+  username,
+  staff_number,
+  password_hash,
+  password_kind,
+  password_expires_at
+) VALUES (
+  'staff',
+  $1::text,
+  $2::citext,
+  $3::text,
+  $4::text,
+  'initial',
+  $5::timestamptz
+)
+RETURNING id
+`
+
+type CreateStaffUserParams struct {
+	DisplayName       string
+	Username          string
+	StaffNumber       *string
+	PasswordHash      string
+	PasswordExpiresAt time.Time
+}
+
+func (q *Queries) CreateStaffUser(ctx context.Context, arg CreateStaffUserParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, createStaffUser,
+		arg.DisplayName,
+		arg.Username,
+		arg.StaffNumber,
+		arg.PasswordHash,
+		arg.PasswordExpiresAt,
+	)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const getRoleIDBySlug = `-- name: GetRoleIDBySlug :one
+SELECT id FROM roles WHERE slug = $1::citext
+`
+
+func (q *Queries) GetRoleIDBySlug(ctx context.Context, slug string) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, getRoleIDBySlug, slug)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
 const getSessionByTokenHash = `-- name: GetSessionByTokenHash :one
@@ -236,6 +317,141 @@ func (q *Queries) GetUserForLogin(ctx context.Context, identifier string) (GetUs
 	return i, err
 }
 
+const getUserIdentity = `-- name: GetUserIdentity :one
+SELECT
+  username,
+  nisn,
+  staff_number,
+  display_name,
+  password_hash,
+  password_kind,
+  activated_at,
+  status,
+  deactivated_at,
+  legacy_v1_id
+FROM users
+WHERE id = $1::uuid
+`
+
+type GetUserIdentityRow struct {
+	Username      *string
+	Nisn          *string
+	StaffNumber   *string
+	DisplayName   string
+	PasswordHash  string
+	PasswordKind  string
+	ActivatedAt   *time.Time
+	Status        string
+	DeactivatedAt *time.Time
+	LegacyV1ID    *uuid.UUID
+}
+
+func (q *Queries) GetUserIdentity(ctx context.Context, id uuid.UUID) (GetUserIdentityRow, error) {
+	row := q.db.QueryRow(ctx, getUserIdentity, id)
+	var i GetUserIdentityRow
+	err := row.Scan(
+		&i.Username,
+		&i.Nisn,
+		&i.StaffNumber,
+		&i.DisplayName,
+		&i.PasswordHash,
+		&i.PasswordKind,
+		&i.ActivatedAt,
+		&i.Status,
+		&i.DeactivatedAt,
+		&i.LegacyV1ID,
+	)
+	return i, err
+}
+
+const insertRecoveryCode = `-- name: InsertRecoveryCode :exec
+INSERT INTO recovery_codes (user_id, batch_id, code_hash)
+VALUES ($1::uuid, $2::uuid, $3::text)
+`
+
+type InsertRecoveryCodeParams struct {
+	UserID   uuid.UUID
+	BatchID  uuid.UUID
+	CodeHash string
+}
+
+func (q *Queries) InsertRecoveryCode(ctx context.Context, arg InsertRecoveryCodeParams) error {
+	_, err := q.db.Exec(ctx, insertRecoveryCode, arg.UserID, arg.BatchID, arg.CodeHash)
+	return err
+}
+
+const insertSystemUserRole = `-- name: InsertSystemUserRole :exec
+INSERT INTO user_roles (user_id, role_id, major_id, assigned_by)
+VALUES ($1::uuid, $2::uuid, NULL, NULL)
+`
+
+type InsertSystemUserRoleParams struct {
+	UserID uuid.UUID
+	RoleID uuid.UUID
+}
+
+func (q *Queries) InsertSystemUserRole(ctx context.Context, arg InsertSystemUserRoleParams) error {
+	_, err := q.db.Exec(ctx, insertSystemUserRole, arg.UserID, arg.RoleID)
+	return err
+}
+
+const insertUsernameHistory = `-- name: InsertUsernameHistory :exec
+INSERT INTO username_history (user_id, old_username, redirect_until)
+VALUES ($1::uuid, $2::citext, $3::timestamptz)
+`
+
+type InsertUsernameHistoryParams struct {
+	UserID        uuid.UUID
+	OldUsername   string
+	RedirectUntil time.Time
+}
+
+func (q *Queries) InsertUsernameHistory(ctx context.Context, arg InsertUsernameHistoryParams) error {
+	_, err := q.db.Exec(ctx, insertUsernameHistory, arg.UserID, arg.OldUsername, arg.RedirectUntil)
+	return err
+}
+
+const isUsernameReserved = `-- name: IsUsernameReserved :one
+SELECT EXISTS (
+  SELECT 1 FROM reserved_usernames WHERE username = $1::citext
+) AS reserved
+`
+
+func (q *Queries) IsUsernameReserved(ctx context.Context, username string) (bool, error) {
+	row := q.db.QueryRow(ctx, isUsernameReserved, username)
+	var reserved bool
+	err := row.Scan(&reserved)
+	return reserved, err
+}
+
+const isUsernameTaken = `-- name: IsUsernameTaken :one
+SELECT EXISTS (
+  SELECT 1
+  FROM users
+  WHERE username = $1::citext
+    AND id <> $2::uuid
+  UNION ALL
+  SELECT 1
+  FROM username_history
+  WHERE old_username = $1::citext
+    AND released_at IS NULL
+    AND redirect_until > now()
+    AND user_id <> $2::uuid
+) AS taken
+`
+
+type IsUsernameTakenParams struct {
+	Username string
+	UserID   uuid.UUID
+}
+
+func (q *Queries) IsUsernameTaken(ctx context.Context, arg IsUsernameTakenParams) (bool, error) {
+	row := q.db.QueryRow(ctx, isUsernameTaken, arg.Username, arg.UserID)
+	var taken bool
+	err := row.Scan(&taken)
+	return taken, err
+}
+
 const listActiveSessions = `-- name: ListActiveSessions :many
 SELECT
   id,
@@ -358,6 +574,19 @@ func (q *Queries) ListRolePermissionsBySlug(ctx context.Context, slug string) ([
 	return items, nil
 }
 
+const revokeActiveRecoveryCodes = `-- name: RevokeActiveRecoveryCodes :exec
+UPDATE recovery_codes
+SET revoked_at = now()
+WHERE user_id = $1::uuid
+  AND used_at IS NULL
+  AND revoked_at IS NULL
+`
+
+func (q *Queries) RevokeActiveRecoveryCodes(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, revokeActiveRecoveryCodes, userID)
+	return err
+}
+
 const revokeSession = `-- name: RevokeSession :exec
 UPDATE sessions
 SET revoked_at = now(),
@@ -423,6 +652,42 @@ func (q *Queries) SetLastLogin(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const setOwnPassword = `-- name: SetOwnPassword :exec
+UPDATE users
+SET password_hash = $1::text,
+    password_kind = 'user',
+    password_expires_at = NULL,
+    password_changed_at = now()
+WHERE id = $2::uuid
+`
+
+type SetOwnPasswordParams struct {
+	PasswordHash string
+	ID           uuid.UUID
+}
+
+func (q *Queries) SetOwnPassword(ctx context.Context, arg SetOwnPasswordParams) error {
+	_, err := q.db.Exec(ctx, setOwnPassword, arg.PasswordHash, arg.ID)
+	return err
+}
+
+const setUsername = `-- name: SetUsername :exec
+UPDATE users
+SET username = $1::citext,
+    username_changed_at = now()
+WHERE id = $2::uuid
+`
+
+type SetUsernameParams struct {
+	Username string
+	ID       uuid.UUID
+}
+
+func (q *Queries) SetUsername(ctx context.Context, arg SetUsernameParams) error {
+	_, err := q.db.Exec(ctx, setUsername, arg.Username, arg.ID)
+	return err
+}
+
 const touchSession = `-- name: TouchSession :exec
 UPDATE sessions
 SET last_seen_at = now(),
@@ -455,4 +720,26 @@ type UpdatePasswordHashParams struct {
 func (q *Queries) UpdatePasswordHash(ctx context.Context, arg UpdatePasswordHashParams) error {
 	_, err := q.db.Exec(ctx, updatePasswordHash, arg.PasswordHash, arg.ID)
 	return err
+}
+
+const useRecoveryCode = `-- name: UseRecoveryCode :one
+UPDATE recovery_codes
+SET used_at = now()
+WHERE user_id = $1::uuid
+  AND code_hash = $2::text
+  AND used_at IS NULL
+  AND revoked_at IS NULL
+RETURNING id
+`
+
+type UseRecoveryCodeParams struct {
+	UserID   uuid.UUID
+	CodeHash string
+}
+
+func (q *Queries) UseRecoveryCode(ctx context.Context, arg UseRecoveryCodeParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, useRecoveryCode, arg.UserID, arg.CodeHash)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }

@@ -189,3 +189,142 @@ func (s *Server) PostAuthSessionsRevokeOthers(ctx context.Context, _ apigen.Post
 
 	return apigen.PostAuthSessionsRevokeOthers204Response{}, nil
 }
+
+// GetAuthUsernameAvailability checks whether a username can be used. It is
+// available to sessions that have not completed activation yet.
+func (s *Server) GetAuthUsernameAvailability(ctx context.Context, request apigen.GetAuthUsernameAvailabilityRequestObject) (apigen.GetAuthUsernameAvailabilityResponseObject, error) {
+	principal, err := requirePrincipal(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	check, err := s.auth.CheckUsername(ctx, principal, request.Params.U)
+	if err != nil {
+		return nil, err
+	}
+
+	response := apigen.UsernameAvailability{
+		Available: check.Available,
+		Username:  check.Username,
+	}
+	if !check.Available {
+		reason := apigen.UsernameAvailabilityReason(check.Reason)
+		response.Reason = &reason
+	}
+
+	return apigen.GetAuthUsernameAvailability200JSONResponse(response), nil
+}
+
+// PostAuthActivate sets the username and password of a not-yet-activated
+// account and returns its first recovery codes.
+func (s *Server) PostAuthActivate(ctx context.Context, request apigen.PostAuthActivateRequestObject) (apigen.PostAuthActivateResponseObject, error) {
+	if request.Body == nil {
+		return nil, apperr.BadRequest("Body permintaan kosong")
+	}
+
+	principal, err := requirePrincipal(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	codes, err := s.auth.Activate(
+		ctx,
+		principal,
+		request.Body.Username,
+		request.Body.NewPassword,
+		authctx.MetaFrom(ctx).IP,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return apigen.PostAuthActivate200JSONResponse(apigen.RecoveryCodes{Codes: codes}), nil
+}
+
+// PostAuthRecoveryCodesConfirm marks activation complete once the user has
+// stored their recovery codes.
+func (s *Server) PostAuthRecoveryCodesConfirm(ctx context.Context, _ apigen.PostAuthRecoveryCodesConfirmRequestObject) (apigen.PostAuthRecoveryCodesConfirmResponseObject, error) {
+	principal, err := requirePrincipal(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	updated, err := s.auth.ConfirmRecoveryCodes(ctx, principal)
+	if err != nil {
+		return nil, err
+	}
+
+	return apigen.PostAuthRecoveryCodesConfirm200JSONResponse(toSession(updated)), nil
+}
+
+// PostAuthRecoveryCodesRegenerate replaces every recovery code after the user
+// confirms their current password.
+func (s *Server) PostAuthRecoveryCodesRegenerate(ctx context.Context, request apigen.PostAuthRecoveryCodesRegenerateRequestObject) (apigen.PostAuthRecoveryCodesRegenerateResponseObject, error) {
+	if request.Body == nil {
+		return nil, apperr.BadRequest("Body permintaan kosong")
+	}
+
+	principal, err := requirePrincipal(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	codes, err := s.auth.RegenerateRecoveryCodes(
+		ctx,
+		principal,
+		request.Body.Password,
+		authctx.MetaFrom(ctx).IP,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return apigen.PostAuthRecoveryCodesRegenerate200JSONResponse(apigen.RecoveryCodes{Codes: codes}), nil
+}
+
+// PostAuthPasswordRecover sets a new password with a recovery code. It needs
+// no session and revokes every session of the account.
+func (s *Server) PostAuthPasswordRecover(ctx context.Context, request apigen.PostAuthPasswordRecoverRequestObject) (apigen.PostAuthPasswordRecoverResponseObject, error) {
+	if request.Body == nil {
+		return nil, apperr.BadRequest("Body permintaan kosong")
+	}
+
+	err := s.auth.RecoverPassword(
+		ctx,
+		request.Body.Identifier,
+		request.Body.RecoveryCode,
+		request.Body.NewPassword,
+		authctx.MetaFrom(ctx).IP,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return apigen.PostAuthPasswordRecover204Response{}, nil
+}
+
+// PostAuthPasswordChange changes the principal's password and revokes every
+// other session.
+func (s *Server) PostAuthPasswordChange(ctx context.Context, request apigen.PostAuthPasswordChangeRequestObject) (apigen.PostAuthPasswordChangeResponseObject, error) {
+	if request.Body == nil {
+		return nil, apperr.BadRequest("Body permintaan kosong")
+	}
+
+	principal, err := requirePrincipal(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	updated, err := s.auth.ChangePassword(
+		ctx,
+		principal,
+		request.Body.CurrentPassword,
+		request.Body.NewPassword,
+		authctx.MetaFrom(ctx).IP,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return apigen.PostAuthPasswordChange200JSONResponse(toSession(updated)), nil
+}

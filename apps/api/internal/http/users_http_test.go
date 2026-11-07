@@ -51,7 +51,7 @@ func newUsersEnv(t *testing.T) *usersEnv {
 		rdb,
 		hasher,
 		ratelimit.New(rdb),
-		auth.Config{},
+		auth.Config{RecoverySecret: testRecoverySecret},
 		logger,
 	)
 	if err != nil {

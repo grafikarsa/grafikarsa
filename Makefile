@@ -6,7 +6,7 @@ API := cd apps/api &&
 
 .PHONY: help dev-init dev-up dev-down dev-reset dev-ps dev-logs db-shell valkey-cli \
 	migrate-up migrate-down migrate-status seed api-run web-dev sqlc openapi generate-check \
-	test test-integration lint prod-local-up prod-local-down
+	test test-integration lint admin-create prod-local-up prod-local-down
 
 help: ## Tampilkan daftar target
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -51,6 +51,10 @@ seed: ## Jalankan seed idempoten (butuh migrate-up)
 		echo "seed $$f"; \
 		$(COMPOSE_DEV) exec -T postgres sh -c 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -v ON_ERROR_STOP=1 -q' < $$f || exit 1; \
 	done
+
+admin-create: ## Buat admin pertama: make admin-create NAME="Nama" USERNAME=admin.sekolah [STAFF_NUMBER=123]
+	@test -n "$(NAME)" -a -n "$(USERNAME)" || (echo 'Pakai: make admin-create NAME="Nama Admin" USERNAME=admin.sekolah [STAFF_NUMBER=123]' && exit 2)
+	$(API) go run ./cmd/admin create --name "$(NAME)" --username "$(USERNAME)" $(if $(STAFF_NUMBER),--staff-number "$(STAFF_NUMBER)")
 
 api-run: ## Jalankan API di :8091 (baca .env root)
 	$(API) go run ./cmd/api
