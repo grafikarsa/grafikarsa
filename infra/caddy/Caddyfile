@@ -1,0 +1,41 @@
+{
+	email {$GK_ACME_EMAIL:admin@localhost}
+}
+
+{$GK_DOMAIN:localhost} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "DENY"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+
+	@internal path /internal/*
+	respond @internal 404
+
+	handle /api/* {
+		reverse_proxy api:8091
+	}
+
+	@mediaRead {
+		path /media/*
+		method GET HEAD
+	}
+	handle @mediaRead {
+		uri strip_prefix /media
+		rewrite * /gk-public{uri}
+		reverse_proxy rustfs:9000
+		header Cache-Control "public, max-age=31536000, immutable"
+	}
+	handle /media/* {
+		respond 405
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+}
