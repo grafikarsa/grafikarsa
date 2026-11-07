@@ -132,3 +132,8 @@ func RateLimited() *Error {
 func Unavailable(detail string) *Error {
 	return newErr(http.StatusServiceUnavailable, "UNAVAILABLE", "Layanan belum siap").WithDetail(detail)
 }
+
+// NotImplemented marks an endpoint that exists in the contract but is not built yet.
+func NotImplemented() *Error {
+	return newErr(http.StatusNotImplemented, "NOT_IMPLEMENTED", "Fitur belum tersedia")
+}

@@ -7,11 +7,125 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/oapi-codegen/runtime"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
+
+// Defines values for AccountStatus.
+const (
+	AccountStatusActive      AccountStatus = "active"
+	AccountStatusAlumni      AccountStatus = "alumni"
+	AccountStatusInactive    AccountStatus = "inactive"
+	AccountStatusTransferred AccountStatus = "transferred"
+)
+
+// Valid indicates whether the value is a known member of the AccountStatus enum.
+func (e AccountStatus) Valid() bool {
+	switch e {
+	case AccountStatusActive:
+		return true
+	case AccountStatusAlumni:
+		return true
+	case AccountStatusInactive:
+		return true
+	case AccountStatusTransferred:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AccountType.
+const (
+	AccountTypeStaff   AccountType = "staff"
+	AccountTypeStudent AccountType = "student"
+	AccountTypeTeacher AccountType = "teacher"
+)
+
+// Valid indicates whether the value is a known member of the AccountType enum.
+func (e AccountType) Valid() bool {
+	switch e {
+	case AccountTypeStaff:
+		return true
+	case AccountTypeStudent:
+		return true
+	case AccountTypeTeacher:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NextStep.
+const (
+	NextStepActivate       NextStep = "activate"
+	NextStepChangePassword NextStep = "change_password"
+	NextStepNone           NextStep = "none"
+)
+
+// Valid indicates whether the value is a known member of the NextStep enum.
+func (e NextStep) Valid() bool {
+	switch e {
+	case NextStepActivate:
+		return true
+	case NextStepChangePassword:
+		return true
+	case NextStepNone:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UsernameAvailabilityReason.
+const (
+	UsernameAvailabilityReasonInvalidFormat UsernameAvailabilityReason = "invalid_format"
+	UsernameAvailabilityReasonReserved      UsernameAvailabilityReason = "reserved"
+	UsernameAvailabilityReasonTaken         UsernameAvailabilityReason = "taken"
+)
+
+// Valid indicates whether the value is a known member of the UsernameAvailabilityReason enum.
+func (e UsernameAvailabilityReason) Valid() bool {
+	switch e {
+	case UsernameAvailabilityReasonInvalidFormat:
+		return true
+	case UsernameAvailabilityReasonReserved:
+		return true
+	case UsernameAvailabilityReasonTaken:
+		return true
+	default:
+		return false
+	}
+}
+
+// AccountStatus defines model for AccountStatus.
+type AccountStatus string
+
+// AccountType defines model for AccountType.
+type AccountType string
+
+// ActivateRequest defines model for ActivateRequest.
+type ActivateRequest struct {
+	NewPassword *string `json:"newPassword,omitempty"`
+	Username    string  `json:"username"`
+}
+
+// ChangePasswordRequest defines model for ChangePasswordRequest.
+type ChangePasswordRequest struct {
+	CurrentPassword *string `json:"currentPassword,omitempty"`
+	NewPassword     string  `json:"newPassword"`
+}
+
+// CsrfToken defines model for CsrfToken.
+type CsrfToken struct {
+	CsrfToken string `json:"csrfToken"`
+}
 
 // FieldError defines model for FieldError.
 type FieldError struct {
@@ -19,6 +133,23 @@ type FieldError struct {
 	Field   string  `json:"field"`
 	Message string  `json:"message"`
 	Ref     *string `json:"ref,omitempty"`
+}
+
+// LoginRequest defines model for LoginRequest.
+type LoginRequest struct {
+	// Identifier NISN, NIP/ID staf, atau username.
+	Identifier string `json:"identifier"`
+	Password   string `json:"password"`
+}
+
+// NextStep Halaman wajib berikutnya. `activate` → /aktivasi, `change_password` → /ganti-sandi,
+// `none` → bebas. Selama bukan `none`, endpoint lain menolak dengan 403
+// `ACTIVATION_REQUIRED` / `PASSWORD_CHANGE_REQUIRED`.
+type NextStep string
+
+// PasswordConfirmation defines model for PasswordConfirmation.
+type PasswordConfirmation struct {
+	Password string `json:"password"`
 }
 
 // Pong defines model for Pong.
@@ -38,8 +169,145 @@ type Problem struct {
 	Type      string        `json:"type"`
 }
 
+// RecoverPasswordRequest defines model for RecoverPasswordRequest.
+type RecoverPasswordRequest struct {
+	Identifier   string `json:"identifier"`
+	NewPassword  string `json:"newPassword"`
+	RecoveryCode string `json:"recoveryCode"`
+}
+
+// RecoveryCodes defines model for RecoveryCodes.
+type RecoveryCodes struct {
+	// Codes Format `xxxxx-xxxxx`. Hanya ditampilkan sekali.
+	Codes []string `json:"codes"`
+}
+
+// RoleGrant Izin efektif user. `majorIds` kosong berarti scope global.
+type RoleGrant struct {
+	Global   bool                 `json:"global"`
+	MajorIds []openapi_types.UUID `json:"majorIds"`
+
+	// Permission Example: content.moderate
+	Permission string `json:"permission"`
+}
+
+// Session defines model for Session.
+type Session struct {
+	ExpiresAt time.Time   `json:"expiresAt"`
+	Grants    []RoleGrant `json:"grants"`
+
+	// IsMigratedAccount Akun hasil migrasi v1 (aktivasi versi singkat).
+	IsMigratedAccount *bool `json:"isMigratedAccount,omitempty"`
+
+	// NextStep Halaman wajib berikutnya. `activate` → /aktivasi, `change_password` → /ganti-sandi,
+	// `none` → bebas. Selama bukan `none`, endpoint lain menolak dengan 403
+	// `ACTIVATION_REQUIRED` / `PASSWORD_CHANGE_REQUIRED`.
+	NextStep NextStep    `json:"nextStep"`
+	User     SessionUser `json:"user"`
+}
+
+// SessionDevice defines model for SessionDevice.
+type SessionDevice struct {
+	CreatedAt time.Time          `json:"createdAt"`
+	Current   bool               `json:"current"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// IpPrefix IP yang disamarkan (mis. 103.134.78.x).
+	IpPrefix   *string   `json:"ipPrefix,omitempty"`
+	LastSeenAt time.Time `json:"lastSeenAt"`
+	UserAgent  *string   `json:"userAgent,omitempty"`
+}
+
+// SessionDeviceList defines model for SessionDeviceList.
+type SessionDeviceList struct {
+	Items []SessionDevice `json:"items"`
+}
+
+// SessionUser defines model for SessionUser.
+type SessionUser struct {
+	AccountType AccountType        `json:"accountType"`
+	AvatarUrl   *string            `json:"avatarUrl,omitempty"`
+	DisplayName string             `json:"displayName"`
+	Id          openapi_types.UUID `json:"id"`
+	Status      AccountStatus      `json:"status"`
+
+	// Username Kosong sebelum aktivasi.
+	Username *string `json:"username,omitempty"`
+}
+
+// UsernameAvailability defines model for UsernameAvailability.
+type UsernameAvailability struct {
+	Available bool                        `json:"available"`
+	Reason    *UsernameAvailabilityReason `json:"reason,omitempty"`
+
+	// Username Username yang sudah dinormalisasi (huruf kecil, tanpa spasi).
+	Username string `json:"username"`
+}
+
+// UsernameAvailabilityReason defines model for UsernameAvailability.Reason.
+type UsernameAvailabilityReason string
+
+// GetAuthUsernameAvailabilityParams defines parameters for GetAuthUsernameAvailability.
+type GetAuthUsernameAvailabilityParams struct {
+	U string `form:"u" json:"u"`
+}
+
+// PostAuthActivateJSONRequestBody defines body for PostAuthActivate for application/json ContentType.
+type PostAuthActivateJSONRequestBody = ActivateRequest
+
+// PostAuthLoginJSONRequestBody defines body for PostAuthLogin for application/json ContentType.
+type PostAuthLoginJSONRequestBody = LoginRequest
+
+// PostAuthPasswordChangeJSONRequestBody defines body for PostAuthPasswordChange for application/json ContentType.
+type PostAuthPasswordChangeJSONRequestBody = ChangePasswordRequest
+
+// PostAuthPasswordRecoverJSONRequestBody defines body for PostAuthPasswordRecover for application/json ContentType.
+type PostAuthPasswordRecoverJSONRequestBody = RecoverPasswordRequest
+
+// PostAuthRecoveryCodesRegenerateJSONRequestBody defines body for PostAuthRecoveryCodesRegenerate for application/json ContentType.
+type PostAuthRecoveryCodesRegenerateJSONRequestBody = PasswordConfirmation
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// PostAuthActivate Aktivasi akun (login pertama)
+	// (POST /auth/activate)
+	PostAuthActivate(w http.ResponseWriter, r *http.Request)
+	// GetAuthCsrf Ambil token CSRF
+	// (GET /auth/csrf)
+	GetAuthCsrf(w http.ResponseWriter, r *http.Request)
+	// PostAuthLogin Masuk dengan NISN/NIP/username dan sandi
+	// (POST /auth/login)
+	PostAuthLogin(w http.ResponseWriter, r *http.Request)
+	// PostAuthLogout Keluar (cabut sesi ini)
+	// (POST /auth/logout)
+	PostAuthLogout(w http.ResponseWriter, r *http.Request)
+	// PostAuthPasswordChange Ganti sandi
+	// (POST /auth/password/change)
+	PostAuthPasswordChange(w http.ResponseWriter, r *http.Request)
+	// PostAuthPasswordRecover Reset sandi dengan recovery code
+	// (POST /auth/password/recover)
+	PostAuthPasswordRecover(w http.ResponseWriter, r *http.Request)
+	// PostAuthRecoveryCodesConfirm Konfirmasi recovery code sudah disimpan
+	// (POST /auth/recovery-codes/confirm)
+	PostAuthRecoveryCodesConfirm(w http.ResponseWriter, r *http.Request)
+	// PostAuthRecoveryCodesRegenerate Buat ulang recovery code
+	// (POST /auth/recovery-codes/regenerate)
+	PostAuthRecoveryCodesRegenerate(w http.ResponseWriter, r *http.Request)
+	// GetAuthSession Sesi saat ini
+	// (GET /auth/session)
+	GetAuthSession(w http.ResponseWriter, r *http.Request)
+	// GetAuthSessions Daftar sesi aktif milik user
+	// (GET /auth/sessions)
+	GetAuthSessions(w http.ResponseWriter, r *http.Request)
+	// PostAuthSessionsRevokeOthers Keluar dari semua perangkat lain
+	// (POST /auth/sessions/revoke-others)
+	PostAuthSessionsRevokeOthers(w http.ResponseWriter, r *http.Request)
+	// DeleteAuthSession Cabut satu sesi milik user
+	// (DELETE /auth/sessions/{id})
+	DeleteAuthSession(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// GetAuthUsernameAvailability Cek ketersediaan username
+	// (GET /auth/username-availability)
+	GetAuthUsernameAvailability(w http.ResponseWriter, r *http.Request, params GetAuthUsernameAvailabilityParams)
 	// GetPing Cek API hidup
 	// (GET /ping)
 	GetPing(w http.ResponseWriter, r *http.Request)
@@ -48,6 +316,84 @@ type ServerInterface interface {
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
 
 type Unimplemented struct{}
+
+// PostAuthActivate Aktivasi akun (login pertama)
+// (POST /auth/activate)
+func (_ Unimplemented) PostAuthActivate(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetAuthCsrf Ambil token CSRF
+// (GET /auth/csrf)
+func (_ Unimplemented) GetAuthCsrf(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostAuthLogin Masuk dengan NISN/NIP/username dan sandi
+// (POST /auth/login)
+func (_ Unimplemented) PostAuthLogin(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostAuthLogout Keluar (cabut sesi ini)
+// (POST /auth/logout)
+func (_ Unimplemented) PostAuthLogout(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostAuthPasswordChange Ganti sandi
+// (POST /auth/password/change)
+func (_ Unimplemented) PostAuthPasswordChange(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostAuthPasswordRecover Reset sandi dengan recovery code
+// (POST /auth/password/recover)
+func (_ Unimplemented) PostAuthPasswordRecover(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostAuthRecoveryCodesConfirm Konfirmasi recovery code sudah disimpan
+// (POST /auth/recovery-codes/confirm)
+func (_ Unimplemented) PostAuthRecoveryCodesConfirm(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostAuthRecoveryCodesRegenerate Buat ulang recovery code
+// (POST /auth/recovery-codes/regenerate)
+func (_ Unimplemented) PostAuthRecoveryCodesRegenerate(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetAuthSession Sesi saat ini
+// (GET /auth/session)
+func (_ Unimplemented) GetAuthSession(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetAuthSessions Daftar sesi aktif milik user
+// (GET /auth/sessions)
+func (_ Unimplemented) GetAuthSessions(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostAuthSessionsRevokeOthers Keluar dari semua perangkat lain
+// (POST /auth/sessions/revoke-others)
+func (_ Unimplemented) PostAuthSessionsRevokeOthers(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DeleteAuthSession Cabut satu sesi milik user
+// (DELETE /auth/sessions/{id})
+func (_ Unimplemented) DeleteAuthSession(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetAuthUsernameAvailability Cek ketersediaan username
+// (GET /auth/username-availability)
+func (_ Unimplemented) GetAuthUsernameAvailability(w http.ResponseWriter, r *http.Request, params GetAuthUsernameAvailabilityParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
 
 // GetPing Cek API hidup
 // (GET /ping)
@@ -63,6 +409,219 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// PostAuthActivate operation middleware
+func (siw *ServerInterfaceWrapper) PostAuthActivate(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAuthActivate(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAuthCsrf operation middleware
+func (siw *ServerInterfaceWrapper) GetAuthCsrf(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAuthCsrf(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAuthLogin operation middleware
+func (siw *ServerInterfaceWrapper) PostAuthLogin(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAuthLogin(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAuthLogout operation middleware
+func (siw *ServerInterfaceWrapper) PostAuthLogout(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAuthLogout(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAuthPasswordChange operation middleware
+func (siw *ServerInterfaceWrapper) PostAuthPasswordChange(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAuthPasswordChange(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAuthPasswordRecover operation middleware
+func (siw *ServerInterfaceWrapper) PostAuthPasswordRecover(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAuthPasswordRecover(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAuthRecoveryCodesConfirm operation middleware
+func (siw *ServerInterfaceWrapper) PostAuthRecoveryCodesConfirm(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAuthRecoveryCodesConfirm(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAuthRecoveryCodesRegenerate operation middleware
+func (siw *ServerInterfaceWrapper) PostAuthRecoveryCodesRegenerate(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAuthRecoveryCodesRegenerate(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAuthSession operation middleware
+func (siw *ServerInterfaceWrapper) GetAuthSession(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAuthSession(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAuthSessions operation middleware
+func (siw *ServerInterfaceWrapper) GetAuthSessions(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAuthSessions(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAuthSessionsRevokeOthers operation middleware
+func (siw *ServerInterfaceWrapper) PostAuthSessionsRevokeOthers(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAuthSessionsRevokeOthers(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteAuthSession operation middleware
+func (siw *ServerInterfaceWrapper) DeleteAuthSession(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteAuthSession(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAuthUsernameAvailability operation middleware
+func (siw *ServerInterfaceWrapper) GetAuthUsernameAvailability(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetAuthUsernameAvailabilityParams
+
+	// ------------- Required query parameter "u" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "u", r.URL.Query(), &params.U, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "u"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "u", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAuthUsernameAvailability(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // GetPing operation middleware
 func (siw *ServerInterfaceWrapper) GetPing(w http.ResponseWriter, r *http.Request) {
@@ -194,11 +753,527 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ping", wrapper.GetPing)
 	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/auth/csrf", wrapper.GetAuthCsrf)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/auth/login", wrapper.PostAuthLogin)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/auth/logout", wrapper.PostAuthLogout)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/auth/session", wrapper.GetAuthSession)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/auth/username-availability", wrapper.GetAuthUsernameAvailability)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/auth/activate", wrapper.PostAuthActivate)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/auth/recovery-codes/confirm", wrapper.PostAuthRecoveryCodesConfirm)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/auth/recovery-codes/regenerate", wrapper.PostAuthRecoveryCodesRegenerate)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/auth/password/recover", wrapper.PostAuthPasswordRecover)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/auth/password/change", wrapper.PostAuthPasswordChange)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/auth/sessions", wrapper.GetAuthSessions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/auth/sessions/{id}", wrapper.DeleteAuthSession)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/auth/sessions/revoke-others", wrapper.PostAuthSessionsRevokeOthers)
+	})
 
 	return r
 }
 
 type ProblemApplicationProblemPlusJSONResponse Problem
+
+type PostAuthActivateRequestObject struct {
+	Body *PostAuthActivateJSONRequestBody
+}
+
+type PostAuthActivateResponseObject interface {
+	VisitPostAuthActivateResponse(w http.ResponseWriter) error
+}
+
+type PostAuthActivate200JSONResponse RecoveryCodes
+
+func (response PostAuthActivate200JSONResponse) VisitPostAuthActivateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAuthActivatedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostAuthActivatedefaultApplicationProblemPlusJSONResponse) VisitPostAuthActivateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAuthCsrfRequestObject struct {
+}
+
+type GetAuthCsrfResponseObject interface {
+	VisitGetAuthCsrfResponse(w http.ResponseWriter) error
+}
+
+type GetAuthCsrf200JSONResponse CsrfToken
+
+func (response GetAuthCsrf200JSONResponse) VisitGetAuthCsrfResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAuthCsrfdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetAuthCsrfdefaultApplicationProblemPlusJSONResponse) VisitGetAuthCsrfResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAuthLoginRequestObject struct {
+	Body *PostAuthLoginJSONRequestBody
+}
+
+type PostAuthLoginResponseObject interface {
+	VisitPostAuthLoginResponse(w http.ResponseWriter) error
+}
+
+type PostAuthLogin200JSONResponse Session
+
+func (response PostAuthLogin200JSONResponse) VisitPostAuthLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAuthLogindefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostAuthLogindefaultApplicationProblemPlusJSONResponse) VisitPostAuthLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAuthLogoutRequestObject struct {
+}
+
+type PostAuthLogoutResponseObject interface {
+	VisitPostAuthLogoutResponse(w http.ResponseWriter) error
+}
+
+type PostAuthLogout204Response struct {
+}
+
+func (response PostAuthLogout204Response) VisitPostAuthLogoutResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PostAuthLogoutdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostAuthLogoutdefaultApplicationProblemPlusJSONResponse) VisitPostAuthLogoutResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAuthPasswordChangeRequestObject struct {
+	Body *PostAuthPasswordChangeJSONRequestBody
+}
+
+type PostAuthPasswordChangeResponseObject interface {
+	VisitPostAuthPasswordChangeResponse(w http.ResponseWriter) error
+}
+
+type PostAuthPasswordChange200JSONResponse Session
+
+func (response PostAuthPasswordChange200JSONResponse) VisitPostAuthPasswordChangeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAuthPasswordChangedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostAuthPasswordChangedefaultApplicationProblemPlusJSONResponse) VisitPostAuthPasswordChangeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAuthPasswordRecoverRequestObject struct {
+	Body *PostAuthPasswordRecoverJSONRequestBody
+}
+
+type PostAuthPasswordRecoverResponseObject interface {
+	VisitPostAuthPasswordRecoverResponse(w http.ResponseWriter) error
+}
+
+type PostAuthPasswordRecover204Response struct {
+}
+
+func (response PostAuthPasswordRecover204Response) VisitPostAuthPasswordRecoverResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PostAuthPasswordRecoverdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostAuthPasswordRecoverdefaultApplicationProblemPlusJSONResponse) VisitPostAuthPasswordRecoverResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAuthRecoveryCodesConfirmRequestObject struct {
+}
+
+type PostAuthRecoveryCodesConfirmResponseObject interface {
+	VisitPostAuthRecoveryCodesConfirmResponse(w http.ResponseWriter) error
+}
+
+type PostAuthRecoveryCodesConfirm200JSONResponse Session
+
+func (response PostAuthRecoveryCodesConfirm200JSONResponse) VisitPostAuthRecoveryCodesConfirmResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAuthRecoveryCodesConfirmdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostAuthRecoveryCodesConfirmdefaultApplicationProblemPlusJSONResponse) VisitPostAuthRecoveryCodesConfirmResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAuthRecoveryCodesRegenerateRequestObject struct {
+	Body *PostAuthRecoveryCodesRegenerateJSONRequestBody
+}
+
+type PostAuthRecoveryCodesRegenerateResponseObject interface {
+	VisitPostAuthRecoveryCodesRegenerateResponse(w http.ResponseWriter) error
+}
+
+type PostAuthRecoveryCodesRegenerate200JSONResponse RecoveryCodes
+
+func (response PostAuthRecoveryCodesRegenerate200JSONResponse) VisitPostAuthRecoveryCodesRegenerateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAuthRecoveryCodesRegeneratedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostAuthRecoveryCodesRegeneratedefaultApplicationProblemPlusJSONResponse) VisitPostAuthRecoveryCodesRegenerateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAuthSessionRequestObject struct {
+}
+
+type GetAuthSessionResponseObject interface {
+	VisitGetAuthSessionResponse(w http.ResponseWriter) error
+}
+
+type GetAuthSession200JSONResponse Session
+
+func (response GetAuthSession200JSONResponse) VisitGetAuthSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAuthSessiondefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetAuthSessiondefaultApplicationProblemPlusJSONResponse) VisitGetAuthSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAuthSessionsRequestObject struct {
+}
+
+type GetAuthSessionsResponseObject interface {
+	VisitGetAuthSessionsResponse(w http.ResponseWriter) error
+}
+
+type GetAuthSessions200JSONResponse SessionDeviceList
+
+func (response GetAuthSessions200JSONResponse) VisitGetAuthSessionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAuthSessionsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetAuthSessionsdefaultApplicationProblemPlusJSONResponse) VisitGetAuthSessionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAuthSessionsRevokeOthersRequestObject struct {
+}
+
+type PostAuthSessionsRevokeOthersResponseObject interface {
+	VisitPostAuthSessionsRevokeOthersResponse(w http.ResponseWriter) error
+}
+
+type PostAuthSessionsRevokeOthers204Response struct {
+}
+
+func (response PostAuthSessionsRevokeOthers204Response) VisitPostAuthSessionsRevokeOthersResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PostAuthSessionsRevokeOthersdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostAuthSessionsRevokeOthersdefaultApplicationProblemPlusJSONResponse) VisitPostAuthSessionsRevokeOthersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAuthSessionRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type DeleteAuthSessionResponseObject interface {
+	VisitDeleteAuthSessionResponse(w http.ResponseWriter) error
+}
+
+type DeleteAuthSession204Response struct {
+}
+
+func (response DeleteAuthSession204Response) VisitDeleteAuthSessionResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteAuthSessiondefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DeleteAuthSessiondefaultApplicationProblemPlusJSONResponse) VisitDeleteAuthSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAuthUsernameAvailabilityRequestObject struct {
+	Params GetAuthUsernameAvailabilityParams
+}
+
+type GetAuthUsernameAvailabilityResponseObject interface {
+	VisitGetAuthUsernameAvailabilityResponse(w http.ResponseWriter) error
+}
+
+type GetAuthUsernameAvailability200JSONResponse UsernameAvailability
+
+func (response GetAuthUsernameAvailability200JSONResponse) VisitGetAuthUsernameAvailabilityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAuthUsernameAvailabilitydefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetAuthUsernameAvailabilitydefaultApplicationProblemPlusJSONResponse) VisitGetAuthUsernameAvailabilityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
 
 type GetPingRequestObject struct {
 }
@@ -240,6 +1315,45 @@ func (response GetPingdefaultApplicationProblemPlusJSONResponse) VisitGetPingRes
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// PostAuthActivate Aktivasi akun (login pertama)
+	// (POST /auth/activate)
+	PostAuthActivate(ctx context.Context, request PostAuthActivateRequestObject) (PostAuthActivateResponseObject, error)
+	// GetAuthCsrf Ambil token CSRF
+	// (GET /auth/csrf)
+	GetAuthCsrf(ctx context.Context, request GetAuthCsrfRequestObject) (GetAuthCsrfResponseObject, error)
+	// PostAuthLogin Masuk dengan NISN/NIP/username dan sandi
+	// (POST /auth/login)
+	PostAuthLogin(ctx context.Context, request PostAuthLoginRequestObject) (PostAuthLoginResponseObject, error)
+	// PostAuthLogout Keluar (cabut sesi ini)
+	// (POST /auth/logout)
+	PostAuthLogout(ctx context.Context, request PostAuthLogoutRequestObject) (PostAuthLogoutResponseObject, error)
+	// PostAuthPasswordChange Ganti sandi
+	// (POST /auth/password/change)
+	PostAuthPasswordChange(ctx context.Context, request PostAuthPasswordChangeRequestObject) (PostAuthPasswordChangeResponseObject, error)
+	// PostAuthPasswordRecover Reset sandi dengan recovery code
+	// (POST /auth/password/recover)
+	PostAuthPasswordRecover(ctx context.Context, request PostAuthPasswordRecoverRequestObject) (PostAuthPasswordRecoverResponseObject, error)
+	// PostAuthRecoveryCodesConfirm Konfirmasi recovery code sudah disimpan
+	// (POST /auth/recovery-codes/confirm)
+	PostAuthRecoveryCodesConfirm(ctx context.Context, request PostAuthRecoveryCodesConfirmRequestObject) (PostAuthRecoveryCodesConfirmResponseObject, error)
+	// PostAuthRecoveryCodesRegenerate Buat ulang recovery code
+	// (POST /auth/recovery-codes/regenerate)
+	PostAuthRecoveryCodesRegenerate(ctx context.Context, request PostAuthRecoveryCodesRegenerateRequestObject) (PostAuthRecoveryCodesRegenerateResponseObject, error)
+	// GetAuthSession Sesi saat ini
+	// (GET /auth/session)
+	GetAuthSession(ctx context.Context, request GetAuthSessionRequestObject) (GetAuthSessionResponseObject, error)
+	// GetAuthSessions Daftar sesi aktif milik user
+	// (GET /auth/sessions)
+	GetAuthSessions(ctx context.Context, request GetAuthSessionsRequestObject) (GetAuthSessionsResponseObject, error)
+	// PostAuthSessionsRevokeOthers Keluar dari semua perangkat lain
+	// (POST /auth/sessions/revoke-others)
+	PostAuthSessionsRevokeOthers(ctx context.Context, request PostAuthSessionsRevokeOthersRequestObject) (PostAuthSessionsRevokeOthersResponseObject, error)
+	// DeleteAuthSession Cabut satu sesi milik user
+	// (DELETE /auth/sessions/{id})
+	DeleteAuthSession(ctx context.Context, request DeleteAuthSessionRequestObject) (DeleteAuthSessionResponseObject, error)
+	// GetAuthUsernameAvailability Cek ketersediaan username
+	// (GET /auth/username-availability)
+	GetAuthUsernameAvailability(ctx context.Context, request GetAuthUsernameAvailabilityRequestObject) (GetAuthUsernameAvailabilityResponseObject, error)
 	// GetPing Cek API hidup
 	// (GET /ping)
 	GetPing(ctx context.Context, request GetPingRequestObject) (GetPingResponseObject, error)
@@ -282,6 +1396,357 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// PostAuthActivate operation middleware
+func (sh *strictHandler) PostAuthActivate(w http.ResponseWriter, r *http.Request) {
+	var request PostAuthActivateRequestObject
+
+	var body PostAuthActivateJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostAuthActivate(ctx, request.(PostAuthActivateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostAuthActivate")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostAuthActivateResponseObject); ok {
+		if err := validResponse.VisitPostAuthActivateResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetAuthCsrf operation middleware
+func (sh *strictHandler) GetAuthCsrf(w http.ResponseWriter, r *http.Request) {
+	var request GetAuthCsrfRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAuthCsrf(ctx, request.(GetAuthCsrfRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAuthCsrf")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetAuthCsrfResponseObject); ok {
+		if err := validResponse.VisitGetAuthCsrfResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostAuthLogin operation middleware
+func (sh *strictHandler) PostAuthLogin(w http.ResponseWriter, r *http.Request) {
+	var request PostAuthLoginRequestObject
+
+	var body PostAuthLoginJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostAuthLogin(ctx, request.(PostAuthLoginRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostAuthLogin")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostAuthLoginResponseObject); ok {
+		if err := validResponse.VisitPostAuthLoginResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostAuthLogout operation middleware
+func (sh *strictHandler) PostAuthLogout(w http.ResponseWriter, r *http.Request) {
+	var request PostAuthLogoutRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostAuthLogout(ctx, request.(PostAuthLogoutRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostAuthLogout")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostAuthLogoutResponseObject); ok {
+		if err := validResponse.VisitPostAuthLogoutResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostAuthPasswordChange operation middleware
+func (sh *strictHandler) PostAuthPasswordChange(w http.ResponseWriter, r *http.Request) {
+	var request PostAuthPasswordChangeRequestObject
+
+	var body PostAuthPasswordChangeJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostAuthPasswordChange(ctx, request.(PostAuthPasswordChangeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostAuthPasswordChange")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostAuthPasswordChangeResponseObject); ok {
+		if err := validResponse.VisitPostAuthPasswordChangeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostAuthPasswordRecover operation middleware
+func (sh *strictHandler) PostAuthPasswordRecover(w http.ResponseWriter, r *http.Request) {
+	var request PostAuthPasswordRecoverRequestObject
+
+	var body PostAuthPasswordRecoverJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostAuthPasswordRecover(ctx, request.(PostAuthPasswordRecoverRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostAuthPasswordRecover")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostAuthPasswordRecoverResponseObject); ok {
+		if err := validResponse.VisitPostAuthPasswordRecoverResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostAuthRecoveryCodesConfirm operation middleware
+func (sh *strictHandler) PostAuthRecoveryCodesConfirm(w http.ResponseWriter, r *http.Request) {
+	var request PostAuthRecoveryCodesConfirmRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostAuthRecoveryCodesConfirm(ctx, request.(PostAuthRecoveryCodesConfirmRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostAuthRecoveryCodesConfirm")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostAuthRecoveryCodesConfirmResponseObject); ok {
+		if err := validResponse.VisitPostAuthRecoveryCodesConfirmResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostAuthRecoveryCodesRegenerate operation middleware
+func (sh *strictHandler) PostAuthRecoveryCodesRegenerate(w http.ResponseWriter, r *http.Request) {
+	var request PostAuthRecoveryCodesRegenerateRequestObject
+
+	var body PostAuthRecoveryCodesRegenerateJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostAuthRecoveryCodesRegenerate(ctx, request.(PostAuthRecoveryCodesRegenerateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostAuthRecoveryCodesRegenerate")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostAuthRecoveryCodesRegenerateResponseObject); ok {
+		if err := validResponse.VisitPostAuthRecoveryCodesRegenerateResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetAuthSession operation middleware
+func (sh *strictHandler) GetAuthSession(w http.ResponseWriter, r *http.Request) {
+	var request GetAuthSessionRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAuthSession(ctx, request.(GetAuthSessionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAuthSession")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetAuthSessionResponseObject); ok {
+		if err := validResponse.VisitGetAuthSessionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetAuthSessions operation middleware
+func (sh *strictHandler) GetAuthSessions(w http.ResponseWriter, r *http.Request) {
+	var request GetAuthSessionsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAuthSessions(ctx, request.(GetAuthSessionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAuthSessions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetAuthSessionsResponseObject); ok {
+		if err := validResponse.VisitGetAuthSessionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostAuthSessionsRevokeOthers operation middleware
+func (sh *strictHandler) PostAuthSessionsRevokeOthers(w http.ResponseWriter, r *http.Request) {
+	var request PostAuthSessionsRevokeOthersRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostAuthSessionsRevokeOthers(ctx, request.(PostAuthSessionsRevokeOthersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostAuthSessionsRevokeOthers")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostAuthSessionsRevokeOthersResponseObject); ok {
+		if err := validResponse.VisitPostAuthSessionsRevokeOthersResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteAuthSession operation middleware
+func (sh *strictHandler) DeleteAuthSession(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request DeleteAuthSessionRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteAuthSession(ctx, request.(DeleteAuthSessionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteAuthSession")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteAuthSessionResponseObject); ok {
+		if err := validResponse.VisitDeleteAuthSessionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetAuthUsernameAvailability operation middleware
+func (sh *strictHandler) GetAuthUsernameAvailability(w http.ResponseWriter, r *http.Request, params GetAuthUsernameAvailabilityParams) {
+	var request GetAuthUsernameAvailabilityRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAuthUsernameAvailability(ctx, request.(GetAuthUsernameAvailabilityRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAuthUsernameAvailability")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetAuthUsernameAvailabilityResponseObject); ok {
+		if err := validResponse.VisitGetAuthUsernameAvailabilityResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // GetPing operation middleware
