@@ -964,7 +964,8 @@ docs/
 | Disk penuh karena media | Batas ukuran per tipe, pembersihan media yatim, alert disk di Grafana |
 | Siswa kehilangan recovery code | Reset oleh Admin/Admin Jurusan dengan sandi sementara (§13.4.2) |
 
-### 14.13 Belum diputuskan
+### 14.13 Domain & server
 
-- Spek final VPS sekolah.
-- Domain produksi.
+- **Domain produksi: `grafikarsa.com`** (satu domain, semua lewat Caddy).
+- Spek final VPS sekolah belum diketahui. Target minimal mengikuti §14.10. Stack observability
+  dipasang jika RAM ≥ 8 GB, jika kurang ditunda.
