@@ -50,15 +50,31 @@ type Config struct {
 // Values that are already set in the environment take precedence because
 // godotenv does not override them.
 func Load() (Config, error) {
-	if os.Getenv("GK_ENV") != EnvProduction {
-		if path := findEnvFile(); path != "" {
-			if err := godotenv.Load(path); err != nil {
-				return Config{}, fmt.Errorf("load .env: %w", err)
-			}
-		}
+	if err := LoadDotEnv(); err != nil {
+		return Config{}, err
 	}
 
 	return Parse()
+}
+
+// LoadDotEnv loads the closest .env file in the current directory or one of
+// its three parents. It does nothing in production or when no .env file is
+// found. Values that are already set in the environment take precedence
+// because godotenv does not override them.
+func LoadDotEnv() error {
+	if os.Getenv("GK_ENV") == EnvProduction {
+		return nil
+	}
+
+	path := findEnvFile()
+	if path == "" {
+		return nil
+	}
+	if err := godotenv.Load(path); err != nil {
+		return fmt.Errorf("load .env: %w", err)
+	}
+
+	return nil
 }
 
 // Parse reads configuration from environment variables only. It does not

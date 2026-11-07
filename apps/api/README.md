@@ -20,6 +20,18 @@ go run ./cmd/api
 
 Loader konfigurasi membaca `.env` di root repo (dicari sampai tiga direktori ke atas) selama `GK_ENV` bukan `production`. Variabel environment yang sudah diset selalu menang.
 
+## Migrasi
+
+Migrasi goose ter-embed di binary dan dijalankan lewat perintah `migrate`. Perintah `up` juga menerapkan migrasi River.
+
+```bash
+cd apps/api && go run ./cmd/migrate up
+cd apps/api && go run ./cmd/migrate down
+cd apps/api && go run ./cmd/migrate down-to 0
+cd apps/api && go run ./cmd/migrate status
+cd apps/api && go run ./cmd/migrate version
+```
+
 ## Test
 
 ```bash
