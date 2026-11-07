@@ -5,7 +5,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Download, Printer } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { useForm, type UseFormReturn } from "react-hook-form";
+import {
+  useForm,
+  useWatch,
+  type UseFormReturn,
+} from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -224,7 +228,7 @@ function ActivationForm({
     },
   });
 
-  const username = form.watch("username");
+  const username = useWatch({ control: form.control, name: "username" });
   const normalizedUsername = username.trim().toLowerCase();
   const debouncedUsername = useDebouncedValue(normalizedUsername, 400);
   const availabilityQuery = useGetAuthUsernameAvailability(
