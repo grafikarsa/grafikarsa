@@ -42,10 +42,10 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${inter.variable} h-full antialiased`}
     >
-      <body className="flex min-h-dvh flex-col">
+      <body className="flex min-h-dvh flex-col pb-20 md:pb-0">
         <ThemeProvider>
           <SiteHeader />
-          <main className="flex-1 pb-20 md:pb-0">{children}</main>
+          <main className="flex-1">{children}</main>
           <SiteFooter />
           <MobileNav />
           <Toaster />
