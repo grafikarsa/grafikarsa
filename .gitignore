@@ -1,0 +1,34 @@
+# --- Environment ---
+.env
+.env.*
+!.env.example
+
+# --- Dependencies ---
+node_modules/
+
+# --- Build output ---
+.next/
+out/
+dist/
+build/
+apps/api/bin/
+*.tsbuildinfo
+next-env.d.ts
+
+# --- Test & coverage ---
+coverage/
+*.test
+*.out
+test-results/
+playwright-report/
+
+# --- Logs & temp ---
+*.log
+tmp/
+backup/
+
+# --- OS & editor ---
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
