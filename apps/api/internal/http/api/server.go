@@ -8,6 +8,7 @@ import (
 
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/academic"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/auth"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/users"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/apigen"
 )
 
@@ -17,6 +18,7 @@ var _ apigen.StrictServerInterface = (*Server)(nil)
 type Deps struct {
 	Auth     *auth.Service
 	Academic *academic.Service
+	Users    *users.Service
 	Logger   *slog.Logger
 }
 
@@ -24,6 +26,7 @@ type Deps struct {
 type Server struct {
 	auth     *auth.Service
 	academic *academic.Service
+	users    *users.Service
 	logger   *slog.Logger
 }
 
@@ -34,7 +37,7 @@ func NewServer(d Deps) *Server {
 		logger = slog.Default()
 	}
 
-	return &Server{auth: d.Auth, academic: d.Academic, logger: logger}
+	return &Server{auth: d.Auth, academic: d.Academic, users: d.Users, logger: logger}
 }
 
 // GetPing reports that the API is alive.

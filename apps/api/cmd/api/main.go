@@ -13,6 +13,7 @@ import (
 
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/academic"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/auth"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/users"
 	apirouter "github.com/grafikarsa/grafikarsa/apps/api/internal/http"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/health"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/cache"
@@ -87,10 +88,11 @@ func main() {
 
 	limiter := ratelimit.New(rdb)
 	dataStore := dbstore.NewStore(pool)
+	hasher := password.NewHasher(password.DefaultParams, 0)
 	authService, err := auth.NewService(
 		dataStore,
 		rdb,
-		password.NewHasher(password.DefaultParams, 0),
+		hasher,
 		limiter,
 		auth.Config{},
 		log,
@@ -103,6 +105,7 @@ func main() {
 	}
 
 	academicService := academic.NewService(dataStore)
+	usersService := users.NewService(dataStore, authService, hasher)
 
 	srv := &http.Server{
 		Addr: cfg.HTTPAddr,
@@ -111,6 +114,7 @@ func main() {
 			Checkers:       checkers,
 			Auth:           authService,
 			Academic:       academicService,
+			Users:          usersService,
 			Limiter:        limiter,
 			AllowedOrigins: cfg.AllowedOrigins,
 		}),

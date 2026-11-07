@@ -4,12 +4,14 @@ package http
 import (
 	"log/slog"
 	stdhttp "net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/academic"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/auth"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/users"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/api"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/apigen"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/authctx"
@@ -29,6 +31,7 @@ type RouterDeps struct {
 	Checkers       []health.Checker
 	Auth           *auth.Service
 	Academic       *academic.Service
+	Users          *users.Service
 	Limiter        *ratelimit.Limiter
 	AllowedOrigins []string
 }
@@ -77,10 +80,12 @@ func NewRouter(d RouterDeps) stdhttp.Handler {
 			}))
 		}
 		r.Use(middleware.Onboarding(logger))
+		r.Use(noStoreAdminResponses)
 
 		apigen.HandlerWithOptions(apigen.NewStrictHandlerWithOptions(api.NewServer(api.Deps{
 			Auth:     d.Auth,
 			Academic: d.Academic,
+			Users:    d.Users,
 			Logger:   logger,
 		}), nil, api.StrictOptions(logger)), apigen.ChiServerOptions{
 			BaseRouter: r,
@@ -90,4 +95,15 @@ func NewRouter(d RouterDeps) stdhttp.Handler {
 	})
 
 	return r
+}
+
+// noStoreAdminResponses prevents browsers and proxies from caching admin
+// responses, which can carry one-time passwords.
+func noStoreAdminResponses(next stdhttp.Handler) stdhttp.Handler {
+	return stdhttp.HandlerFunc(func(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+		if r.URL.Path == "/api/v1/admin" || strings.HasPrefix(r.URL.Path, "/api/v1/admin/") {
+			w.Header().Set("Cache-Control", "no-store")
+		}
+		next.ServeHTTP(w, r)
+	})
 }
