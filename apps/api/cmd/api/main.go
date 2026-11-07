@@ -11,13 +11,17 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/auth"
 	apirouter "github.com/grafikarsa/grafikarsa/apps/api/internal/http"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/health"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/cache"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/config"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/db"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/logger"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/password"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/ratelimit"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/storage"
+	dbstore "github.com/grafikarsa/grafikarsa/apps/api/internal/store"
 )
 
 const startupTimeout = 10 * time.Second
@@ -80,9 +84,31 @@ func main() {
 		health.CheckerFunc{N: "storage", F: store.Ping},
 	}
 
+	limiter := ratelimit.New(rdb)
+	authService, err := auth.NewService(
+		dbstore.NewStore(pool),
+		rdb,
+		password.NewHasher(password.DefaultParams, 0),
+		limiter,
+		auth.Config{},
+		log,
+	)
+	if err != nil {
+		log.Error("auth service failed", "error", err)
+		pool.Close()
+		_ = rdb.Close()
+		os.Exit(1)
+	}
+
 	srv := &http.Server{
-		Addr:              cfg.HTTPAddr,
-		Handler:           apirouter.NewRouter(log, checkers...),
+		Addr: cfg.HTTPAddr,
+		Handler: apirouter.NewRouter(apirouter.RouterDeps{
+			Logger:         log,
+			Checkers:       checkers,
+			Auth:           authService,
+			Limiter:        limiter,
+			AllowedOrigins: cfg.AllowedOrigins,
+		}),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      60 * time.Second,

@@ -4,18 +4,40 @@ package http
 import (
 	"log/slog"
 	stdhttp "net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/auth"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/api"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/apigen"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/authctx"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/health"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/middleware"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/problem"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/ratelimit"
 )
 
+// Rate limit applied to every API request: 600 requests per minute per user
+// (or per IP for anonymous requests).
+const generalRateLimit = 600
+
+// RouterDeps carries the services and settings the router needs.
+type RouterDeps struct {
+	Logger         *slog.Logger
+	Checkers       []health.Checker
+	Auth           *auth.Service
+	Limiter        *ratelimit.Limiter
+	AllowedOrigins []string
+}
+
 // NewRouter builds the full HTTP handler with the standard middleware stack.
-func NewRouter(logger *slog.Logger, checkers ...health.Checker) stdhttp.Handler {
+func NewRouter(d RouterDeps) stdhttp.Handler {
+	logger := d.Logger
+	if logger == nil {
+		logger = slog.Default()
+	}
+
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
@@ -30,10 +52,31 @@ func NewRouter(logger *slog.Logger, checkers ...health.Checker) stdhttp.Handler 
 	})
 
 	r.Get("/healthz", health.Healthz())
-	r.Get("/readyz", health.Readyz(logger, checkers...))
+	r.Get("/readyz", health.Readyz(logger, d.Checkers...))
 
 	r.Route("/api/v1", func(r chi.Router) {
-		apigen.HandlerWithOptions(apigen.NewStrictHandlerWithOptions(api.NewServer(), nil, api.StrictOptions(logger)), apigen.ChiServerOptions{
+		r.Use(middleware.CookieJar)
+		if d.Auth != nil {
+			r.Use(middleware.Session(d.Auth, logger))
+		}
+		r.Use(middleware.CSRF(middleware.CSRFOptions{AllowedOrigins: d.AllowedOrigins}))
+		if d.Limiter != nil {
+			r.Use(middleware.RateLimit(d.Limiter, middleware.RateLimitOptions{
+				Name: "api",
+				Rule: ratelimit.Rule{Limit: generalRateLimit, Window: time.Minute},
+				Key: func(r *stdhttp.Request) string {
+					if principal := authctx.Principal(r.Context()); principal != nil {
+						return principal.UserID.String()
+					}
+					return "ip:" + middleware.ClientIP(r)
+				},
+				FailOpen: true,
+				Logger:   logger,
+			}))
+		}
+		r.Use(middleware.Onboarding(logger))
+
+		apigen.HandlerWithOptions(apigen.NewStrictHandlerWithOptions(api.NewServer(api.Deps{Auth: d.Auth, Logger: logger}), nil, api.StrictOptions(logger)), apigen.ChiServerOptions{
 			BaseRouter: r,
 			// Parameter binding errors (bad path/query values) must also be problem+json.
 			ErrorHandlerFunc: api.StrictOptions(logger).RequestErrorHandlerFunc,
