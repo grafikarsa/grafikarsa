@@ -1,7 +1,7 @@
 # Grafikarsa Revamp — PRD (Product Requirements Document)
 
 > Status: **draft keputusan produk** · Branch: `revamp` · Dibangun ulang dari nol.
-> Dokumen ini fokus ke *apa* dan *aturan main*. Tech stack dan arsitektur ditulis terpisah.
+> Dokumen ini memuat keputusan produk (§0–§13) dan tech stack & arsitektur (§14).
 
 ---
 
@@ -85,7 +85,7 @@ Role bisa diberi `expires_at` opsional. Semua pemberian/pencabutan role masuk au
 | Buat konten & jadi kolaborator | ❌ | ✅ (butuh `content.create`) |
 
 - Hitungan view/share tetap dicatat dari publik (analitik, bukan perubahan konten).
-- **Data identitas tidak pernah tampil publik**: email, NISN, nomor HP, tanggal lahir, alamat.
+- **Data identitas tidak pernah tampil publik**: NISN/NIP, nomor HP, tanggal lahir, alamat.
 - Draf bukan "privat", hanya belum terbit, jadi hanya terlihat oleh author-nya.
 
 ---
@@ -251,8 +251,9 @@ jebol: submit versi aman, lolos, lalu isinya diganti.
 - **Laporkan**: konten, komentar, profil, grup.
 - Saat konten `archived` / `taken_down` / `deleted`: komentar & apresiasi ikut tersembunyi, tidak dihapus
   (kecuali purge permanen).
-- **Notifikasi**: in-app + email digest opsional. Pemicunya undangan kolaborasi, keputusan moderasi,
-  komentar, balasan, mention, apresiasi (diringkas), follower baru, badge baru.
+- **Notifikasi**: **in-app saja** (tidak ada email), realtime lewat SSE. Pemicunya undangan kolaborasi,
+  keputusan moderasi, komentar, balasan, mention, apresiasi (diringkas), follower baru, badge baru.
+  User bisa mematikan tipe tertentu di `/pengaturan/notifikasi`.
 
 ### 5.1 Feed & discovery
 
@@ -421,6 +422,9 @@ sekolah (tinggal kelas, mutasi, pindah rombel, lulus ditunda).
 | Kedaluwarsa undangan kolaborasi | 14 hari |
 | Kedaluwarsa claim moderasi | 30 menit |
 | Retensi soft delete | 30 hari |
+| Masa berlaku sandi awal | 30 hari |
+| Masa berlaku sandi sementara (reset Admin) | 72 jam |
+| Jumlah recovery code per user | 8 |
 | Maks konten disematkan | 3 |
 | Pengingat promotion job sebelum tahun ajaran | 30 & 7 hari |
 | Jendela rollback promotion job | 14 hari |
@@ -443,13 +447,19 @@ sekolah (tinggal kelas, mutasi, pindah rombel, lulus ditunda).
 ## 11. Konsep model data (tingkat tinggi)
 
 ```
-users ─┬─ profiles (banner, avatar, headline, bio, links)
-       ├─ experiences
-       ├─ user_skills ── skill_endorsements
-       ├─ user_badges ── badges
-       ├─ user_roles ── roles ── role_permissions
-       └─ enrollments ── classes ── academic_years
-                              └── majors
+users (nisn/nip, username, password_hash, status, must_change_password)   — tanpa email
+  ├─ sessions
+  ├─ recovery_codes (hash, used_at)
+  ├─ profiles (banner, avatar, headline, bio, links)
+  ├─ experiences
+  ├─ user_skills ── skill_endorsements
+  ├─ user_badges ── badges
+  ├─ user_roles ── roles ── role_permissions
+  ├─ notification_preferences
+  └─ enrollments ── classes ── academic_years
+                        └── majors
+
+media_assets (owner_id, bucket, object_key, mime, size, variants, status: processing|ready|failed)
 
 groups (type: major|class, ref_id, banner, avatar, description, archived_at)
 group_managers (group_id, user_id, assigned_by)
@@ -509,7 +519,8 @@ assignments ── assignment_submissions ── assessments
 - Username lama di-*redirect* ke yang baru selama 90 hari, lalu dilepas.
 - **Username terlarang (reserved)**: semua segmen route tingkat atas (`admin`, `studio`, `karya`, `blog`,
   `jurusan`, `kelas`, `cari`, `masuk`, `aktivasi`, `onboarding`, `pengaturan`, `moderasi`, `notifikasi`,
-  `tersimpan`, `kurasi`, `penugasan`, `pedoman`, `tentang`, `privasi`, `syarat`, `api`), plus nama
+  `tersimpan`, `kurasi`, `penugasan`, `pedoman`, `tentang`, `privasi`, `syarat`, `api`, `media`,
+  `internal`, `lupa-sandi`, `ganti-sandi`), plus nama
   yang menyaru pihak resmi (`grafikarsa`, `smkn4malang`, `grafika`, `official`, `moderator`, `support`, dll).
   Daftar dikelola di kode + bisa ditambah Admin.
 
@@ -545,15 +556,37 @@ assignments ── assignment_submissions ── assessments
 
 | URL | Halaman | Catatan |
 |---|---|---|
-| `/masuk` | Login | Identitas: **NISN** (siswa/alumni) / **NIP atau ID staf** (guru/tendik) / username / email. `?kembali=` untuk kembali ke halaman asal (hanya path internal) |
-| `/aktivasi` | Login pertama | Wajib: ganti sandi awal, isi email, pilih username. Tidak bisa ke halaman lain sebelum selesai |
+| `/masuk` | Login | Identitas: **NISN** (siswa/alumni) / **NIP atau ID staf** (guru/tendik) / username. `?kembali=` untuk kembali ke halaman asal (hanya path internal) |
+| `/aktivasi` | Login pertama | Wajib: ganti sandi awal, pilih username, **simpan recovery code**. Tidak bisa ke halaman lain sebelum selesai |
 | `/onboarding` | Lengkapi profil | Foto, headline, bio, skill. Boleh dilewati |
-| `/lupa-sandi` | Minta reset sandi | Butuh email terdaftar. Tanpa email → reset oleh Admin |
-| `/reset-sandi?token=` | Atur sandi baru | Token sekali pakai, kedaluwarsa singkat |
-| `/verifikasi-email?token=` | Verifikasi email | |
+| `/lupa-sandi` | Reset sandi mandiri | Identitas + **1 recovery code** → atur sandi baru |
+| `/ganti-sandi` | Wajib ganti sandi | Muncul setelah login dengan **sandi sementara** dari Admin. Tidak bisa ke halaman lain sebelum selesai |
 
-Akun dibagikan sekolah berupa **NISN/NIP + sandi awal**. Sandi awal hanya berlaku untuk aktivasi
-dan kedaluwarsa jika tidak dipakai dalam waktu tertentu (Admin bisa menerbitkan ulang).
+**Platform tidak memakai email sama sekali** di fase ini: tidak ada kolom email, verifikasi email,
+atau link reset lewat email.
+
+#### 13.4.1 Distribusi akun
+
+- Akun dibagikan sekolah berupa **NISN/NIP + sandi awal**.
+- Admin dapat **mengekspor kartu akun per kelas** (PDF: nama, NISN, sandi awal) untuk dibagikan lewat
+  wali kelas. Setiap ekspor masuk audit log.
+- Sandi awal hanya berlaku untuk aktivasi dan kedaluwarsa jika tidak dipakai (default 30 hari).
+  Admin bisa menerbitkan ulang.
+
+#### 13.4.2 Pemulihan akun tanpa email
+
+1. **Recovery code (mandiri)**
+   - Saat aktivasi, user menerima **8 recovery code** sekali pakai dan wajib mengonfirmasi sudah
+     menyimpannya (unduh/cetak/salin).
+   - Disimpan sebagai hash (Argon2id). Setiap kode hanya bisa dipakai sekali.
+   - Percobaan `/lupa-sandi` dibatasi ketat per akun dan per IP.
+   - Setelah reset: semua sesi lain dicabut, user diberi tahu lewat notifikasi in-app.
+   - Bisa dibuat ulang di `/pengaturan/akun` (wajib memasukkan sandi saat ini). Kode lama otomatis hangus.
+2. **Reset oleh Admin (cadangan kalau recovery code hilang)**
+   - **Admin** (semua user) atau **Admin Jurusan** (user di jurusannya) menerbitkan **sandi sementara**.
+   - Sandi sementara berlaku terbatas (default 72 jam) dan wajib diganti saat login (`/ganti-sandi`).
+   - Semua sesi lama dicabut. Aksi masuk audit log.
+   - Verifikasi identitas dilakukan offline oleh sekolah (tatap muka / wali kelas).
 
 ### 13.5 Halaman member (wajib login)
 
@@ -570,9 +603,9 @@ dan kedaluwarsa jika tidak dipakai dalam waktu tertentu (Admin bisa menerbitkan 
 | `/studio/undangan` | Undangan kolaborasi masuk (terima/tolak) |
 | `/pengaturan/profil` | Banner, foto, nama tampilan, headline, bio, kota, link sosial, skill, konten disematkan |
 | `/pengaturan/experience` | Tambah/ubah/hapus experience |
-| `/pengaturan/akun` | Username, email, sandi |
+| `/pengaturan/akun` | Username, sandi, buat ulang recovery code |
 | `/pengaturan/sesi` | Perangkat aktif, logout perangkat lain |
-| `/pengaturan/notifikasi` | Preferensi email digest |
+| `/pengaturan/notifikasi` | Preferensi notifikasi in-app (matikan tipe tertentu) |
 | `/jurusan/{kode}/kelola` · `/kelas/{tahun}/{rombel}/kelola` | Edit foto, banner, deskripsi grup (pengelola grup, Admin Jurusan, Admin) |
 
 Editor (`/studio/{id}`) hanya bisa dibuka **pemilik & editor**. Kontributor hanya bisa melihat
@@ -594,8 +627,9 @@ preview dan keluar dari konten.
 |---|---|
 | `/admin` | Dashboard |
 | `/admin/pengguna` | Daftar user (filter tipe, status, jurusan, kelas) |
-| `/admin/pengguna/{id}` | Detail user: data akademik, role, capability, terbitkan ulang sandi awal, nonaktifkan |
+| `/admin/pengguna/{id}` | Detail user: data akademik, role, capability, terbitkan ulang sandi awal, **reset sandi (sandi sementara)**, nonaktifkan |
 | `/admin/pengguna/impor` | Impor CSV (siswa baru, guru, tendik) dengan preview & validasi |
+| `/admin/pengguna/kartu-akun` | Ekspor kartu akun per kelas (PDF) |
 | `/admin/role` | Role, izin, penugasan role |
 | `/admin/akademik/jurusan` | Data jurusan |
 | `/admin/akademik/tahun-ajaran` | Tahun ajaran |
@@ -638,11 +672,17 @@ dan menu yang bukan wewenangnya disembunyikan (enforcement tetap di server).
 
 **1. Login pertama**
 ```
-/masuk (NISN/NIP + sandi awal dari sekolah)
-  → /aktivasi: ganti sandi, isi email, pilih username        [wajib]
-  → email verifikasi dikirim (boleh diverifikasi nanti)
+/masuk (NISN/NIP + sandi awal dari kartu akun)
+  → /aktivasi: ganti sandi, pilih username, simpan 8 recovery code   [wajib]
   → /onboarding: foto, headline, bio, skill                   [boleh dilewati]
   → /
+```
+
+**1b. Lupa sandi**
+```
+Punya recovery code : /lupa-sandi → identitas + 1 recovery code → sandi baru → sesi lain dicabut → /masuk
+Kode hilang         : lapor ke wali kelas/Admin → Admin/Admin Jurusan menerbitkan sandi sementara
+                      → /masuk dengan sandi sementara → /ganti-sandi [wajib] → /
 ```
 
 **2. Tamu mencoba berinteraksi**
@@ -707,3 +747,224 @@ Admin menunjuk pengelola di /admin/grup
   → tandai pengecualian / impor CSV → dry-run → selesaikan konflik
   → Setujui → terjadwal → eksekusi otomatis di tanggal mulai → rollback ≤ 14 hari
 ```
+
+---
+
+## 14. Tech Stack & Arsitektur
+
+### 14.1 Prinsip
+
+1. **Fully self-hosted** di VPS Ubuntu milik sekolah. Tidak ada layanan SaaS di jalur runtime.
+2. **Stateless app tier**: `web`, `api`, `worker` tidak menyimpan state. Semua state ada di
+   PostgreSQL, Valkey, RustFS, sehingga app bisa di-scale horizontal tanpa ubah kode.
+3. **Satu pintu masuk**: hanya Caddy yang terbuka ke internet. Semua service lain internal.
+4. **Kontrak dulu**: API didefinisikan di OpenAPI, kode server (Go) dan klien (TypeScript) di-generate.
+5. **Tanpa email** di fase ini (lihat §13.4).
+6. **Semua komponen open source** dengan lisensi yang aman dipakai sekolah.
+
+### 14.2 Topologi
+
+```
+Internet
+   │  :443 HTTPS (sertifikat otomatis) · :80 hanya redirect + ACME
+   ▼
+ Caddy ──────────┬── /api/*      → api (Go)
+                 ├── /media/*    → rustfs, bucket gk-public, GET/HEAD saja
+                 ├── /internal/* → 403 (diblokir)
+                 └── /*          → web (Next.js)
+
+ api (Go) ───┬── postgres   (sumber kebenaran + antrian job River)
+             ├── valkey     (cache, rate limit, counter, pub/sub)
+             └── rustfs     (object storage S3, internal penuh)
+
+ worker (Go, image sama dengan api, perintah berbeda)
+             └── job River: media, notifikasi, kenaikan kelas, trending, purge, kedaluwarsa
+
+ web (Next.js) ── memanggil api lewat jaringan internal saat render server
+                 └── valkey (cache halaman bersama antar-replica)
+```
+
+### 14.3 Komponen
+
+#### Backend (Go)
+
+| Bagian | Pilihan | Alasan |
+|---|---|---|
+| Bahasa | **Go** (stabil terbaru) | Hemat RAM, cepat, satu binary |
+| HTTP router | **chi** di atas `net/http` | Ringan, idiomatik, middleware jelas |
+| Kontrak API | **OpenAPI contract-first** (`packages/contracts/openapi.yaml`) → **oapi-codegen** (strict server Go) | Handler wajib sesuai kontrak. Kontrak berubah = kode gagal compile |
+| Akses DB | **pgx v5** + **sqlc** | SQL ditulis tangan, kode Go type-safe di-generate, tanpa ORM |
+| Migrasi | **goose** (SQL versioned) | Jalan otomatis saat deploy, sebelum app start |
+| Job queue | **River** (di atas PostgreSQL) | Job di-enqueue **dalam transaksi yang sama** dengan perubahan data (outbox tanpa infra tambahan). Retry, jadwal (cron), unique job |
+| Auth | Dibangun sendiri: **sesi opaque** (tabel `sessions` + cache Valkey), cookie `__Host-gk_session` HttpOnly Secure SameSite=Lax, **Argon2id**, CSRF token untuk request yang mengubah data | Sesi bisa dicabut seketika (reset sandi, nonaktif akun). Tanpa JWT |
+| Otorisasi | Policy terpusat `can(actor, action, resource)` + filter scope jurusan di SQL | Sesuai matriks role (§1) |
+| Validasi | Skema OpenAPI + validasi domain di service | |
+| Media | **govips** (libvips) untuk resize, WebP/AVIF, hapus EXIF. **poppler** (`pdftoppm`) untuk thumbnail PDF | Varian dibuat sekali di worker |
+| Realtime | **SSE** (`/api/v1/stream`) untuk notifikasi, fan-out via **pub/sub Valkey** | Tetap konsisten meski api multi-replica |
+| Pencarian | **PostgreSQL FTS** (konfigurasi `indonesian`) + **pg_trgm**, di balik interface `Search` | Cukup untuk skala sekolah, bisa diganti mesin lain tanpa ubah domain |
+| Rate limit | Sliding window di Valkey | Login, lupa sandi, komentar, apresiasi, undangan, laporan, upload |
+| Log & telemetri | `log/slog` (JSON) + **OpenTelemetry** (trace + metric) | |
+
+#### Frontend (Next.js)
+
+| Bagian | Pilihan |
+|---|---|
+| Framework | **Next.js** App Router, `output: standalone`. Halaman publik di-render di server (SEO, OG image) |
+| UI | **Tailwind CSS** + **shadcn/ui** |
+| Klien API | **orval** dari OpenAPI → hook **TanStack Query** + skema **zod** |
+| Form | react-hook-form + zod |
+| Editor blog | **TipTap** (ProseMirror JSON) |
+| Editor portfolio | Editor blok sendiri dengan **dnd-kit**, skema blok divalidasi zod (sisi web) dan Go (sisi api) |
+| Cache halaman | Revalidasi berbasis tag. Api memanggil `/internal/revalidate` (shared secret, jaringan internal) saat konten terbit/diturunkan/diarsip. Cache handler disimpan di **Valkey** agar konsisten antar-replica |
+| Realtime | `EventSource` ke `/api/v1/stream` |
+
+#### Data & infrastruktur
+
+| Komponen | Lisensi | Peran |
+|---|---|---|
+| **PostgreSQL 18** | PostgreSQL License | Sumber kebenaran, antrian River, FTS. `pg_stat_statements` aktif |
+| **Valkey** | BSD-3 | Cache (izin, sesi, halaman), rate limit, buffer counter view (di-flush ke Postgres oleh worker), sorted set trending, pub/sub SSE. Diakses via `go-redis` (protokol Redis) |
+| **RustFS** | Apache-2.0 | Object storage S3-compatible, **internal penuh** |
+| **Caddy** | Apache-2.0 | Reverse proxy, HTTPS otomatis, header keamanan, kompresi |
+| PgBouncer | ISC | *Menyusul* saat api lebih dari satu replica |
+
+DragonflyDB **tidak dipakai** karena lisensinya BSL 1.1 (bukan open source murni).
+
+### 14.4 Alur media
+
+Dua bucket di RustFS:
+
+| Bucket | Isi | Akses |
+|---|---|---|
+| `gk-private` | File asli, upload yang sedang diproses, media milik konten yang belum disetujui | Hanya lewat api (cek izin), di-stream |
+| `gk-public` | Varian media dari konten yang **sudah disetujui**, avatar, banner, gambar grup | Caddy `/media/*`, GET/HEAD saja, `Cache-Control: public, max-age=31536000, immutable` |
+
+```
+1. Browser upload ke POST /api/v1/media (multipart)
+2. api: cek sesi, kuota, tipe (magic bytes), batas ukuran → stream ke gk-private (tanpa buffer penuh di memori)
+   → catat media_assets (status: processing) → enqueue job River
+3. worker: hapus EXIF → buat varian (WebP/AVIF, beberapa lebar) / thumbnail PDF → status: ready
+4. Editor menampilkan media draf lewat GET /api/v1/media/{id}/{varian} (cek izin)
+5. Moderator menyetujui → job menyalin varian ke gk-public → URL /media/... dipakai di halaman publik
+6. Konten diturunkan / diarsip / dihapus → job mencabut varian dari gk-public
+   (kecuali masih dipakai versi lain yang sedang tayang)
+7. Avatar / banner / gambar grup (post-moderasi) → langsung ke gk-public setelah diproses
+```
+
+- Object key memakai ID acak (UUIDv7 + suffix acak), tidak pernah nama file asli.
+- Tipe & batas ukuran (default, configurable): gambar 10 MB, PDF 25 MB, model 3D (`.glb`) 30 MB.
+- **Video: embed saja** (YouTube/Vimeo) di fase 1. Upload video menyusul dengan job transcoding ffmpeg.
+- Media yatim (tidak terpakai konten apa pun > 7 hari) dibersihkan worker.
+
+### 14.5 Jaringan & port
+
+| Lapisan | Port | Akses |
+|---|---|---|
+| Internet → host | **443** HTTPS, **80** (redirect + ACME) | Publik |
+| | **22** SSH (key saja, fail2ban, login root dimatikan) | Admin server |
+| Jaringan internal Docker | `web:3000`, `api:8080`, `postgres:5432`, `valkey:6379`, `rustfs:9000` (S3), `rustfs:9001` (console), `grafana:3000`, `victoriametrics:8428`, `victorialogs:9428`, `uptime-kuma:3001` | **Tidak bisa diakses dari internet** |
+
+Aturan:
+
+1. **Hanya service `caddy` yang boleh punya `ports:`** di compose produksi. Docker mem-bypass ufw,
+   jadi port lain yang di-publish akan terbuka ke internet walau ufw menutupnya. Jika perlu akses
+   debug, bind ke `127.0.0.1:<port>`.
+2. Dashboard internal (Grafana, console RustFS, Uptime Kuma) diakses lewat **SSH tunnel** atau
+   WireGuard/Tailscale, bukan subdomain publik.
+3. `/internal/*` diblokir di Caddy. Endpoint internal hanya dipanggil antar-container + shared secret.
+4. Firewall host (ufw): izinkan 22, 80, 443 saja.
+
+### 14.6 Keamanan aplikasi
+
+- Header: HSTS, CSP ketat (nonce untuk script), `X-Content-Type-Options`, `Referrer-Policy`,
+  `Permissions-Policy`, `frame-ancestors 'none'`.
+- Cookie sesi `__Host-` (Secure, HttpOnly, SameSite=Lax, Path=/). CSRF token untuk semua request
+  yang mengubah data.
+- Konten rich-text dirender dari JSON lewat allowlist node/mark (tidak ada HTML mentah dari user).
+  Embed hanya dari domain allowlist.
+- Argon2id untuk sandi dan recovery code. Kebijakan sandi minimal + cek sandi umum.
+- Rate limit di Valkey (§14.3). Lockout bertahap untuk login & lupa sandi.
+- Audit log untuk semua aksi admin/moderator dan aksi keamanan akun.
+- Dependensi dipantau **Renovate + Dependabot**, update keamanan Next.js/React/Go wajib diterapkan
+  cepat.
+
+### 14.7 Operasional
+
+| Bagian | Pilihan |
+|---|---|
+| Orkestrasi | **Docker Compose** (fase 1). App stateless, siap pindah ke Docker Swarm/k3s bila multi-server |
+| CI | GitHub Actions: lint (golangci-lint, ESLint), typecheck, test, cek drift OpenAPI & sqlc, build image |
+| Registry | **GHCR**, tag `sha-<commit>` + `latest` |
+| Deploy | SSH ke VPS → `docker compose pull` → backup pre-deploy → `goose up` → `up -d` → healthcheck → rollback otomatis ke tag sebelumnya jika gagal |
+| Backup DB | **pgBackRest**: full mingguan, diff harian, **arsip WAL terus-menerus** (PITR) |
+| Backup media | **restic** (snapshot bucket RustFS), retensi 7 harian / 4 mingguan / 6 bulanan |
+| Lokasi backup | **Wajib di luar VPS** (NAS sekolah / server lain / penyimpanan cloud sekolah). Uji restore terjadwal |
+| Observability | **Grafana + VictoriaMetrics + VictoriaLogs**, OpenTelemetry Collector |
+| Uptime | **Uptime Kuma**, alert ke Telegram. Idealnya dijalankan di luar VPS utama |
+| Server | Ubuntu LTS, ufw, SSH key only, fail2ban, unattended-upgrades, rotasi log Docker |
+
+### 14.8 Pengembangan
+
+| Bagian | Pilihan |
+|---|---|
+| Dev lokal | `make dev`: compose (postgres, valkey, rustfs) + **air** (hot reload Go) + `next dev` |
+| Tes Go | Unit test domain (state machine lifecycle, policy, kolaborasi, promotion) + integration test dengan **Testcontainers** (Postgres, Valkey, RustFS asli) |
+| Tes web | **Vitest** (unit) + **Playwright** (flow §13.10) |
+| Generate | `make openapi` (oapi-codegen + orval), `make sqlc`, `make migrate-new` |
+| Konfigurasi | Satu `.env` di root, `make dev-init` membuat secret acak |
+
+### 14.9 Struktur monorepo
+
+```
+apps/
+  web/                    Next.js
+  api/
+    cmd/api/              HTTP server
+    cmd/worker/           River worker
+    cmd/migrate/          goose
+    internal/
+      domain/             content, moderation, collab, user, profile, group, academic,
+                          promotion, notification, media, report, badge, search
+      platform/           db, cache, storage, queue, auth, config, telemetry
+      http/               handler (oapi-codegen) + middleware
+    db/queries/           SQL untuk sqlc
+    db/migrations/        goose
+packages/
+  contracts/              openapi.yaml (sumber kebenaran API)
+infra/
+  compose/                dev, prod
+  caddy/                  Caddyfile
+  observability/          grafana, victoriametrics, victorialogs, otel-collector
+docs/
+```
+
+### 14.10 Kebutuhan server
+
+| | Minimal | Disarankan |
+|---|---|---|
+| CPU | 2 vCPU | 4 vCPU |
+| RAM | 4 GB (tanpa stack observability) | **8 GB** (dengan Grafana + Victoria*) |
+| Disk | 100 GB SSD | 200 GB+ atau volume terpisah untuk RustFS |
+
+### 14.11 Jalur scale-up (tanpa ubah kode)
+
+1. Tambah replica `web` dan `api` di belakang Caddy (load balancing bawaan). Pasang PgBouncer.
+2. Pindahkan PostgreSQL ke server sendiri, tambah read replica untuk query baca berat.
+3. RustFS mode terdistribusi (multi-node) atau ganti ke object storage S3 lain lewat konfigurasi.
+4. Pindah orkestrasi ke Docker Swarm/k3s.
+5. Ganti mesin pencarian lewat interface `Search` bila FTS Postgres tidak cukup.
+
+### 14.12 Risiko & mitigasi
+
+| Risiko | Mitigasi |
+|---|---|
+| RustFS relatif baru | Akses hanya lewat API S3 di balik interface `storage`, versi di-pin, backup restic wajib. Bisa ganti ke Garage/SeaweedFS lewat konfigurasi |
+| VPS tunggal = satu titik gagal | Backup di luar VPS + PITR + uji restore terjadwal + runbook pemulihan |
+| Celah keamanan framework (Next.js/React) | Renovate/Dependabot, alert keamanan, prosedur patch cepat |
+| Disk penuh karena media | Batas ukuran per tipe, pembersihan media yatim, alert disk di Grafana |
+| Siswa kehilangan recovery code | Reset oleh Admin/Admin Jurusan dengan sandi sementara (§13.4.2) |
+
+### 14.13 Belum diputuskan
+
+- Spek final VPS sekolah.
+- Domain produksi.
