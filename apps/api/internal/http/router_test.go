@@ -49,6 +49,9 @@ func TestRouterPing(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Errorf("status = %d, want 200", rec.Code)
 	}
+	if got := rec.Header().Get("Content-Type"); got != "application/json" {
+		t.Errorf("Content-Type = %q, want application/json", got)
+	}
 
 	var body map[string]bool
 	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
@@ -56,6 +59,26 @@ func TestRouterPing(t *testing.T) {
 	}
 	if !body["pong"] {
 		t.Errorf("pong = %t, want true", body["pong"])
+	}
+}
+
+func TestRouterAPINotFound(t *testing.T) {
+	rec := httptest.NewRecorder()
+	NewRouter(testLogger()).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/tidak-ada", nil))
+
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want 404", rec.Code)
+	}
+	if got := rec.Header().Get("Content-Type"); got != "application/problem+json" {
+		t.Errorf("Content-Type = %q, want application/problem+json", got)
+	}
+
+	var body map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
+	if body["code"] != "NOT_FOUND" {
+		t.Errorf("code = %v, want NOT_FOUND", body["code"])
 	}
 }
 
