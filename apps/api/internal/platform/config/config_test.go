@@ -1,6 +1,8 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -24,6 +26,61 @@ func setRequiredEnv(t *testing.T) {
 	t.Setenv("S3_BUCKET_PRIVATE", "gk-private")
 	t.Setenv("S3_BUCKET_PUBLIC", "gk-public")
 	t.Setenv("GK_SHUTDOWN_TIMEOUT", "25s")
+}
+
+func TestLoadDotEnvMissingFileIsIgnored(t *testing.T) {
+	t.Chdir(t.TempDir())
+	t.Setenv("GK_ENV", EnvDevelopment)
+
+	if err := LoadDotEnv(); err != nil {
+		t.Fatalf("LoadDotEnv() error = %v", err)
+	}
+}
+
+func TestLoadDotEnvLoadsFile(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, ".env"), []byte("GK_TEST_DOTENV_VALUE=from-file\n"), 0o600); err != nil {
+		t.Fatalf("write .env: %v", err)
+	}
+	t.Chdir(dir)
+	t.Setenv("GK_ENV", EnvDevelopment)
+
+	const key = "GK_TEST_DOTENV_VALUE"
+	previous, existed := os.LookupEnv(key)
+	if err := os.Unsetenv(key); err != nil {
+		t.Fatalf("unset %s: %v", key, err)
+	}
+	t.Cleanup(func() {
+		if existed {
+			_ = os.Setenv(key, previous)
+			return
+		}
+		_ = os.Unsetenv(key)
+	})
+
+	if err := LoadDotEnv(); err != nil {
+		t.Fatalf("LoadDotEnv() error = %v", err)
+	}
+	if got := os.Getenv(key); got != "from-file" {
+		t.Errorf("%s = %q, want %q", key, got, "from-file")
+	}
+}
+
+func TestLoadDotEnvSkipsFileInProduction(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, ".env"), []byte("GK_TEST_DOTENV_PRODUCTION=from-file\n"), 0o600); err != nil {
+		t.Fatalf("write .env: %v", err)
+	}
+	t.Chdir(dir)
+	t.Setenv("GK_ENV", EnvProduction)
+	t.Setenv("GK_TEST_DOTENV_PRODUCTION", "from-env")
+
+	if err := LoadDotEnv(); err != nil {
+		t.Fatalf("LoadDotEnv() error = %v", err)
+	}
+	if got := os.Getenv("GK_TEST_DOTENV_PRODUCTION"); got != "from-env" {
+		t.Errorf("GK_TEST_DOTENV_PRODUCTION = %q, want %q", got, "from-env")
+	}
 }
 
 func TestParseValid(t *testing.T) {
