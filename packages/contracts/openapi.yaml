@@ -529,6 +529,281 @@ paths:
           description: Kelas dihapus.
         default:
           $ref: "#/components/responses/Problem"
+  /admin/users:
+    get:
+      operationId: getAdminUsers
+      tags: [admin-users]
+      summary: Daftar pengguna
+      description: |
+        Butuh izin `user.view`. Tanpa izin → 404. Admin jurusan hanya melihat
+        pengguna pada jurusannya. Hasil terbaru lebih dulu dan berhalaman
+        dengan `cursor`.
+      parameters:
+        - name: accountType
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/AccountType"
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/AccountStatus"
+        - name: majorId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: classId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: q
+          in: query
+          required: false
+          description: Cari pada nama tampilan, username, NISN, atau NIP/ID staf.
+          schema:
+            type: string
+            maxLength: 100
+        - name: cursor
+          in: query
+          required: false
+          description: Cursor halaman berikutnya dari `nextCursor`.
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        "200":
+          description: Daftar pengguna.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUserPage"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: postAdminUser
+      tags: [admin-users]
+      summary: Buat pengguna
+      description: |
+        Butuh izin `user.create`. Admin jurusan hanya dapat membuat siswa pada
+        jurusannya. NISN atau NIP/ID staf duplikat → 409.
+        `initialPassword` hanya ditampilkan sekali pada respons ini dan tidak
+        dapat diambil kembali.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminUserCreate"
+      responses:
+        "201":
+          description: Pengguna dibuat.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUserCreated"
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/users/{id}:
+    get:
+      operationId: getAdminUser
+      tags: [admin-users]
+      summary: Detail pengguna
+      description: |
+        Butuh izin `user.view`. Tanpa izin atau di luar jurusan admin → 404.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Detail pengguna.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUserDetail"
+        default:
+          $ref: "#/components/responses/Problem"
+    patch:
+      operationId: patchAdminUser
+      tags: [admin-users]
+      summary: Ubah pengguna
+      description: |
+        Butuh izin `user.update`. Tanpa izin atau di luar jurusan admin → 404.
+        Field yang tidak dikirim tidak berubah. Mengirim NISN atau NIP/ID staf
+        kosong akan mengosongkannya. NISN atau NIP/ID staf duplikat → 409.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminUserUpdate"
+      responses:
+        "200":
+          description: Pengguna diperbarui.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUserDetail"
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/users/{id}/deactivate:
+    post:
+      operationId: postAdminUserDeactivate
+      tags: [admin-users]
+      summary: Nonaktifkan pengguna
+      description: |
+        Butuh izin `user.deactivate`. Tanpa izin atau di luar jurusan admin → 404.
+        Menonaktifkan akun mencabut seluruh sesinya.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Pengguna dinonaktifkan.
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/users/{id}/reactivate:
+    post:
+      operationId: postAdminUserReactivate
+      tags: [admin-users]
+      summary: Aktifkan kembali pengguna
+      description: |
+        Butuh izin `user.deactivate`. Tanpa izin atau di luar jurusan admin → 404.
+        Akun dengan tahun lulus kembali menjadi alumni.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Pengguna diaktifkan kembali.
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/users/{id}/reset-password:
+    post:
+      operationId: postAdminUserResetPassword
+      tags: [admin-users]
+      summary: Reset sandi pengguna
+      description: |
+        Butuh izin `user.reset_password`. Tanpa izin atau di luar jurusan admin → 404.
+        Hanya untuk akun yang sudah aktivasi; akun belum aktivasi memakai
+        terbitkan ulang sandi awal. Seluruh sesi lama dicabut. `password` hanya
+        ditampilkan sekali pada respons ini dan tidak dapat diambil kembali.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Sandi sementara diterbitkan.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssuedPassword"
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/users/{id}/reissue-initial-password:
+    post:
+      operationId: postAdminUserReissueInitialPassword
+      tags: [admin-users]
+      summary: Terbitkan ulang sandi awal
+      description: |
+        Butuh izin `user.reset_password`. Tanpa izin atau di luar jurusan admin → 404.
+        Hanya untuk akun yang belum aktivasi; akun yang sudah aktivasi memakai
+        reset sandi. `password` hanya ditampilkan sekali pada respons ini dan
+        tidak dapat diambil kembali.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Sandi awal baru diterbitkan.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssuedPassword"
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/users/{id}/content-block:
+    post:
+      operationId: postAdminUserContentBlock
+      tags: [admin-users]
+      summary: Cabut izin membuat konten
+      description: |
+        Butuh izin `user.block_content` global. Tanpa izin → 404.
+        Alasan wajib 3–300 karakter dan dicatat di audit log.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminContentBlockRequest"
+      responses:
+        "204":
+          description: Izin membuat konten dicabut.
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/users/{id}/content-unblock:
+    post:
+      operationId: postAdminUserContentUnblock
+      tags: [admin-users]
+      summary: Pulihkan izin membuat konten
+      description: |
+        Butuh izin `user.block_content` global. Tanpa izin → 404.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Izin membuat konten dipulihkan.
+        default:
+          $ref: "#/components/responses/Problem"
 components:
   schemas:
     CsrfToken:
@@ -917,6 +1192,333 @@ components:
         section:
           type: string
           description: Rombel baru, 1–2 huruf kapital.
+    AdminClassRef:
+      type: object
+      description: Kelas terkini pengguna beserta jurusan dan tahun ajarannya.
+      required: [id, name, majorCode, academicYearLabel]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID kelas.
+        name:
+          type: string
+          description: Nama tampilan kelas, misalnya "XI RPL B".
+        majorCode:
+          type: string
+          description: Kode jurusan kelas.
+        academicYearLabel:
+          type: string
+          description: Label tahun ajaran, misalnya "2026/2027".
+    AdminRoleAssignment:
+      type: object
+      description: Satu penugasan role aktif pengguna.
+      required: [id, roleSlug, roleName, majorId, expiresAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID penugasan role.
+        roleSlug:
+          type: string
+          description: Slug role, misalnya "major_admin".
+        roleName:
+          type: string
+          description: Nama tampilan role.
+        majorId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Jurusan cakupan role. Kosong berarti global.
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Waktu kedaluwarsa penugasan.
+    AdminEnrollment:
+      type: object
+      description: Satu riwayat kelas pengguna.
+      required: [classId, className, majorCode, academicYearLabel, outcome]
+      properties:
+        classId:
+          type: string
+          format: uuid
+          description: ID kelas.
+        className:
+          type: string
+          description: Nama tampilan kelas.
+        majorCode:
+          type: string
+          description: Kode jurusan kelas.
+        academicYearLabel:
+          type: string
+          description: Label tahun ajaran, misalnya "2026/2027".
+        outcome:
+          type: string
+          nullable: true
+          description: Hasil akhir, misalnya "lulus" atau "pindah".
+    AdminUserSummary:
+      type: object
+      description: Ringkasan pengguna untuk daftar admin.
+      required:
+        - id
+        - accountType
+        - status
+        - displayName
+        - username
+        - nisn
+        - staffNumber
+        - activated
+        - contentBlocked
+        - currentClass
+        - lastLoginAt
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID pengguna.
+        accountType:
+          $ref: "#/components/schemas/AccountType"
+        status:
+          $ref: "#/components/schemas/AccountStatus"
+        displayName:
+          type: string
+          description: Nama tampilan.
+        username:
+          type: string
+          nullable: true
+          description: Kosong sebelum aktivasi.
+        nisn:
+          type: string
+          nullable: true
+          description: NISN siswa.
+        staffNumber:
+          type: string
+          nullable: true
+          description: NIP/ID staf guru atau tendik.
+        activated:
+          type: boolean
+          description: Apakah akun sudah aktivasi.
+        contentBlocked:
+          type: boolean
+          description: Apakah izin membuat konten sedang dicabut.
+        currentClass:
+          allOf:
+            - $ref: "#/components/schemas/AdminClassRef"
+          nullable: true
+          description: Kelas terkini siswa. Kosong untuk guru, tendik, dan alumni tanpa kelas.
+        lastLoginAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Waktu masuk terakhir.
+        createdAt:
+          type: string
+          format: date-time
+          description: Waktu akun dibuat.
+    AdminUserDetail:
+      type: object
+      description: Detail pengguna untuk admin, termasuk data akademik dan role.
+      required:
+        - id
+        - accountType
+        - status
+        - displayName
+        - username
+        - nisn
+        - staffNumber
+        - activated
+        - contentBlocked
+        - currentClass
+        - lastLoginAt
+        - createdAt
+        - entryYear
+        - graduationYear
+        - teacherMajorIds
+        - roles
+        - activeSessions
+        - passwordKind
+        - passwordExpiresAt
+        - deactivatedAt
+        - enrollments
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID pengguna.
+        accountType:
+          $ref: "#/components/schemas/AccountType"
+        status:
+          $ref: "#/components/schemas/AccountStatus"
+        displayName:
+          type: string
+          description: Nama tampilan.
+        username:
+          type: string
+          nullable: true
+          description: Kosong sebelum aktivasi.
+        nisn:
+          type: string
+          nullable: true
+          description: NISN siswa.
+        staffNumber:
+          type: string
+          nullable: true
+          description: NIP/ID staf guru atau tendik.
+        activated:
+          type: boolean
+          description: Apakah akun sudah aktivasi.
+        contentBlocked:
+          type: boolean
+          description: Apakah izin membuat konten sedang dicabut.
+        currentClass:
+          allOf:
+            - $ref: "#/components/schemas/AdminClassRef"
+          nullable: true
+          description: Kelas terkini siswa.
+        lastLoginAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Waktu masuk terakhir.
+        createdAt:
+          type: string
+          format: date-time
+          description: Waktu akun dibuat.
+        entryYear:
+          type: integer
+          nullable: true
+          description: Angkatan masuk.
+        graduationYear:
+          type: integer
+          nullable: true
+          description: Tahun lulus.
+        teacherMajorIds:
+          type: array
+          description: Jurusan yang diampu guru.
+          items:
+            type: string
+            format: uuid
+        roles:
+          type: array
+          description: Role aktif pengguna.
+          items:
+            $ref: "#/components/schemas/AdminRoleAssignment"
+        activeSessions:
+          type: integer
+          description: Jumlah sesi aktif pengguna.
+        passwordKind:
+          type: string
+          enum: [initial, temporary, user]
+          description: Jenis sandi yang sedang berlaku.
+        passwordExpiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Waktu kedaluwarsa sandi.
+        deactivatedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Waktu akun dinonaktifkan.
+        enrollments:
+          type: array
+          description: Riwayat kelas pengguna, terbaru lebih dulu.
+          items:
+            $ref: "#/components/schemas/AdminEnrollment"
+    AdminUserPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminUserSummary"
+        nextCursor:
+          type: string
+          nullable: true
+          description: Cursor halaman berikutnya. Kosong pada halaman terakhir.
+    AdminUserCreate:
+      type: object
+      description: Data pembuatan akun oleh admin.
+      required: [accountType, displayName]
+      properties:
+        accountType:
+          $ref: "#/components/schemas/AccountType"
+        displayName:
+          type: string
+          description: Nama tampilan, 1–100 karakter.
+        nisn:
+          type: string
+          description: NISN 10 digit. Wajib untuk siswa.
+        staffNumber:
+          type: string
+          description: NIP/ID staf, 3–30 karakter.
+        classId:
+          type: string
+          format: uuid
+          description: Kelas siswa. Wajib untuk siswa.
+        entryYear:
+          type: integer
+          description: Angkatan masuk, 1950–2100. Default dihitung dari kelas.
+        teacherMajorIds:
+          type: array
+          description: Jurusan yang diampu. Hanya untuk guru.
+          items:
+            type: string
+            format: uuid
+    AdminUserCreated:
+      type: object
+      required: [user, initialPassword]
+      properties:
+        user:
+          $ref: "#/components/schemas/AdminUserDetail"
+        initialPassword:
+          type: string
+          description: |
+            Sandi awal akun. Hanya ditampilkan sekali pada respons ini dan tidak
+            dapat diambil kembali.
+    AdminUserUpdate:
+      type: object
+      description: Perubahan data akun oleh admin. Field yang tidak dikirim tidak berubah.
+      properties:
+        displayName:
+          type: string
+          description: Nama tampilan, 1–100 karakter.
+        nisn:
+          type: string
+          description: NISN 10 digit. Kirim string kosong untuk mengosongkan.
+        staffNumber:
+          type: string
+          description: NIP/ID staf, 3–30 karakter. Kirim string kosong untuk mengosongkan.
+        accountType:
+          $ref: "#/components/schemas/AccountType"
+        teacherMajorIds:
+          type: array
+          description: Jurusan yang diampu. Hanya untuk guru.
+          items:
+            type: string
+            format: uuid
+    AdminContentBlockRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          description: Alasan pencabutan izin, 3–300 karakter.
+    IssuedPassword:
+      type: object
+      description: Sandi yang baru diterbitkan. Hanya ditampilkan sekali.
+      required: [password, expiresAt]
+      properties:
+        password:
+          type: string
+          description: Sandi baru. Hanya ditampilkan sekali pada respons ini dan tidak dapat diambil kembali.
+        expiresAt:
+          type: string
+          format: date-time
+          description: Waktu kedaluwarsa sandi.
     Pong:
       type: object
       required:
