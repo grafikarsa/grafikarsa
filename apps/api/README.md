@@ -52,6 +52,27 @@ yang di-rollback tidak meninggalkan job. Tipe argumen job didefinisikan di domai
 misalnya `internal/domain/users/jobs.go`, dengan `Kind()` berformat `<domain>.<action>` dan
 `InsertOpts()` yang menentukan antrean serta `MaxAttempts`.
 
+## Admin pertama
+
+Belum ada endpoint untuk membuat admin, jadi akun admin pertama dibuat lewat CLI. CLI membaca
+`DATABASE_URL` dari environment (dan `.env` di root repo selama `GK_ENV` bukan `production`).
+
+```bash
+cd apps/api
+go run ./cmd/admin create --name "Nama Admin" --username admin.sekolah
+go run ./cmd/admin create --name "Nama Admin" --username admin.sekolah --staff-number 1987654321
+```
+
+Dari root repo:
+
+```bash
+make admin-create NAME="Nama Admin" USERNAME=admin.sekolah
+```
+
+Perintah ini mencetak sandi awal yang berlaku 7 hari. Admin wajib menyelesaikan aktivasi
+(username, sandi baru, dan recovery code) saat pertama kali masuk. Username yang sudah dipakai
+atau dicadangkan ditolak dengan exit code `1`; kesalahan pemakaian argumen memakai exit code `2`.
+
 ## Test
 
 ```bash

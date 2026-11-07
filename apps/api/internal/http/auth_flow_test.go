@@ -34,6 +34,9 @@ var cheapPasswordParams = password.Params{
 	KeyLength:   32,
 }
 
+// testRecoverySecret keys the HMAC of recovery codes in tests.
+var testRecoverySecret = []byte("test-recovery-secret-0123456789abcdef")
+
 type flowEnv struct {
 	t      *testing.T
 	pool   *pgxpool.Pool
@@ -56,7 +59,7 @@ func newFlowEnv(t *testing.T) *flowEnv {
 		rdb,
 		hasher,
 		ratelimit.New(rdb),
-		auth.Config{},
+		auth.Config{RecoverySecret: testRecoverySecret},
 		logger,
 	)
 	if err != nil {
@@ -523,17 +526,175 @@ func TestAuthFlow_RevokeOthersLogsOutOtherClients(t *testing.T) {
 	}
 }
 
-func TestAuthFlow_PlaceholderEndpointStillReturns501(t *testing.T) {
+func decodeRecoveryCodes(t *testing.T, body []byte) []string {
+	t.Helper()
+
+	var payload apigen.RecoveryCodes
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("decode recovery codes: %v (body %s)", err, body)
+	}
+	return payload.Codes
+}
+
+func TestAuthFlow_ActivationEndToEnd(t *testing.T) {
 	env := newFlowEnv(t)
-	env.createPendingStudent("1000000007", "Siswa Placeholder", "sandi-awal-123")
+	env.createPendingStudent("1000000010", "Siswa Aktivasi", "sandi-awal-123")
 
 	c := env.client()
 	csrf := env.fetchCSRF(c)
-	if res, body := env.login(c, "1000000007", "sandi-awal-123", csrf); res.StatusCode != http.StatusOK {
+
+	res, body := env.login(c, "1000000010", "sandi-awal-123", csrf)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("login status = %d, body %s", res.StatusCode, body)
+	}
+	if got := decodeSession(t, body).NextStep; got != apigen.NextStepActivate {
+		t.Fatalf("nextStep = %q, want activate", got)
+	}
+
+	// Reserved usernames are reported, available ones omit the reason.
+	res, body = env.do(c, http.MethodGet, "/api/v1/auth/username-availability?u="+url.QueryEscape("admin"), nil, "", nil)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("availability status = %d, body %s", res.StatusCode, body)
+	}
+	var availability apigen.UsernameAvailability
+	if err := json.Unmarshal(body, &availability); err != nil {
+		t.Fatalf("decode availability: %v (body %s)", err, body)
+	}
+	if availability.Available {
+		t.Error("admin reported as available")
+	}
+	if availability.Reason == nil || *availability.Reason != apigen.UsernameAvailabilityReasonReserved {
+		t.Errorf("reason = %v, want reserved", availability.Reason)
+	}
+
+	res, body = env.do(c, http.MethodGet, "/api/v1/auth/username-availability?u="+url.QueryEscape("Siswa.Baru"), nil, "", nil)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("availability status = %d, body %s", res.StatusCode, body)
+	}
+	var available apigen.UsernameAvailability
+	if err := json.Unmarshal(body, &available); err != nil {
+		t.Fatalf("decode availability: %v (body %s)", err, body)
+	}
+	if !available.Available || available.Username != "siswa.baru" || available.Reason != nil {
+		t.Fatalf("availability = %+v, want available siswa.baru without reason", available)
+	}
+
+	res, body = env.do(c, http.MethodPost, "/api/v1/auth/activate", map[string]string{
+		"username":    "siswa.baru",
+		"newPassword": "Kopi-Susu-2026!",
+	}, env.csrfFromJar(c), nil)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("activate status = %d, body %s", res.StatusCode, body)
+	}
+	codes := decodeRecoveryCodes(t, body)
+	if len(codes) != 8 {
+		t.Fatalf("recovery codes = %d, want 8", len(codes))
+	}
+
+	// Activation is still gated until the codes are confirmed.
+	res, body = env.do(c, http.MethodGet, "/api/v1/auth/sessions", nil, "", nil)
+	requireProblem(t, res, body, http.StatusForbidden, "ACTIVATION_REQUIRED")
+
+	res, body = env.do(c, http.MethodPost, "/api/v1/auth/recovery-codes/confirm", nil, env.csrfFromJar(c), nil)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("confirm status = %d, body %s", res.StatusCode, body)
+	}
+	session := decodeSession(t, body)
+	if session.NextStep != apigen.NextStepNone {
+		t.Errorf("nextStep = %q, want none", session.NextStep)
+	}
+	if session.User.Username == nil || *session.User.Username != "siswa.baru" {
+		t.Errorf("username = %v, want siswa.baru", session.User.Username)
+	}
+
+	res, body = env.do(c, http.MethodGet, "/api/v1/auth/sessions", nil, "", nil)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("GET sessions after activation status = %d, body %s", res.StatusCode, body)
+	}
+}
+
+func TestAuthFlow_PasswordRecoveryEndToEnd(t *testing.T) {
+	env := newFlowEnv(t)
+	env.createPendingStudent("1000000011", "Siswa Pulih", "sandi-awal-123")
+
+	c := env.client()
+	csrf := env.fetchCSRF(c)
+	if res, body := env.login(c, "1000000011", "sandi-awal-123", csrf); res.StatusCode != http.StatusOK {
 		t.Fatalf("login status = %d, body %s", res.StatusCode, body)
 	}
 
-	res, body := env.do(c, http.MethodPost, "/api/v1/auth/activate",
-		map[string]string{"username": "siswa.baru"}, env.csrfFromJar(c), nil)
-	requireProblem(t, res, body, http.StatusNotImplemented, "NOT_IMPLEMENTED")
+	res, body := env.do(c, http.MethodPost, "/api/v1/auth/activate", map[string]string{
+		"username":    "siswa.pulih",
+		"newPassword": "Kopi-Susu-2026!",
+	}, env.csrfFromJar(c), nil)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("activate status = %d, body %s", res.StatusCode, body)
+	}
+	codes := decodeRecoveryCodes(t, body)
+	if len(codes) != 8 {
+		t.Fatalf("recovery codes = %d, want 8", len(codes))
+	}
+	if res, body := env.do(c, http.MethodPost, "/api/v1/auth/recovery-codes/confirm", nil, env.csrfFromJar(c), nil); res.StatusCode != http.StatusOK {
+		t.Fatalf("confirm status = %d, body %s", res.StatusCode, body)
+	}
+
+	// Recovery runs without a session.
+	other := env.client()
+	recoverCSRF := env.fetchCSRF(other)
+	res, body = env.do(other, http.MethodPost, "/api/v1/auth/password/recover", map[string]string{
+		"identifier":   "1000000011",
+		"recoveryCode": codes[0],
+		"newPassword":  "Melon-Manis-77!",
+	}, recoverCSRF, nil)
+	if res.StatusCode != http.StatusNoContent {
+		t.Fatalf("recover status = %d, body %s", res.StatusCode, body)
+	}
+
+	// The old session is dead.
+	res, body = env.do(c, http.MethodGet, "/api/v1/auth/session", nil, "", nil)
+	requireProblem(t, res, body, http.StatusUnauthorized, "UNAUTHENTICATED")
+
+	res, body = env.login(other, "1000000011", "Melon-Manis-77!", recoverCSRF)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("login with new password status = %d, body %s", res.StatusCode, body)
+	}
+	session := decodeSession(t, body)
+	if session.NextStep != apigen.NextStepNone {
+		t.Errorf("nextStep = %q, want none", session.NextStep)
+	}
+	if session.User.Username == nil || *session.User.Username != "siswa.pulih" {
+		t.Errorf("username = %v, want siswa.pulih", session.User.Username)
+	}
+}
+
+func TestAuthFlow_TemporaryPasswordChangeEndToEnd(t *testing.T) {
+	env := newFlowEnv(t)
+	env.createTemporaryPasswordStudent("1000000012", "siswa.sementara2", "Siswa Sementara", "sandi-temp-123")
+
+	c := env.client()
+	csrf := env.fetchCSRF(c)
+
+	res, body := env.login(c, "1000000012", "sandi-temp-123", csrf)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("login status = %d, body %s", res.StatusCode, body)
+	}
+	if got := decodeSession(t, body).NextStep; got != apigen.NextStepChangePassword {
+		t.Fatalf("nextStep = %q, want change_password", got)
+	}
+
+	res, body = env.do(c, http.MethodPost, "/api/v1/auth/password/change", map[string]string{
+		"newPassword": "Melon-Manis-77!",
+	}, env.csrfFromJar(c), nil)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("change password status = %d, body %s", res.StatusCode, body)
+	}
+	session := decodeSession(t, body)
+	if session.NextStep != apigen.NextStepNone {
+		t.Errorf("nextStep = %q, want none", session.NextStep)
+	}
+
+	res, body = env.do(c, http.MethodGet, "/api/v1/auth/sessions", nil, "", nil)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("GET sessions after change status = %d, body %s", res.StatusCode, body)
+	}
 }
