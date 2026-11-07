@@ -198,6 +198,16 @@ CREATE TABLE recovery_codes (
 );
 CREATE INDEX ix_recovery_codes_user ON recovery_codes (user_id) WHERE used_at IS NULL AND revoked_at IS NULL;
 
+-- Brankas sandi awal untuk mencetak kartu akun. Disimpan terenkripsi
+-- (AES-256-GCM) dan dihapus begitu akun aktivasi atau sandi awal diganti.
+CREATE TABLE initial_password_vault (
+  user_id     uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  ciphertext  bytea NOT NULL,           -- AES-256-GCM: nonce || sealed
+  expires_at  timestamptz NOT NULL,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX ix_vault_expiry ON initial_password_vault (expires_at);
+
 -- =============================================================================
 -- 4. IAM (role & izin)
 -- =============================================================================
