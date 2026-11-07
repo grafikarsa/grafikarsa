@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Search } from "lucide-react";
 
+import { NextStepGuard } from "@/components/auth/next-step-guard";
+import { UserMenu } from "@/components/auth/user-menu";
 import { MainNav } from "@/components/main-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -22,11 +24,10 @@ export function SiteHeader() {
             </Link>
           </Button>
           <ThemeToggle />
-          <Button asChild size="sm" className="ml-1">
-            <Link href="/masuk">Masuk</Link>
-          </Button>
+          <UserMenu />
         </div>
       </div>
+      <NextStepGuard />
     </header>
   );
 }
