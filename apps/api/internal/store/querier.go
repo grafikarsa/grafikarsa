@@ -11,7 +11,9 @@ import (
 type Querier interface {
 	GetMajorByCode(ctx context.Context, code string) (GetMajorByCodeRow, error)
 	GetSetting(ctx context.Context, key string) (Setting, error)
+	InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) (InsertAuditLogRow, error)
 	ListActiveMajors(ctx context.Context) ([]ListActiveMajorsRow, error)
+	ListAuditLogs(ctx context.Context, arg ListAuditLogsParams) ([]AuditLog, error)
 	ListSettings(ctx context.Context) ([]Setting, error)
 	UpsertSetting(ctx context.Context, arg UpsertSettingParams) (Setting, error)
 }
