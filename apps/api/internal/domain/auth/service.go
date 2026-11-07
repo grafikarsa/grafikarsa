@@ -36,6 +36,8 @@ const (
 
 	maxUserAgentLength = 512
 
+	minRecoverySecretLength = 32
+
 	sessionCachePrefix = "sess:"
 	userSessionsPrefix = "usess:"
 )
@@ -47,6 +49,9 @@ type Config struct {
 	SessionAbsolute time.Duration
 	TouchInterval   time.Duration
 	CacheTTL        time.Duration
+	// RecoverySecret keys the HMAC-SHA256 used to store recovery codes. It must
+	// be at least 32 bytes.
+	RecoverySecret []byte
 }
 
 func (c Config) withDefaults() Config {
@@ -98,6 +103,8 @@ func NewService(
 		return nil, errors.New("auth: password hasher is required")
 	case limiter == nil:
 		return nil, errors.New("auth: rate limiter is required")
+	case len(cfg.RecoverySecret) < minRecoverySecretLength:
+		return nil, errors.New("auth: recovery secret must be at least 32 bytes")
 	}
 	if logger == nil {
 		logger = slog.Default()

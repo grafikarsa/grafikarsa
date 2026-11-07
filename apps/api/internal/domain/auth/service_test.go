@@ -34,6 +34,9 @@ var cheapPasswordParams = password.Params{
 	KeyLength:   32,
 }
 
+// testRecoverySecret keys the HMAC of recovery codes in tests.
+var testRecoverySecret = []byte("test-recovery-secret-0123456789abcdef")
+
 type testClock struct {
 	mu  sync.Mutex
 	now time.Time
@@ -68,7 +71,9 @@ func newTestEnv(t *testing.T) *testEnv {
 	hasher := password.NewHasher(cheapPasswordParams, 0)
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 
-	svc, err := NewService(store.NewStore(pool), rdb, hasher, ratelimit.New(rdb), Config{}, logger)
+	svc, err := NewService(store.NewStore(pool), rdb, hasher, ratelimit.New(rdb), Config{
+		RecoverySecret: testRecoverySecret,
+	}, logger)
 	if err != nil {
 		t.Fatalf("NewService: %v", err)
 	}
@@ -93,6 +98,7 @@ type userSpec struct {
 	ActivatedAt       *time.Time
 	ContentBlockedAt  *time.Time
 	DeactivatedAt     *time.Time
+	LegacyV1ID        *uuid.UUID
 }
 
 func (e *testEnv) createUser(spec userSpec) uuid.UUID {
@@ -123,13 +129,13 @@ func (e *testEnv) createUser(spec userSpec) uuid.UUID {
 		INSERT INTO users (
 			account_type, status, nisn, staff_number, username, display_name,
 			password_hash, password_kind, password_expires_at, activated_at,
-			content_blocked_at, deactivated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+			content_blocked_at, deactivated_at, legacy_v1_id
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 		RETURNING id`,
 		spec.AccountType, spec.Status, spec.Nisn, spec.StaffNumber, spec.Username,
 		spec.DisplayName, spec.PasswordHash, spec.PasswordKind,
 		spec.PasswordExpiresAt, spec.ActivatedAt, spec.ContentBlockedAt,
-		spec.DeactivatedAt,
+		spec.DeactivatedAt, spec.LegacyV1ID,
 	).Scan(&id)
 	if err != nil {
 		e.t.Fatalf("insert user: %v", err)

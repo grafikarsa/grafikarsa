@@ -34,6 +34,9 @@ var cheapPasswordParams = password.Params{
 	KeyLength:   32,
 }
 
+// testRecoverySecret keys the HMAC of recovery codes in tests.
+var testRecoverySecret = []byte("test-recovery-secret-0123456789abcdef")
+
 type flowEnv struct {
 	t      *testing.T
 	pool   *pgxpool.Pool
@@ -56,7 +59,7 @@ func newFlowEnv(t *testing.T) *flowEnv {
 		rdb,
 		hasher,
 		ratelimit.New(rdb),
-		auth.Config{},
+		auth.Config{RecoverySecret: testRecoverySecret},
 		logger,
 	)
 	if err != nil {
