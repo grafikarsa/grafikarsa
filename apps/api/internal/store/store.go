@@ -3,7 +3,6 @@ package store
 
 import (
 	"context"
-	"errors"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -29,13 +28,8 @@ func (s *Store) WithTx(ctx context.Context, fn func(q *Queries) error) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		// After a successful commit the transaction is closed and Rollback
-		// returns pgx.ErrTxClosed, which is expected.
-		if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-			// Nothing actionable: fn's error (if any) is what callers see.
-		}
-	}()
+	// Rollback after a successful Commit returns pgx.ErrTxClosed; ignoring it is safe.
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	if err := fn(s.Queries.WithTx(tx)); err != nil {
 		return err
