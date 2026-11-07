@@ -1,35 +1,18 @@
-//go:build integration
-
 package store_test
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
-	"os"
 	"testing"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/store"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/testutil"
 )
 
 func TestSettingsIntegration(t *testing.T) {
-	dsn := os.Getenv("DATABASE_URL")
-	if dsn == "" {
-		t.Skip("DATABASE_URL tidak diset, lewati uji integrasi")
-	}
-
 	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, dsn)
-	if err != nil {
-		t.Fatalf("buat pgxpool: %v", err)
-	}
-	defer pool.Close()
-
-	if err := pool.Ping(ctx); err != nil {
-		t.Fatalf("ping database: %v", err)
-	}
+	pool := testutil.NewDB(t)
 
 	s := store.NewStore(pool)
 	const key = "test.sqlc_check"
