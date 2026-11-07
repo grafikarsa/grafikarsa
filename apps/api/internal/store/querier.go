@@ -13,12 +13,16 @@ import (
 type Querier interface {
 	BlockUserContent(ctx context.Context, arg BlockUserContentParams) error
 	ClearCurrentAcademicYear(ctx context.Context) error
+	CountActiveRoleHolders(ctx context.Context, roleID uuid.UUID) (int64, error)
 	CountClassEnrollments(ctx context.Context, classID uuid.UUID) (int64, error)
 	CountUserActiveSessions(ctx context.Context, userID uuid.UUID) (int64, error)
 	CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error)
 	DeactivateUser(ctx context.Context, id uuid.UUID) error
 	DeleteClass(ctx context.Context, id uuid.UUID) error
 	DeleteClassGroupByClassID(ctx context.Context, classID uuid.UUID) error
+	DeleteInactiveRoleAssignments(ctx context.Context, roleID uuid.UUID) error
+	DeleteRole(ctx context.Context, id uuid.UUID) error
+	DeleteRolePermissions(ctx context.Context, roleID uuid.UUID) error
 	DeleteTeacherMajors(ctx context.Context, userID uuid.UUID) error
 	GetAcademicYearByID(ctx context.Context, id uuid.UUID) (GetAcademicYearByIDRow, error)
 	GetClassByID(ctx context.Context, id uuid.UUID) (GetClassByIDRow, error)
@@ -28,11 +32,16 @@ type Querier interface {
 	GetMajorByID(ctx context.Context, id uuid.UUID) (GetMajorByIDRow, error)
 	GetMajorDetailByCode(ctx context.Context, code string) (GetMajorDetailByCodeRow, error)
 	GetMajorGroupByMajorID(ctx context.Context, majorID uuid.UUID) (GetMajorGroupByMajorIDRow, error)
+	GetRoleAssignmentTarget(ctx context.Context, id uuid.UUID) (GetRoleAssignmentTargetRow, error)
+	GetRoleByID(ctx context.Context, id uuid.UUID) (GetRoleByIDRow, error)
+	GetRoleBySlug(ctx context.Context, slug string) (GetRoleBySlugRow, error)
+	GetRoleMajor(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
 	GetSessionByTokenHash(ctx context.Context, tokenHash []byte) (Session, error)
 	GetSetting(ctx context.Context, key string) (Setting, error)
 	GetUserAdminDetail(ctx context.Context, id uuid.UUID) (GetUserAdminDetailRow, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (GetUserByIDRow, error)
 	GetUserForLogin(ctx context.Context, identifier string) (GetUserForLoginRow, error)
+	GetUserRoleAssignment(ctx context.Context, id uuid.UUID) (GetUserRoleAssignmentRow, error)
 	InsertAcademicYear(ctx context.Context, arg InsertAcademicYearParams) (InsertAcademicYearRow, error)
 	InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) (InsertAuditLogRow, error)
 	InsertClass(ctx context.Context, arg InsertClassParams) (uuid.UUID, error)
@@ -40,17 +49,26 @@ type Querier interface {
 	InsertEnrollment(ctx context.Context, arg InsertEnrollmentParams) error
 	InsertMajor(ctx context.Context, arg InsertMajorParams) (uuid.UUID, error)
 	InsertMajorGroup(ctx context.Context, majorID uuid.UUID) (uuid.UUID, error)
+	InsertRole(ctx context.Context, arg InsertRoleParams) (uuid.UUID, error)
+	InsertRolePermission(ctx context.Context, arg InsertRolePermissionParams) error
 	InsertSystemExperience(ctx context.Context, arg InsertSystemExperienceParams) error
 	InsertTeacherMajor(ctx context.Context, arg InsertTeacherMajorParams) error
 	InsertUser(ctx context.Context, arg InsertUserParams) (uuid.UUID, error)
+	InsertUserRole(ctx context.Context, arg InsertUserRoleParams) (InsertUserRoleRow, error)
 	ListAcademicYears(ctx context.Context) ([]ListAcademicYearsRow, error)
 	ListActiveMajors(ctx context.Context) ([]ListActiveMajorsRow, error)
+	ListActiveRoleHolderIDs(ctx context.Context, roleID uuid.UUID) ([]uuid.UUID, error)
 	ListActiveSessions(ctx context.Context, userID uuid.UUID) ([]ListActiveSessionsRow, error)
+	ListActiveUserRoleAssignments(ctx context.Context, arg ListActiveUserRoleAssignmentsParams) ([]ListActiveUserRoleAssignmentsRow, error)
+	ListAllRolePermissions(ctx context.Context) ([]RolePermission, error)
 	ListAuditLogs(ctx context.Context, arg ListAuditLogsParams) ([]AuditLog, error)
 	ListClasses(ctx context.Context, arg ListClassesParams) ([]ListClassesRow, error)
 	ListExplicitGrants(ctx context.Context, userID uuid.UUID) ([]ListExplicitGrantsRow, error)
 	ListMajors(ctx context.Context) ([]ListMajorsRow, error)
+	ListPermissions(ctx context.Context) ([]Permission, error)
+	ListRolePermissions(ctx context.Context, roleID uuid.UUID) ([]ListRolePermissionsRow, error)
 	ListRolePermissionsBySlug(ctx context.Context, slug string) ([]string, error)
+	ListRoles(ctx context.Context) ([]ListRolesRow, error)
 	ListSettings(ctx context.Context) ([]Setting, error)
 	ListTeacherMajorIDs(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error)
 	ListUserEnrollments(ctx context.Context, userID uuid.UUID) ([]ListUserEnrollmentsRow, error)
@@ -58,6 +76,7 @@ type Querier interface {
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error)
 	ReactivateUser(ctx context.Context, id uuid.UUID) error
 	RevokeSession(ctx context.Context, arg RevokeSessionParams) error
+	RevokeUserRole(ctx context.Context, arg RevokeUserRoleParams) (uuid.UUID, error)
 	RevokeUserSessions(ctx context.Context, arg RevokeUserSessionsParams) ([][]byte, error)
 	SetClassGroupStatus(ctx context.Context, arg SetClassGroupStatusParams) error
 	SetCurrentAcademicYear(ctx context.Context, id uuid.UUID) error
@@ -70,6 +89,7 @@ type Querier interface {
 	UpdateClassSection(ctx context.Context, arg UpdateClassSectionParams) (uuid.UUID, error)
 	UpdateMajor(ctx context.Context, arg UpdateMajorParams) (uuid.UUID, error)
 	UpdatePasswordHash(ctx context.Context, arg UpdatePasswordHashParams) error
+	UpdateRole(ctx context.Context, arg UpdateRoleParams) (uuid.UUID, error)
 	UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) error
 	UpsertSetting(ctx context.Context, arg UpsertSettingParams) (Setting, error)
 }
