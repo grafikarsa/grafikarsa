@@ -16,8 +16,7 @@ export default defineConfig({
           name: "apiFetch",
         },
         query: {
-          useQuery: true,
-          useSuspenseQuery: false,
+          // Default orval behavior: GET → useQuery, other methods → useMutation.
           signal: true,
         },
         fetch: {
