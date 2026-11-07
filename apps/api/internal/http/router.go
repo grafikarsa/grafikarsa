@@ -33,7 +33,7 @@ func NewRouter(logger *slog.Logger, checkers ...health.Checker) stdhttp.Handler 
 	r.Get("/readyz", health.Readyz(logger, checkers...))
 
 	r.Route("/api/v1", func(r chi.Router) {
-		apigen.HandlerFromMux(apigen.NewStrictHandlerWithOptions(api.NewServer(), nil, api.StrictOptions()), r)
+		apigen.HandlerFromMux(apigen.NewStrictHandlerWithOptions(api.NewServer(), nil, api.StrictOptions(logger)), r)
 	})
 
 	return r
