@@ -304,3 +304,17 @@ export const PostAdminUserContentUnblockParams = zod.object({
 
 export const PostAdminUserContentUnblockResponse = zod.void()
 
+/**
+ * Mengembalikan PDF berisi kartu akun siswa kelas yang belum aktivasi dan
+ * masih memiliki sandi awal yang berlaku (nama, NISN, sandi awal).
+ * Butuh izin `user.reset_password` pada jurusan kelas terkait. Tanpa izin →
+ * 404. Bila tidak ada siswa yang memenuhi syarat → 422. Setiap ekspor
+ * dicatat di audit log.
+ * @summary Ekspor kartu akun per kelas
+ */
+export const GetAdminAccountCardsQueryParams = zod.object({
+  "classId": zod.uuid()
+})
+
+export const GetAdminAccountCardsResponse = zod.unknown()
+

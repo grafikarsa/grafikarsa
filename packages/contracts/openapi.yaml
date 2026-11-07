@@ -804,6 +804,39 @@ paths:
           description: Izin membuat konten dipulihkan.
         default:
           $ref: "#/components/responses/Problem"
+  /admin/account-cards:
+    get:
+      operationId: getAdminAccountCards
+      tags: [admin-users]
+      summary: Ekspor kartu akun per kelas
+      description: |
+        Mengembalikan PDF berisi kartu akun siswa kelas yang belum aktivasi dan
+        masih memiliki sandi awal yang berlaku (nama, NISN, sandi awal).
+        Butuh izin `user.reset_password` pada jurusan kelas terkait. Tanpa izin →
+        404. Bila tidak ada siswa yang memenuhi syarat → 422. Setiap ekspor
+        dicatat di audit log.
+      parameters:
+        - name: classId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Berkas PDF kartu akun.
+          headers:
+            Content-Disposition:
+              description: Nama berkas unduhan, mis. kartu-akun-x-rpl-a.pdf
+              schema:
+                type: string
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        default:
+          $ref: "#/components/responses/Problem"
 components:
   schemas:
     CsrfToken:
