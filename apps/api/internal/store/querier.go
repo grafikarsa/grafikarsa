@@ -11,11 +11,15 @@ import (
 )
 
 type Querier interface {
+	BlockUserContent(ctx context.Context, arg BlockUserContentParams) error
 	ClearCurrentAcademicYear(ctx context.Context) error
 	CountClassEnrollments(ctx context.Context, classID uuid.UUID) (int64, error)
+	CountUserActiveSessions(ctx context.Context, userID uuid.UUID) (int64, error)
 	CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error)
+	DeactivateUser(ctx context.Context, id uuid.UUID) error
 	DeleteClass(ctx context.Context, id uuid.UUID) error
 	DeleteClassGroupByClassID(ctx context.Context, classID uuid.UUID) error
+	DeleteTeacherMajors(ctx context.Context, userID uuid.UUID) error
 	GetAcademicYearByID(ctx context.Context, id uuid.UUID) (GetAcademicYearByIDRow, error)
 	GetClassByID(ctx context.Context, id uuid.UUID) (GetClassByIDRow, error)
 	GetClassGroupByClassID(ctx context.Context, classID uuid.UUID) (GetClassGroupByClassIDRow, error)
@@ -26,14 +30,19 @@ type Querier interface {
 	GetMajorGroupByMajorID(ctx context.Context, majorID uuid.UUID) (GetMajorGroupByMajorIDRow, error)
 	GetSessionByTokenHash(ctx context.Context, tokenHash []byte) (Session, error)
 	GetSetting(ctx context.Context, key string) (Setting, error)
+	GetUserAdminDetail(ctx context.Context, id uuid.UUID) (GetUserAdminDetailRow, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (GetUserByIDRow, error)
 	GetUserForLogin(ctx context.Context, identifier string) (GetUserForLoginRow, error)
 	InsertAcademicYear(ctx context.Context, arg InsertAcademicYearParams) (InsertAcademicYearRow, error)
 	InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) (InsertAuditLogRow, error)
 	InsertClass(ctx context.Context, arg InsertClassParams) (uuid.UUID, error)
 	InsertClassGroup(ctx context.Context, arg InsertClassGroupParams) (uuid.UUID, error)
+	InsertEnrollment(ctx context.Context, arg InsertEnrollmentParams) error
 	InsertMajor(ctx context.Context, arg InsertMajorParams) (uuid.UUID, error)
 	InsertMajorGroup(ctx context.Context, majorID uuid.UUID) (uuid.UUID, error)
+	InsertSystemExperience(ctx context.Context, arg InsertSystemExperienceParams) error
+	InsertTeacherMajor(ctx context.Context, arg InsertTeacherMajorParams) error
+	InsertUser(ctx context.Context, arg InsertUserParams) (uuid.UUID, error)
 	ListAcademicYears(ctx context.Context) ([]ListAcademicYearsRow, error)
 	ListActiveMajors(ctx context.Context) ([]ListActiveMajorsRow, error)
 	ListActiveSessions(ctx context.Context, userID uuid.UUID) ([]ListActiveSessionsRow, error)
@@ -43,17 +52,25 @@ type Querier interface {
 	ListMajors(ctx context.Context) ([]ListMajorsRow, error)
 	ListRolePermissionsBySlug(ctx context.Context, slug string) ([]string, error)
 	ListSettings(ctx context.Context) ([]Setting, error)
+	ListTeacherMajorIDs(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error)
+	ListUserEnrollments(ctx context.Context, userID uuid.UUID) ([]ListUserEnrollmentsRow, error)
+	ListUserRoleAssignments(ctx context.Context, userID uuid.UUID) ([]ListUserRoleAssignmentsRow, error)
+	ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error)
+	ReactivateUser(ctx context.Context, id uuid.UUID) error
 	RevokeSession(ctx context.Context, arg RevokeSessionParams) error
 	RevokeUserSessions(ctx context.Context, arg RevokeUserSessionsParams) ([][]byte, error)
 	SetClassGroupStatus(ctx context.Context, arg SetClassGroupStatusParams) error
 	SetCurrentAcademicYear(ctx context.Context, id uuid.UUID) error
 	SetLastLogin(ctx context.Context, id uuid.UUID) error
 	SetMajorGroupStatus(ctx context.Context, arg SetMajorGroupStatusParams) error
+	SetUserPassword(ctx context.Context, arg SetUserPasswordParams) error
 	TouchSession(ctx context.Context, arg TouchSessionParams) error
+	UnblockUserContent(ctx context.Context, id uuid.UUID) error
 	UpdateAcademicYearDates(ctx context.Context, arg UpdateAcademicYearDatesParams) (UpdateAcademicYearDatesRow, error)
 	UpdateClassSection(ctx context.Context, arg UpdateClassSectionParams) (uuid.UUID, error)
 	UpdateMajor(ctx context.Context, arg UpdateMajorParams) (uuid.UUID, error)
 	UpdatePasswordHash(ctx context.Context, arg UpdatePasswordHashParams) error
+	UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) error
 	UpsertSetting(ctx context.Context, arg UpsertSettingParams) (Setting, error)
 }
 
