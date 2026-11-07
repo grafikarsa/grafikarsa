@@ -62,6 +62,27 @@ func (e AccountType) Valid() bool {
 	}
 }
 
+// Defines values for ClassCreateGrade.
+const (
+	ClassCreateGradeN10 ClassCreateGrade = 10
+	ClassCreateGradeN11 ClassCreateGrade = 11
+	ClassCreateGradeN12 ClassCreateGrade = 12
+)
+
+// Valid indicates whether the value is a known member of the ClassCreateGrade enum.
+func (e ClassCreateGrade) Valid() bool {
+	switch e {
+	case ClassCreateGradeN10:
+		return true
+	case ClassCreateGradeN11:
+		return true
+	case ClassCreateGradeN12:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for NextStep.
 const (
 	NextStepActivate       NextStep = "activate"
@@ -104,6 +125,56 @@ func (e UsernameAvailabilityReason) Valid() bool {
 	}
 }
 
+// AcademicYear Satu tahun ajaran.
+type AcademicYear struct {
+	// EndsOn Tanggal selesai tahun ajaran.
+	EndsOn openapi_types.Date `json:"endsOn"`
+
+	// Id ID tahun ajaran.
+	Id openapi_types.UUID `json:"id"`
+
+	// IsCurrent Apakah ini tahun ajaran yang aktif saat ini.
+	IsCurrent bool `json:"isCurrent"`
+
+	// Label Label tahun ajaran, misalnya "2026/2027".
+	Label string `json:"label"`
+
+	// Slug Slug tahun ajaran, misalnya "2026-2027".
+	Slug string `json:"slug"`
+
+	// StartYear Tahun mulai, misalnya 2026.
+	StartYear int `json:"startYear"`
+
+	// StartsOn Tanggal mulai tahun ajaran.
+	StartsOn openapi_types.Date `json:"startsOn"`
+}
+
+// AcademicYearCreate defines model for AcademicYearCreate.
+type AcademicYearCreate struct {
+	// EndsOn Tanggal selesai tahun ajaran.
+	EndsOn openapi_types.Date `json:"endsOn"`
+
+	// StartYear Tahun mulai, misalnya 2026.
+	StartYear int `json:"startYear"`
+
+	// StartsOn Tanggal mulai tahun ajaran.
+	StartsOn openapi_types.Date `json:"startsOn"`
+}
+
+// AcademicYearList defines model for AcademicYearList.
+type AcademicYearList struct {
+	Items []AcademicYear `json:"items"`
+}
+
+// AcademicYearUpdate defines model for AcademicYearUpdate.
+type AcademicYearUpdate struct {
+	// EndsOn Tanggal selesai tahun ajaran.
+	EndsOn *openapi_types.Date `json:"endsOn,omitempty"`
+
+	// StartsOn Tanggal mulai tahun ajaran.
+	StartsOn *openapi_types.Date `json:"startsOn,omitempty"`
+}
+
 // AccountStatus defines model for AccountStatus.
 type AccountStatus string
 
@@ -120,6 +191,68 @@ type ActivateRequest struct {
 type ChangePasswordRequest struct {
 	CurrentPassword *string `json:"currentPassword,omitempty"`
 	NewPassword     string  `json:"newPassword"`
+}
+
+// Class Satu rombel (kelas) pada tahun ajaran tertentu.
+type Class struct {
+	// AcademicYearId ID tahun ajaran kelas ini.
+	AcademicYearId openapi_types.UUID `json:"academicYearId"`
+
+	// EnrollmentCount Jumlah siswa yang terdaftar di kelas ini.
+	EnrollmentCount int64 `json:"enrollmentCount"`
+
+	// Grade Tingkat kelas (10, 11, atau 12).
+	Grade int `json:"grade"`
+
+	// GroupId ID grup yang mencerminkan kelas ini.
+	GroupId openapi_types.UUID `json:"groupId"`
+
+	// Id ID kelas.
+	Id openapi_types.UUID `json:"id"`
+
+	// MajorCode Kode jurusan kelas ini.
+	MajorCode string `json:"majorCode"`
+
+	// MajorId ID jurusan kelas ini.
+	MajorId openapi_types.UUID `json:"majorId"`
+
+	// Name Nama tampilan kelas, misalnya "XI RPL B".
+	Name string `json:"name"`
+
+	// Section Rombel, misalnya "A".
+	Section string `json:"section"`
+
+	// Slug Slug kelas, misalnya "xi-rpl-b".
+	Slug string `json:"slug"`
+}
+
+// ClassCreate defines model for ClassCreate.
+type ClassCreate struct {
+	// AcademicYearId ID tahun ajaran kelas ini.
+	AcademicYearId openapi_types.UUID `json:"academicYearId"`
+
+	// Grade Tingkat kelas (10, 11, atau 12).
+	Grade ClassCreateGrade `json:"grade"`
+
+	// MajorId ID jurusan kelas ini.
+	MajorId openapi_types.UUID `json:"majorId"`
+
+	// Section Rombel, 1–2 huruf kapital.
+	Section string `json:"section"`
+}
+
+// ClassCreateGrade Tingkat kelas (10, 11, atau 12).
+type ClassCreateGrade int
+
+// ClassList defines model for ClassList.
+type ClassList struct {
+	Items []Class `json:"items"`
+}
+
+// ClassUpdate defines model for ClassUpdate.
+type ClassUpdate struct {
+	// Section Rombel baru, 1–2 huruf kapital.
+	Section string `json:"section"`
 }
 
 // CsrfToken defines model for CsrfToken.
@@ -140,6 +273,65 @@ type LoginRequest struct {
 	// Identifier NISN, NIP/ID staf, atau username.
 	Identifier string `json:"identifier"`
 	Password   string `json:"password"`
+}
+
+// Major Data jurusan beserta grup cerminnya.
+type Major struct {
+	// Code Kode unik jurusan (huruf kecil).
+	Code string `json:"code"`
+
+	// GroupId ID grup yang mencerminkan jurusan ini.
+	GroupId openapi_types.UUID `json:"groupId"`
+
+	// Id ID jurusan.
+	Id openapi_types.UUID `json:"id"`
+
+	// IsActive Apakah jurusan masih aktif.
+	IsActive bool `json:"isActive"`
+
+	// Name Nama lengkap jurusan.
+	Name string `json:"name"`
+
+	// ShortName Nama singkat jurusan untuk nama kelas.
+	ShortName string `json:"shortName"`
+
+	// SortOrder Urutan tampil jurusan.
+	SortOrder int `json:"sortOrder"`
+}
+
+// MajorCreate defines model for MajorCreate.
+type MajorCreate struct {
+	// Code Kode jurusan, huruf kecil tanpa spasi.
+	Code string `json:"code"`
+
+	// Name Nama lengkap jurusan.
+	Name string `json:"name"`
+
+	// ShortName Nama singkat jurusan (huruf kapital).
+	ShortName string `json:"shortName"`
+
+	// SortOrder Urutan tampil jurusan. Default 0.
+	SortOrder *int `json:"sortOrder,omitempty"`
+}
+
+// MajorList defines model for MajorList.
+type MajorList struct {
+	Items []Major `json:"items"`
+}
+
+// MajorUpdate defines model for MajorUpdate.
+type MajorUpdate struct {
+	// IsActive Aktif atau nonaktif.
+	IsActive *bool `json:"isActive,omitempty"`
+
+	// Name Nama lengkap jurusan.
+	Name *string `json:"name,omitempty"`
+
+	// ShortName Nama singkat jurusan (huruf kapital).
+	ShortName *string `json:"shortName,omitempty"`
+
+	// SortOrder Urutan tampil jurusan.
+	SortOrder *int `json:"sortOrder,omitempty"`
 }
 
 // NextStep Halaman wajib berikutnya. `activate` → /aktivasi, `change_password` → /ganti-sandi,
@@ -247,10 +439,34 @@ type UsernameAvailability struct {
 // UsernameAvailabilityReason defines model for UsernameAvailability.Reason.
 type UsernameAvailabilityReason string
 
+// GetAdminClassesParams defines parameters for GetAdminClasses.
+type GetAdminClassesParams struct {
+	AcademicYearId *openapi_types.UUID `form:"academicYearId,omitempty" json:"academicYearId,omitempty"`
+	MajorId        *openapi_types.UUID `form:"majorId,omitempty" json:"majorId,omitempty"`
+}
+
 // GetAuthUsernameAvailabilityParams defines parameters for GetAuthUsernameAvailability.
 type GetAuthUsernameAvailabilityParams struct {
 	U string `form:"u" json:"u"`
 }
+
+// PostAdminAcademicYearJSONRequestBody defines body for PostAdminAcademicYear for application/json ContentType.
+type PostAdminAcademicYearJSONRequestBody = AcademicYearCreate
+
+// PatchAdminAcademicYearJSONRequestBody defines body for PatchAdminAcademicYear for application/json ContentType.
+type PatchAdminAcademicYearJSONRequestBody = AcademicYearUpdate
+
+// PostAdminClassJSONRequestBody defines body for PostAdminClass for application/json ContentType.
+type PostAdminClassJSONRequestBody = ClassCreate
+
+// PatchAdminClassJSONRequestBody defines body for PatchAdminClass for application/json ContentType.
+type PatchAdminClassJSONRequestBody = ClassUpdate
+
+// PostAdminMajorJSONRequestBody defines body for PostAdminMajor for application/json ContentType.
+type PostAdminMajorJSONRequestBody = MajorCreate
+
+// PatchAdminMajorJSONRequestBody defines body for PatchAdminMajor for application/json ContentType.
+type PatchAdminMajorJSONRequestBody = MajorUpdate
 
 // PostAuthActivateJSONRequestBody defines body for PostAuthActivate for application/json ContentType.
 type PostAuthActivateJSONRequestBody = ActivateRequest
@@ -269,6 +485,39 @@ type PostAuthRecoveryCodesRegenerateJSONRequestBody = PasswordConfirmation
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// GetAdminAcademicYears Daftar tahun ajaran
+	// (GET /admin/academic-years)
+	GetAdminAcademicYears(w http.ResponseWriter, r *http.Request)
+	// PostAdminAcademicYear Buat tahun ajaran
+	// (POST /admin/academic-years)
+	PostAdminAcademicYear(w http.ResponseWriter, r *http.Request)
+	// PatchAdminAcademicYear Ubah tanggal tahun ajaran
+	// (PATCH /admin/academic-years/{id})
+	PatchAdminAcademicYear(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// PostAdminAcademicYearSetCurrent Tandai tahun ajaran sebagai tahun ajaran aktif
+	// (POST /admin/academic-years/{id}/set-current)
+	PostAdminAcademicYearSetCurrent(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// GetAdminClasses Daftar kelas
+	// (GET /admin/classes)
+	GetAdminClasses(w http.ResponseWriter, r *http.Request, params GetAdminClassesParams)
+	// PostAdminClass Buat kelas
+	// (POST /admin/classes)
+	PostAdminClass(w http.ResponseWriter, r *http.Request)
+	// DeleteAdminClass Hapus kelas
+	// (DELETE /admin/classes/{id})
+	DeleteAdminClass(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// PatchAdminClass Ubah rombel kelas
+	// (PATCH /admin/classes/{id})
+	PatchAdminClass(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// GetAdminMajors Daftar seluruh jurusan
+	// (GET /admin/majors)
+	GetAdminMajors(w http.ResponseWriter, r *http.Request)
+	// PostAdminMajor Buat jurusan
+	// (POST /admin/majors)
+	PostAdminMajor(w http.ResponseWriter, r *http.Request)
+	// PatchAdminMajor Ubah jurusan
+	// (PATCH /admin/majors/{id})
+	PatchAdminMajor(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// PostAuthActivate Aktivasi akun (login pertama)
 	// (POST /auth/activate)
 	PostAuthActivate(w http.ResponseWriter, r *http.Request)
@@ -308,6 +557,9 @@ type ServerInterface interface {
 	// GetAuthUsernameAvailability Cek ketersediaan username
 	// (GET /auth/username-availability)
 	GetAuthUsernameAvailability(w http.ResponseWriter, r *http.Request, params GetAuthUsernameAvailabilityParams)
+	// GetMajors Daftar jurusan aktif
+	// (GET /majors)
+	GetMajors(w http.ResponseWriter, r *http.Request)
 	// GetPing Cek API hidup
 	// (GET /ping)
 	GetPing(w http.ResponseWriter, r *http.Request)
@@ -316,6 +568,72 @@ type ServerInterface interface {
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
 
 type Unimplemented struct{}
+
+// GetAdminAcademicYears Daftar tahun ajaran
+// (GET /admin/academic-years)
+func (_ Unimplemented) GetAdminAcademicYears(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostAdminAcademicYear Buat tahun ajaran
+// (POST /admin/academic-years)
+func (_ Unimplemented) PostAdminAcademicYear(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PatchAdminAcademicYear Ubah tanggal tahun ajaran
+// (PATCH /admin/academic-years/{id})
+func (_ Unimplemented) PatchAdminAcademicYear(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostAdminAcademicYearSetCurrent Tandai tahun ajaran sebagai tahun ajaran aktif
+// (POST /admin/academic-years/{id}/set-current)
+func (_ Unimplemented) PostAdminAcademicYearSetCurrent(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetAdminClasses Daftar kelas
+// (GET /admin/classes)
+func (_ Unimplemented) GetAdminClasses(w http.ResponseWriter, r *http.Request, params GetAdminClassesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostAdminClass Buat kelas
+// (POST /admin/classes)
+func (_ Unimplemented) PostAdminClass(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DeleteAdminClass Hapus kelas
+// (DELETE /admin/classes/{id})
+func (_ Unimplemented) DeleteAdminClass(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PatchAdminClass Ubah rombel kelas
+// (PATCH /admin/classes/{id})
+func (_ Unimplemented) PatchAdminClass(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetAdminMajors Daftar seluruh jurusan
+// (GET /admin/majors)
+func (_ Unimplemented) GetAdminMajors(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostAdminMajor Buat jurusan
+// (POST /admin/majors)
+func (_ Unimplemented) PostAdminMajor(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PatchAdminMajor Ubah jurusan
+// (PATCH /admin/majors/{id})
+func (_ Unimplemented) PatchAdminMajor(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
 
 // PostAuthActivate Aktivasi akun (login pertama)
 // (POST /auth/activate)
@@ -395,6 +713,12 @@ func (_ Unimplemented) GetAuthUsernameAvailability(w http.ResponseWriter, r *htt
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// GetMajors Daftar jurusan aktif
+// (GET /majors)
+func (_ Unimplemented) GetMajors(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // GetPing Cek API hidup
 // (GET /ping)
 func (_ Unimplemented) GetPing(w http.ResponseWriter, r *http.Request) {
@@ -409,6 +733,252 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// GetAdminAcademicYears operation middleware
+func (siw *ServerInterfaceWrapper) GetAdminAcademicYears(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAdminAcademicYears(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAdminAcademicYear operation middleware
+func (siw *ServerInterfaceWrapper) PostAdminAcademicYear(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAdminAcademicYear(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PatchAdminAcademicYear operation middleware
+func (siw *ServerInterfaceWrapper) PatchAdminAcademicYear(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PatchAdminAcademicYear(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAdminAcademicYearSetCurrent operation middleware
+func (siw *ServerInterfaceWrapper) PostAdminAcademicYearSetCurrent(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAdminAcademicYearSetCurrent(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAdminClasses operation middleware
+func (siw *ServerInterfaceWrapper) GetAdminClasses(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetAdminClassesParams
+
+	// ------------- Optional query parameter "academicYearId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "academicYearId", r.URL.Query(), &params.AcademicYearId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "academicYearId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "academicYearId", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "majorId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "majorId", r.URL.Query(), &params.MajorId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "majorId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "majorId", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAdminClasses(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAdminClass operation middleware
+func (siw *ServerInterfaceWrapper) PostAdminClass(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAdminClass(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteAdminClass operation middleware
+func (siw *ServerInterfaceWrapper) DeleteAdminClass(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteAdminClass(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PatchAdminClass operation middleware
+func (siw *ServerInterfaceWrapper) PatchAdminClass(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PatchAdminClass(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAdminMajors operation middleware
+func (siw *ServerInterfaceWrapper) GetAdminMajors(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAdminMajors(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAdminMajor operation middleware
+func (siw *ServerInterfaceWrapper) PostAdminMajor(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAdminMajor(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PatchAdminMajor operation middleware
+func (siw *ServerInterfaceWrapper) PatchAdminMajor(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PatchAdminMajor(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // PostAuthActivate operation middleware
 func (siw *ServerInterfaceWrapper) PostAuthActivate(w http.ResponseWriter, r *http.Request) {
@@ -623,6 +1193,20 @@ func (siw *ServerInterfaceWrapper) GetAuthUsernameAvailability(w http.ResponseWr
 	handler.ServeHTTP(w, r)
 }
 
+// GetMajors operation middleware
+func (siw *ServerInterfaceWrapper) GetMajors(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMajors(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetPing operation middleware
 func (siw *ServerInterfaceWrapper) GetPing(w http.ResponseWriter, r *http.Request) {
 
@@ -792,11 +1376,465 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/auth/sessions/revoke-others", wrapper.PostAuthSessionsRevokeOthers)
 	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/majors", wrapper.GetMajors)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/majors", wrapper.GetAdminMajors)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/majors", wrapper.PostAdminMajor)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/admin/majors/{id}", wrapper.PatchAdminMajor)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/academic-years", wrapper.GetAdminAcademicYears)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/academic-years", wrapper.PostAdminAcademicYear)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/admin/academic-years/{id}", wrapper.PatchAdminAcademicYear)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/academic-years/{id}/set-current", wrapper.PostAdminAcademicYearSetCurrent)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/classes", wrapper.GetAdminClasses)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/classes", wrapper.PostAdminClass)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/admin/classes/{id}", wrapper.DeleteAdminClass)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/admin/classes/{id}", wrapper.PatchAdminClass)
+	})
 
 	return r
 }
 
 type ProblemApplicationProblemPlusJSONResponse Problem
+
+type GetAdminAcademicYearsRequestObject struct {
+}
+
+type GetAdminAcademicYearsResponseObject interface {
+	VisitGetAdminAcademicYearsResponse(w http.ResponseWriter) error
+}
+
+type GetAdminAcademicYears200JSONResponse AcademicYearList
+
+func (response GetAdminAcademicYears200JSONResponse) VisitGetAdminAcademicYearsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAdminAcademicYearsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetAdminAcademicYearsdefaultApplicationProblemPlusJSONResponse) VisitGetAdminAcademicYearsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAdminAcademicYearRequestObject struct {
+	Body *PostAdminAcademicYearJSONRequestBody
+}
+
+type PostAdminAcademicYearResponseObject interface {
+	VisitPostAdminAcademicYearResponse(w http.ResponseWriter) error
+}
+
+type PostAdminAcademicYear201JSONResponse AcademicYear
+
+func (response PostAdminAcademicYear201JSONResponse) VisitPostAdminAcademicYearResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAdminAcademicYeardefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostAdminAcademicYeardefaultApplicationProblemPlusJSONResponse) VisitPostAdminAcademicYearResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchAdminAcademicYearRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *PatchAdminAcademicYearJSONRequestBody
+}
+
+type PatchAdminAcademicYearResponseObject interface {
+	VisitPatchAdminAcademicYearResponse(w http.ResponseWriter) error
+}
+
+type PatchAdminAcademicYear200JSONResponse AcademicYear
+
+func (response PatchAdminAcademicYear200JSONResponse) VisitPatchAdminAcademicYearResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchAdminAcademicYeardefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PatchAdminAcademicYeardefaultApplicationProblemPlusJSONResponse) VisitPatchAdminAcademicYearResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAdminAcademicYearSetCurrentRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type PostAdminAcademicYearSetCurrentResponseObject interface {
+	VisitPostAdminAcademicYearSetCurrentResponse(w http.ResponseWriter) error
+}
+
+type PostAdminAcademicYearSetCurrent204Response struct {
+}
+
+func (response PostAdminAcademicYearSetCurrent204Response) VisitPostAdminAcademicYearSetCurrentResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PostAdminAcademicYearSetCurrentdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostAdminAcademicYearSetCurrentdefaultApplicationProblemPlusJSONResponse) VisitPostAdminAcademicYearSetCurrentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAdminClassesRequestObject struct {
+	Params GetAdminClassesParams
+}
+
+type GetAdminClassesResponseObject interface {
+	VisitGetAdminClassesResponse(w http.ResponseWriter) error
+}
+
+type GetAdminClasses200JSONResponse ClassList
+
+func (response GetAdminClasses200JSONResponse) VisitGetAdminClassesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAdminClassesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetAdminClassesdefaultApplicationProblemPlusJSONResponse) VisitGetAdminClassesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAdminClassRequestObject struct {
+	Body *PostAdminClassJSONRequestBody
+}
+
+type PostAdminClassResponseObject interface {
+	VisitPostAdminClassResponse(w http.ResponseWriter) error
+}
+
+type PostAdminClass201JSONResponse Class
+
+func (response PostAdminClass201JSONResponse) VisitPostAdminClassResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAdminClassdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostAdminClassdefaultApplicationProblemPlusJSONResponse) VisitPostAdminClassResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAdminClassRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type DeleteAdminClassResponseObject interface {
+	VisitDeleteAdminClassResponse(w http.ResponseWriter) error
+}
+
+type DeleteAdminClass204Response struct {
+}
+
+func (response DeleteAdminClass204Response) VisitDeleteAdminClassResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteAdminClassdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DeleteAdminClassdefaultApplicationProblemPlusJSONResponse) VisitDeleteAdminClassResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchAdminClassRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *PatchAdminClassJSONRequestBody
+}
+
+type PatchAdminClassResponseObject interface {
+	VisitPatchAdminClassResponse(w http.ResponseWriter) error
+}
+
+type PatchAdminClass200JSONResponse Class
+
+func (response PatchAdminClass200JSONResponse) VisitPatchAdminClassResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchAdminClassdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PatchAdminClassdefaultApplicationProblemPlusJSONResponse) VisitPatchAdminClassResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAdminMajorsRequestObject struct {
+}
+
+type GetAdminMajorsResponseObject interface {
+	VisitGetAdminMajorsResponse(w http.ResponseWriter) error
+}
+
+type GetAdminMajors200JSONResponse MajorList
+
+func (response GetAdminMajors200JSONResponse) VisitGetAdminMajorsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAdminMajorsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetAdminMajorsdefaultApplicationProblemPlusJSONResponse) VisitGetAdminMajorsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAdminMajorRequestObject struct {
+	Body *PostAdminMajorJSONRequestBody
+}
+
+type PostAdminMajorResponseObject interface {
+	VisitPostAdminMajorResponse(w http.ResponseWriter) error
+}
+
+type PostAdminMajor201JSONResponse Major
+
+func (response PostAdminMajor201JSONResponse) VisitPostAdminMajorResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAdminMajordefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostAdminMajordefaultApplicationProblemPlusJSONResponse) VisitPostAdminMajorResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchAdminMajorRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *PatchAdminMajorJSONRequestBody
+}
+
+type PatchAdminMajorResponseObject interface {
+	VisitPatchAdminMajorResponse(w http.ResponseWriter) error
+}
+
+type PatchAdminMajor200JSONResponse Major
+
+func (response PatchAdminMajor200JSONResponse) VisitPatchAdminMajorResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchAdminMajordefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PatchAdminMajordefaultApplicationProblemPlusJSONResponse) VisitPatchAdminMajorResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
 
 type PostAuthActivateRequestObject struct {
 	Body *PostAuthActivateJSONRequestBody
@@ -1275,6 +2313,44 @@ func (response GetAuthUsernameAvailabilitydefaultApplicationProblemPlusJSONRespo
 	return err
 }
 
+type GetMajorsRequestObject struct {
+}
+
+type GetMajorsResponseObject interface {
+	VisitGetMajorsResponse(w http.ResponseWriter) error
+}
+
+type GetMajors200JSONResponse MajorList
+
+func (response GetMajors200JSONResponse) VisitGetMajorsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMajorsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetMajorsdefaultApplicationProblemPlusJSONResponse) VisitGetMajorsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetPingRequestObject struct {
 }
 
@@ -1315,6 +2391,39 @@ func (response GetPingdefaultApplicationProblemPlusJSONResponse) VisitGetPingRes
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// GetAdminAcademicYears Daftar tahun ajaran
+	// (GET /admin/academic-years)
+	GetAdminAcademicYears(ctx context.Context, request GetAdminAcademicYearsRequestObject) (GetAdminAcademicYearsResponseObject, error)
+	// PostAdminAcademicYear Buat tahun ajaran
+	// (POST /admin/academic-years)
+	PostAdminAcademicYear(ctx context.Context, request PostAdminAcademicYearRequestObject) (PostAdminAcademicYearResponseObject, error)
+	// PatchAdminAcademicYear Ubah tanggal tahun ajaran
+	// (PATCH /admin/academic-years/{id})
+	PatchAdminAcademicYear(ctx context.Context, request PatchAdminAcademicYearRequestObject) (PatchAdminAcademicYearResponseObject, error)
+	// PostAdminAcademicYearSetCurrent Tandai tahun ajaran sebagai tahun ajaran aktif
+	// (POST /admin/academic-years/{id}/set-current)
+	PostAdminAcademicYearSetCurrent(ctx context.Context, request PostAdminAcademicYearSetCurrentRequestObject) (PostAdminAcademicYearSetCurrentResponseObject, error)
+	// GetAdminClasses Daftar kelas
+	// (GET /admin/classes)
+	GetAdminClasses(ctx context.Context, request GetAdminClassesRequestObject) (GetAdminClassesResponseObject, error)
+	// PostAdminClass Buat kelas
+	// (POST /admin/classes)
+	PostAdminClass(ctx context.Context, request PostAdminClassRequestObject) (PostAdminClassResponseObject, error)
+	// DeleteAdminClass Hapus kelas
+	// (DELETE /admin/classes/{id})
+	DeleteAdminClass(ctx context.Context, request DeleteAdminClassRequestObject) (DeleteAdminClassResponseObject, error)
+	// PatchAdminClass Ubah rombel kelas
+	// (PATCH /admin/classes/{id})
+	PatchAdminClass(ctx context.Context, request PatchAdminClassRequestObject) (PatchAdminClassResponseObject, error)
+	// GetAdminMajors Daftar seluruh jurusan
+	// (GET /admin/majors)
+	GetAdminMajors(ctx context.Context, request GetAdminMajorsRequestObject) (GetAdminMajorsResponseObject, error)
+	// PostAdminMajor Buat jurusan
+	// (POST /admin/majors)
+	PostAdminMajor(ctx context.Context, request PostAdminMajorRequestObject) (PostAdminMajorResponseObject, error)
+	// PatchAdminMajor Ubah jurusan
+	// (PATCH /admin/majors/{id})
+	PatchAdminMajor(ctx context.Context, request PatchAdminMajorRequestObject) (PatchAdminMajorResponseObject, error)
 	// PostAuthActivate Aktivasi akun (login pertama)
 	// (POST /auth/activate)
 	PostAuthActivate(ctx context.Context, request PostAuthActivateRequestObject) (PostAuthActivateResponseObject, error)
@@ -1354,6 +2463,9 @@ type StrictServerInterface interface {
 	// GetAuthUsernameAvailability Cek ketersediaan username
 	// (GET /auth/username-availability)
 	GetAuthUsernameAvailability(ctx context.Context, request GetAuthUsernameAvailabilityRequestObject) (GetAuthUsernameAvailabilityResponseObject, error)
+	// GetMajors Daftar jurusan aktif
+	// (GET /majors)
+	GetMajors(ctx context.Context, request GetMajorsRequestObject) (GetMajorsResponseObject, error)
 	// GetPing Cek API hidup
 	// (GET /ping)
 	GetPing(ctx context.Context, request GetPingRequestObject) (GetPingResponseObject, error)
@@ -1396,6 +2508,324 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// GetAdminAcademicYears operation middleware
+func (sh *strictHandler) GetAdminAcademicYears(w http.ResponseWriter, r *http.Request) {
+	var request GetAdminAcademicYearsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAdminAcademicYears(ctx, request.(GetAdminAcademicYearsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAdminAcademicYears")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetAdminAcademicYearsResponseObject); ok {
+		if err := validResponse.VisitGetAdminAcademicYearsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostAdminAcademicYear operation middleware
+func (sh *strictHandler) PostAdminAcademicYear(w http.ResponseWriter, r *http.Request) {
+	var request PostAdminAcademicYearRequestObject
+
+	var body PostAdminAcademicYearJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostAdminAcademicYear(ctx, request.(PostAdminAcademicYearRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostAdminAcademicYear")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostAdminAcademicYearResponseObject); ok {
+		if err := validResponse.VisitPostAdminAcademicYearResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PatchAdminAcademicYear operation middleware
+func (sh *strictHandler) PatchAdminAcademicYear(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PatchAdminAcademicYearRequestObject
+
+	request.Id = id
+
+	var body PatchAdminAcademicYearJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PatchAdminAcademicYear(ctx, request.(PatchAdminAcademicYearRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PatchAdminAcademicYear")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PatchAdminAcademicYearResponseObject); ok {
+		if err := validResponse.VisitPatchAdminAcademicYearResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostAdminAcademicYearSetCurrent operation middleware
+func (sh *strictHandler) PostAdminAcademicYearSetCurrent(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PostAdminAcademicYearSetCurrentRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostAdminAcademicYearSetCurrent(ctx, request.(PostAdminAcademicYearSetCurrentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostAdminAcademicYearSetCurrent")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostAdminAcademicYearSetCurrentResponseObject); ok {
+		if err := validResponse.VisitPostAdminAcademicYearSetCurrentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetAdminClasses operation middleware
+func (sh *strictHandler) GetAdminClasses(w http.ResponseWriter, r *http.Request, params GetAdminClassesParams) {
+	var request GetAdminClassesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAdminClasses(ctx, request.(GetAdminClassesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAdminClasses")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetAdminClassesResponseObject); ok {
+		if err := validResponse.VisitGetAdminClassesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostAdminClass operation middleware
+func (sh *strictHandler) PostAdminClass(w http.ResponseWriter, r *http.Request) {
+	var request PostAdminClassRequestObject
+
+	var body PostAdminClassJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostAdminClass(ctx, request.(PostAdminClassRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostAdminClass")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostAdminClassResponseObject); ok {
+		if err := validResponse.VisitPostAdminClassResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteAdminClass operation middleware
+func (sh *strictHandler) DeleteAdminClass(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request DeleteAdminClassRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteAdminClass(ctx, request.(DeleteAdminClassRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteAdminClass")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteAdminClassResponseObject); ok {
+		if err := validResponse.VisitDeleteAdminClassResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PatchAdminClass operation middleware
+func (sh *strictHandler) PatchAdminClass(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PatchAdminClassRequestObject
+
+	request.Id = id
+
+	var body PatchAdminClassJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PatchAdminClass(ctx, request.(PatchAdminClassRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PatchAdminClass")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PatchAdminClassResponseObject); ok {
+		if err := validResponse.VisitPatchAdminClassResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetAdminMajors operation middleware
+func (sh *strictHandler) GetAdminMajors(w http.ResponseWriter, r *http.Request) {
+	var request GetAdminMajorsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAdminMajors(ctx, request.(GetAdminMajorsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAdminMajors")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetAdminMajorsResponseObject); ok {
+		if err := validResponse.VisitGetAdminMajorsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostAdminMajor operation middleware
+func (sh *strictHandler) PostAdminMajor(w http.ResponseWriter, r *http.Request) {
+	var request PostAdminMajorRequestObject
+
+	var body PostAdminMajorJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostAdminMajor(ctx, request.(PostAdminMajorRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostAdminMajor")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostAdminMajorResponseObject); ok {
+		if err := validResponse.VisitPostAdminMajorResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PatchAdminMajor operation middleware
+func (sh *strictHandler) PatchAdminMajor(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PatchAdminMajorRequestObject
+
+	request.Id = id
+
+	var body PatchAdminMajorJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PatchAdminMajor(ctx, request.(PatchAdminMajorRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PatchAdminMajor")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PatchAdminMajorResponseObject); ok {
+		if err := validResponse.VisitPatchAdminMajorResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // PostAuthActivate operation middleware
@@ -1742,6 +3172,30 @@ func (sh *strictHandler) GetAuthUsernameAvailability(w http.ResponseWriter, r *h
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetAuthUsernameAvailabilityResponseObject); ok {
 		if err := validResponse.VisitGetAuthUsernameAvailabilityResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetMajors operation middleware
+func (sh *strictHandler) GetMajors(w http.ResponseWriter, r *http.Request) {
+	var request GetMajorsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMajors(ctx, request.(GetMajorsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMajors")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetMajorsResponseObject); ok {
+		if err := validResponse.VisitGetMajorsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
