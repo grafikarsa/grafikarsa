@@ -2,12 +2,13 @@
 package http
 
 import (
-	"encoding/json"
 	"log/slog"
 	stdhttp "net/http"
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/api"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/apigen"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/health"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/middleware"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/problem"
@@ -32,10 +33,7 @@ func NewRouter(logger *slog.Logger, checkers ...health.Checker) stdhttp.Handler 
 	r.Get("/readyz", health.Readyz(logger, checkers...))
 
 	r.Route("/api/v1", func(r chi.Router) {
-		r.Get("/ping", func(w stdhttp.ResponseWriter, _ *stdhttp.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(map[string]bool{"pong": true})
-		})
+		apigen.HandlerFromMux(apigen.NewStrictHandlerWithOptions(api.NewServer(), nil, api.StrictOptions()), r)
 	})
 
 	return r
