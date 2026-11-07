@@ -145,3 +145,117 @@ SELECT rp.permission_key
 FROM role_permissions rp
 JOIN roles r ON r.id = rp.role_id
 WHERE r.slug = @slug::citext;
+
+-- name: IsUsernameReserved :one
+SELECT EXISTS (
+  SELECT 1 FROM reserved_usernames WHERE username = @username::citext
+) AS reserved;
+
+-- name: IsUsernameTaken :one
+SELECT EXISTS (
+  SELECT 1
+  FROM users
+  WHERE username = @username::citext
+    AND id <> @user_id::uuid
+  UNION ALL
+  SELECT 1
+  FROM username_history
+  WHERE old_username = @username::citext
+    AND released_at IS NULL
+    AND redirect_until > now()
+    AND user_id <> @user_id::uuid
+) AS taken;
+
+-- name: SetUsername :exec
+UPDATE users
+SET username = @username::citext,
+    username_changed_at = now()
+WHERE id = @id::uuid;
+
+-- name: InsertUsernameHistory :exec
+INSERT INTO username_history (user_id, old_username, redirect_until)
+VALUES (@user_id::uuid, @old_username::citext, @redirect_until::timestamptz);
+
+-- name: SetOwnPassword :exec
+UPDATE users
+SET password_hash = @password_hash::text,
+    password_kind = 'user',
+    password_expires_at = NULL,
+    password_changed_at = now()
+WHERE id = @id::uuid;
+
+-- name: RevokeActiveRecoveryCodes :exec
+UPDATE recovery_codes
+SET revoked_at = now()
+WHERE user_id = @user_id::uuid
+  AND used_at IS NULL
+  AND revoked_at IS NULL;
+
+-- name: InsertRecoveryCode :exec
+INSERT INTO recovery_codes (user_id, batch_id, code_hash)
+VALUES (@user_id::uuid, @batch_id::uuid, @code_hash::text);
+
+-- name: CountActiveRecoveryCodes :one
+SELECT count(*)
+FROM recovery_codes
+WHERE user_id = @user_id::uuid
+  AND used_at IS NULL
+  AND revoked_at IS NULL;
+
+-- name: UseRecoveryCode :one
+UPDATE recovery_codes
+SET used_at = now()
+WHERE user_id = @user_id::uuid
+  AND code_hash = @code_hash::text
+  AND used_at IS NULL
+  AND revoked_at IS NULL
+RETURNING id;
+
+-- name: CompleteActivation :exec
+UPDATE users
+SET recovery_codes_confirmed_at = now(),
+    activated_at = now()
+WHERE id = @id::uuid
+  AND username IS NOT NULL;
+
+-- name: GetUserIdentity :one
+SELECT
+  username,
+  nisn,
+  staff_number,
+  display_name,
+  password_hash,
+  password_kind,
+  activated_at,
+  status,
+  deactivated_at,
+  legacy_v1_id
+FROM users
+WHERE id = @id::uuid;
+
+-- name: GetRoleIDBySlug :one
+SELECT id FROM roles WHERE slug = @slug::citext;
+
+-- name: InsertSystemUserRole :exec
+INSERT INTO user_roles (user_id, role_id, major_id, assigned_by)
+VALUES (@user_id::uuid, @role_id::uuid, NULL, NULL);
+
+-- name: CreateStaffUser :one
+INSERT INTO users (
+  account_type,
+  display_name,
+  username,
+  staff_number,
+  password_hash,
+  password_kind,
+  password_expires_at
+) VALUES (
+  'staff',
+  @display_name::text,
+  @username::citext,
+  sqlc.narg('staff_number')::text,
+  @password_hash::text,
+  'initial',
+  @password_expires_at::timestamptz
+)
+RETURNING id;
