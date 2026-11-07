@@ -1,0 +1,10 @@
+package: apigen
+# Output relatif terhadap direktori kerja saat oapi-codegen dijalankan,
+# yaitu direktori package ini (lihat generate.go).
+output: apigen.gen.go
+generate:
+  chi-server: true
+  strict-server: true
+  models: true
+output-options:
+  skip-prune: false
