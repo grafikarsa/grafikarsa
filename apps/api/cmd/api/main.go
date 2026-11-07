@@ -1,0 +1,130 @@
+// Command api runs the Grafikarsa HTTP API.
+package main
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	apirouter "github.com/grafikarsa/grafikarsa/apps/api/internal/http"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/health"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/cache"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/config"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/db"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/logger"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/storage"
+)
+
+const startupTimeout = 10 * time.Second
+
+func main() {
+	cfg, err := config.Load()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "config:", err)
+		os.Exit(1)
+	}
+
+	log := logger.New(cfg.Env, cfg.LogLevel)
+
+	startupCtx, cancelStartup := context.WithTimeout(context.Background(), startupTimeout)
+	defer cancelStartup()
+
+	pool, err := db.Open(startupCtx, cfg.DatabaseURL)
+	if err != nil {
+		log.Error("postgres connection failed", "error", err)
+		os.Exit(1)
+	}
+
+	rdb, err := cache.Open(startupCtx, cfg.ValkeyURL)
+	if err != nil {
+		log.Error("valkey connection failed", "error", err)
+		pool.Close()
+		os.Exit(1)
+	}
+
+	store, err := storage.New(startupCtx,
+		cfg.S3Endpoint,
+		cfg.S3Region,
+		cfg.S3AccessKey,
+		cfg.S3SecretKey,
+		cfg.S3BucketPrivate,
+		cfg.S3BucketPublic,
+	)
+	if err != nil {
+		log.Error("storage client failed", "error", err)
+		pool.Close()
+		_ = rdb.Close()
+		os.Exit(1)
+	}
+
+	if !cfg.IsProduction() {
+		if err := store.EnsureBuckets(startupCtx); err != nil {
+			log.Error("ensure buckets failed", "error", err)
+			pool.Close()
+			_ = rdb.Close()
+			os.Exit(1)
+		}
+	}
+	cancelStartup()
+
+	checkers := []health.Checker{
+		health.CheckerFunc{N: "postgres", F: pool.Ping},
+		health.CheckerFunc{N: "valkey", F: func(ctx context.Context) error {
+			return rdb.Ping(ctx).Err()
+		}},
+		health.CheckerFunc{N: "storage", F: store.Ping},
+	}
+
+	srv := &http.Server{
+		Addr:              cfg.HTTPAddr,
+		Handler:           apirouter.NewRouter(log, checkers...),
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      60 * time.Second,
+		IdleTimeout:       120 * time.Second,
+	}
+
+	signalCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	serveErr := make(chan error, 1)
+	log.Info("server started", "addr", cfg.HTTPAddr)
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			serveErr <- err
+		}
+	}()
+
+	exitCode := 0
+	select {
+	case err := <-serveErr:
+		log.Error("server failed", "error", err)
+		exitCode = 1
+	case <-signalCtx.Done():
+		log.Info("shutdown signal received")
+	}
+
+	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
+	defer cancelShutdown()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Error("server shutdown failed", "error", err)
+		exitCode = 1
+	}
+
+	pool.Close()
+	if err := rdb.Close(); err != nil {
+		log.Warn("valkey close failed", "error", err)
+	}
+
+	log.Info("server stopped")
+
+	if exitCode != 0 {
+		os.Exit(exitCode)
+	}
+}
