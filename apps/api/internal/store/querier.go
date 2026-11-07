@@ -6,15 +6,29 @@ package store
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
 type Querier interface {
+	CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error)
 	GetMajorByCode(ctx context.Context, code string) (GetMajorByCodeRow, error)
+	GetSessionByTokenHash(ctx context.Context, tokenHash []byte) (Session, error)
 	GetSetting(ctx context.Context, key string) (Setting, error)
+	GetUserByID(ctx context.Context, id uuid.UUID) (GetUserByIDRow, error)
+	GetUserForLogin(ctx context.Context, identifier string) (GetUserForLoginRow, error)
 	InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) (InsertAuditLogRow, error)
 	ListActiveMajors(ctx context.Context) ([]ListActiveMajorsRow, error)
+	ListActiveSessions(ctx context.Context, userID uuid.UUID) ([]ListActiveSessionsRow, error)
 	ListAuditLogs(ctx context.Context, arg ListAuditLogsParams) ([]AuditLog, error)
+	ListExplicitGrants(ctx context.Context, userID uuid.UUID) ([]ListExplicitGrantsRow, error)
+	ListRolePermissionsBySlug(ctx context.Context, slug string) ([]string, error)
 	ListSettings(ctx context.Context) ([]Setting, error)
+	RevokeSession(ctx context.Context, arg RevokeSessionParams) error
+	RevokeUserSessions(ctx context.Context, arg RevokeUserSessionsParams) ([][]byte, error)
+	SetLastLogin(ctx context.Context, id uuid.UUID) error
+	TouchSession(ctx context.Context, arg TouchSessionParams) error
+	UpdatePasswordHash(ctx context.Context, arg UpdatePasswordHashParams) error
 	UpsertSetting(ctx context.Context, arg UpsertSettingParams) (Setting, error)
 }
 
