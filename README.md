@@ -7,9 +7,12 @@ Jejaring sosial, katalog portfolio, dan blogging untuk warga SMKN 4 Malang.
 ## Mulai cepat (dev)
 
 ```bash
-make dev-init   # buat .env dengan secret acak
-make dev-up     # postgres, valkey, rustfs
-make dev-ps
+make dev-init     # buat .env dengan secret acak
+make dev-up       # postgres, valkey, rustfs
+make migrate-up   # migrasi goose + River
+make seed         # data awal (idempoten)
+make api-run      # API di http://localhost:8091
+make web-dev      # web di http://localhost:3020 (terminal lain)
 ```
 
 Jalankan `make help` untuk melihat semua target.

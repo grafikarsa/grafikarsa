@@ -113,7 +113,7 @@ Akun admin pertama dibuat lewat CLI (`make seed-admin`), sandi awal ditampilkan 
 | `promotion.rollback_days` | 14 |
 | `media.max_image_mb` | 10 |
 | `media.max_pdf_mb` | 25 |
-| `media.max_model3d_mb` | 30 |
+| `media.max_model_mb` | 30 (model 3D `.glb`; key setting tidak boleh mengandung angka) |
 | `media.daily_upload_mb` | 1024 |
 | `media.orphan_days` | 7 |
 | `comment.edit_window_minutes` | 15 |
