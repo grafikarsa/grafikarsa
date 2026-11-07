@@ -478,3 +478,232 @@ assignments ── assignment_submissions ── assessments
    lifecycle + moderasi + revisi, follow/apresiasi/komentar/simpan/share, notifikasi, grup jurusan & kelas.
 2. **Fase 2**: badge, skill endorsement, kurasi "Pilihan Guru", penugasan & penilaian guru,
    ekspor CV PDF, trending feed.
+
+---
+
+## 13. Halaman, Routing & Flow
+
+### 13.1 Prinsip URL
+
+1. **Slug URL berbahasa Indonesia** (`/karya`, `/masuk`, `/pengaturan`).
+2. **Profil di `/@{username}`**.
+3. **URL konten tidak memuat username**, karena konten bisa multi-author dan kepemilikannya bisa
+   dipindah. Format: `/karya/{slug}-{id}` dan `/blog/{slug}-{id}`.
+   - `{id}` adalah ID pendek (mis. `a7k2`) dan menjadi kunci lookup. `{slug}` hanya kosmetik.
+   - Slug salah/lama (mis. judul berubah lewat revisi) → **301 redirect** ke slug kanonik.
+4. **Satu URL untuk semua status konten.**
+   - `published` → semua orang.
+   - Status lain (`draft`, `in_review`, `changes_requested`, `archived`, `taken_down`, `rejected`) →
+     author & moderator melihatnya dengan **banner status**. Publik dan member lain mendapat **404**
+     (tidak membocorkan keberadaan konten).
+   - `deleted` → 404 untuk semua kecuali pemilik (lewat Studio › Sampah) dan Admin.
+5. **Ruang kerja author dipisah** di `/studio`, terpisah dari halaman publik.
+6. Halaman grup yang berstatus `riwayat` tetap memakai URL yang sama.
+7. Query string dipakai untuk filter/urutan/tab yang bisa di-share (mis. `/karya?jurusan=rpl&urut=populer`).
+
+### 13.2 Aturan username
+
+- 3–30 karakter, huruf kecil, angka, titik, underscore. Tidak boleh diawali/diakhiri titik.
+- Unik, case-insensitive.
+- Dipilih saat aktivasi. Bisa diganti di `/pengaturan/akun` maksimal **1× per 30 hari**.
+- Username lama di-*redirect* ke yang baru selama 90 hari, lalu dilepas.
+- **Username terlarang (reserved)**: semua segmen route tingkat atas (`admin`, `studio`, `karya`, `blog`,
+  `jurusan`, `kelas`, `cari`, `masuk`, `aktivasi`, `onboarding`, `pengaturan`, `moderasi`, `notifikasi`,
+  `tersimpan`, `kurasi`, `penugasan`, `pedoman`, `tentang`, `privasi`, `syarat`, `api`), plus nama
+  yang menyaru pihak resmi (`grafikarsa`, `smkn4malang`, `grafika`, `official`, `moderator`, `support`, dll).
+  Daftar dikelola di kode + bisa ditambah Admin.
+
+### 13.3 Halaman publik (tanpa login)
+
+| URL | Halaman | Catatan |
+|---|---|---|
+| `/` | Beranda | Tamu: landing (hero, karya pilihan, terbaru). Member: feed |
+| `/?tab=mengikuti` · `jurusanku` · `terbaru` · `trending` | Tab feed | `mengikuti` & `jurusanku` khusus member. Default member: `mengikuti`, tamu: `terbaru` |
+| `/karya` | Katalog Karya | Filter: `jurusan`, `kategori`, `tools`, `skill`, `konteks`. Urut: `terbaru` (default) / `populer` |
+| `/karya/{slug}-{id}` | Detail portfolio | |
+| `/blog` | Daftar blog | Filter: `kategori`, `tag`. Urut: `terbaru` / `populer` |
+| `/blog/{slug}-{id}` | Detail blog | |
+| `/blog/tag/{tag}` | Blog per tag | |
+| `/@{username}` | Profil, tab Portfolio (default) | |
+| `/@{username}/blog` | Tab Blog | |
+| `/@{username}/experience` | Tab Experience | |
+| `/@{username}/kolaborasi` | Tab Kolaborasi (konten di mana user bukan pemilik) | |
+| `/@{username}/pengikut` · `/@{username}/mengikuti` | Daftar pengikut / diikuti | |
+| `/jurusan` | Daftar jurusan | |
+| `/jurusan/{kode}` | Grup jurusan: feed konten anggota | Mis. `/jurusan/rpl`. Filter `tipe`, `kategori`; urut `terbaru` / `populer` |
+| `/jurusan/{kode}/kelas` | Daftar kelas di jurusan (aktif + riwayat) | |
+| `/jurusan/{kode}/anggota` | Anggota jurusan | |
+| `/jurusan/{kode}/tentang` | Deskripsi, pengelola | |
+| `/kelas/{tahun}/{rombel}` | Grup kelas: feed konten anggota | Mis. `/kelas/2026-2027/xi-rpl-b` |
+| `/kelas/{tahun}/{rombel}/anggota` | Anggota kelas | |
+| `/kelas/{tahun}/{rombel}/tentang` | Deskripsi, pengelola | |
+| `/cari?q=…&tipe=user\|karya\|blog\|grup` | Pencarian | Tanpa `tipe` = hasil gabungan per bagian |
+| `/pedoman` | Pedoman komunitas | Dirujuk oleh setiap alasan moderasi |
+| `/tentang` · `/privasi` · `/syarat` | Halaman statis | |
+
+### 13.4 Autentikasi
+
+| URL | Halaman | Catatan |
+|---|---|---|
+| `/masuk` | Login | Identitas: **NISN** (siswa/alumni) / **NIP atau ID staf** (guru/tendik) / username / email. `?kembali=` untuk kembali ke halaman asal (hanya path internal) |
+| `/aktivasi` | Login pertama | Wajib: ganti sandi awal, isi email, pilih username. Tidak bisa ke halaman lain sebelum selesai |
+| `/onboarding` | Lengkapi profil | Foto, headline, bio, skill. Boleh dilewati |
+| `/lupa-sandi` | Minta reset sandi | Butuh email terdaftar. Tanpa email → reset oleh Admin |
+| `/reset-sandi?token=` | Atur sandi baru | Token sekali pakai, kedaluwarsa singkat |
+| `/verifikasi-email?token=` | Verifikasi email | |
+
+Akun dibagikan sekolah berupa **NISN/NIP + sandi awal**. Sandi awal hanya berlaku untuk aktivasi
+dan kedaluwarsa jika tidak dipakai dalam waktu tertentu (Admin bisa menerbitkan ulang).
+
+### 13.5 Halaman member (wajib login)
+
+| URL | Halaman |
+|---|---|
+| `/notifikasi` | Semua notifikasi |
+| `/tersimpan` | Koleksi tersimpan (hanya terlihat pemiliknya) |
+| `/studio` | Dashboard konten saya. Tab: Draf · Ditinjau · Perlu Revisi · Terbit · Diarsipkan · Diturunkan · Ditolak · Sampah |
+| `/studio/baru` | Pilih tipe: Portfolio / Blog. Draf dibuat lewat aksi POST, lalu redirect ke editor |
+| `/studio/{id}` | Editor (blok untuk portfolio, dokumen untuk blog) + panel status & catatan moderasi |
+| `/studio/{id}/kolaborator` | Kelola author: undang, level, label peran, urutan, transfer kepemilikan |
+| `/studio/{id}/riwayat` | Versi yang pernah disetujui + log keputusan moderasi |
+| `/studio/{id}/revisi` | Editor revisi untuk konten yang sudah terbit |
+| `/studio/undangan` | Undangan kolaborasi masuk (terima/tolak) |
+| `/pengaturan/profil` | Banner, foto, nama tampilan, headline, bio, kota, link sosial, skill, konten disematkan |
+| `/pengaturan/experience` | Tambah/ubah/hapus experience |
+| `/pengaturan/akun` | Username, email, sandi |
+| `/pengaturan/sesi` | Perangkat aktif, logout perangkat lain |
+| `/pengaturan/notifikasi` | Preferensi email digest |
+| `/jurusan/{kode}/kelola` · `/kelas/{tahun}/{rombel}/kelola` | Edit foto, banner, deskripsi grup (pengelola grup, Admin Jurusan, Admin) |
+
+Editor (`/studio/{id}`) hanya bisa dibuka **pemilik & editor**. Kontributor hanya bisa melihat
+preview dan keluar dari konten.
+
+### 13.6 Halaman moderator
+
+| URL | Halaman |
+|---|---|
+| `/moderasi` | Antrian konten. Filter: tipe, jurusan, submit baru vs revisi, umur antrian. Konten milik moderator sendiri tidak muncul |
+| `/moderasi/{caseId}` | Ruang tinjau: preview, **diff** (untuk revisi), catatan per blok, Setujui / Minta Revisi / Tolak. Membuka halaman = *claim* |
+| `/moderasi/laporan` | Antrian laporan (konten, komentar, profil, grup) |
+| `/moderasi/laporan/{id}` | Detail laporan + aksi |
+| `/moderasi/riwayat` | Log keputusan |
+
+### 13.7 Halaman admin
+
+| URL | Halaman |
+|---|---|
+| `/admin` | Dashboard |
+| `/admin/pengguna` | Daftar user (filter tipe, status, jurusan, kelas) |
+| `/admin/pengguna/{id}` | Detail user: data akademik, role, capability, terbitkan ulang sandi awal, nonaktifkan |
+| `/admin/pengguna/impor` | Impor CSV (siswa baru, guru, tendik) dengan preview & validasi |
+| `/admin/role` | Role, izin, penugasan role |
+| `/admin/akademik/jurusan` | Data jurusan |
+| `/admin/akademik/tahun-ajaran` | Tahun ajaran |
+| `/admin/akademik/kelas` | Kelas/rombel |
+| `/admin/akademik/kenaikan` | Daftar promotion job |
+| `/admin/akademik/kenaikan/{jobId}` | Pemetaan rombel, pengecualian, dry-run, setujui, rollback |
+| `/admin/grup` | Grup & pengelolanya |
+| `/admin/badge` | Katalog badge & pemberian badge |
+| `/admin/taksonomi` | Kategori portfolio/blog, skill, tools, alasan moderasi, filter kata, username terlarang |
+| `/admin/pengaturan` | Setting configurable (§9) |
+| `/admin/audit` | Audit log |
+
+Admin Jurusan memakai halaman `/admin/...` yang sama, dengan data **otomatis dibatasi ke jurusannya**
+dan menu yang bukan wewenangnya disembunyikan (enforcement tetap di server).
+
+**Fase 2:** `/kurasi`, `/kurasi/{slug}` (Pilihan Guru); `/penugasan`, `/penugasan/{id}`.
+
+### 13.8 Aturan akses route
+
+| Kelompok | Tamu | Member | Moderator | Admin Jurusan | Admin |
+|---|---|---|---|---|---|
+| Publik (§13.3) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Auth (§13.4) | ✅ | redirect ke `/` (kecuali `/aktivasi` saat wajib) | ← | ← | ← |
+| Member (§13.5) | redirect `/masuk?kembali=` | ✅ | ✅ | ✅ | ✅ |
+| `/moderasi/*` | redirect `/masuk` | 404 | ✅ (sesuai scope) | ✅ (jurusannya) | ✅ |
+| `/admin/*` | redirect `/masuk` | 404 | 404 | ✅ (jurusannya) | ✅ |
+
+- Area tanpa wewenang mengembalikan **404**, bukan 403, supaya struktur area admin tidak terbaca.
+- Akun yang belum aktivasi selalu diarahkan ke `/aktivasi`.
+
+### 13.9 Navigasi
+
+- **Desktop (top bar):** Logo · Beranda · Karya · Blog · Jurusan · Cari | **+ Buat** · Notifikasi · Avatar.
+- **Menu avatar:** Profil saya · Studio · Undangan · Tersimpan · *Moderasi* · *Admin* · Pengaturan · Keluar
+  (menu miring hanya tampil untuk role terkait).
+- **Mobile (bottom bar):** Beranda · Karya · **+** · Blog · Profil. Notifikasi & cari di header.
+- **Tamu:** tombol "+ Buat" dan Notifikasi diganti tombol **Masuk**.
+
+### 13.10 Flow utama
+
+**1. Login pertama**
+```
+/masuk (NISN/NIP + sandi awal dari sekolah)
+  → /aktivasi: ganti sandi, isi email, pilih username        [wajib]
+  → email verifikasi dikirim (boleh diverifikasi nanti)
+  → /onboarding: foto, headline, bio, skill                   [boleh dilewati]
+  → /
+```
+
+**2. Tamu mencoba berinteraksi**
+```
+/karya/x → klik Apresiasi / Komentar / Follow / Simpan
+  → dialog "Masuk untuk berinteraksi" → /masuk?kembali=/karya/x
+  → setelah login kembali ke /karya/x (aksi tidak dijalankan otomatis)
+```
+
+**3. Membuat konten sampai terbit**
+```
++ Buat → /studio/baru → pilih tipe → draf dibuat → /studio/{id}
+  → tulis (autosave) → /studio/{id}/kolaborator: undang author (opsional)
+  → "Kirim ke Moderasi" → validasi field wajib (gagal = tunjukkan yang kurang)
+  → status Ditinjau (editor terkunci, tombol "Tarik Kembali" selama belum di-claim)
+  → moderator di /moderasi/{caseId}:
+       Setujui      → notifikasi semua author → konten tayang di /karya|blog/{slug}-{id}
+       Minta Revisi → author membuka /studio/{id} dengan catatan per blok → perbaiki → kirim lagi
+       Tolak        → final, alasan tampil di /studio/{id}
+```
+
+**4. Merevisi konten yang sudah terbit**
+```
+/karya/{slug}-{id} (sebagai pemilik/editor) → "Edit" → /studio/{id}/revisi
+  (versi tayang tetap online, banner "Kamu sedang mengedit revisi")
+  → kirim → moderator melihat diff
+  → Setujui: versi tayang diganti | Minta Revisi: kembali ke editor revisi | Tolak: revisi dibuang, versi tayang aman
+```
+
+**5. Undangan kolaborasi**
+```
+Pemilik mengundang di /studio/{id}/kolaborator → notifikasi → /studio/undangan
+  → Terima: nama tampil di konten + muncul di profilnya
+  → Tolak / 14 hari tidak dijawab: undangan hangus
+```
+
+**6. Arsip, hapus, pulihkan**
+```
+/studio (tab Terbit) → Arsipkan → hilang dari publik → tab Diarsipkan → Terbitkan lagi (tanpa review)
+/studio → Hapus → tab Sampah (30 hari) → Pulihkan ke status sebelumnya | purge otomatis
+```
+
+**7. Melaporkan**
+```
+Menu ⋯ di konten / komentar / profil / grup → pilih alasan → kirim
+  → /moderasi/laporan → moderator: abaikan / sembunyikan komentar / turunkan konten / reset profil atau grup
+  → pelapor dinotifikasi hasilnya (tanpa detail), pihak terlapor dinotifikasi jika ada tindakan
+```
+
+**8. Kelola grup**
+```
+Admin menunjuk pengelola di /admin/grup
+  → pengelola membuka /jurusan/{kode}/kelola atau /kelas/{tahun}/{rombel}/kelola
+  → ubah foto/banner/deskripsi → langsung tayang (post-moderasi)
+  (grup berstatus riwayat: hanya Admin yang bisa mengubah)
+```
+
+**9. Kenaikan kelas**
+```
+/admin/akademik/tahun-ajaran: buat tahun ajaran baru
+  → /admin/akademik/kenaikan/{jobId}: draf + pemetaan rombel otomatis
+  → tandai pengecualian / impor CSV → dry-run → selesaikan konflik
+  → Setujui → terjadwal → eksekusi otomatis di tanggal mulai → rollback ≤ 14 hari
+```
