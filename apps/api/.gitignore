@@ -1,0 +1,5 @@
+bin/
+/api
+*.test
+*.out
+coverage.out

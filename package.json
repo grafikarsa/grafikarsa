@@ -1,0 +1,19 @@
+{
+  "name": "grafikarsa",
+  "private": true,
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "web:dev": "pnpm --filter web dev",
+    "web:build": "pnpm --filter web build",
+    "web:lint": "pnpm --filter web lint",
+    "web:typecheck": "pnpm --filter web typecheck"
+  },
+  "pnpm": {
+    "overrides": {
+      "minimatch@>=7.0.0 <11.0.1": "^11.0.1"
+    }
+  }
+}
