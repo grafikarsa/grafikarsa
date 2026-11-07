@@ -6,7 +6,7 @@ lain hanya dapat diakses dari jaringan internal Compose.
 
 ## Berkas
 
-- `compose/prod.yml` — definisi stack produksi: `caddy`, `web`, `api`,
+- `compose/prod.yml` — definisi stack produksi: `caddy`, `web`, `api`, `worker`,
   `postgres`, `valkey`, dan `rustfs`. Berkas ini membaca variabel yang sama
   dengan `.env` dev (`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`,
   `VALKEY_PASSWORD`, `RUSTFS_ACCESS_KEY`, `RUSTFS_SECRET_KEY`,
@@ -24,9 +24,17 @@ lain hanya dapat diakses dari jaringan internal Compose.
 ## Port yang terbuka
 
 Hanya layanan `caddy` yang mempublikasikan port: `HTTP_PORT` (80), `HTTPS_PORT`
-(443/TCP), dan `HTTPS_PORT/udp` (443/UDP untuk HTTP/3). `web`, `api`,
+(443/TCP), dan `HTTPS_PORT/udp` (443/UDP untuk HTTP/3). `web`, `api`, `worker`,
 `postgres`, `valkey`, dan `rustfs` tidak memiliki `ports` sehingga hanya bisa
 diakses lewat jaringan internal Compose. RustFS console juga tidak diekspos.
+
+## Worker
+
+Service `worker` memakai image yang sama dengan `api` tetapi berjalan dengan
+`entrypoint: ["/worker"]`. Worker memproses antrean job River (`default`,
+`media`, `bulk`) dan berbagi blok environment dengan `api` lewat anchor
+`x-api-env`. Health check liveness-nya tersedia di dalam jaringan Compose pada
+`worker:8092/healthz` (`GET /healthz`), tidak dipublikasikan ke host.
 
 ## Simulasi produksi lokal
 
