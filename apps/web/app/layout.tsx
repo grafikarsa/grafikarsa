@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 
 import { MobileNav } from "@/components/mobile-nav";
+import { Providers } from "@/components/providers";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -44,11 +45,13 @@ export default function RootLayout({
     >
       <body className="flex min-h-dvh flex-col pb-20 md:pb-0">
         <ThemeProvider>
-          <SiteHeader />
-          <main className="flex-1">{children}</main>
-          <SiteFooter />
-          <MobileNav />
-          <Toaster />
+          <Providers>
+            <SiteHeader />
+            <main className="flex-1">{children}</main>
+            <SiteFooter />
+            <MobileNav />
+            <Toaster />
+          </Providers>
         </ThemeProvider>
       </body>
     </html>

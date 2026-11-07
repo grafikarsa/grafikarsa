@@ -93,3 +93,26 @@ func TestRouterMethodNotAllowed(t *testing.T) {
 		t.Errorf("Content-Type = %q, want application/problem+json", got)
 	}
 }
+
+func TestRouter_InvalidPathParamIsProblemJSON(t *testing.T) {
+	h := NewRouter(testLogger())
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/auth/sessions/not-a-uuid", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400", rec.Code)
+	}
+	if ct := rec.Header().Get("Content-Type"); ct != "application/problem+json" {
+		t.Fatalf("content type = %q", ct)
+	}
+}
+
+func TestRouter_PlaceholderAuthEndpointIs501(t *testing.T) {
+	h := NewRouter(testLogger())
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/session", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNotImplemented {
+		t.Fatalf("status = %d, want 501", rec.Code)
+	}
+}

@@ -24,8 +24,421 @@ paths:
                 $ref: "#/components/schemas/Pong"
         default:
           $ref: "#/components/responses/Problem"
+  /auth/csrf:
+    get:
+      operationId: getAuthCsrf
+      tags: [auth]
+      summary: Ambil token CSRF
+      description: |
+        Mengatur cookie `__Host-gk_csrf` dan mengembalikan nilainya. Klien wajib
+        mengirim nilai ini di header `X-CSRF-Token` untuk setiap request yang mengubah data.
+      responses:
+        "200":
+          description: Token CSRF.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CsrfToken"
+        default:
+          $ref: "#/components/responses/Problem"
+  /auth/login:
+    post:
+      operationId: postAuthLogin
+      tags: [auth]
+      summary: Masuk dengan NISN/NIP/username dan sandi
+      description: |
+        Berhasil → cookie sesi `__Host-gk_session` diatur dan cookie CSRF diputar.
+        `nextStep` memberi tahu klien halaman wajib berikutnya.
+        Gagal → 401 `INVALID_CREDENTIALS` (pesan sama untuk identitas tidak ada dan sandi salah).
+        Terlalu banyak percobaan → 429 `RATE_LIMITED`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Berhasil masuk.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        default:
+          $ref: "#/components/responses/Problem"
+  /auth/logout:
+    post:
+      operationId: postAuthLogout
+      tags: [auth]
+      summary: Keluar (cabut sesi ini)
+      responses:
+        "204":
+          description: Sesi dicabut dan cookie dihapus.
+        default:
+          $ref: "#/components/responses/Problem"
+  /auth/session:
+    get:
+      operationId: getAuthSession
+      tags: [auth]
+      summary: Sesi saat ini
+      description: Mengembalikan sesi aktif. Tanpa sesi → 401 `UNAUTHENTICATED`.
+      responses:
+        "200":
+          description: Sesi aktif.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        default:
+          $ref: "#/components/responses/Problem"
+  /auth/username-availability:
+    get:
+      operationId: getAuthUsernameAvailability
+      tags: [auth]
+      summary: Cek ketersediaan username
+      description: Butuh sesi (boleh belum aktivasi).
+      parameters:
+        - name: u
+          in: query
+          required: true
+          schema:
+            type: string
+            maxLength: 64
+      responses:
+        "200":
+          description: Hasil pengecekan.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsernameAvailability"
+        default:
+          $ref: "#/components/responses/Problem"
+  /auth/activate:
+    post:
+      operationId: postAuthActivate
+      tags: [auth]
+      summary: Aktivasi akun (login pertama)
+      description: |
+        Hanya untuk sesi dengan `nextStep = activate`. Mengatur username dan sandi baru,
+        lalu mengembalikan recovery code (hanya ditampilkan sekali). Aktivasi baru selesai
+        setelah `POST /auth/recovery-codes/confirm`.
+        Akun hasil migrasi v1 yang sudah punya username dan sandi boleh mengirim
+        `newPassword` kosong untuk mempertahankan sandinya.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActivateRequest"
+      responses:
+        "200":
+          description: Recovery code baru.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecoveryCodes"
+        default:
+          $ref: "#/components/responses/Problem"
+  /auth/recovery-codes/confirm:
+    post:
+      operationId: postAuthRecoveryCodesConfirm
+      tags: [auth]
+      summary: Konfirmasi recovery code sudah disimpan
+      responses:
+        "200":
+          description: Aktivasi selesai, sesi diperbarui.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        default:
+          $ref: "#/components/responses/Problem"
+  /auth/recovery-codes/regenerate:
+    post:
+      operationId: postAuthRecoveryCodesRegenerate
+      tags: [auth]
+      summary: Buat ulang recovery code
+      description: Butuh sandi saat ini. Semua kode lama hangus.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordConfirmation"
+      responses:
+        "200":
+          description: Recovery code baru.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecoveryCodes"
+        default:
+          $ref: "#/components/responses/Problem"
+  /auth/password/recover:
+    post:
+      operationId: postAuthPasswordRecover
+      tags: [auth]
+      summary: Reset sandi dengan recovery code
+      description: Tanpa sesi. Berhasil → semua sesi user dicabut, user harus masuk ulang.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecoverPasswordRequest"
+      responses:
+        "204":
+          description: Sandi diganti.
+        default:
+          $ref: "#/components/responses/Problem"
+  /auth/password/change:
+    post:
+      operationId: postAuthPasswordChange
+      tags: [auth]
+      summary: Ganti sandi
+      description: |
+        `currentPassword` wajib kecuali sesi sedang `nextStep = change_password`
+        (login dengan sandi sementara). Berhasil → sesi lain dicabut.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+      responses:
+        "200":
+          description: Sandi diganti, sesi saat ini diperbarui.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        default:
+          $ref: "#/components/responses/Problem"
+  /auth/sessions:
+    get:
+      operationId: getAuthSessions
+      tags: [auth]
+      summary: Daftar sesi aktif milik user
+      responses:
+        "200":
+          description: Sesi aktif.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionDeviceList"
+        default:
+          $ref: "#/components/responses/Problem"
+  /auth/sessions/{id}:
+    delete:
+      operationId: deleteAuthSession
+      tags: [auth]
+      summary: Cabut satu sesi milik user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Sesi dicabut.
+        default:
+          $ref: "#/components/responses/Problem"
+  /auth/sessions/revoke-others:
+    post:
+      operationId: postAuthSessionsRevokeOthers
+      tags: [auth]
+      summary: Keluar dari semua perangkat lain
+      responses:
+        "204":
+          description: Sesi lain dicabut.
+        default:
+          $ref: "#/components/responses/Problem"
 components:
   schemas:
+    CsrfToken:
+      type: object
+      required: [csrfToken]
+      properties:
+        csrfToken:
+          type: string
+    LoginRequest:
+      type: object
+      required: [identifier, password]
+      properties:
+        identifier:
+          type: string
+          description: NISN, NIP/ID staf, atau username.
+          minLength: 1
+          maxLength: 64
+        password:
+          type: string
+          minLength: 1
+          maxLength: 128
+    AccountType:
+      type: string
+      enum: [student, teacher, staff]
+    AccountStatus:
+      type: string
+      enum: [active, alumni, transferred, inactive]
+    NextStep:
+      type: string
+      description: |
+        Halaman wajib berikutnya. `activate` → /aktivasi, `change_password` → /ganti-sandi,
+        `none` → bebas. Selama bukan `none`, endpoint lain menolak dengan 403
+        `ACTIVATION_REQUIRED` / `PASSWORD_CHANGE_REQUIRED`.
+      enum: [activate, change_password, none]
+    SessionUser:
+      type: object
+      required: [id, displayName, accountType, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+          nullable: true
+          description: Kosong sebelum aktivasi.
+        displayName:
+          type: string
+        accountType:
+          $ref: "#/components/schemas/AccountType"
+        status:
+          $ref: "#/components/schemas/AccountStatus"
+        avatarUrl:
+          type: string
+          nullable: true
+    RoleGrant:
+      type: object
+      description: Izin efektif user. `majorIds` kosong berarti scope global.
+      required: [permission, global, majorIds]
+      properties:
+        permission:
+          type: string
+          example: content.moderate
+        global:
+          type: boolean
+        majorIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+    Session:
+      type: object
+      required: [user, nextStep, grants, expiresAt]
+      properties:
+        user:
+          $ref: "#/components/schemas/SessionUser"
+        nextStep:
+          $ref: "#/components/schemas/NextStep"
+        grants:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoleGrant"
+        isMigratedAccount:
+          type: boolean
+          description: Akun hasil migrasi v1 (aktivasi versi singkat).
+        expiresAt:
+          type: string
+          format: date-time
+    UsernameAvailability:
+      type: object
+      required: [username, available]
+      properties:
+        username:
+          type: string
+          description: Username yang sudah dinormalisasi (huruf kecil, tanpa spasi).
+        available:
+          type: boolean
+        reason:
+          type: string
+          enum: [invalid_format, reserved, taken]
+    ActivateRequest:
+      type: object
+      required: [username]
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 30
+        newPassword:
+          type: string
+          maxLength: 128
+    RecoveryCodes:
+      type: object
+      required: [codes]
+      properties:
+        codes:
+          type: array
+          description: Format `xxxxx-xxxxx`. Hanya ditampilkan sekali.
+          items:
+            type: string
+    PasswordConfirmation:
+      type: object
+      required: [password]
+      properties:
+        password:
+          type: string
+          minLength: 1
+          maxLength: 128
+    RecoverPasswordRequest:
+      type: object
+      required: [identifier, recoveryCode, newPassword]
+      properties:
+        identifier:
+          type: string
+          minLength: 1
+          maxLength: 64
+        recoveryCode:
+          type: string
+          minLength: 10
+          maxLength: 20
+        newPassword:
+          type: string
+          minLength: 8
+          maxLength: 128
+    ChangePasswordRequest:
+      type: object
+      required: [newPassword]
+      properties:
+        currentPassword:
+          type: string
+          maxLength: 128
+        newPassword:
+          type: string
+          minLength: 8
+          maxLength: 128
+    SessionDevice:
+      type: object
+      required: [id, current, createdAt, lastSeenAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        current:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        lastSeenAt:
+          type: string
+          format: date-time
+        userAgent:
+          type: string
+          nullable: true
+        ipPrefix:
+          type: string
+          nullable: true
+          description: IP yang disamarkan (mis. 103.134.78.x).
+    SessionDeviceList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionDevice"
     Pong:
       type: object
       required:
