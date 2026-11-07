@@ -2,12 +2,14 @@ package users_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/apperr"
@@ -292,6 +294,29 @@ func (f *fixture) insertSession(userID uuid.UUID) uuid.UUID {
 		f.t.Fatalf("buat sesi: %v", err)
 	}
 	return id
+}
+
+// vaultPlaintext returns the decrypted initial password kept for userID. ok is
+// false when the vault has no entry for the user.
+func (f *fixture) vaultPlaintext(userID uuid.UUID) (plain string, ok bool) {
+	f.t.Helper()
+
+	var ciphertext []byte
+	err := f.pool.QueryRow(f.ctx,
+		"SELECT ciphertext FROM initial_password_vault WHERE user_id = $1", userID,
+	).Scan(&ciphertext)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", false
+	}
+	if err != nil {
+		f.t.Fatalf("ambil entri brankas: %v", err)
+	}
+
+	plaintext, err := f.box.Open(ciphertext, userID[:])
+	if err != nil {
+		f.t.Fatalf("buka entri brankas: %v", err)
+	}
+	return string(plaintext), true
 }
 
 func (f *fixture) passwordHash(userID uuid.UUID) string {

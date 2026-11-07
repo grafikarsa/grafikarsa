@@ -623,3 +623,82 @@ func contains(haystack, needle string) bool {
 	}
 	return false
 }
+
+func TestCreate_StoresInitialPasswordInVault(t *testing.T) {
+	f := newFixture(t)
+
+	created := f.createStudent(f.scopedActor(), f.rplClassID, "Siswa Brankas")
+
+	plain, ok := f.vaultPlaintext(created.User.ID)
+	if !ok {
+		t.Fatal("entri brankas tidak ada setelah Create")
+	}
+	if plain != created.InitialPassword {
+		t.Errorf("sandi di brankas = %q, mau sama dengan sandi awal yang dikembalikan", plain)
+	}
+}
+
+func TestCreate_StoresInitialPasswordInVaultForTeacher(t *testing.T) {
+	f := newFixture(t)
+
+	created := f.createTeacher(f.globalActor(), "Guru Brankas", []uuid.UUID{f.rplID})
+
+	plain, ok := f.vaultPlaintext(created.User.ID)
+	if !ok {
+		t.Fatal("entri brankas tidak ada setelah Create guru")
+	}
+	if plain != created.InitialPassword {
+		t.Errorf("sandi guru di brankas = %q, mau sama dengan sandi awal", plain)
+	}
+}
+
+func TestReissueInitialPassword_RotatesVaultEntry(t *testing.T) {
+	f := newFixture(t)
+
+	created := f.createStudent(f.scopedActor(), f.rplClassID, "Siswa Terbit Ulang")
+
+	reissued, _, err := f.service.ReissueInitialPassword(f.ctx, f.scopedActor(), created.User.ID)
+	if err != nil {
+		t.Fatalf("ReissueInitialPassword: %v", err)
+	}
+	if reissued == created.InitialPassword {
+		t.Fatal("sandi terbitan ulang sama dengan sandi awal sebelumnya")
+	}
+
+	plain, ok := f.vaultPlaintext(created.User.ID)
+	if !ok {
+		t.Fatal("entri brankas hilang setelah terbit ulang")
+	}
+	if plain != reissued {
+		t.Errorf("sandi di brankas = %q, mau sandi terbitan ulang", plain)
+	}
+}
+
+func TestResetPassword_DeletesVaultEntry(t *testing.T) {
+	f := newFixture(t)
+
+	created := f.createStudent(f.scopedActor(), f.rplClassID, "Siswa Reset")
+	f.activate(created.User.ID)
+
+	if _, _, err := f.service.ResetPassword(f.ctx, f.scopedActor(), created.User.ID); err != nil {
+		t.Fatalf("ResetPassword: %v", err)
+	}
+
+	if _, ok := f.vaultPlaintext(created.User.ID); ok {
+		t.Fatal("entri brankas masih ada setelah ResetPassword")
+	}
+}
+
+func TestDeactivate_DeletesVaultEntry(t *testing.T) {
+	f := newFixture(t)
+
+	created := f.createStudent(f.scopedActor(), f.rplClassID, "Siswa Nonaktif")
+
+	if err := f.service.Deactivate(f.ctx, f.scopedActor(), created.User.ID); err != nil {
+		t.Fatalf("Deactivate: %v", err)
+	}
+
+	if _, ok := f.vaultPlaintext(created.User.ID); ok {
+		t.Fatal("entri brankas masih ada setelah Deactivate")
+	}
+}
