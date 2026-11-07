@@ -44,6 +44,13 @@ var DefaultParams = Params{
 
 const argon2idVersion = "v=19"
 
+// Upper bounds accepted when parsing stored hashes.
+const (
+	maxMemoryKiB   = 256 * 1024
+	maxIterations  = 10
+	maxParallelism = 8
+)
+
 // Hasher hashes and verifies passwords. A semaphore caps the number of
 // concurrent Argon2 computations so memory use stays predictable.
 type Hasher struct {
@@ -240,6 +247,10 @@ func parseArgon2Params(encoded string) (Params, error) {
 	}
 
 	if params.Memory == 0 || params.Iterations == 0 || params.Parallelism == 0 {
+		return Params{}, ErrMalformedHash
+	}
+	// Refuse absurd parameters so a tampered hash cannot exhaust memory or CPU.
+	if params.Memory > maxMemoryKiB || params.Iterations > maxIterations || params.Parallelism > maxParallelism {
 		return Params{}, ErrMalformedHash
 	}
 

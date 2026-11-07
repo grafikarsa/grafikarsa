@@ -83,7 +83,9 @@ CI menolak PR jika kode hasil generate (apigen, sqlc, klien web) tidak sinkron.
 
 ## 7. Keamanan (tidak bisa ditawar)
 
-- Sandi & recovery code: Argon2id. Token sesi: 32 byte acak, yang disimpan di DB hanya SHA-256-nya.
+- Sandi: Argon2id (`internal/platform/password`). Recovery code: HMAC-SHA256 dengan `GK_SECRET_KEY` (kode acak
+  berentropi tinggi, bisa dicari lewat index). Token sesi: 32 byte acak, yang disimpan di DB hanya SHA-256-nya
+  (`internal/platform/securetoken`).
 - Cookie sesi `__Host-gk_session`: HttpOnly, Secure, SameSite=Lax, Path=/.
 - Request yang mengubah data wajib lolos CSRF (header `X-CSRF-Token` = cookie `__Host-gk_csrf`).
 - Data identitas (NISN/NIP, sandi, token) tidak pernah dikirim ke klien kecuali pemiliknya dan memang perlu.

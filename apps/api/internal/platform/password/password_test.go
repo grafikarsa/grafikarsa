@@ -320,3 +320,11 @@ func TestCommonPasswordsList(t *testing.T) {
 		}
 	}
 }
+
+func TestVerify_RejectsAbsurdParams(t *testing.T) {
+	h := NewHasher(Params{Memory: 1024, Iterations: 1, Parallelism: 1, SaltLength: 16, KeyLength: 32}, 1)
+	huge := "$argon2id$v=19$m=4194304,t=1,p=1$c2FsdHNhbHRzYWx0c2FsdA$a2V5a2V5a2V5a2V5a2V5a2V5a2V5a2V5a2V5a2U"
+	if _, _, err := h.Verify(context.Background(), huge, "x"); !errors.Is(err, ErrMalformedHash) {
+		t.Fatalf("err = %v, want ErrMalformedHash", err)
+	}
+}
