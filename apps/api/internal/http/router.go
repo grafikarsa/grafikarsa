@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/academic"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/auth"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/api"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/apigen"
@@ -27,6 +28,7 @@ type RouterDeps struct {
 	Logger         *slog.Logger
 	Checkers       []health.Checker
 	Auth           *auth.Service
+	Academic       *academic.Service
 	Limiter        *ratelimit.Limiter
 	AllowedOrigins []string
 }
@@ -76,7 +78,11 @@ func NewRouter(d RouterDeps) stdhttp.Handler {
 		}
 		r.Use(middleware.Onboarding(logger))
 
-		apigen.HandlerWithOptions(apigen.NewStrictHandlerWithOptions(api.NewServer(api.Deps{Auth: d.Auth, Logger: logger}), nil, api.StrictOptions(logger)), apigen.ChiServerOptions{
+		apigen.HandlerWithOptions(apigen.NewStrictHandlerWithOptions(api.NewServer(api.Deps{
+			Auth:     d.Auth,
+			Academic: d.Academic,
+			Logger:   logger,
+		}), nil, api.StrictOptions(logger)), apigen.ChiServerOptions{
 			BaseRouter: r,
 			// Parameter binding errors (bad path/query values) must also be problem+json.
 			ErrorHandlerFunc: api.StrictOptions(logger).RequestErrorHandlerFunc,
