@@ -9,16 +9,20 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
@@ -207,81 +211,54 @@ return apiFetch<Major>(getPostAdminMajorUrl(),
 
 
 
-export const getPostAdminMajorQueryKey = (majorCreate?: MajorCreate,) => {
-    return [
-    'POST', `/admin/majors`, majorCreate
-    ] as const;
-    }
+export const getPostAdminMajorMutationKey = () => ['postAdminMajor'] as const;
 
+export const getPostAdminMajorMutationOptions = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAdminMajor>>, TError,PostAdminMajorMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postAdminMajor>>, TError,PostAdminMajorMutationVariables, TContext> => {
 
-export const getPostAdminMajorQueryOptions = <TData = Awaited<ReturnType<typeof postAdminMajor>>, TError = ProblemResponse>(majorCreate: MajorCreate, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAdminMajor>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getPostAdminMajorQueryKey(majorCreate);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof postAdminMajor>>> = ({ signal }) => postAdminMajor(majorCreate, { signal, ...requestOptions });
+const mutationKey = getPostAdminMajorMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
 
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postAdminMajor>>, PostAdminMajorMutationVariables> = (props) => {
+          const {data} = props ?? {};
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof postAdminMajor>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type PostAdminMajorQueryResult = NonNullable<Awaited<ReturnType<typeof postAdminMajor>>>
-export type PostAdminMajorQueryError = ProblemResponse
+          return  postAdminMajor(data,requestOptions)
+        }
 
 
-export function usePostAdminMajor<TData = Awaited<ReturnType<typeof postAdminMajor>>, TError = ProblemResponse>(
- majorCreate: MajorCreate, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAdminMajor>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof postAdminMajor>>,
-          TError,
-          Awaited<ReturnType<typeof postAdminMajor>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePostAdminMajor<TData = Awaited<ReturnType<typeof postAdminMajor>>, TError = ProblemResponse>(
- majorCreate: MajorCreate, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAdminMajor>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof postAdminMajor>>,
-          TError,
-          Awaited<ReturnType<typeof postAdminMajor>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePostAdminMajor<TData = Awaited<ReturnType<typeof postAdminMajor>>, TError = ProblemResponse>(
- majorCreate: MajorCreate, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAdminMajor>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostAdminMajorMutationResult = NonNullable<Awaited<ReturnType<typeof postAdminMajor>>>
+    export type PostAdminMajorMutationBody = MajorCreate
+    export type PostAdminMajorMutationError = ProblemResponse
+    export type PostAdminMajorMutationVariables = {data: MajorCreate}
+
+    /**
  * @summary Buat jurusan
  */
-
-export function usePostAdminMajor<TData = Awaited<ReturnType<typeof postAdminMajor>>, TError = ProblemResponse>(
- majorCreate: MajorCreate, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAdminMajor>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getPostAdminMajorQueryOptions(majorCreate,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const getPatchAdminMajorUrl = (id: string,) => {
+export const usePostAdminMajor = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAdminMajor>>, TError,PostAdminMajorMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postAdminMajor>>,
+        TError,
+        PostAdminMajorMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPostAdminMajorMutationOptions(options), queryClient);
+    }
+    export const getPatchAdminMajorUrl = (id: string,) => {
 
 
 
@@ -324,87 +301,54 @@ return apiFetch<Major>(getPatchAdminMajorUrl(id),
 
 
 
-export const getPatchAdminMajorQueryKey = (id: string,
-    majorUpdate?: MajorUpdate,) => {
-    return [
-    'PATCH', `/admin/majors/${id}`, majorUpdate
-    ] as const;
-    }
+export const getPatchAdminMajorMutationKey = () => ['patchAdminMajor'] as const;
 
+export const getPatchAdminMajorMutationOptions = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchAdminMajor>>, TError,PatchAdminMajorMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchAdminMajor>>, TError,PatchAdminMajorMutationVariables, TContext> => {
 
-export const getPatchAdminMajorQueryOptions = <TData = Awaited<ReturnType<typeof patchAdminMajor>>, TError = ProblemResponse>(id: string,
-    majorUpdate: MajorUpdate, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof patchAdminMajor>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getPatchAdminMajorQueryKey(id,majorUpdate);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof patchAdminMajor>>> = ({ signal }) => patchAdminMajor(id,majorUpdate, { signal, ...requestOptions });
+const mutationKey = getPatchAdminMajorMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
 
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchAdminMajor>>, PatchAdminMajorMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
 
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof patchAdminMajor>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type PatchAdminMajorQueryResult = NonNullable<Awaited<ReturnType<typeof patchAdminMajor>>>
-export type PatchAdminMajorQueryError = ProblemResponse
+          return  patchAdminMajor(id,data,requestOptions)
+        }
 
 
-export function usePatchAdminMajor<TData = Awaited<ReturnType<typeof patchAdminMajor>>, TError = ProblemResponse>(
- id: string,
-    majorUpdate: MajorUpdate, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof patchAdminMajor>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof patchAdminMajor>>,
-          TError,
-          Awaited<ReturnType<typeof patchAdminMajor>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePatchAdminMajor<TData = Awaited<ReturnType<typeof patchAdminMajor>>, TError = ProblemResponse>(
- id: string,
-    majorUpdate: MajorUpdate, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof patchAdminMajor>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof patchAdminMajor>>,
-          TError,
-          Awaited<ReturnType<typeof patchAdminMajor>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePatchAdminMajor<TData = Awaited<ReturnType<typeof patchAdminMajor>>, TError = ProblemResponse>(
- id: string,
-    majorUpdate: MajorUpdate, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof patchAdminMajor>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchAdminMajorMutationResult = NonNullable<Awaited<ReturnType<typeof patchAdminMajor>>>
+    export type PatchAdminMajorMutationBody = MajorUpdate
+    export type PatchAdminMajorMutationError = ProblemResponse
+    export type PatchAdminMajorMutationVariables = {id: string;data: MajorUpdate}
+
+    /**
  * @summary Ubah jurusan
  */
-
-export function usePatchAdminMajor<TData = Awaited<ReturnType<typeof patchAdminMajor>>, TError = ProblemResponse>(
- id: string,
-    majorUpdate: MajorUpdate, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof patchAdminMajor>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getPatchAdminMajorQueryOptions(id,majorUpdate,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const getGetAdminAcademicYearsUrl = () => {
+export const usePatchAdminMajor = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchAdminMajor>>, TError,PatchAdminMajorMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof patchAdminMajor>>,
+        TError,
+        PatchAdminMajorMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPatchAdminMajorMutationOptions(options), queryClient);
+    }
+    export const getGetAdminAcademicYearsUrl = () => {
 
 
 
@@ -548,81 +492,54 @@ return apiFetch<AcademicYear>(getPostAdminAcademicYearUrl(),
 
 
 
-export const getPostAdminAcademicYearQueryKey = (academicYearCreate?: AcademicYearCreate,) => {
-    return [
-    'POST', `/admin/academic-years`, academicYearCreate
-    ] as const;
-    }
+export const getPostAdminAcademicYearMutationKey = () => ['postAdminAcademicYear'] as const;
 
+export const getPostAdminAcademicYearMutationOptions = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAdminAcademicYear>>, TError,PostAdminAcademicYearMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postAdminAcademicYear>>, TError,PostAdminAcademicYearMutationVariables, TContext> => {
 
-export const getPostAdminAcademicYearQueryOptions = <TData = Awaited<ReturnType<typeof postAdminAcademicYear>>, TError = ProblemResponse>(academicYearCreate: AcademicYearCreate, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAdminAcademicYear>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getPostAdminAcademicYearQueryKey(academicYearCreate);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof postAdminAcademicYear>>> = ({ signal }) => postAdminAcademicYear(academicYearCreate, { signal, ...requestOptions });
+const mutationKey = getPostAdminAcademicYearMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
 
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postAdminAcademicYear>>, PostAdminAcademicYearMutationVariables> = (props) => {
+          const {data} = props ?? {};
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof postAdminAcademicYear>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type PostAdminAcademicYearQueryResult = NonNullable<Awaited<ReturnType<typeof postAdminAcademicYear>>>
-export type PostAdminAcademicYearQueryError = ProblemResponse
+          return  postAdminAcademicYear(data,requestOptions)
+        }
 
 
-export function usePostAdminAcademicYear<TData = Awaited<ReturnType<typeof postAdminAcademicYear>>, TError = ProblemResponse>(
- academicYearCreate: AcademicYearCreate, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAdminAcademicYear>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof postAdminAcademicYear>>,
-          TError,
-          Awaited<ReturnType<typeof postAdminAcademicYear>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePostAdminAcademicYear<TData = Awaited<ReturnType<typeof postAdminAcademicYear>>, TError = ProblemResponse>(
- academicYearCreate: AcademicYearCreate, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAdminAcademicYear>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof postAdminAcademicYear>>,
-          TError,
-          Awaited<ReturnType<typeof postAdminAcademicYear>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePostAdminAcademicYear<TData = Awaited<ReturnType<typeof postAdminAcademicYear>>, TError = ProblemResponse>(
- academicYearCreate: AcademicYearCreate, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAdminAcademicYear>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostAdminAcademicYearMutationResult = NonNullable<Awaited<ReturnType<typeof postAdminAcademicYear>>>
+    export type PostAdminAcademicYearMutationBody = AcademicYearCreate
+    export type PostAdminAcademicYearMutationError = ProblemResponse
+    export type PostAdminAcademicYearMutationVariables = {data: AcademicYearCreate}
+
+    /**
  * @summary Buat tahun ajaran
  */
-
-export function usePostAdminAcademicYear<TData = Awaited<ReturnType<typeof postAdminAcademicYear>>, TError = ProblemResponse>(
- academicYearCreate: AcademicYearCreate, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAdminAcademicYear>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getPostAdminAcademicYearQueryOptions(academicYearCreate,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const getPatchAdminAcademicYearUrl = (id: string,) => {
+export const usePostAdminAcademicYear = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAdminAcademicYear>>, TError,PostAdminAcademicYearMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postAdminAcademicYear>>,
+        TError,
+        PostAdminAcademicYearMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPostAdminAcademicYearMutationOptions(options), queryClient);
+    }
+    export const getPatchAdminAcademicYearUrl = (id: string,) => {
 
 
 
@@ -664,87 +581,54 @@ return apiFetch<AcademicYear>(getPatchAdminAcademicYearUrl(id),
 
 
 
-export const getPatchAdminAcademicYearQueryKey = (id: string,
-    academicYearUpdate?: AcademicYearUpdate,) => {
-    return [
-    'PATCH', `/admin/academic-years/${id}`, academicYearUpdate
-    ] as const;
-    }
+export const getPatchAdminAcademicYearMutationKey = () => ['patchAdminAcademicYear'] as const;
 
+export const getPatchAdminAcademicYearMutationOptions = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchAdminAcademicYear>>, TError,PatchAdminAcademicYearMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchAdminAcademicYear>>, TError,PatchAdminAcademicYearMutationVariables, TContext> => {
 
-export const getPatchAdminAcademicYearQueryOptions = <TData = Awaited<ReturnType<typeof patchAdminAcademicYear>>, TError = ProblemResponse>(id: string,
-    academicYearUpdate: AcademicYearUpdate, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof patchAdminAcademicYear>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getPatchAdminAcademicYearQueryKey(id,academicYearUpdate);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof patchAdminAcademicYear>>> = ({ signal }) => patchAdminAcademicYear(id,academicYearUpdate, { signal, ...requestOptions });
+const mutationKey = getPatchAdminAcademicYearMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
 
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchAdminAcademicYear>>, PatchAdminAcademicYearMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
 
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof patchAdminAcademicYear>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type PatchAdminAcademicYearQueryResult = NonNullable<Awaited<ReturnType<typeof patchAdminAcademicYear>>>
-export type PatchAdminAcademicYearQueryError = ProblemResponse
+          return  patchAdminAcademicYear(id,data,requestOptions)
+        }
 
 
-export function usePatchAdminAcademicYear<TData = Awaited<ReturnType<typeof patchAdminAcademicYear>>, TError = ProblemResponse>(
- id: string,
-    academicYearUpdate: AcademicYearUpdate, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof patchAdminAcademicYear>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof patchAdminAcademicYear>>,
-          TError,
-          Awaited<ReturnType<typeof patchAdminAcademicYear>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePatchAdminAcademicYear<TData = Awaited<ReturnType<typeof patchAdminAcademicYear>>, TError = ProblemResponse>(
- id: string,
-    academicYearUpdate: AcademicYearUpdate, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof patchAdminAcademicYear>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof patchAdminAcademicYear>>,
-          TError,
-          Awaited<ReturnType<typeof patchAdminAcademicYear>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePatchAdminAcademicYear<TData = Awaited<ReturnType<typeof patchAdminAcademicYear>>, TError = ProblemResponse>(
- id: string,
-    academicYearUpdate: AcademicYearUpdate, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof patchAdminAcademicYear>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchAdminAcademicYearMutationResult = NonNullable<Awaited<ReturnType<typeof patchAdminAcademicYear>>>
+    export type PatchAdminAcademicYearMutationBody = AcademicYearUpdate
+    export type PatchAdminAcademicYearMutationError = ProblemResponse
+    export type PatchAdminAcademicYearMutationVariables = {id: string;data: AcademicYearUpdate}
+
+    /**
  * @summary Ubah tanggal tahun ajaran
  */
-
-export function usePatchAdminAcademicYear<TData = Awaited<ReturnType<typeof patchAdminAcademicYear>>, TError = ProblemResponse>(
- id: string,
-    academicYearUpdate: AcademicYearUpdate, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof patchAdminAcademicYear>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getPatchAdminAcademicYearQueryOptions(id,academicYearUpdate,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const getPostAdminAcademicYearSetCurrentUrl = (id: string,) => {
+export const usePatchAdminAcademicYear = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchAdminAcademicYear>>, TError,PatchAdminAcademicYearMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof patchAdminAcademicYear>>,
+        TError,
+        PatchAdminAcademicYearMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPatchAdminAcademicYearMutationOptions(options), queryClient);
+    }
+    export const getPostAdminAcademicYearSetCurrentUrl = (id: string,) => {
 
 
 
@@ -772,81 +656,54 @@ export const postAdminAcademicYearSetCurrent = async (id: string, options?: Para
 
 
 
-export const getPostAdminAcademicYearSetCurrentQueryKey = (id: string,) => {
-    return [
-    'POST', `/admin/academic-years/${id}/set-current`
-    ] as const;
-    }
+export const getPostAdminAcademicYearSetCurrentMutationKey = () => ['postAdminAcademicYearSetCurrent'] as const;
 
+export const getPostAdminAcademicYearSetCurrentMutationOptions = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAdminAcademicYearSetCurrent>>, TError,PostAdminAcademicYearSetCurrentMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postAdminAcademicYearSetCurrent>>, TError,PostAdminAcademicYearSetCurrentMutationVariables, TContext> => {
 
-export const getPostAdminAcademicYearSetCurrentQueryOptions = <TData = Awaited<ReturnType<typeof postAdminAcademicYearSetCurrent>>, TError = ProblemResponse>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAdminAcademicYearSetCurrent>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getPostAdminAcademicYearSetCurrentQueryKey(id);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof postAdminAcademicYearSetCurrent>>> = ({ signal }) => postAdminAcademicYearSetCurrent(id, { signal, ...requestOptions });
+const mutationKey = getPostAdminAcademicYearSetCurrentMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
 
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postAdminAcademicYearSetCurrent>>, PostAdminAcademicYearSetCurrentMutationVariables> = (props) => {
+          const {id} = props ?? {};
 
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof postAdminAcademicYearSetCurrent>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type PostAdminAcademicYearSetCurrentQueryResult = NonNullable<Awaited<ReturnType<typeof postAdminAcademicYearSetCurrent>>>
-export type PostAdminAcademicYearSetCurrentQueryError = ProblemResponse
+          return  postAdminAcademicYearSetCurrent(id,requestOptions)
+        }
 
 
-export function usePostAdminAcademicYearSetCurrent<TData = Awaited<ReturnType<typeof postAdminAcademicYearSetCurrent>>, TError = ProblemResponse>(
- id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAdminAcademicYearSetCurrent>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof postAdminAcademicYearSetCurrent>>,
-          TError,
-          Awaited<ReturnType<typeof postAdminAcademicYearSetCurrent>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePostAdminAcademicYearSetCurrent<TData = Awaited<ReturnType<typeof postAdminAcademicYearSetCurrent>>, TError = ProblemResponse>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAdminAcademicYearSetCurrent>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof postAdminAcademicYearSetCurrent>>,
-          TError,
-          Awaited<ReturnType<typeof postAdminAcademicYearSetCurrent>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePostAdminAcademicYearSetCurrent<TData = Awaited<ReturnType<typeof postAdminAcademicYearSetCurrent>>, TError = ProblemResponse>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAdminAcademicYearSetCurrent>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostAdminAcademicYearSetCurrentMutationResult = NonNullable<Awaited<ReturnType<typeof postAdminAcademicYearSetCurrent>>>
+
+    export type PostAdminAcademicYearSetCurrentMutationError = ProblemResponse
+    export type PostAdminAcademicYearSetCurrentMutationVariables = {id: string}
+
+    /**
  * @summary Tandai tahun ajaran sebagai tahun ajaran aktif
  */
-
-export function usePostAdminAcademicYearSetCurrent<TData = Awaited<ReturnType<typeof postAdminAcademicYearSetCurrent>>, TError = ProblemResponse>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAdminAcademicYearSetCurrent>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getPostAdminAcademicYearSetCurrentQueryOptions(id,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const getGetAdminClassesUrl = (params?: GetAdminClassesParams,) => {
+export const usePostAdminAcademicYearSetCurrent = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAdminAcademicYearSetCurrent>>, TError,PostAdminAcademicYearSetCurrentMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postAdminAcademicYearSetCurrent>>,
+        TError,
+        PostAdminAcademicYearSetCurrentMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPostAdminAcademicYearSetCurrentMutationOptions(options), queryClient);
+    }
+    export const getGetAdminClassesUrl = (params?: GetAdminClassesParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -997,81 +854,54 @@ return apiFetch<Class>(getPostAdminClassUrl(),
 
 
 
-export const getPostAdminClassQueryKey = (classCreate?: ClassCreate,) => {
-    return [
-    'POST', `/admin/classes`, classCreate
-    ] as const;
-    }
+export const getPostAdminClassMutationKey = () => ['postAdminClass'] as const;
 
+export const getPostAdminClassMutationOptions = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAdminClass>>, TError,PostAdminClassMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postAdminClass>>, TError,PostAdminClassMutationVariables, TContext> => {
 
-export const getPostAdminClassQueryOptions = <TData = Awaited<ReturnType<typeof postAdminClass>>, TError = ProblemResponse>(classCreate: ClassCreate, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAdminClass>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getPostAdminClassQueryKey(classCreate);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof postAdminClass>>> = ({ signal }) => postAdminClass(classCreate, { signal, ...requestOptions });
+const mutationKey = getPostAdminClassMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
 
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postAdminClass>>, PostAdminClassMutationVariables> = (props) => {
+          const {data} = props ?? {};
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof postAdminClass>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type PostAdminClassQueryResult = NonNullable<Awaited<ReturnType<typeof postAdminClass>>>
-export type PostAdminClassQueryError = ProblemResponse
+          return  postAdminClass(data,requestOptions)
+        }
 
 
-export function usePostAdminClass<TData = Awaited<ReturnType<typeof postAdminClass>>, TError = ProblemResponse>(
- classCreate: ClassCreate, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAdminClass>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof postAdminClass>>,
-          TError,
-          Awaited<ReturnType<typeof postAdminClass>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePostAdminClass<TData = Awaited<ReturnType<typeof postAdminClass>>, TError = ProblemResponse>(
- classCreate: ClassCreate, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAdminClass>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof postAdminClass>>,
-          TError,
-          Awaited<ReturnType<typeof postAdminClass>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePostAdminClass<TData = Awaited<ReturnType<typeof postAdminClass>>, TError = ProblemResponse>(
- classCreate: ClassCreate, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAdminClass>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostAdminClassMutationResult = NonNullable<Awaited<ReturnType<typeof postAdminClass>>>
+    export type PostAdminClassMutationBody = ClassCreate
+    export type PostAdminClassMutationError = ProblemResponse
+    export type PostAdminClassMutationVariables = {data: ClassCreate}
+
+    /**
  * @summary Buat kelas
  */
-
-export function usePostAdminClass<TData = Awaited<ReturnType<typeof postAdminClass>>, TError = ProblemResponse>(
- classCreate: ClassCreate, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAdminClass>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getPostAdminClassQueryOptions(classCreate,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const getPatchAdminClassUrl = (id: string,) => {
+export const usePostAdminClass = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAdminClass>>, TError,PostAdminClassMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postAdminClass>>,
+        TError,
+        PostAdminClassMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPostAdminClassMutationOptions(options), queryClient);
+    }
+    export const getPatchAdminClassUrl = (id: string,) => {
 
 
 
@@ -1114,87 +944,54 @@ return apiFetch<Class>(getPatchAdminClassUrl(id),
 
 
 
-export const getPatchAdminClassQueryKey = (id: string,
-    classUpdate?: ClassUpdate,) => {
-    return [
-    'PATCH', `/admin/classes/${id}`, classUpdate
-    ] as const;
-    }
+export const getPatchAdminClassMutationKey = () => ['patchAdminClass'] as const;
 
+export const getPatchAdminClassMutationOptions = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchAdminClass>>, TError,PatchAdminClassMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchAdminClass>>, TError,PatchAdminClassMutationVariables, TContext> => {
 
-export const getPatchAdminClassQueryOptions = <TData = Awaited<ReturnType<typeof patchAdminClass>>, TError = ProblemResponse>(id: string,
-    classUpdate: ClassUpdate, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof patchAdminClass>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getPatchAdminClassQueryKey(id,classUpdate);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof patchAdminClass>>> = ({ signal }) => patchAdminClass(id,classUpdate, { signal, ...requestOptions });
+const mutationKey = getPatchAdminClassMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
 
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchAdminClass>>, PatchAdminClassMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
 
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof patchAdminClass>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type PatchAdminClassQueryResult = NonNullable<Awaited<ReturnType<typeof patchAdminClass>>>
-export type PatchAdminClassQueryError = ProblemResponse
+          return  patchAdminClass(id,data,requestOptions)
+        }
 
 
-export function usePatchAdminClass<TData = Awaited<ReturnType<typeof patchAdminClass>>, TError = ProblemResponse>(
- id: string,
-    classUpdate: ClassUpdate, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof patchAdminClass>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof patchAdminClass>>,
-          TError,
-          Awaited<ReturnType<typeof patchAdminClass>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePatchAdminClass<TData = Awaited<ReturnType<typeof patchAdminClass>>, TError = ProblemResponse>(
- id: string,
-    classUpdate: ClassUpdate, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof patchAdminClass>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof patchAdminClass>>,
-          TError,
-          Awaited<ReturnType<typeof patchAdminClass>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePatchAdminClass<TData = Awaited<ReturnType<typeof patchAdminClass>>, TError = ProblemResponse>(
- id: string,
-    classUpdate: ClassUpdate, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof patchAdminClass>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchAdminClassMutationResult = NonNullable<Awaited<ReturnType<typeof patchAdminClass>>>
+    export type PatchAdminClassMutationBody = ClassUpdate
+    export type PatchAdminClassMutationError = ProblemResponse
+    export type PatchAdminClassMutationVariables = {id: string;data: ClassUpdate}
+
+    /**
  * @summary Ubah rombel kelas
  */
-
-export function usePatchAdminClass<TData = Awaited<ReturnType<typeof patchAdminClass>>, TError = ProblemResponse>(
- id: string,
-    classUpdate: ClassUpdate, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof patchAdminClass>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getPatchAdminClassQueryOptions(id,classUpdate,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const getDeleteAdminClassUrl = (id: string,) => {
+export const usePatchAdminClass = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchAdminClass>>, TError,PatchAdminClassMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof patchAdminClass>>,
+        TError,
+        PatchAdminClassMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPatchAdminClassMutationOptions(options), queryClient);
+    }
+    export const getDeleteAdminClassUrl = (id: string,) => {
 
 
 
@@ -1222,77 +1019,50 @@ export const deleteAdminClass = async (id: string, options?: Parameters<typeof a
 
 
 
-export const getDeleteAdminClassQueryKey = (id: string,) => {
-    return [
-    'DELETE', `/admin/classes/${id}`
-    ] as const;
-    }
+export const getDeleteAdminClassMutationKey = () => ['deleteAdminClass'] as const;
 
+export const getDeleteAdminClassMutationOptions = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminClass>>, TError,DeleteAdminClassMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAdminClass>>, TError,DeleteAdminClassMutationVariables, TContext> => {
 
-export const getDeleteAdminClassQueryOptions = <TData = Awaited<ReturnType<typeof deleteAdminClass>>, TError = ProblemResponse>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof deleteAdminClass>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getDeleteAdminClassQueryKey(id);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof deleteAdminClass>>> = ({ signal }) => deleteAdminClass(id, { signal, ...requestOptions });
+const mutationKey = getDeleteAdminClassMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
 
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAdminClass>>, DeleteAdminClassMutationVariables> = (props) => {
+          const {id} = props ?? {};
 
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof deleteAdminClass>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type DeleteAdminClassQueryResult = NonNullable<Awaited<ReturnType<typeof deleteAdminClass>>>
-export type DeleteAdminClassQueryError = ProblemResponse
+          return  deleteAdminClass(id,requestOptions)
+        }
 
 
-export function useDeleteAdminClass<TData = Awaited<ReturnType<typeof deleteAdminClass>>, TError = ProblemResponse>(
- id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof deleteAdminClass>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof deleteAdminClass>>,
-          TError,
-          Awaited<ReturnType<typeof deleteAdminClass>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useDeleteAdminClass<TData = Awaited<ReturnType<typeof deleteAdminClass>>, TError = ProblemResponse>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof deleteAdminClass>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof deleteAdminClass>>,
-          TError,
-          Awaited<ReturnType<typeof deleteAdminClass>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useDeleteAdminClass<TData = Awaited<ReturnType<typeof deleteAdminClass>>, TError = ProblemResponse>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof deleteAdminClass>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAdminClassMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAdminClass>>>
+
+    export type DeleteAdminClassMutationError = ProblemResponse
+    export type DeleteAdminClassMutationVariables = {id: string}
+
+    /**
  * @summary Hapus kelas
  */
-
-export function useDeleteAdminClass<TData = Awaited<ReturnType<typeof deleteAdminClass>>, TError = ProblemResponse>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof deleteAdminClass>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getDeleteAdminClassQueryOptions(id,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
+export const useDeleteAdminClass = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminClass>>, TError,DeleteAdminClassMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAdminClass>>,
+        TError,
+        DeleteAdminClassMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteAdminClassMutationOptions(options), queryClient);
+    }

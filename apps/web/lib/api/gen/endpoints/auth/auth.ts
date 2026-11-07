@@ -9,16 +9,20 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
@@ -206,81 +210,54 @@ return apiFetch<Session>(getPostAuthLoginUrl(),
 
 
 
-export const getPostAuthLoginQueryKey = (loginRequest?: LoginRequest,) => {
-    return [
-    'POST', `/auth/login`, loginRequest
-    ] as const;
-    }
+export const getPostAuthLoginMutationKey = () => ['postAuthLogin'] as const;
 
+export const getPostAuthLoginMutationOptions = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthLogin>>, TError,PostAuthLoginMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postAuthLogin>>, TError,PostAuthLoginMutationVariables, TContext> => {
 
-export const getPostAuthLoginQueryOptions = <TData = Awaited<ReturnType<typeof postAuthLogin>>, TError = ProblemResponse>(loginRequest: LoginRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthLogin>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getPostAuthLoginQueryKey(loginRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof postAuthLogin>>> = ({ signal }) => postAuthLogin(loginRequest, { signal, ...requestOptions });
+const mutationKey = getPostAuthLoginMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
 
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postAuthLogin>>, PostAuthLoginMutationVariables> = (props) => {
+          const {data} = props ?? {};
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof postAuthLogin>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type PostAuthLoginQueryResult = NonNullable<Awaited<ReturnType<typeof postAuthLogin>>>
-export type PostAuthLoginQueryError = ProblemResponse
+          return  postAuthLogin(data,requestOptions)
+        }
 
 
-export function usePostAuthLogin<TData = Awaited<ReturnType<typeof postAuthLogin>>, TError = ProblemResponse>(
- loginRequest: LoginRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthLogin>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof postAuthLogin>>,
-          TError,
-          Awaited<ReturnType<typeof postAuthLogin>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePostAuthLogin<TData = Awaited<ReturnType<typeof postAuthLogin>>, TError = ProblemResponse>(
- loginRequest: LoginRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthLogin>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof postAuthLogin>>,
-          TError,
-          Awaited<ReturnType<typeof postAuthLogin>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePostAuthLogin<TData = Awaited<ReturnType<typeof postAuthLogin>>, TError = ProblemResponse>(
- loginRequest: LoginRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthLogin>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostAuthLoginMutationResult = NonNullable<Awaited<ReturnType<typeof postAuthLogin>>>
+    export type PostAuthLoginMutationBody = LoginRequest
+    export type PostAuthLoginMutationError = ProblemResponse
+    export type PostAuthLoginMutationVariables = {data: LoginRequest}
+
+    /**
  * @summary Masuk dengan NISN/NIP/username dan sandi
  */
-
-export function usePostAuthLogin<TData = Awaited<ReturnType<typeof postAuthLogin>>, TError = ProblemResponse>(
- loginRequest: LoginRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthLogin>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getPostAuthLoginQueryOptions(loginRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const getPostAuthLogoutUrl = () => {
+export const usePostAuthLogin = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthLogin>>, TError,PostAuthLoginMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postAuthLogin>>,
+        TError,
+        PostAuthLoginMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPostAuthLoginMutationOptions(options), queryClient);
+    }
+    export const getPostAuthLogoutUrl = () => {
 
 
 
@@ -306,81 +283,54 @@ export const postAuthLogout = async ( options?: Parameters<typeof apiFetch>[1]):
 
 
 
-export const getPostAuthLogoutQueryKey = () => {
-    return [
-    'POST', `/auth/logout`
-    ] as const;
-    }
+export const getPostAuthLogoutMutationKey = () => ['postAuthLogout'] as const;
 
+export const getPostAuthLogoutMutationOptions = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthLogout>>, TError,void, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postAuthLogout>>, TError,void, TContext> => {
 
-export const getPostAuthLogoutQueryOptions = <TData = Awaited<ReturnType<typeof postAuthLogout>>, TError = ProblemResponse>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthLogout>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getPostAuthLogoutQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof postAuthLogout>>> = ({ signal }) => postAuthLogout({ signal, ...requestOptions });
+const mutationKey = getPostAuthLogoutMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
 
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof postAuthLogout>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type PostAuthLogoutQueryResult = NonNullable<Awaited<ReturnType<typeof postAuthLogout>>>
-export type PostAuthLogoutQueryError = ProblemResponse
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postAuthLogout>>, void> = () => {
 
 
-export function usePostAuthLogout<TData = Awaited<ReturnType<typeof postAuthLogout>>, TError = ProblemResponse>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthLogout>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof postAuthLogout>>,
-          TError,
-          Awaited<ReturnType<typeof postAuthLogout>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePostAuthLogout<TData = Awaited<ReturnType<typeof postAuthLogout>>, TError = ProblemResponse>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthLogout>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof postAuthLogout>>,
-          TError,
-          Awaited<ReturnType<typeof postAuthLogout>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePostAuthLogout<TData = Awaited<ReturnType<typeof postAuthLogout>>, TError = ProblemResponse>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthLogout>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
+          return  postAuthLogout(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostAuthLogoutMutationResult = NonNullable<Awaited<ReturnType<typeof postAuthLogout>>>
+
+    export type PostAuthLogoutMutationError = ProblemResponse
+
+
+    /**
  * @summary Keluar (cabut sesi ini)
  */
-
-export function usePostAuthLogout<TData = Awaited<ReturnType<typeof postAuthLogout>>, TError = ProblemResponse>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthLogout>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getPostAuthLogoutQueryOptions(options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const getGetAuthSessionUrl = () => {
+export const usePostAuthLogout = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthLogout>>, TError,void, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postAuthLogout>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getPostAuthLogoutMutationOptions(options), queryClient);
+    }
+    export const getGetAuthSessionUrl = () => {
 
 
 
@@ -634,81 +584,54 @@ return apiFetch<RecoveryCodes>(getPostAuthActivateUrl(),
 
 
 
-export const getPostAuthActivateQueryKey = (activateRequest?: ActivateRequest,) => {
-    return [
-    'POST', `/auth/activate`, activateRequest
-    ] as const;
-    }
+export const getPostAuthActivateMutationKey = () => ['postAuthActivate'] as const;
 
+export const getPostAuthActivateMutationOptions = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthActivate>>, TError,PostAuthActivateMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postAuthActivate>>, TError,PostAuthActivateMutationVariables, TContext> => {
 
-export const getPostAuthActivateQueryOptions = <TData = Awaited<ReturnType<typeof postAuthActivate>>, TError = ProblemResponse>(activateRequest: ActivateRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthActivate>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getPostAuthActivateQueryKey(activateRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof postAuthActivate>>> = ({ signal }) => postAuthActivate(activateRequest, { signal, ...requestOptions });
+const mutationKey = getPostAuthActivateMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
 
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postAuthActivate>>, PostAuthActivateMutationVariables> = (props) => {
+          const {data} = props ?? {};
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof postAuthActivate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type PostAuthActivateQueryResult = NonNullable<Awaited<ReturnType<typeof postAuthActivate>>>
-export type PostAuthActivateQueryError = ProblemResponse
+          return  postAuthActivate(data,requestOptions)
+        }
 
 
-export function usePostAuthActivate<TData = Awaited<ReturnType<typeof postAuthActivate>>, TError = ProblemResponse>(
- activateRequest: ActivateRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthActivate>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof postAuthActivate>>,
-          TError,
-          Awaited<ReturnType<typeof postAuthActivate>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePostAuthActivate<TData = Awaited<ReturnType<typeof postAuthActivate>>, TError = ProblemResponse>(
- activateRequest: ActivateRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthActivate>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof postAuthActivate>>,
-          TError,
-          Awaited<ReturnType<typeof postAuthActivate>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePostAuthActivate<TData = Awaited<ReturnType<typeof postAuthActivate>>, TError = ProblemResponse>(
- activateRequest: ActivateRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthActivate>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostAuthActivateMutationResult = NonNullable<Awaited<ReturnType<typeof postAuthActivate>>>
+    export type PostAuthActivateMutationBody = ActivateRequest
+    export type PostAuthActivateMutationError = ProblemResponse
+    export type PostAuthActivateMutationVariables = {data: ActivateRequest}
+
+    /**
  * @summary Aktivasi akun (login pertama)
  */
-
-export function usePostAuthActivate<TData = Awaited<ReturnType<typeof postAuthActivate>>, TError = ProblemResponse>(
- activateRequest: ActivateRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthActivate>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getPostAuthActivateQueryOptions(activateRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const getPostAuthRecoveryCodesConfirmUrl = () => {
+export const usePostAuthActivate = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthActivate>>, TError,PostAuthActivateMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postAuthActivate>>,
+        TError,
+        PostAuthActivateMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPostAuthActivateMutationOptions(options), queryClient);
+    }
+    export const getPostAuthRecoveryCodesConfirmUrl = () => {
 
 
 
@@ -734,81 +657,54 @@ export const postAuthRecoveryCodesConfirm = async ( options?: Parameters<typeof 
 
 
 
-export const getPostAuthRecoveryCodesConfirmQueryKey = () => {
-    return [
-    'POST', `/auth/recovery-codes/confirm`
-    ] as const;
-    }
+export const getPostAuthRecoveryCodesConfirmMutationKey = () => ['postAuthRecoveryCodesConfirm'] as const;
 
+export const getPostAuthRecoveryCodesConfirmMutationOptions = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthRecoveryCodesConfirm>>, TError,void, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postAuthRecoveryCodesConfirm>>, TError,void, TContext> => {
 
-export const getPostAuthRecoveryCodesConfirmQueryOptions = <TData = Awaited<ReturnType<typeof postAuthRecoveryCodesConfirm>>, TError = ProblemResponse>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthRecoveryCodesConfirm>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getPostAuthRecoveryCodesConfirmQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof postAuthRecoveryCodesConfirm>>> = ({ signal }) => postAuthRecoveryCodesConfirm({ signal, ...requestOptions });
+const mutationKey = getPostAuthRecoveryCodesConfirmMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
 
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof postAuthRecoveryCodesConfirm>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type PostAuthRecoveryCodesConfirmQueryResult = NonNullable<Awaited<ReturnType<typeof postAuthRecoveryCodesConfirm>>>
-export type PostAuthRecoveryCodesConfirmQueryError = ProblemResponse
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postAuthRecoveryCodesConfirm>>, void> = () => {
 
 
-export function usePostAuthRecoveryCodesConfirm<TData = Awaited<ReturnType<typeof postAuthRecoveryCodesConfirm>>, TError = ProblemResponse>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthRecoveryCodesConfirm>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof postAuthRecoveryCodesConfirm>>,
-          TError,
-          Awaited<ReturnType<typeof postAuthRecoveryCodesConfirm>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePostAuthRecoveryCodesConfirm<TData = Awaited<ReturnType<typeof postAuthRecoveryCodesConfirm>>, TError = ProblemResponse>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthRecoveryCodesConfirm>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof postAuthRecoveryCodesConfirm>>,
-          TError,
-          Awaited<ReturnType<typeof postAuthRecoveryCodesConfirm>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePostAuthRecoveryCodesConfirm<TData = Awaited<ReturnType<typeof postAuthRecoveryCodesConfirm>>, TError = ProblemResponse>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthRecoveryCodesConfirm>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
+          return  postAuthRecoveryCodesConfirm(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostAuthRecoveryCodesConfirmMutationResult = NonNullable<Awaited<ReturnType<typeof postAuthRecoveryCodesConfirm>>>
+
+    export type PostAuthRecoveryCodesConfirmMutationError = ProblemResponse
+
+
+    /**
  * @summary Konfirmasi recovery code sudah disimpan
  */
-
-export function usePostAuthRecoveryCodesConfirm<TData = Awaited<ReturnType<typeof postAuthRecoveryCodesConfirm>>, TError = ProblemResponse>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthRecoveryCodesConfirm>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getPostAuthRecoveryCodesConfirmQueryOptions(options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const getPostAuthRecoveryCodesRegenerateUrl = () => {
+export const usePostAuthRecoveryCodesConfirm = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthRecoveryCodesConfirm>>, TError,void, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postAuthRecoveryCodesConfirm>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getPostAuthRecoveryCodesConfirmMutationOptions(options), queryClient);
+    }
+    export const getPostAuthRecoveryCodesRegenerateUrl = () => {
 
 
 
@@ -849,81 +745,54 @@ return apiFetch<RecoveryCodes>(getPostAuthRecoveryCodesRegenerateUrl(),
 
 
 
-export const getPostAuthRecoveryCodesRegenerateQueryKey = (passwordConfirmation?: PasswordConfirmation,) => {
-    return [
-    'POST', `/auth/recovery-codes/regenerate`, passwordConfirmation
-    ] as const;
-    }
+export const getPostAuthRecoveryCodesRegenerateMutationKey = () => ['postAuthRecoveryCodesRegenerate'] as const;
 
+export const getPostAuthRecoveryCodesRegenerateMutationOptions = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthRecoveryCodesRegenerate>>, TError,PostAuthRecoveryCodesRegenerateMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postAuthRecoveryCodesRegenerate>>, TError,PostAuthRecoveryCodesRegenerateMutationVariables, TContext> => {
 
-export const getPostAuthRecoveryCodesRegenerateQueryOptions = <TData = Awaited<ReturnType<typeof postAuthRecoveryCodesRegenerate>>, TError = ProblemResponse>(passwordConfirmation: PasswordConfirmation, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthRecoveryCodesRegenerate>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getPostAuthRecoveryCodesRegenerateQueryKey(passwordConfirmation);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof postAuthRecoveryCodesRegenerate>>> = ({ signal }) => postAuthRecoveryCodesRegenerate(passwordConfirmation, { signal, ...requestOptions });
+const mutationKey = getPostAuthRecoveryCodesRegenerateMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
 
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postAuthRecoveryCodesRegenerate>>, PostAuthRecoveryCodesRegenerateMutationVariables> = (props) => {
+          const {data} = props ?? {};
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof postAuthRecoveryCodesRegenerate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type PostAuthRecoveryCodesRegenerateQueryResult = NonNullable<Awaited<ReturnType<typeof postAuthRecoveryCodesRegenerate>>>
-export type PostAuthRecoveryCodesRegenerateQueryError = ProblemResponse
+          return  postAuthRecoveryCodesRegenerate(data,requestOptions)
+        }
 
 
-export function usePostAuthRecoveryCodesRegenerate<TData = Awaited<ReturnType<typeof postAuthRecoveryCodesRegenerate>>, TError = ProblemResponse>(
- passwordConfirmation: PasswordConfirmation, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthRecoveryCodesRegenerate>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof postAuthRecoveryCodesRegenerate>>,
-          TError,
-          Awaited<ReturnType<typeof postAuthRecoveryCodesRegenerate>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePostAuthRecoveryCodesRegenerate<TData = Awaited<ReturnType<typeof postAuthRecoveryCodesRegenerate>>, TError = ProblemResponse>(
- passwordConfirmation: PasswordConfirmation, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthRecoveryCodesRegenerate>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof postAuthRecoveryCodesRegenerate>>,
-          TError,
-          Awaited<ReturnType<typeof postAuthRecoveryCodesRegenerate>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePostAuthRecoveryCodesRegenerate<TData = Awaited<ReturnType<typeof postAuthRecoveryCodesRegenerate>>, TError = ProblemResponse>(
- passwordConfirmation: PasswordConfirmation, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthRecoveryCodesRegenerate>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostAuthRecoveryCodesRegenerateMutationResult = NonNullable<Awaited<ReturnType<typeof postAuthRecoveryCodesRegenerate>>>
+    export type PostAuthRecoveryCodesRegenerateMutationBody = PasswordConfirmation
+    export type PostAuthRecoveryCodesRegenerateMutationError = ProblemResponse
+    export type PostAuthRecoveryCodesRegenerateMutationVariables = {data: PasswordConfirmation}
+
+    /**
  * @summary Buat ulang recovery code
  */
-
-export function usePostAuthRecoveryCodesRegenerate<TData = Awaited<ReturnType<typeof postAuthRecoveryCodesRegenerate>>, TError = ProblemResponse>(
- passwordConfirmation: PasswordConfirmation, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthRecoveryCodesRegenerate>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getPostAuthRecoveryCodesRegenerateQueryOptions(passwordConfirmation,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const getPostAuthPasswordRecoverUrl = () => {
+export const usePostAuthRecoveryCodesRegenerate = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthRecoveryCodesRegenerate>>, TError,PostAuthRecoveryCodesRegenerateMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postAuthRecoveryCodesRegenerate>>,
+        TError,
+        PostAuthRecoveryCodesRegenerateMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPostAuthRecoveryCodesRegenerateMutationOptions(options), queryClient);
+    }
+    export const getPostAuthPasswordRecoverUrl = () => {
 
 
 
@@ -964,81 +833,54 @@ return apiFetch<void>(getPostAuthPasswordRecoverUrl(),
 
 
 
-export const getPostAuthPasswordRecoverQueryKey = (recoverPasswordRequest?: RecoverPasswordRequest,) => {
-    return [
-    'POST', `/auth/password/recover`, recoverPasswordRequest
-    ] as const;
-    }
+export const getPostAuthPasswordRecoverMutationKey = () => ['postAuthPasswordRecover'] as const;
 
+export const getPostAuthPasswordRecoverMutationOptions = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthPasswordRecover>>, TError,PostAuthPasswordRecoverMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postAuthPasswordRecover>>, TError,PostAuthPasswordRecoverMutationVariables, TContext> => {
 
-export const getPostAuthPasswordRecoverQueryOptions = <TData = Awaited<ReturnType<typeof postAuthPasswordRecover>>, TError = ProblemResponse>(recoverPasswordRequest: RecoverPasswordRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthPasswordRecover>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getPostAuthPasswordRecoverQueryKey(recoverPasswordRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof postAuthPasswordRecover>>> = ({ signal }) => postAuthPasswordRecover(recoverPasswordRequest, { signal, ...requestOptions });
+const mutationKey = getPostAuthPasswordRecoverMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
 
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postAuthPasswordRecover>>, PostAuthPasswordRecoverMutationVariables> = (props) => {
+          const {data} = props ?? {};
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof postAuthPasswordRecover>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type PostAuthPasswordRecoverQueryResult = NonNullable<Awaited<ReturnType<typeof postAuthPasswordRecover>>>
-export type PostAuthPasswordRecoverQueryError = ProblemResponse
+          return  postAuthPasswordRecover(data,requestOptions)
+        }
 
 
-export function usePostAuthPasswordRecover<TData = Awaited<ReturnType<typeof postAuthPasswordRecover>>, TError = ProblemResponse>(
- recoverPasswordRequest: RecoverPasswordRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthPasswordRecover>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof postAuthPasswordRecover>>,
-          TError,
-          Awaited<ReturnType<typeof postAuthPasswordRecover>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePostAuthPasswordRecover<TData = Awaited<ReturnType<typeof postAuthPasswordRecover>>, TError = ProblemResponse>(
- recoverPasswordRequest: RecoverPasswordRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthPasswordRecover>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof postAuthPasswordRecover>>,
-          TError,
-          Awaited<ReturnType<typeof postAuthPasswordRecover>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePostAuthPasswordRecover<TData = Awaited<ReturnType<typeof postAuthPasswordRecover>>, TError = ProblemResponse>(
- recoverPasswordRequest: RecoverPasswordRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthPasswordRecover>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostAuthPasswordRecoverMutationResult = NonNullable<Awaited<ReturnType<typeof postAuthPasswordRecover>>>
+    export type PostAuthPasswordRecoverMutationBody = RecoverPasswordRequest
+    export type PostAuthPasswordRecoverMutationError = ProblemResponse
+    export type PostAuthPasswordRecoverMutationVariables = {data: RecoverPasswordRequest}
+
+    /**
  * @summary Reset sandi dengan recovery code
  */
-
-export function usePostAuthPasswordRecover<TData = Awaited<ReturnType<typeof postAuthPasswordRecover>>, TError = ProblemResponse>(
- recoverPasswordRequest: RecoverPasswordRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthPasswordRecover>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getPostAuthPasswordRecoverQueryOptions(recoverPasswordRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const getPostAuthPasswordChangeUrl = () => {
+export const usePostAuthPasswordRecover = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthPasswordRecover>>, TError,PostAuthPasswordRecoverMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postAuthPasswordRecover>>,
+        TError,
+        PostAuthPasswordRecoverMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPostAuthPasswordRecoverMutationOptions(options), queryClient);
+    }
+    export const getPostAuthPasswordChangeUrl = () => {
 
 
 
@@ -1080,81 +922,54 @@ return apiFetch<Session>(getPostAuthPasswordChangeUrl(),
 
 
 
-export const getPostAuthPasswordChangeQueryKey = (changePasswordRequest?: ChangePasswordRequest,) => {
-    return [
-    'POST', `/auth/password/change`, changePasswordRequest
-    ] as const;
-    }
+export const getPostAuthPasswordChangeMutationKey = () => ['postAuthPasswordChange'] as const;
 
+export const getPostAuthPasswordChangeMutationOptions = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthPasswordChange>>, TError,PostAuthPasswordChangeMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postAuthPasswordChange>>, TError,PostAuthPasswordChangeMutationVariables, TContext> => {
 
-export const getPostAuthPasswordChangeQueryOptions = <TData = Awaited<ReturnType<typeof postAuthPasswordChange>>, TError = ProblemResponse>(changePasswordRequest: ChangePasswordRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthPasswordChange>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getPostAuthPasswordChangeQueryKey(changePasswordRequest);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof postAuthPasswordChange>>> = ({ signal }) => postAuthPasswordChange(changePasswordRequest, { signal, ...requestOptions });
+const mutationKey = getPostAuthPasswordChangeMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
 
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postAuthPasswordChange>>, PostAuthPasswordChangeMutationVariables> = (props) => {
+          const {data} = props ?? {};
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof postAuthPasswordChange>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type PostAuthPasswordChangeQueryResult = NonNullable<Awaited<ReturnType<typeof postAuthPasswordChange>>>
-export type PostAuthPasswordChangeQueryError = ProblemResponse
+          return  postAuthPasswordChange(data,requestOptions)
+        }
 
 
-export function usePostAuthPasswordChange<TData = Awaited<ReturnType<typeof postAuthPasswordChange>>, TError = ProblemResponse>(
- changePasswordRequest: ChangePasswordRequest, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthPasswordChange>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof postAuthPasswordChange>>,
-          TError,
-          Awaited<ReturnType<typeof postAuthPasswordChange>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePostAuthPasswordChange<TData = Awaited<ReturnType<typeof postAuthPasswordChange>>, TError = ProblemResponse>(
- changePasswordRequest: ChangePasswordRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthPasswordChange>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof postAuthPasswordChange>>,
-          TError,
-          Awaited<ReturnType<typeof postAuthPasswordChange>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePostAuthPasswordChange<TData = Awaited<ReturnType<typeof postAuthPasswordChange>>, TError = ProblemResponse>(
- changePasswordRequest: ChangePasswordRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthPasswordChange>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostAuthPasswordChangeMutationResult = NonNullable<Awaited<ReturnType<typeof postAuthPasswordChange>>>
+    export type PostAuthPasswordChangeMutationBody = ChangePasswordRequest
+    export type PostAuthPasswordChangeMutationError = ProblemResponse
+    export type PostAuthPasswordChangeMutationVariables = {data: ChangePasswordRequest}
+
+    /**
  * @summary Ganti sandi
  */
-
-export function usePostAuthPasswordChange<TData = Awaited<ReturnType<typeof postAuthPasswordChange>>, TError = ProblemResponse>(
- changePasswordRequest: ChangePasswordRequest, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthPasswordChange>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getPostAuthPasswordChangeQueryOptions(changePasswordRequest,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const getGetAuthSessionsUrl = () => {
+export const usePostAuthPasswordChange = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthPasswordChange>>, TError,PostAuthPasswordChangeMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postAuthPasswordChange>>,
+        TError,
+        PostAuthPasswordChangeMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPostAuthPasswordChangeMutationOptions(options), queryClient);
+    }
+    export const getGetAuthSessionsUrl = () => {
 
 
 
@@ -1280,81 +1095,54 @@ export const deleteAuthSession = async (id: string, options?: Parameters<typeof 
 
 
 
-export const getDeleteAuthSessionQueryKey = (id: string,) => {
-    return [
-    'DELETE', `/auth/sessions/${id}`
-    ] as const;
-    }
+export const getDeleteAuthSessionMutationKey = () => ['deleteAuthSession'] as const;
 
+export const getDeleteAuthSessionMutationOptions = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAuthSession>>, TError,DeleteAuthSessionMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAuthSession>>, TError,DeleteAuthSessionMutationVariables, TContext> => {
 
-export const getDeleteAuthSessionQueryOptions = <TData = Awaited<ReturnType<typeof deleteAuthSession>>, TError = ProblemResponse>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof deleteAuthSession>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getDeleteAuthSessionQueryKey(id);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof deleteAuthSession>>> = ({ signal }) => deleteAuthSession(id, { signal, ...requestOptions });
+const mutationKey = getDeleteAuthSessionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
 
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAuthSession>>, DeleteAuthSessionMutationVariables> = (props) => {
+          const {id} = props ?? {};
 
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof deleteAuthSession>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type DeleteAuthSessionQueryResult = NonNullable<Awaited<ReturnType<typeof deleteAuthSession>>>
-export type DeleteAuthSessionQueryError = ProblemResponse
+          return  deleteAuthSession(id,requestOptions)
+        }
 
 
-export function useDeleteAuthSession<TData = Awaited<ReturnType<typeof deleteAuthSession>>, TError = ProblemResponse>(
- id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof deleteAuthSession>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof deleteAuthSession>>,
-          TError,
-          Awaited<ReturnType<typeof deleteAuthSession>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useDeleteAuthSession<TData = Awaited<ReturnType<typeof deleteAuthSession>>, TError = ProblemResponse>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof deleteAuthSession>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof deleteAuthSession>>,
-          TError,
-          Awaited<ReturnType<typeof deleteAuthSession>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useDeleteAuthSession<TData = Awaited<ReturnType<typeof deleteAuthSession>>, TError = ProblemResponse>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof deleteAuthSession>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAuthSessionMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAuthSession>>>
+
+    export type DeleteAuthSessionMutationError = ProblemResponse
+    export type DeleteAuthSessionMutationVariables = {id: string}
+
+    /**
  * @summary Cabut satu sesi milik user
  */
-
-export function useDeleteAuthSession<TData = Awaited<ReturnType<typeof deleteAuthSession>>, TError = ProblemResponse>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof deleteAuthSession>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getDeleteAuthSessionQueryOptions(id,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const getPostAuthSessionsRevokeOthersUrl = () => {
+export const useDeleteAuthSession = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAuthSession>>, TError,DeleteAuthSessionMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAuthSession>>,
+        TError,
+        DeleteAuthSessionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteAuthSessionMutationOptions(options), queryClient);
+    }
+    export const getPostAuthSessionsRevokeOthersUrl = () => {
 
 
 
@@ -1380,77 +1168,50 @@ export const postAuthSessionsRevokeOthers = async ( options?: Parameters<typeof 
 
 
 
-export const getPostAuthSessionsRevokeOthersQueryKey = () => {
-    return [
-    'POST', `/auth/sessions/revoke-others`
-    ] as const;
-    }
+export const getPostAuthSessionsRevokeOthersMutationKey = () => ['postAuthSessionsRevokeOthers'] as const;
 
+export const getPostAuthSessionsRevokeOthersMutationOptions = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthSessionsRevokeOthers>>, TError,void, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postAuthSessionsRevokeOthers>>, TError,void, TContext> => {
 
-export const getPostAuthSessionsRevokeOthersQueryOptions = <TData = Awaited<ReturnType<typeof postAuthSessionsRevokeOthers>>, TError = ProblemResponse>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthSessionsRevokeOthers>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getPostAuthSessionsRevokeOthersQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof postAuthSessionsRevokeOthers>>> = ({ signal }) => postAuthSessionsRevokeOthers({ signal, ...requestOptions });
+const mutationKey = getPostAuthSessionsRevokeOthersMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
 
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof postAuthSessionsRevokeOthers>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type PostAuthSessionsRevokeOthersQueryResult = NonNullable<Awaited<ReturnType<typeof postAuthSessionsRevokeOthers>>>
-export type PostAuthSessionsRevokeOthersQueryError = ProblemResponse
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postAuthSessionsRevokeOthers>>, void> = () => {
 
 
-export function usePostAuthSessionsRevokeOthers<TData = Awaited<ReturnType<typeof postAuthSessionsRevokeOthers>>, TError = ProblemResponse>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthSessionsRevokeOthers>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof postAuthSessionsRevokeOthers>>,
-          TError,
-          Awaited<ReturnType<typeof postAuthSessionsRevokeOthers>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePostAuthSessionsRevokeOthers<TData = Awaited<ReturnType<typeof postAuthSessionsRevokeOthers>>, TError = ProblemResponse>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthSessionsRevokeOthers>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof postAuthSessionsRevokeOthers>>,
-          TError,
-          Awaited<ReturnType<typeof postAuthSessionsRevokeOthers>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function usePostAuthSessionsRevokeOthers<TData = Awaited<ReturnType<typeof postAuthSessionsRevokeOthers>>, TError = ProblemResponse>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthSessionsRevokeOthers>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
+          return  postAuthSessionsRevokeOthers(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostAuthSessionsRevokeOthersMutationResult = NonNullable<Awaited<ReturnType<typeof postAuthSessionsRevokeOthers>>>
+
+    export type PostAuthSessionsRevokeOthersMutationError = ProblemResponse
+
+
+    /**
  * @summary Keluar dari semua perangkat lain
  */
-
-export function usePostAuthSessionsRevokeOthers<TData = Awaited<ReturnType<typeof postAuthSessionsRevokeOthers>>, TError = ProblemResponse>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof postAuthSessionsRevokeOthers>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getPostAuthSessionsRevokeOthersQueryOptions(options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
+export const usePostAuthSessionsRevokeOthers = <TError = ProblemResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthSessionsRevokeOthers>>, TError,void, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postAuthSessionsRevokeOthers>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getPostAuthSessionsRevokeOthersMutationOptions(options), queryClient);
+    }
