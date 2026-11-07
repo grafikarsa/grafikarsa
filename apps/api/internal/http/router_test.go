@@ -112,16 +112,6 @@ func TestRouter_InvalidPathParamIsProblemJSON(t *testing.T) {
 	}
 }
 
-func TestRouter_PlaceholderAuthEndpointIs501(t *testing.T) {
-	h := NewRouter(RouterDeps{Logger: testLogger()})
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/username-availability?u=budi", nil)
-	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, req)
-	if rec.Code != http.StatusNotImplemented {
-		t.Fatalf("status = %d, want 501", rec.Code)
-	}
-}
-
 func TestRouter_SessionEndpointWithoutSessionIs401(t *testing.T) {
 	h := NewRouter(RouterDeps{Logger: testLogger()})
 	rec := httptest.NewRecorder()
