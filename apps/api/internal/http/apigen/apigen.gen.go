@@ -62,6 +62,27 @@ func (e AccountType) Valid() bool {
 	}
 }
 
+// Defines values for AdminUserDetailPasswordKind.
+const (
+	AdminUserDetailPasswordKindInitial   AdminUserDetailPasswordKind = "initial"
+	AdminUserDetailPasswordKindTemporary AdminUserDetailPasswordKind = "temporary"
+	AdminUserDetailPasswordKindUser      AdminUserDetailPasswordKind = "user"
+)
+
+// Valid indicates whether the value is a known member of the AdminUserDetailPasswordKind enum.
+func (e AdminUserDetailPasswordKind) Valid() bool {
+	switch e {
+	case AdminUserDetailPasswordKindInitial:
+		return true
+	case AdminUserDetailPasswordKindTemporary:
+		return true
+	case AdminUserDetailPasswordKindUser:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ClassCreateGrade.
 const (
 	ClassCreateGradeN10 ClassCreateGrade = 10
@@ -187,6 +208,223 @@ type ActivateRequest struct {
 	Username    string  `json:"username"`
 }
 
+// AdminClassRef Kelas terkini pengguna beserta jurusan dan tahun ajarannya.
+type AdminClassRef struct {
+	// AcademicYearLabel Label tahun ajaran, misalnya "2026/2027".
+	AcademicYearLabel string `json:"academicYearLabel"`
+
+	// Id ID kelas.
+	Id openapi_types.UUID `json:"id"`
+
+	// MajorCode Kode jurusan kelas.
+	MajorCode string `json:"majorCode"`
+
+	// Name Nama tampilan kelas, misalnya "XI RPL B".
+	Name string `json:"name"`
+}
+
+// AdminContentBlockRequest defines model for AdminContentBlockRequest.
+type AdminContentBlockRequest struct {
+	// Reason Alasan pencabutan izin, 3–300 karakter.
+	Reason string `json:"reason"`
+}
+
+// AdminEnrollment Satu riwayat kelas pengguna.
+type AdminEnrollment struct {
+	// AcademicYearLabel Label tahun ajaran, misalnya "2026/2027".
+	AcademicYearLabel string `json:"academicYearLabel"`
+
+	// ClassId ID kelas.
+	ClassId openapi_types.UUID `json:"classId"`
+
+	// ClassName Nama tampilan kelas.
+	ClassName string `json:"className"`
+
+	// MajorCode Kode jurusan kelas.
+	MajorCode string `json:"majorCode"`
+
+	// Outcome Hasil akhir, misalnya "lulus" atau "pindah".
+	Outcome *string `json:"outcome"`
+}
+
+// AdminRoleAssignment Satu penugasan role aktif pengguna.
+type AdminRoleAssignment struct {
+	// ExpiresAt Waktu kedaluwarsa penugasan.
+	ExpiresAt *time.Time `json:"expiresAt"`
+
+	// Id ID penugasan role.
+	Id openapi_types.UUID `json:"id"`
+
+	// MajorId Jurusan cakupan role. Kosong berarti global.
+	MajorId *openapi_types.UUID `json:"majorId"`
+
+	// RoleName Nama tampilan role.
+	RoleName string `json:"roleName"`
+
+	// RoleSlug Slug role, misalnya "major_admin".
+	RoleSlug string `json:"roleSlug"`
+}
+
+// AdminUserCreate Data pembuatan akun oleh admin.
+type AdminUserCreate struct {
+	AccountType AccountType `json:"accountType"`
+
+	// ClassId Kelas siswa. Wajib untuk siswa.
+	ClassId *openapi_types.UUID `json:"classId,omitempty"`
+
+	// DisplayName Nama tampilan, 1–100 karakter.
+	DisplayName string `json:"displayName"`
+
+	// EntryYear Angkatan masuk, 1950–2100. Default dihitung dari kelas.
+	EntryYear *int `json:"entryYear,omitempty"`
+
+	// Nisn NISN 10 digit. Wajib untuk siswa.
+	Nisn *string `json:"nisn,omitempty"`
+
+	// StaffNumber NIP/ID staf, 3–30 karakter.
+	StaffNumber *string `json:"staffNumber,omitempty"`
+
+	// TeacherMajorIds Jurusan yang diampu. Hanya untuk guru.
+	TeacherMajorIds *[]openapi_types.UUID `json:"teacherMajorIds,omitempty"`
+}
+
+// AdminUserCreated defines model for AdminUserCreated.
+type AdminUserCreated struct {
+	// InitialPassword Sandi awal akun. Hanya ditampilkan sekali pada respons ini dan tidak
+	// dapat diambil kembali.
+	InitialPassword string `json:"initialPassword"`
+
+	// User Detail pengguna untuk admin, termasuk data akademik dan role.
+	User AdminUserDetail `json:"user"`
+}
+
+// AdminUserDetail Detail pengguna untuk admin, termasuk data akademik dan role.
+type AdminUserDetail struct {
+	AccountType AccountType `json:"accountType"`
+
+	// Activated Apakah akun sudah aktivasi.
+	Activated bool `json:"activated"`
+
+	// ActiveSessions Jumlah sesi aktif pengguna.
+	ActiveSessions int `json:"activeSessions"`
+
+	// ContentBlocked Apakah izin membuat konten sedang dicabut.
+	ContentBlocked bool `json:"contentBlocked"`
+
+	// CreatedAt Waktu akun dibuat.
+	CreatedAt time.Time `json:"createdAt"`
+
+	// CurrentClass Kelas terkini siswa.
+	CurrentClass *AdminClassRef `json:"currentClass"`
+
+	// DeactivatedAt Waktu akun dinonaktifkan.
+	DeactivatedAt *time.Time `json:"deactivatedAt"`
+
+	// DisplayName Nama tampilan.
+	DisplayName string `json:"displayName"`
+
+	// Enrollments Riwayat kelas pengguna, terbaru lebih dulu.
+	Enrollments []AdminEnrollment `json:"enrollments"`
+
+	// EntryYear Angkatan masuk.
+	EntryYear *int `json:"entryYear"`
+
+	// GraduationYear Tahun lulus.
+	GraduationYear *int `json:"graduationYear"`
+
+	// Id ID pengguna.
+	Id openapi_types.UUID `json:"id"`
+
+	// LastLoginAt Waktu masuk terakhir.
+	LastLoginAt *time.Time `json:"lastLoginAt"`
+
+	// Nisn NISN siswa.
+	Nisn *string `json:"nisn"`
+
+	// PasswordExpiresAt Waktu kedaluwarsa sandi.
+	PasswordExpiresAt *time.Time `json:"passwordExpiresAt"`
+
+	// PasswordKind Jenis sandi yang sedang berlaku.
+	PasswordKind AdminUserDetailPasswordKind `json:"passwordKind"`
+
+	// Roles Role aktif pengguna.
+	Roles []AdminRoleAssignment `json:"roles"`
+
+	// StaffNumber NIP/ID staf guru atau tendik.
+	StaffNumber *string       `json:"staffNumber"`
+	Status      AccountStatus `json:"status"`
+
+	// TeacherMajorIds Jurusan yang diampu guru.
+	TeacherMajorIds []openapi_types.UUID `json:"teacherMajorIds"`
+
+	// Username Kosong sebelum aktivasi.
+	Username *string `json:"username"`
+}
+
+// AdminUserDetailPasswordKind Jenis sandi yang sedang berlaku.
+type AdminUserDetailPasswordKind string
+
+// AdminUserPage defines model for AdminUserPage.
+type AdminUserPage struct {
+	Items []AdminUserSummary `json:"items"`
+
+	// NextCursor Cursor halaman berikutnya. Kosong pada halaman terakhir.
+	NextCursor *string `json:"nextCursor"`
+}
+
+// AdminUserSummary Ringkasan pengguna untuk daftar admin.
+type AdminUserSummary struct {
+	AccountType AccountType `json:"accountType"`
+
+	// Activated Apakah akun sudah aktivasi.
+	Activated bool `json:"activated"`
+
+	// ContentBlocked Apakah izin membuat konten sedang dicabut.
+	ContentBlocked bool `json:"contentBlocked"`
+
+	// CreatedAt Waktu akun dibuat.
+	CreatedAt time.Time `json:"createdAt"`
+
+	// CurrentClass Kelas terkini siswa. Kosong untuk guru, tendik, dan alumni tanpa kelas.
+	CurrentClass *AdminClassRef `json:"currentClass"`
+
+	// DisplayName Nama tampilan.
+	DisplayName string `json:"displayName"`
+
+	// Id ID pengguna.
+	Id openapi_types.UUID `json:"id"`
+
+	// LastLoginAt Waktu masuk terakhir.
+	LastLoginAt *time.Time `json:"lastLoginAt"`
+
+	// Nisn NISN siswa.
+	Nisn *string `json:"nisn"`
+
+	// StaffNumber NIP/ID staf guru atau tendik.
+	StaffNumber *string       `json:"staffNumber"`
+	Status      AccountStatus `json:"status"`
+
+	// Username Kosong sebelum aktivasi.
+	Username *string `json:"username"`
+}
+
+// AdminUserUpdate Perubahan data akun oleh admin. Field yang tidak dikirim tidak berubah.
+type AdminUserUpdate struct {
+	AccountType *AccountType `json:"accountType,omitempty"`
+
+	// DisplayName Nama tampilan, 1–100 karakter.
+	DisplayName *string `json:"displayName,omitempty"`
+
+	// Nisn NISN 10 digit. Kirim string kosong untuk mengosongkan.
+	Nisn *string `json:"nisn,omitempty"`
+
+	// StaffNumber NIP/ID staf, 3–30 karakter. Kirim string kosong untuk mengosongkan.
+	StaffNumber *string `json:"staffNumber,omitempty"`
+
+	// TeacherMajorIds Jurusan yang diampu. Hanya untuk guru.
+	TeacherMajorIds *[]openapi_types.UUID `json:"teacherMajorIds,omitempty"`
+}
+
 // ChangePasswordRequest defines model for ChangePasswordRequest.
 type ChangePasswordRequest struct {
 	CurrentPassword *string `json:"currentPassword,omitempty"`
@@ -266,6 +504,15 @@ type FieldError struct {
 	Field   string  `json:"field"`
 	Message string  `json:"message"`
 	Ref     *string `json:"ref,omitempty"`
+}
+
+// IssuedPassword Sandi yang baru diterbitkan. Hanya ditampilkan sekali.
+type IssuedPassword struct {
+	// ExpiresAt Waktu kedaluwarsa sandi.
+	ExpiresAt time.Time `json:"expiresAt"`
+
+	// Password Sandi baru. Hanya ditampilkan sekali pada respons ini dan tidak dapat diambil kembali.
+	Password string `json:"password"`
 }
 
 // LoginRequest defines model for LoginRequest.
@@ -445,6 +692,21 @@ type GetAdminClassesParams struct {
 	MajorId        *openapi_types.UUID `form:"majorId,omitempty" json:"majorId,omitempty"`
 }
 
+// GetAdminUsersParams defines parameters for GetAdminUsers.
+type GetAdminUsersParams struct {
+	AccountType *AccountType        `form:"accountType,omitempty" json:"accountType,omitempty"`
+	Status      *AccountStatus      `form:"status,omitempty" json:"status,omitempty"`
+	MajorId     *openapi_types.UUID `form:"majorId,omitempty" json:"majorId,omitempty"`
+	ClassId     *openapi_types.UUID `form:"classId,omitempty" json:"classId,omitempty"`
+
+	// Q Cari pada nama tampilan, username, NISN, atau NIP/ID staf.
+	Q *string `form:"q,omitempty" json:"q,omitempty"`
+
+	// Cursor Cursor halaman berikutnya dari `nextCursor`.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // GetAuthUsernameAvailabilityParams defines parameters for GetAuthUsernameAvailability.
 type GetAuthUsernameAvailabilityParams struct {
 	U string `form:"u" json:"u"`
@@ -467,6 +729,15 @@ type PostAdminMajorJSONRequestBody = MajorCreate
 
 // PatchAdminMajorJSONRequestBody defines body for PatchAdminMajor for application/json ContentType.
 type PatchAdminMajorJSONRequestBody = MajorUpdate
+
+// PostAdminUserJSONRequestBody defines body for PostAdminUser for application/json ContentType.
+type PostAdminUserJSONRequestBody = AdminUserCreate
+
+// PatchAdminUserJSONRequestBody defines body for PatchAdminUser for application/json ContentType.
+type PatchAdminUserJSONRequestBody = AdminUserUpdate
+
+// PostAdminUserContentBlockJSONRequestBody defines body for PostAdminUserContentBlock for application/json ContentType.
+type PostAdminUserContentBlockJSONRequestBody = AdminContentBlockRequest
 
 // PostAuthActivateJSONRequestBody defines body for PostAuthActivate for application/json ContentType.
 type PostAuthActivateJSONRequestBody = ActivateRequest
@@ -518,6 +789,36 @@ type ServerInterface interface {
 	// PatchAdminMajor Ubah jurusan
 	// (PATCH /admin/majors/{id})
 	PatchAdminMajor(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// GetAdminUsers Daftar pengguna
+	// (GET /admin/users)
+	GetAdminUsers(w http.ResponseWriter, r *http.Request, params GetAdminUsersParams)
+	// PostAdminUser Buat pengguna
+	// (POST /admin/users)
+	PostAdminUser(w http.ResponseWriter, r *http.Request)
+	// GetAdminUser Detail pengguna
+	// (GET /admin/users/{id})
+	GetAdminUser(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// PatchAdminUser Ubah pengguna
+	// (PATCH /admin/users/{id})
+	PatchAdminUser(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// PostAdminUserContentBlock Cabut izin membuat konten
+	// (POST /admin/users/{id}/content-block)
+	PostAdminUserContentBlock(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// PostAdminUserContentUnblock Pulihkan izin membuat konten
+	// (POST /admin/users/{id}/content-unblock)
+	PostAdminUserContentUnblock(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// PostAdminUserDeactivate Nonaktifkan pengguna
+	// (POST /admin/users/{id}/deactivate)
+	PostAdminUserDeactivate(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// PostAdminUserReactivate Aktifkan kembali pengguna
+	// (POST /admin/users/{id}/reactivate)
+	PostAdminUserReactivate(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// PostAdminUserReissueInitialPassword Terbitkan ulang sandi awal
+	// (POST /admin/users/{id}/reissue-initial-password)
+	PostAdminUserReissueInitialPassword(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// PostAdminUserResetPassword Reset sandi pengguna
+	// (POST /admin/users/{id}/reset-password)
+	PostAdminUserResetPassword(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// PostAuthActivate Aktivasi akun (login pertama)
 	// (POST /auth/activate)
 	PostAuthActivate(w http.ResponseWriter, r *http.Request)
@@ -632,6 +933,66 @@ func (_ Unimplemented) PostAdminMajor(w http.ResponseWriter, r *http.Request) {
 // PatchAdminMajor Ubah jurusan
 // (PATCH /admin/majors/{id})
 func (_ Unimplemented) PatchAdminMajor(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetAdminUsers Daftar pengguna
+// (GET /admin/users)
+func (_ Unimplemented) GetAdminUsers(w http.ResponseWriter, r *http.Request, params GetAdminUsersParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostAdminUser Buat pengguna
+// (POST /admin/users)
+func (_ Unimplemented) PostAdminUser(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetAdminUser Detail pengguna
+// (GET /admin/users/{id})
+func (_ Unimplemented) GetAdminUser(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PatchAdminUser Ubah pengguna
+// (PATCH /admin/users/{id})
+func (_ Unimplemented) PatchAdminUser(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostAdminUserContentBlock Cabut izin membuat konten
+// (POST /admin/users/{id}/content-block)
+func (_ Unimplemented) PostAdminUserContentBlock(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostAdminUserContentUnblock Pulihkan izin membuat konten
+// (POST /admin/users/{id}/content-unblock)
+func (_ Unimplemented) PostAdminUserContentUnblock(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostAdminUserDeactivate Nonaktifkan pengguna
+// (POST /admin/users/{id}/deactivate)
+func (_ Unimplemented) PostAdminUserDeactivate(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostAdminUserReactivate Aktifkan kembali pengguna
+// (POST /admin/users/{id}/reactivate)
+func (_ Unimplemented) PostAdminUserReactivate(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostAdminUserReissueInitialPassword Terbitkan ulang sandi awal
+// (POST /admin/users/{id}/reissue-initial-password)
+func (_ Unimplemented) PostAdminUserReissueInitialPassword(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostAdminUserResetPassword Reset sandi pengguna
+// (POST /admin/users/{id}/reset-password)
+func (_ Unimplemented) PostAdminUserResetPassword(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -971,6 +1332,339 @@ func (siw *ServerInterfaceWrapper) PatchAdminMajor(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PatchAdminMajor(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAdminUsers operation middleware
+func (siw *ServerInterfaceWrapper) GetAdminUsers(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetAdminUsersParams
+
+	// ------------- Optional query parameter "accountType" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "accountType", r.URL.Query(), &params.AccountType, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "accountType"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "accountType", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "majorId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "majorId", r.URL.Query(), &params.MajorId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "majorId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "majorId", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "classId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "classId", r.URL.Query(), &params.ClassId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "classId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "classId", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAdminUsers(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAdminUser operation middleware
+func (siw *ServerInterfaceWrapper) PostAdminUser(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAdminUser(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAdminUser operation middleware
+func (siw *ServerInterfaceWrapper) GetAdminUser(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAdminUser(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PatchAdminUser operation middleware
+func (siw *ServerInterfaceWrapper) PatchAdminUser(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PatchAdminUser(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAdminUserContentBlock operation middleware
+func (siw *ServerInterfaceWrapper) PostAdminUserContentBlock(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAdminUserContentBlock(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAdminUserContentUnblock operation middleware
+func (siw *ServerInterfaceWrapper) PostAdminUserContentUnblock(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAdminUserContentUnblock(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAdminUserDeactivate operation middleware
+func (siw *ServerInterfaceWrapper) PostAdminUserDeactivate(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAdminUserDeactivate(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAdminUserReactivate operation middleware
+func (siw *ServerInterfaceWrapper) PostAdminUserReactivate(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAdminUserReactivate(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAdminUserReissueInitialPassword operation middleware
+func (siw *ServerInterfaceWrapper) PostAdminUserReissueInitialPassword(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAdminUserReissueInitialPassword(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAdminUserResetPassword operation middleware
+func (siw *ServerInterfaceWrapper) PostAdminUserResetPassword(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAdminUserResetPassword(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1412,6 +2106,36 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/admin/classes/{id}", wrapper.PatchAdminClass)
 	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/users", wrapper.GetAdminUsers)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/users", wrapper.PostAdminUser)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/users/{id}", wrapper.GetAdminUser)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/admin/users/{id}", wrapper.PatchAdminUser)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/users/{id}/deactivate", wrapper.PostAdminUserDeactivate)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/users/{id}/reactivate", wrapper.PostAdminUserReactivate)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/users/{id}/reset-password", wrapper.PostAdminUserResetPassword)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/users/{id}/reissue-initial-password", wrapper.PostAdminUserReissueInitialPassword)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/users/{id}/content-block", wrapper.PostAdminUserContentBlock)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/users/{id}/content-unblock", wrapper.PostAdminUserContentUnblock)
+	})
 
 	return r
 }
@@ -1825,6 +2549,374 @@ type PatchAdminMajordefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response PatchAdminMajordefaultApplicationProblemPlusJSONResponse) VisitPatchAdminMajorResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAdminUsersRequestObject struct {
+	Params GetAdminUsersParams
+}
+
+type GetAdminUsersResponseObject interface {
+	VisitGetAdminUsersResponse(w http.ResponseWriter) error
+}
+
+type GetAdminUsers200JSONResponse AdminUserPage
+
+func (response GetAdminUsers200JSONResponse) VisitGetAdminUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAdminUsersdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetAdminUsersdefaultApplicationProblemPlusJSONResponse) VisitGetAdminUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAdminUserRequestObject struct {
+	Body *PostAdminUserJSONRequestBody
+}
+
+type PostAdminUserResponseObject interface {
+	VisitPostAdminUserResponse(w http.ResponseWriter) error
+}
+
+type PostAdminUser201JSONResponse AdminUserCreated
+
+func (response PostAdminUser201JSONResponse) VisitPostAdminUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAdminUserdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostAdminUserdefaultApplicationProblemPlusJSONResponse) VisitPostAdminUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAdminUserRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type GetAdminUserResponseObject interface {
+	VisitGetAdminUserResponse(w http.ResponseWriter) error
+}
+
+type GetAdminUser200JSONResponse AdminUserDetail
+
+func (response GetAdminUser200JSONResponse) VisitGetAdminUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAdminUserdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetAdminUserdefaultApplicationProblemPlusJSONResponse) VisitGetAdminUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchAdminUserRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *PatchAdminUserJSONRequestBody
+}
+
+type PatchAdminUserResponseObject interface {
+	VisitPatchAdminUserResponse(w http.ResponseWriter) error
+}
+
+type PatchAdminUser200JSONResponse AdminUserDetail
+
+func (response PatchAdminUser200JSONResponse) VisitPatchAdminUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchAdminUserdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PatchAdminUserdefaultApplicationProblemPlusJSONResponse) VisitPatchAdminUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAdminUserContentBlockRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *PostAdminUserContentBlockJSONRequestBody
+}
+
+type PostAdminUserContentBlockResponseObject interface {
+	VisitPostAdminUserContentBlockResponse(w http.ResponseWriter) error
+}
+
+type PostAdminUserContentBlock204Response struct {
+}
+
+func (response PostAdminUserContentBlock204Response) VisitPostAdminUserContentBlockResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PostAdminUserContentBlockdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostAdminUserContentBlockdefaultApplicationProblemPlusJSONResponse) VisitPostAdminUserContentBlockResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAdminUserContentUnblockRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type PostAdminUserContentUnblockResponseObject interface {
+	VisitPostAdminUserContentUnblockResponse(w http.ResponseWriter) error
+}
+
+type PostAdminUserContentUnblock204Response struct {
+}
+
+func (response PostAdminUserContentUnblock204Response) VisitPostAdminUserContentUnblockResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PostAdminUserContentUnblockdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostAdminUserContentUnblockdefaultApplicationProblemPlusJSONResponse) VisitPostAdminUserContentUnblockResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAdminUserDeactivateRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type PostAdminUserDeactivateResponseObject interface {
+	VisitPostAdminUserDeactivateResponse(w http.ResponseWriter) error
+}
+
+type PostAdminUserDeactivate204Response struct {
+}
+
+func (response PostAdminUserDeactivate204Response) VisitPostAdminUserDeactivateResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PostAdminUserDeactivatedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostAdminUserDeactivatedefaultApplicationProblemPlusJSONResponse) VisitPostAdminUserDeactivateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAdminUserReactivateRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type PostAdminUserReactivateResponseObject interface {
+	VisitPostAdminUserReactivateResponse(w http.ResponseWriter) error
+}
+
+type PostAdminUserReactivate204Response struct {
+}
+
+func (response PostAdminUserReactivate204Response) VisitPostAdminUserReactivateResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PostAdminUserReactivatedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostAdminUserReactivatedefaultApplicationProblemPlusJSONResponse) VisitPostAdminUserReactivateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAdminUserReissueInitialPasswordRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type PostAdminUserReissueInitialPasswordResponseObject interface {
+	VisitPostAdminUserReissueInitialPasswordResponse(w http.ResponseWriter) error
+}
+
+type PostAdminUserReissueInitialPassword200JSONResponse IssuedPassword
+
+func (response PostAdminUserReissueInitialPassword200JSONResponse) VisitPostAdminUserReissueInitialPasswordResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAdminUserReissueInitialPassworddefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostAdminUserReissueInitialPassworddefaultApplicationProblemPlusJSONResponse) VisitPostAdminUserReissueInitialPasswordResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAdminUserResetPasswordRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type PostAdminUserResetPasswordResponseObject interface {
+	VisitPostAdminUserResetPasswordResponse(w http.ResponseWriter) error
+}
+
+type PostAdminUserResetPassword200JSONResponse IssuedPassword
+
+func (response PostAdminUserResetPassword200JSONResponse) VisitPostAdminUserResetPasswordResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAdminUserResetPassworddefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostAdminUserResetPassworddefaultApplicationProblemPlusJSONResponse) VisitPostAdminUserResetPasswordResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -2424,6 +3516,36 @@ type StrictServerInterface interface {
 	// PatchAdminMajor Ubah jurusan
 	// (PATCH /admin/majors/{id})
 	PatchAdminMajor(ctx context.Context, request PatchAdminMajorRequestObject) (PatchAdminMajorResponseObject, error)
+	// GetAdminUsers Daftar pengguna
+	// (GET /admin/users)
+	GetAdminUsers(ctx context.Context, request GetAdminUsersRequestObject) (GetAdminUsersResponseObject, error)
+	// PostAdminUser Buat pengguna
+	// (POST /admin/users)
+	PostAdminUser(ctx context.Context, request PostAdminUserRequestObject) (PostAdminUserResponseObject, error)
+	// GetAdminUser Detail pengguna
+	// (GET /admin/users/{id})
+	GetAdminUser(ctx context.Context, request GetAdminUserRequestObject) (GetAdminUserResponseObject, error)
+	// PatchAdminUser Ubah pengguna
+	// (PATCH /admin/users/{id})
+	PatchAdminUser(ctx context.Context, request PatchAdminUserRequestObject) (PatchAdminUserResponseObject, error)
+	// PostAdminUserContentBlock Cabut izin membuat konten
+	// (POST /admin/users/{id}/content-block)
+	PostAdminUserContentBlock(ctx context.Context, request PostAdminUserContentBlockRequestObject) (PostAdminUserContentBlockResponseObject, error)
+	// PostAdminUserContentUnblock Pulihkan izin membuat konten
+	// (POST /admin/users/{id}/content-unblock)
+	PostAdminUserContentUnblock(ctx context.Context, request PostAdminUserContentUnblockRequestObject) (PostAdminUserContentUnblockResponseObject, error)
+	// PostAdminUserDeactivate Nonaktifkan pengguna
+	// (POST /admin/users/{id}/deactivate)
+	PostAdminUserDeactivate(ctx context.Context, request PostAdminUserDeactivateRequestObject) (PostAdminUserDeactivateResponseObject, error)
+	// PostAdminUserReactivate Aktifkan kembali pengguna
+	// (POST /admin/users/{id}/reactivate)
+	PostAdminUserReactivate(ctx context.Context, request PostAdminUserReactivateRequestObject) (PostAdminUserReactivateResponseObject, error)
+	// PostAdminUserReissueInitialPassword Terbitkan ulang sandi awal
+	// (POST /admin/users/{id}/reissue-initial-password)
+	PostAdminUserReissueInitialPassword(ctx context.Context, request PostAdminUserReissueInitialPasswordRequestObject) (PostAdminUserReissueInitialPasswordResponseObject, error)
+	// PostAdminUserResetPassword Reset sandi pengguna
+	// (POST /admin/users/{id}/reset-password)
+	PostAdminUserResetPassword(ctx context.Context, request PostAdminUserResetPasswordRequestObject) (PostAdminUserResetPasswordResponseObject, error)
 	// PostAuthActivate Aktivasi akun (login pertama)
 	// (POST /auth/activate)
 	PostAuthActivate(ctx context.Context, request PostAuthActivateRequestObject) (PostAuthActivateResponseObject, error)
@@ -2821,6 +3943,285 @@ func (sh *strictHandler) PatchAdminMajor(w http.ResponseWriter, r *http.Request,
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(PatchAdminMajorResponseObject); ok {
 		if err := validResponse.VisitPatchAdminMajorResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetAdminUsers operation middleware
+func (sh *strictHandler) GetAdminUsers(w http.ResponseWriter, r *http.Request, params GetAdminUsersParams) {
+	var request GetAdminUsersRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAdminUsers(ctx, request.(GetAdminUsersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAdminUsers")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetAdminUsersResponseObject); ok {
+		if err := validResponse.VisitGetAdminUsersResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostAdminUser operation middleware
+func (sh *strictHandler) PostAdminUser(w http.ResponseWriter, r *http.Request) {
+	var request PostAdminUserRequestObject
+
+	var body PostAdminUserJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostAdminUser(ctx, request.(PostAdminUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostAdminUser")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostAdminUserResponseObject); ok {
+		if err := validResponse.VisitPostAdminUserResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetAdminUser operation middleware
+func (sh *strictHandler) GetAdminUser(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request GetAdminUserRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAdminUser(ctx, request.(GetAdminUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAdminUser")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetAdminUserResponseObject); ok {
+		if err := validResponse.VisitGetAdminUserResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PatchAdminUser operation middleware
+func (sh *strictHandler) PatchAdminUser(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PatchAdminUserRequestObject
+
+	request.Id = id
+
+	var body PatchAdminUserJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PatchAdminUser(ctx, request.(PatchAdminUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PatchAdminUser")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PatchAdminUserResponseObject); ok {
+		if err := validResponse.VisitPatchAdminUserResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostAdminUserContentBlock operation middleware
+func (sh *strictHandler) PostAdminUserContentBlock(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PostAdminUserContentBlockRequestObject
+
+	request.Id = id
+
+	var body PostAdminUserContentBlockJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostAdminUserContentBlock(ctx, request.(PostAdminUserContentBlockRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostAdminUserContentBlock")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostAdminUserContentBlockResponseObject); ok {
+		if err := validResponse.VisitPostAdminUserContentBlockResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostAdminUserContentUnblock operation middleware
+func (sh *strictHandler) PostAdminUserContentUnblock(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PostAdminUserContentUnblockRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostAdminUserContentUnblock(ctx, request.(PostAdminUserContentUnblockRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostAdminUserContentUnblock")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostAdminUserContentUnblockResponseObject); ok {
+		if err := validResponse.VisitPostAdminUserContentUnblockResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostAdminUserDeactivate operation middleware
+func (sh *strictHandler) PostAdminUserDeactivate(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PostAdminUserDeactivateRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostAdminUserDeactivate(ctx, request.(PostAdminUserDeactivateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostAdminUserDeactivate")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostAdminUserDeactivateResponseObject); ok {
+		if err := validResponse.VisitPostAdminUserDeactivateResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostAdminUserReactivate operation middleware
+func (sh *strictHandler) PostAdminUserReactivate(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PostAdminUserReactivateRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostAdminUserReactivate(ctx, request.(PostAdminUserReactivateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostAdminUserReactivate")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostAdminUserReactivateResponseObject); ok {
+		if err := validResponse.VisitPostAdminUserReactivateResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostAdminUserReissueInitialPassword operation middleware
+func (sh *strictHandler) PostAdminUserReissueInitialPassword(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PostAdminUserReissueInitialPasswordRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostAdminUserReissueInitialPassword(ctx, request.(PostAdminUserReissueInitialPasswordRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostAdminUserReissueInitialPassword")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostAdminUserReissueInitialPasswordResponseObject); ok {
+		if err := validResponse.VisitPostAdminUserReissueInitialPasswordResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostAdminUserResetPassword operation middleware
+func (sh *strictHandler) PostAdminUserResetPassword(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PostAdminUserResetPasswordRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostAdminUserResetPassword(ctx, request.(PostAdminUserResetPasswordRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostAdminUserResetPassword")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostAdminUserResetPasswordResponseObject); ok {
+		if err := validResponse.VisitPostAdminUserResetPasswordResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
