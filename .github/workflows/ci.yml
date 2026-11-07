@@ -1,0 +1,140 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  api:
+    name: API (Go)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/api/go.mod
+          cache-dependency-path: apps/api/go.sum
+
+      - name: Cek format gofmt
+        run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go test
+        run: go test -race -count=1 ./...
+
+      - name: go build
+        run: go build ./...
+
+      - name: Cek generated code
+        run: if [ -x scripts/check-generated.sh ]; then ./scripts/check-generated.sh; fi
+
+  migrations:
+    name: Migrasi DB
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: postgres://grafikarsa:grafikarsa@localhost:5432/grafikarsa?sslmode=disable
+    services:
+      postgres:
+        image: postgres:18.4-alpine
+        env:
+          POSTGRES_USER: grafikarsa
+          POSTGRES_PASSWORD: grafikarsa
+          POSTGRES_DB: grafikarsa
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U grafikarsa"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/api/go.mod
+          cache-dependency-path: apps/api/go.sum
+
+      - name: Migrasi naik, turun, lalu naik lagi
+        run: |
+          GOOSE="go run github.com/pressly/goose/v3/cmd/goose@v3.26.0 -dir apps/api/db/migrations postgres $DATABASE_URL"
+          $GOOSE up
+          $GOOSE down-to 0
+          $GOOSE up
+
+      - name: Seed idempoten
+        run: |
+          if [ -d apps/api/db/seeds ]; then
+            mapfile -t seeds < <(find apps/api/db/seeds -maxdepth 1 -type f -name '*.sql' | sort)
+            for _ in 1 2; do
+              for file in "${seeds[@]}"; do
+                psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "$file"
+              done
+            done
+          fi
+
+  web:
+    name: Web (Next.js)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependency
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm --filter web lint
+
+      - name: Typecheck
+        run: pnpm --filter web typecheck
+
+      - name: Build
+        run: pnpm --filter web build
+
+  docker:
+    name: Build image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build image API
+        run: docker build -t gk-api:ci apps/api
+
+      - name: Build image web
+        run: if [ -f apps/web/Dockerfile ]; then docker build -t gk-web:ci -f apps/web/Dockerfile .; fi
