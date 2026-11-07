@@ -14,12 +14,16 @@ import (
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/auth"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/users"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/password"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/secretbox"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/securetoken"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/store"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/testutil"
 )
 
 const testActorIP = "203.0.113.7"
+
+// testVaultSecret keys the initial-password vault in tests.
+var testVaultSecret = []byte("test-secret-key-for-initial-password-vault")
 
 type fakeInvalidator struct {
 	mu    sync.Mutex
@@ -55,6 +59,7 @@ type fixture struct {
 	store       *store.Store
 	service     *users.Service
 	hasher      *password.Hasher
+	box         *secretbox.Box
 	invalidator *fakeInvalidator
 
 	yearID uuid.UUID
@@ -84,14 +89,19 @@ func newFixture(t *testing.T) *fixture {
 		KeyLength:   32,
 	}, 1)
 	invalidator := &fakeInvalidator{}
+	box, err := secretbox.New(testVaultSecret)
+	if err != nil {
+		t.Fatalf("secretbox.New: %v", err)
+	}
 
 	f := &fixture{
 		t:           t,
 		ctx:         context.Background(),
 		pool:        pool,
 		store:       st,
-		service:     users.NewService(st, invalidator, hasher),
+		service:     users.NewService(st, invalidator, hasher, box),
 		hasher:      hasher,
+		box:         box,
 		invalidator: invalidator,
 	}
 

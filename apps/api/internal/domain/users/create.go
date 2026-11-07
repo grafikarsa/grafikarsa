@@ -99,6 +99,10 @@ func (s *Service) Create(ctx context.Context, a Actor, in CreateInput) (Created,
 			return fmt.Errorf("users: insert user: %w", err)
 		}
 
+		if err := s.putVaultEntry(ctx, q, id, plain, expiresAt); err != nil {
+			return err
+		}
+
 		switch in.AccountType {
 		case accountTypeStudent:
 			if err := q.InsertEnrollment(ctx, store.InsertEnrollmentParams{

@@ -156,6 +156,10 @@ func (s *Service) ConfirmRecoveryCodes(ctx context.Context, p *Principal) (*Prin
 		if err := q.CompleteActivation(ctx, p.UserID); err != nil {
 			return fmt.Errorf("auth: complete activation: %w", err)
 		}
+		// The initial password card is no longer usable once activation completes.
+		if err := q.DeleteVaultEntry(ctx, p.UserID); err != nil {
+			return fmt.Errorf("auth: delete initial password vault entry: %w", err)
+		}
 		return audit.Record(ctx, q, audit.Entry{
 			ActorID:    &p.UserID,
 			Action:     "auth.activation_complete",
