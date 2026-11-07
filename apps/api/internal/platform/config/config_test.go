@@ -25,6 +25,7 @@ func setRequiredEnv(t *testing.T) {
 	t.Setenv("S3_SECRET_KEY", "secret-key")
 	t.Setenv("S3_BUCKET_PRIVATE", "gk-private")
 	t.Setenv("S3_BUCKET_PUBLIC", "gk-public")
+	t.Setenv("GK_ALLOWED_ORIGINS", "http://localhost:3020")
 	t.Setenv("GK_SHUTDOWN_TIMEOUT", "25s")
 }
 
@@ -115,6 +116,9 @@ func TestParseValid(t *testing.T) {
 	if cfg.S3BucketPrivate != "gk-private" || cfg.S3BucketPublic != "gk-public" {
 		t.Errorf("buckets = %q, %q", cfg.S3BucketPrivate, cfg.S3BucketPublic)
 	}
+	if len(cfg.AllowedOrigins) != 1 || cfg.AllowedOrigins[0] != "http://localhost:3020" {
+		t.Errorf("AllowedOrigins = %v, want [http://localhost:3020]", cfg.AllowedOrigins)
+	}
 	if cfg.ShutdownTimeout != 25*time.Second {
 		t.Errorf("ShutdownTimeout = %v, want 25s", cfg.ShutdownTimeout)
 	}
@@ -170,6 +174,7 @@ func TestParseDefaults(t *testing.T) {
 	t.Setenv("S3_REGION", "")
 	t.Setenv("S3_BUCKET_PRIVATE", "")
 	t.Setenv("S3_BUCKET_PUBLIC", "")
+	t.Setenv("GK_ALLOWED_ORIGINS", "")
 	t.Setenv("GK_SHUTDOWN_TIMEOUT", "")
 
 	cfg, err := Parse()
@@ -195,8 +200,57 @@ func TestParseDefaults(t *testing.T) {
 	if cfg.S3BucketPublic != "gk-public" {
 		t.Errorf("S3BucketPublic = %q, want %q", cfg.S3BucketPublic, "gk-public")
 	}
+	if len(cfg.AllowedOrigins) != 1 || cfg.AllowedOrigins[0] != "http://localhost:3020" {
+		t.Errorf("AllowedOrigins = %v, want [http://localhost:3020]", cfg.AllowedOrigins)
+	}
 	if cfg.ShutdownTimeout != 25*time.Second {
 		t.Errorf("ShutdownTimeout = %v, want 25s", cfg.ShutdownTimeout)
+	}
+}
+
+func TestParseAllowedOriginsMultiple(t *testing.T) {
+	setRequiredEnv(t)
+	t.Setenv("GK_ALLOWED_ORIGINS", "http://localhost:3020,https://grafikarsa.com")
+
+	cfg, err := Parse()
+	if err != nil {
+		t.Fatalf("Parse() error = %v", err)
+	}
+
+	want := []string{"http://localhost:3020", "https://grafikarsa.com"}
+	if len(cfg.AllowedOrigins) != len(want) {
+		t.Fatalf("AllowedOrigins = %v, want %v", cfg.AllowedOrigins, want)
+	}
+	for i, origin := range want {
+		if cfg.AllowedOrigins[i] != origin {
+			t.Errorf("AllowedOrigins[%d] = %q, want %q", i, cfg.AllowedOrigins[i], origin)
+		}
+	}
+}
+
+func TestParseInvalidAllowedOrigins(t *testing.T) {
+	tests := []string{
+		"ftp://grafikarsa.com",
+		"grafikarsa.com",
+		"https://grafikarsa.com/app",
+		"https://grafikarsa.com/?debug=1",
+		"https://user@grafikarsa.com",
+		"https://",
+	}
+
+	for _, origin := range tests {
+		t.Run(origin, func(t *testing.T) {
+			setRequiredEnv(t)
+			t.Setenv("GK_ALLOWED_ORIGINS", origin)
+
+			_, err := Parse()
+			if err == nil {
+				t.Fatalf("Parse() error = nil, want error for %q", origin)
+			}
+			if !strings.Contains(err.Error(), "GK_ALLOWED_ORIGINS") {
+				t.Errorf("error = %q, want mention of GK_ALLOWED_ORIGINS", err)
+			}
+		})
 	}
 }
 

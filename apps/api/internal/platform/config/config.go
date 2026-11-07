@@ -5,6 +5,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"time"
@@ -42,6 +43,7 @@ type Config struct {
 	S3SecretKey     string        `env:"S3_SECRET_KEY"`
 	S3BucketPrivate string        `env:"S3_BUCKET_PRIVATE" envDefault:"gk-private"`
 	S3BucketPublic  string        `env:"S3_BUCKET_PUBLIC" envDefault:"gk-public"`
+	AllowedOrigins  []string      `env:"GK_ALLOWED_ORIGINS" envDefault:"http://localhost:3020" envSeparator:","`
 	ShutdownTimeout time.Duration `env:"GK_SHUTDOWN_TIMEOUT" envDefault:"25s"`
 }
 
@@ -129,7 +131,33 @@ func (c Config) Validate() error {
 		errs = append(errs, errors.New("S3_SECRET_KEY is required"))
 	}
 
+	for _, origin := range c.AllowedOrigins {
+		if err := validateOrigin(origin); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
 	return errors.Join(errs...)
+}
+
+// validateOrigin checks that origin is an absolute http(s) URL with a host and
+// no path, query, fragment, or credentials.
+func validateOrigin(origin string) error {
+	u, err := url.Parse(origin)
+	if err != nil {
+		return fmt.Errorf("GK_ALLOWED_ORIGINS: %q is not a valid URL", origin)
+	}
+
+	switch {
+	case u.Scheme != "http" && u.Scheme != "https":
+		return fmt.Errorf("GK_ALLOWED_ORIGINS: %q must start with http:// or https://", origin)
+	case u.Host == "":
+		return fmt.Errorf("GK_ALLOWED_ORIGINS: %q must include a host", origin)
+	case u.Path != "" || u.RawQuery != "" || u.Fragment != "" || u.User != nil:
+		return fmt.Errorf("GK_ALLOWED_ORIGINS: %q must not include a path, query, fragment, or credentials", origin)
+	}
+
+	return nil
 }
 
 // IsProduction reports whether the API runs in the production environment.
