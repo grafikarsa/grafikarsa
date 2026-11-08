@@ -1016,6 +1016,88 @@ paths:
           description: Penugasan dicabut.
         default:
           $ref: "#/components/responses/Problem"
+  /admin/audit-logs:
+    get:
+      operationId: getAdminAuditLogs
+      tags: [admin-audit]
+      summary: Daftar audit log
+      description: |
+        Butuh izin `audit.view`. Tanpa izin → 404. Pemegang izin global melihat
+        seluruh entri; pemegang izin ber-scope jurusan hanya melihat entri
+        dengan `scopeMajorId` pada jurusannya (entri tanpa scope jurusan
+        disembunyikan). `actorIp` hanya dikirim ke pemegang izin global.
+        Hasil terbaru lebih dulu dan berhalaman dengan `cursor`.
+      parameters:
+        - name: actorId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: action
+          in: query
+          required: false
+          description: Nama aksi persis, misalnya `user.create`.
+          schema:
+            type: string
+        - name: actionPrefix
+          in: query
+          required: false
+          description: Awalan aksi, misalnya `user.`.
+          schema:
+            type: string
+        - name: targetType
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: targetId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: majorId
+          in: query
+          required: false
+          description: Filter entri yang dicatat untuk jurusan ini.
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: cursor
+          in: query
+          required: false
+          description: Cursor halaman berikutnya dari `nextCursor`.
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        "200":
+          description: Daftar audit log.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditLogPage"
+        default:
+          $ref: "#/components/responses/Problem"
 components:
   schemas:
     CsrfToken:
@@ -1776,6 +1858,59 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AdminUserSummary"
+        nextCursor:
+          type: string
+          nullable: true
+          description: Cursor halaman berikutnya. Kosong pada halaman terakhir.
+    AuditLogEntry:
+      type: object
+      required: [id, occurredAt, action, data]
+      properties:
+        id:
+          type: integer
+          format: int64
+        occurredAt:
+          type: string
+          format: date-time
+        actorId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Kosong untuk aksi sistem.
+        actorName:
+          type: string
+          nullable: true
+        actorUsername:
+          type: string
+          nullable: true
+        actorIp:
+          type: string
+          nullable: true
+          description: Hanya dikirim ke pemegang izin `audit.view` global.
+        action:
+          type: string
+        targetType:
+          type: string
+          nullable: true
+        targetId:
+          type: string
+          format: uuid
+          nullable: true
+        scopeMajorId:
+          type: string
+          format: uuid
+          nullable: true
+        data:
+          type: object
+          additionalProperties: true
+    AuditLogPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditLogEntry"
         nextCursor:
           type: string
           nullable: true
