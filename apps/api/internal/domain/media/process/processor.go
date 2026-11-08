@@ -1,3 +1,5 @@
+//go:build vips
+
 // Package process turns uploaded media into web-ready variants. It links
 // libvips through cgo, so only the worker binary may import it. The API binary
 // must stay CGO_ENABLED=0 and must not depend on this package.

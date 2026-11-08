@@ -31,7 +31,7 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=1 go build -trimpath -ldflags="-s -w" -o /out/worker ./cmd/worker
+RUN CGO_ENABLED=1 go build -tags vips -trimpath -ldflags="-s -w" -o /out/worker ./cmd/worker
 
 FROM debian:trixie-slim AS worker
 

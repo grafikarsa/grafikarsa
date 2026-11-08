@@ -59,7 +59,7 @@ admin-create: ## Buat admin pertama: make admin-create NAME="Nama" USERNAME=admi
 api-run: ## Jalankan API di :8091 (baca .env root)
 	$(API) go run ./cmd/api
 
-worker-run: ## Jalankan worker River
+worker-run: ## Jalankan worker River (tanpa libvips; pemrosesan media butuh image worker)
 	$(API) go run ./cmd/worker
 
 web-dev: ## Jalankan Next.js dev di :3020

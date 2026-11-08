@@ -53,6 +53,9 @@ CI menolak PR jika kode hasil generate (apigen, sqlc, klien web) tidak sinkron.
 ## 4. Konvensi Go
 
 - Go 1.26. Format `gofmt`. Wajib lulus `go vet ./...` dan `go test -race ./...`.
+- Paket `internal/domain/media/process` (libvips, cgo) hanya ter-compile dengan **build tag `vips`**.
+  Tanpa tag (laptop tanpa libvips) semua perintah standar tetap jalan dan worker memakai stub.
+  Image worker & CI memakai `-tags vips`. Jangan impor paket itu dari API.
 - Error yang **diharapkan** (validasi, tidak ditemukan, konflik, tidak berwenang) dikembalikan sebagai
   `*apperr.Error` (lihat `internal/apperr`). Handler cukup `return nil, err`; error handler strict server
   memetakannya ke problem+json. Error lain = 500 dan dicatat di log (tanpa detail ke klien).
