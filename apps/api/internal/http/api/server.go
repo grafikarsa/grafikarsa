@@ -9,6 +9,7 @@ import (
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/academic"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/audit"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/auth"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/profiles"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/roles"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/users"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/apigen"
@@ -21,6 +22,7 @@ type Deps struct {
 	Auth     *auth.Service
 	Academic *academic.Service
 	Users    *users.Service
+	Profiles *profiles.Service
 	Imports  *users.Importer
 	Roles    *roles.Service
 	Audit    *audit.Service
@@ -32,6 +34,7 @@ type Server struct {
 	auth     *auth.Service
 	academic *academic.Service
 	users    *users.Service
+	profiles *profiles.Service
 	imports  *users.Importer
 	roles    *roles.Service
 	audit    *audit.Service
@@ -49,6 +52,7 @@ func NewServer(d Deps) *Server {
 		auth:     d.Auth,
 		academic: d.Academic,
 		users:    d.Users,
+		profiles: d.Profiles,
 		imports:  d.Imports,
 		roles:    d.Roles,
 		audit:    d.Audit,

@@ -14,6 +14,7 @@ import (
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/academic"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/audit"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/auth"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/profiles"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/roles"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/users"
 	apirouter "github.com/grafikarsa/grafikarsa/apps/api/internal/http"
@@ -117,6 +118,7 @@ func main() {
 
 	academicService := academic.NewService(dataStore)
 	usersService := users.NewService(dataStore, authService, hasher, box)
+	profilesService := profiles.NewService(dataStore, authService)
 	rolesService := roles.NewService(dataStore, authService)
 	auditService := audit.NewService(dataStore)
 
@@ -143,6 +145,7 @@ func main() {
 			Auth:           authService,
 			Academic:       academicService,
 			Users:          usersService,
+			Profiles:       profilesService,
 			Imports:        importer,
 			Roles:          rolesService,
 			Audit:          auditService,
