@@ -160,6 +160,93 @@ func (e ImportStatus) Valid() bool {
 	}
 }
 
+// Defines values for MediaKind.
+const (
+	MediaKindDocument MediaKind = "document"
+	MediaKindImage    MediaKind = "image"
+	MediaKindModel3d  MediaKind = "model3d"
+	MediaKindPdf      MediaKind = "pdf"
+)
+
+// Valid indicates whether the value is a known member of the MediaKind enum.
+func (e MediaKind) Valid() bool {
+	switch e {
+	case MediaKindDocument:
+		return true
+	case MediaKindImage:
+		return true
+	case MediaKindModel3d:
+		return true
+	case MediaKindPdf:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MediaPurpose.
+const (
+	MediaPurposeAvatar               MediaPurpose = "avatar"
+	MediaPurposeBadgeIcon            MediaPurpose = "badge_icon"
+	MediaPurposeBanner               MediaPurpose = "banner"
+	MediaPurposeContent              MediaPurpose = "content"
+	MediaPurposeCurationCover        MediaPurpose = "curation_cover"
+	MediaPurposeExperienceAttachment MediaPurpose = "experience_attachment"
+	MediaPurposeGroupAvatar          MediaPurpose = "group_avatar"
+	MediaPurposeGroupBanner          MediaPurpose = "group_banner"
+	MediaPurposeImport               MediaPurpose = "import"
+)
+
+// Valid indicates whether the value is a known member of the MediaPurpose enum.
+func (e MediaPurpose) Valid() bool {
+	switch e {
+	case MediaPurposeAvatar:
+		return true
+	case MediaPurposeBadgeIcon:
+		return true
+	case MediaPurposeBanner:
+		return true
+	case MediaPurposeContent:
+		return true
+	case MediaPurposeCurationCover:
+		return true
+	case MediaPurposeExperienceAttachment:
+		return true
+	case MediaPurposeGroupAvatar:
+		return true
+	case MediaPurposeGroupBanner:
+		return true
+	case MediaPurposeImport:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MediaStatus.
+const (
+	MediaStatusFailed     MediaStatus = "failed"
+	MediaStatusProcessing MediaStatus = "processing"
+	MediaStatusReady      MediaStatus = "ready"
+	MediaStatusUploaded   MediaStatus = "uploaded"
+)
+
+// Valid indicates whether the value is a known member of the MediaStatus enum.
+func (e MediaStatus) Valid() bool {
+	switch e {
+	case MediaStatusFailed:
+		return true
+	case MediaStatusProcessing:
+		return true
+	case MediaStatusReady:
+		return true
+	case MediaStatusUploaded:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for NextStep.
 const (
 	NextStepActivate       NextStep = "activate"
@@ -822,6 +909,48 @@ type MajorUpdate struct {
 	SortOrder *int `json:"sortOrder,omitempty"`
 }
 
+// MediaAsset defines model for MediaAsset.
+type MediaAsset struct {
+	Blurhash      *string            `json:"blurhash,omitempty"`
+	CreatedAt     time.Time          `json:"createdAt"`
+	DominantColor *string            `json:"dominantColor,omitempty"`
+	Height        *int               `json:"height,omitempty"`
+	Id            openapi_types.UUID `json:"id"`
+	IsPublic      bool               `json:"isPublic"`
+
+	// Kind Jenis media yang dideteksi dari isi berkas.
+	Kind             MediaKind    `json:"kind"`
+	MimeType         string       `json:"mimeType"`
+	OriginalFilename *string      `json:"originalFilename,omitempty"`
+	PageCount        *int         `json:"pageCount,omitempty"`
+	Purpose          MediaPurpose `json:"purpose"`
+	SizeBytes        int64        `json:"sizeBytes"`
+	Status           MediaStatus  `json:"status"`
+
+	// Variants Varian siap pakai, dipetakan dari nama varian ke metadata.
+	Variants map[string]MediaVariant `json:"variants"`
+	Width    *int                    `json:"width,omitempty"`
+}
+
+// MediaKind Jenis media yang dideteksi dari isi berkas.
+type MediaKind string
+
+// MediaPurpose defines model for MediaPurpose.
+type MediaPurpose string
+
+// MediaStatus defines model for MediaStatus.
+type MediaStatus string
+
+// MediaVariant defines model for MediaVariant.
+type MediaVariant struct {
+	Bytes int64 `json:"bytes"`
+
+	// Format Format varian, misalnya `avif` atau `webp`.
+	Format string `json:"format"`
+	H      int    `json:"h"`
+	W      int    `json:"w"`
+}
+
 // NextStep Halaman wajib berikutnya. `activate` → /aktivasi, `change_password` → /ganti-sandi,
 // `none` → bebas. Selama bukan `none`, endpoint lain menolak dengan 403
 // `ACTIVATION_REQUIRED` / `PASSWORD_CHANGE_REQUIRED`.
@@ -989,6 +1118,17 @@ type GetAuthUsernameAvailabilityParams struct {
 	U string `form:"u" json:"u"`
 }
 
+// PostMediaMultipartBody defines parameters for PostMedia.
+type PostMediaMultipartBody struct {
+	File    openapi_types.File `json:"file"`
+	Purpose MediaPurpose       `json:"purpose"`
+}
+
+// PostMediaParams defines parameters for PostMedia.
+type PostMediaParams struct {
+	IdempotencyKey *string `json:"Idempotency-Key,omitempty"`
+}
+
 // PostAdminAcademicYearJSONRequestBody defines body for PostAdminAcademicYear for application/json ContentType.
 type PostAdminAcademicYearJSONRequestBody = AcademicYearCreate
 
@@ -1045,6 +1185,9 @@ type PostAuthPasswordRecoverJSONRequestBody = RecoverPasswordRequest
 
 // PostAuthRecoveryCodesRegenerateJSONRequestBody defines body for PostAuthRecoveryCodesRegenerate for application/json ContentType.
 type PostAuthRecoveryCodesRegenerateJSONRequestBody = PasswordConfirmation
+
+// PostMediaMultipartRequestBody defines body for PostMedia for multipart/form-data ContentType.
+type PostMediaMultipartRequestBody PostMediaMultipartBody
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -1198,6 +1341,18 @@ type ServerInterface interface {
 	// GetMajors Daftar jurusan aktif
 	// (GET /majors)
 	GetMajors(w http.ResponseWriter, r *http.Request)
+	// PostMedia Unggah media
+	// (POST /media)
+	PostMedia(w http.ResponseWriter, r *http.Request, params PostMediaParams)
+	// DeleteMedia Hapus media
+	// (DELETE /media/{id})
+	DeleteMedia(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// GetMedia Detail media
+	// (GET /media/{id})
+	GetMedia(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// GetMediaVariant Stream varian media
+	// (GET /media/{id}/{variant})
+	GetMediaVariant(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, variant string)
 	// GetPing Cek API hidup
 	// (GET /ping)
 	GetPing(w http.ResponseWriter, r *http.Request)
@@ -1504,6 +1659,30 @@ func (_ Unimplemented) GetAuthUsernameAvailability(w http.ResponseWriter, r *htt
 // GetMajors Daftar jurusan aktif
 // (GET /majors)
 func (_ Unimplemented) GetMajors(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostMedia Unggah media
+// (POST /media)
+func (_ Unimplemented) PostMedia(w http.ResponseWriter, r *http.Request, params PostMediaParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DeleteMedia Hapus media
+// (DELETE /media/{id})
+func (_ Unimplemented) DeleteMedia(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetMedia Detail media
+// (GET /media/{id})
+func (_ Unimplemented) GetMedia(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetMediaVariant Stream varian media
+// (GET /media/{id}/{variant})
+func (_ Unimplemented) GetMediaVariant(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, variant string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -2789,6 +2968,134 @@ func (siw *ServerInterfaceWrapper) GetMajors(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r)
 }
 
+// PostMedia operation middleware
+func (siw *ServerInterfaceWrapper) PostMedia(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PostMediaParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostMedia(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteMedia operation middleware
+func (siw *ServerInterfaceWrapper) DeleteMedia(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteMedia(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMedia operation middleware
+func (siw *ServerInterfaceWrapper) GetMedia(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMedia(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMediaVariant operation middleware
+func (siw *ServerInterfaceWrapper) GetMediaVariant(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "variant" -------------
+	var variant string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "variant", chi.URLParam(r, "variant"), &variant, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "variant", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMediaVariant(w, r, id, variant)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetPing operation middleware
 func (siw *ServerInterfaceWrapper) GetPing(w http.ResponseWriter, r *http.Request) {
 
@@ -3068,6 +3375,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/audit-logs", wrapper.GetAdminAuditLogs)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/media", wrapper.PostMedia)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/media/{id}", wrapper.DeleteMedia)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/media/{id}", wrapper.GetMedia)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/media/{id}/{variant}", wrapper.GetMediaVariant)
 	})
 
 	return r
@@ -4963,6 +5282,176 @@ func (response GetMajorsdefaultApplicationProblemPlusJSONResponse) VisitGetMajor
 	return err
 }
 
+type PostMediaRequestObject struct {
+	Params PostMediaParams
+	Body   *multipart.Reader
+}
+
+type PostMediaResponseObject interface {
+	VisitPostMediaResponse(w http.ResponseWriter) error
+}
+
+type PostMedia202JSONResponse MediaAsset
+
+func (response PostMedia202JSONResponse) VisitPostMediaResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostMediadefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostMediadefaultApplicationProblemPlusJSONResponse) VisitPostMediaResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteMediaRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type DeleteMediaResponseObject interface {
+	VisitDeleteMediaResponse(w http.ResponseWriter) error
+}
+
+type DeleteMedia204Response struct {
+}
+
+func (response DeleteMedia204Response) VisitDeleteMediaResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteMediadefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DeleteMediadefaultApplicationProblemPlusJSONResponse) VisitDeleteMediaResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMediaRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type GetMediaResponseObject interface {
+	VisitGetMediaResponse(w http.ResponseWriter) error
+}
+
+type GetMedia200JSONResponse MediaAsset
+
+func (response GetMedia200JSONResponse) VisitGetMediaResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMediadefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetMediadefaultApplicationProblemPlusJSONResponse) VisitGetMediaResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMediaVariantRequestObject struct {
+	Id      openapi_types.UUID `json:"id"`
+	Variant string             `json:"variant"`
+}
+
+type GetMediaVariantResponseObject interface {
+	VisitGetMediaVariantResponse(w http.ResponseWriter) error
+}
+
+type GetMediaVariant200ResponseHeaders struct {
+	CacheControl *string
+	ContentType  *string
+}
+
+type GetMediaVariant200ApplicationoctetStreamResponse struct {
+	Body          io.Reader
+	Headers       GetMediaVariant200ResponseHeaders
+	ContentLength int64
+}
+
+func (response GetMediaVariant200ApplicationoctetStreamResponse) VisitGetMediaVariantResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "application/octet-stream")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	if response.Headers.CacheControl != nil {
+		w.Header().Set("Cache-Control", fmt.Sprint(*response.Headers.CacheControl))
+	}
+	if response.Headers.ContentType != nil {
+		w.Header().Set("Content-Type", fmt.Sprint(*response.Headers.ContentType))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetMediaVariantdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetMediaVariantdefaultApplicationProblemPlusJSONResponse) VisitGetMediaVariantResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetPingRequestObject struct {
 }
 
@@ -5153,6 +5642,18 @@ type StrictServerInterface interface {
 	// GetMajors Daftar jurusan aktif
 	// (GET /majors)
 	GetMajors(ctx context.Context, request GetMajorsRequestObject) (GetMajorsResponseObject, error)
+	// PostMedia Unggah media
+	// (POST /media)
+	PostMedia(ctx context.Context, request PostMediaRequestObject) (PostMediaResponseObject, error)
+	// DeleteMedia Hapus media
+	// (DELETE /media/{id})
+	DeleteMedia(ctx context.Context, request DeleteMediaRequestObject) (DeleteMediaResponseObject, error)
+	// GetMedia Detail media
+	// (GET /media/{id})
+	GetMedia(ctx context.Context, request GetMediaRequestObject) (GetMediaResponseObject, error)
+	// GetMediaVariant Stream varian media
+	// (GET /media/{id}/{variant})
+	GetMediaVariant(ctx context.Context, request GetMediaVariantRequestObject) (GetMediaVariantResponseObject, error)
 	// GetPing Cek API hidup
 	// (GET /ping)
 	GetPing(ctx context.Context, request GetPingRequestObject) (GetPingResponseObject, error)
@@ -6577,6 +7078,118 @@ func (sh *strictHandler) GetMajors(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetMajorsResponseObject); ok {
 		if err := validResponse.VisitGetMajorsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostMedia operation middleware
+func (sh *strictHandler) PostMedia(w http.ResponseWriter, r *http.Request, params PostMediaParams) {
+	var request PostMediaRequestObject
+
+	request.Params = params
+
+	if reader, err := r.MultipartReader(); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode multipart body: %w", err))
+		return
+	} else {
+		request.Body = reader
+	}
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostMedia(ctx, request.(PostMediaRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostMedia")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostMediaResponseObject); ok {
+		if err := validResponse.VisitPostMediaResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteMedia operation middleware
+func (sh *strictHandler) DeleteMedia(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request DeleteMediaRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteMedia(ctx, request.(DeleteMediaRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteMedia")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteMediaResponseObject); ok {
+		if err := validResponse.VisitDeleteMediaResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetMedia operation middleware
+func (sh *strictHandler) GetMedia(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request GetMediaRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMedia(ctx, request.(GetMediaRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMedia")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetMediaResponseObject); ok {
+		if err := validResponse.VisitGetMediaResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetMediaVariant operation middleware
+func (sh *strictHandler) GetMediaVariant(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, variant string) {
+	var request GetMediaVariantRequestObject
+
+	request.Id = id
+	request.Variant = variant
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMediaVariant(ctx, request.(GetMediaVariantRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMediaVariant")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetMediaVariantResponseObject); ok {
+		if err := validResponse.VisitGetMediaVariantResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

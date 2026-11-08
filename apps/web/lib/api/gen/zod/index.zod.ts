@@ -5,4 +5,5 @@ export * from './admin-imports/admin-imports.zod';
 export * from './admin-roles/admin-roles.zod';
 export * from './admin-users/admin-users.zod';
 export * from './auth/auth.zod';
+export * from './media/media.zod';
 export * from './system/system.zod';
