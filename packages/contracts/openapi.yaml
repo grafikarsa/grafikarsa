@@ -1358,8 +1358,892 @@ paths:
                 format: binary
         default:
           $ref: "#/components/responses/Problem"
+  /contents:
+    get:
+      operationId: getContents
+      tags: [contents]
+      summary: Katalog konten tayang (Katalog Karya & Blog)
+      description: Hanya konten berstatus published. Paginasi cursor berdasarkan waktu terbit pertama.
+      parameters:
+        - {name: type, in: query, schema: {$ref: "#/components/schemas/ContentType"}}
+        - {name: sort, in: query, schema: {type: string, enum: [latest, popular], default: latest}}
+        - {name: period, in: query, description: Hanya untuk sort=popular., schema: {type: string, enum: [7d, 30d, all], default: all}}
+        - {name: category, in: query, description: Slug kategori., schema: {type: string, maxLength: 60}}
+        - {name: major, in: query, description: Kode jurusan (konten yang salah satu author-nya anggota jurusan itu)., schema: {type: string, maxLength: 20}}
+        - {name: tool, in: query, schema: {type: string, maxLength: 60}}
+        - {name: skill, in: query, schema: {type: string, maxLength: 60}}
+        - {name: tag, in: query, schema: {type: string, maxLength: 40}}
+        - {name: context, in: query, schema: {$ref: "#/components/schemas/PortfolioContext"}}
+        - {name: cursor, in: query, schema: {type: string, maxLength: 200}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 50, default: 20}}
+      responses:
+        "200":
+          description: Satu halaman kartu konten.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ContentCardPage"}
+        default: {$ref: "#/components/responses/Problem"}
+  /contents/{publicId}:
+    get:
+      operationId: getContent
+      tags: [contents]
+      summary: Detail konten
+      description: |
+        Publik hanya bisa membuka konten published (selain itu 404). Author dan moderator yang
+        berwenang juga bisa membuka status lain; respons memuat `status` agar UI menampilkan banner.
+      parameters:
+        - {name: publicId, in: path, required: true, schema: {type: string, pattern: "^[0-9a-z]{8}$"}}
+      responses:
+        "200":
+          description: Detail konten (versi tayang, atau draf untuk author jika belum pernah tayang).
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ContentDetail"}
+        default: {$ref: "#/components/responses/Problem"}
+  /taxonomy/categories:
+    get:
+      operationId: getTaxonomyCategories
+      tags: [taxonomy]
+      summary: Kategori konten
+      parameters:
+        - {name: type, in: query, required: true, schema: {$ref: "#/components/schemas/ContentType"}}
+      responses:
+        "200":
+          description: Daftar kategori aktif berurutan.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/CategoryList"}
+        default: {$ref: "#/components/responses/Problem"}
+  /taxonomy/tools:
+    get:
+      operationId: getTaxonomyTools
+      tags: [taxonomy]
+      summary: Cari tools/software (autocomplete)
+      parameters:
+        - {name: q, in: query, schema: {type: string, maxLength: 60}}
+      responses:
+        "200":
+          description: Maksimal 20 hasil.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/TaxonomyTermList"}
+        default: {$ref: "#/components/responses/Problem"}
+  /taxonomy/tags:
+    get:
+      operationId: getTaxonomyTags
+      tags: [taxonomy]
+      summary: Cari tag (autocomplete)
+      parameters:
+        - {name: q, in: query, schema: {type: string, maxLength: 40}}
+      responses:
+        "200":
+          description: Maksimal 20 hasil.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/TaxonomyTermList"}
+        default: {$ref: "#/components/responses/Problem"}
+  /studio/summary:
+    get:
+      operationId: getStudioSummary
+      tags: [studio]
+      summary: Ringkasan Studio (jumlah per status + undangan pending)
+      responses:
+        "200":
+          description: Ringkasan.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/StudioSummary"}
+        default: {$ref: "#/components/responses/Problem"}
+  /studio/contents:
+    get:
+      operationId: getStudioContents
+      tags: [studio]
+      summary: Konten saya (sebagai author accepted)
+      parameters:
+        - {name: status, in: query, schema: {$ref: "#/components/schemas/ContentStatus"}}
+        - {name: type, in: query, schema: {$ref: "#/components/schemas/ContentType"}}
+        - {name: cursor, in: query, schema: {type: string, maxLength: 200}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 50, default: 20}}
+      responses:
+        "200":
+          description: Satu halaman konten Studio.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/StudioContentPage"}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: postStudioContent
+      tags: [studio]
+      summary: Buat konten baru (draf kosong)
+      description: Butuh izin content.create. Batas draf aktif mengikuti setting content.max_active_drafts.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/StudioContentCreate"}
+      responses:
+        "201":
+          description: Konten draf baru.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/StudioContent"}
+        default: {$ref: "#/components/responses/Problem"}
+  /studio/contents/{id}:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    get:
+      operationId: getStudioContent
+      tags: [studio]
+      summary: Detail konten untuk editor
+      responses:
+        "200":
+          description: Draf, status, keputusan moderasi terakhir, dan author.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/StudioContent"}
+        default: {$ref: "#/components/responses/Problem"}
+    delete:
+      operationId: deleteStudioContent
+      tags: [studio]
+      summary: Hapus konten (soft delete 30 hari, hanya pemilik)
+      responses:
+        "204": {description: Dipindah ke sampah.}
+        default: {$ref: "#/components/responses/Problem"}
+  /studio/contents/{id}/draft:
+    put:
+      operationId: putStudioContentDraft
+      tags: [studio]
+      summary: Simpan draf (autosave)
+      description: |
+        Pemilik/editor. Ditolak saat in_review/rejected. `lockVersion` wajib sama dengan versi server;
+        jika tidak → 409 LOCK_CONFLICT dan klien memuat ulang. Validasi penuh hanya saat submit.
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/DraftInput"}
+      responses:
+        "200":
+          description: Draf tersimpan (lockVersion baru).
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/StudioContent"}
+        default: {$ref: "#/components/responses/Problem"}
+  /studio/contents/{id}/submit:
+    post:
+      operationId: postStudioContentSubmit
+      tags: [studio]
+      summary: Kirim ke moderasi
+      description: Pemilik. Validasi penuh, membuat versi snapshot imutabel dan kasus moderasi.
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        "200":
+          description: Konten in_review (atau revisi in_review).
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/StudioContent"}
+        default: {$ref: "#/components/responses/Problem"}
+  /studio/contents/{id}/withdraw:
+    post:
+      operationId: postStudioContentWithdraw
+      tags: [studio]
+      summary: Tarik kembali dari moderasi (selama belum di-claim)
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        "200":
+          description: Kembali ke draf.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/StudioContent"}
+        default: {$ref: "#/components/responses/Problem"}
+  /studio/contents/{id}/revision:
+    post:
+      operationId: postStudioContentRevision
+      tags: [studio]
+      summary: Mulai revisi atas konten tayang
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        "200":
+          description: Draf diisi dari versi tayang, revisionStatus editing.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/StudioContent"}
+        default: {$ref: "#/components/responses/Problem"}
+    delete:
+      operationId: deleteStudioContentRevision
+      tags: [studio]
+      summary: Buang revisi yang belum dikirim
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        "200":
+          description: Revisi dibuang.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/StudioContent"}
+        default: {$ref: "#/components/responses/Problem"}
+  /studio/contents/{id}/archive:
+    post:
+      operationId: postStudioContentArchive
+      tags: [studio]
+      summary: Arsipkan konten tayang (pemilik)
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        "200":
+          description: Diarsipkan.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/StudioContent"}
+        default: {$ref: "#/components/responses/Problem"}
+  /studio/contents/{id}/unarchive:
+    post:
+      operationId: postStudioContentUnarchive
+      tags: [studio]
+      summary: Terbitkan kembali konten arsip tanpa review (pemilik)
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        "200":
+          description: Tayang kembali.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/StudioContent"}
+        default: {$ref: "#/components/responses/Problem"}
+  /studio/contents/{id}/restore:
+    post:
+      operationId: postStudioContentRestore
+      tags: [studio]
+      summary: Pulihkan dari sampah (pemilik, ≤ 30 hari)
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        "200":
+          description: Kembali ke status sebelum dihapus.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/StudioContent"}
+        default: {$ref: "#/components/responses/Problem"}
+  /studio/contents/{id}/versions:
+    get:
+      operationId: getStudioContentVersions
+      tags: [studio]
+      summary: Riwayat versi + keputusan moderasi
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        "200":
+          description: Versi terbaru dulu.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ContentVersionList"}
+        default: {$ref: "#/components/responses/Problem"}
+  /studio/contents/{id}/versions/{versionId}:
+    get:
+      operationId: getStudioContentVersion
+      tags: [studio]
+      summary: Snapshot satu versi
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: versionId, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        "200":
+          description: Snapshot lengkap.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ContentVersionDetail"}
+        default: {$ref: "#/components/responses/Problem"}
+  /studio/contents/{id}/appeal:
+    post:
+      operationId: postStudioContentAppeal
+      tags: [studio]
+      summary: Ajukan banding atas penolakan (sekali per penolakan, pemilik)
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/AppealCreate"}
+      responses:
+        "201":
+          description: Banding diterima.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Appeal"}
+        default: {$ref: "#/components/responses/Problem"}
+  /studio/contents/{id}/authors:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    get:
+      operationId: getStudioContentAuthors
+      tags: [studio]
+      summary: Daftar author (termasuk undangan pending)
+      responses:
+        "200":
+          description: Author berurutan.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ContentAuthorList"}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: postStudioContentAuthor
+      tags: [studio]
+      summary: Undang kolaborator (pemilik)
+      description: Batas jumlah author dari setting collab.max_authors_portfolio / collab.max_authors_blog.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/AuthorInvite"}
+      responses:
+        "201":
+          description: Undangan dibuat (kedaluwarsa 14 hari).
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ContentAuthor"}
+        default: {$ref: "#/components/responses/Problem"}
+  /studio/contents/{id}/authors/{userId}:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: userId, in: path, required: true, schema: {type: string, format: uuid}}
+    patch:
+      operationId: patchStudioContentAuthor
+      tags: [studio]
+      summary: Ubah level / label peran / urutan author (pemilik)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/AuthorUpdate"}
+      responses:
+        "200":
+          description: Author diperbarui.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ContentAuthor"}
+        default: {$ref: "#/components/responses/Problem"}
+    delete:
+      operationId: deleteStudioContentAuthor
+      tags: [studio]
+      summary: Keluarkan author / batalkan undangan (pemilik)
+      responses:
+        "204": {description: Dikeluarkan.}
+        default: {$ref: "#/components/responses/Problem"}
+  /studio/contents/{id}/transfer-ownership:
+    post:
+      operationId: postStudioContentTransferOwnership
+      tags: [studio]
+      summary: Pindahkan kepemilikan ke author accepted (pemilik lama jadi editor)
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/OwnershipTransfer"}
+      responses:
+        "200":
+          description: Kepemilikan dipindah.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ContentAuthorList"}
+        default: {$ref: "#/components/responses/Problem"}
+  /studio/contents/{id}/leave:
+    post:
+      operationId: postStudioContentLeave
+      tags: [studio]
+      summary: Keluar dari konten (editor/kontributor)
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        "204": {description: Keluar.}
+        default: {$ref: "#/components/responses/Problem"}
+  /studio/invitations:
+    get:
+      operationId: getStudioInvitations
+      tags: [studio]
+      summary: Undangan kolaborasi yang masuk (pending)
+      parameters:
+        - {name: cursor, in: query, schema: {type: string, maxLength: 200}}
+      responses:
+        "200":
+          description: Undangan pending.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/InvitationPage"}
+        default: {$ref: "#/components/responses/Problem"}
+  /studio/invitations/{contentId}/accept:
+    post:
+      operationId: postStudioInvitationAccept
+      tags: [studio]
+      summary: Terima undangan
+      parameters:
+        - {name: contentId, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        "204": {description: Diterima.}
+        default: {$ref: "#/components/responses/Problem"}
+  /studio/invitations/{contentId}/decline:
+    post:
+      operationId: postStudioInvitationDecline
+      tags: [studio]
+      summary: Tolak undangan
+      parameters:
+        - {name: contentId, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        "204": {description: Ditolak.}
+        default: {$ref: "#/components/responses/Problem"}
 components:
   schemas:
+    ContentType:
+      type: string
+      enum: [portfolio, blog]
+    ContentStatus:
+      type: string
+      enum: [draft, in_review, changes_requested, published, archived, taken_down, rejected, deleted]
+    RevisionStatus:
+      type: string
+      description: Status revisi atas konten tayang (hanya saat status published).
+      enum: [editing, in_review, changes_requested]
+    AuthorLevel:
+      type: string
+      enum: [owner, editor, contributor]
+    InviteStatus:
+      type: string
+      enum: [pending, accepted, declined, expired, left, removed]
+    PortfolioContext:
+      type: string
+      enum: [assignment, internship, competition, ukk, personal, other]
+    AuthorMini:
+      type: object
+      required: [userId, displayName]
+      properties:
+        userId: {type: string, format: uuid}
+        username: {type: string, nullable: true}
+        displayName: {type: string}
+        avatarUrl: {type: string, nullable: true}
+    ImageRef:
+      type: object
+      description: Referensi gambar. `url` kosong sampai media diproses/dipublikasikan.
+      required: [mediaId]
+      properties:
+        mediaId: {type: string, format: uuid}
+        url: {type: string, nullable: true}
+        w: {type: integer, nullable: true}
+        h: {type: integer, nullable: true}
+        blurhash: {type: string, nullable: true}
+        dominantColor: {type: string, nullable: true}
+    CategoryRef:
+      type: object
+      required: [slug, name]
+      properties:
+        slug: {type: string}
+        name: {type: string}
+    CategoryOption:
+      type: object
+      required: [id, slug, name, majorCodes]
+      properties:
+        id: {type: string, format: uuid}
+        slug: {type: string}
+        name: {type: string}
+        description: {type: string, nullable: true}
+        majorCodes:
+          type: array
+          description: Jurusan yang disarankan untuk kategori ini.
+          items: {type: string}
+    CategoryList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: "#/components/schemas/CategoryOption"}
+    TaxonomyTerm:
+      type: object
+      required: [slug, name]
+      properties:
+        slug: {type: string}
+        name: {type: string}
+        category: {type: string, nullable: true}
+    TaxonomyTermList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: "#/components/schemas/TaxonomyTerm"}
+    ContentStats:
+      type: object
+      required: [appreciations, comments]
+      properties:
+        appreciations: {type: integer}
+        comments: {type: integer}
+    ContentAuthorsPreview:
+      type: object
+      required: [preview, total]
+      properties:
+        preview:
+          type: array
+          description: Maksimal 3 author pertama (urutan tampil).
+          items: {$ref: "#/components/schemas/AuthorMini"}
+        total: {type: integer}
+    ContentCardViewer:
+      type: object
+      required: [appreciated, bookmarked]
+      properties:
+        appreciated: {type: boolean}
+        bookmarked: {type: boolean}
+    ContentCard:
+      type: object
+      required: [publicId, type, slug, title, authors, stats, firstPublishedAt]
+      properties:
+        publicId: {type: string}
+        type: {$ref: "#/components/schemas/ContentType"}
+        slug: {type: string}
+        title: {type: string}
+        excerpt: {type: string, nullable: true}
+        cover:
+          allOf: [{$ref: "#/components/schemas/ImageRef"}]
+          nullable: true
+        category:
+          allOf: [{$ref: "#/components/schemas/CategoryRef"}]
+          nullable: true
+        authors: {$ref: "#/components/schemas/ContentAuthorsPreview"}
+        stats: {$ref: "#/components/schemas/ContentStats"}
+        viewer:
+          allOf: [{$ref: "#/components/schemas/ContentCardViewer"}]
+          nullable: true
+          description: Hanya jika login.
+        readingMinutes: {type: integer, nullable: true}
+        firstPublishedAt: {type: string, format: date-time}
+    ContentCardPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items: {$ref: "#/components/schemas/ContentCard"}
+        nextCursor: {type: string, nullable: true}
+    ContentAuthor:
+      type: object
+      required: [user, level, position, inviteStatus, invitedAt]
+      properties:
+        user: {$ref: "#/components/schemas/AuthorMini"}
+        level: {$ref: "#/components/schemas/AuthorLevel"}
+        roleLabel: {type: string, nullable: true, description: "Label peran, mis. Animator."}
+        position: {type: integer}
+        inviteStatus: {$ref: "#/components/schemas/InviteStatus"}
+        invitedAt: {type: string, format: date-time}
+        inviteExpiresAt: {type: string, format: date-time, nullable: true}
+    ContentAuthorList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: "#/components/schemas/ContentAuthor"}
+    AuthorInvite:
+      type: object
+      required: [userId, level]
+      properties:
+        userId: {type: string, format: uuid}
+        level: {type: string, enum: [editor, contributor]}
+        roleLabel: {type: string, maxLength: 60}
+    AuthorUpdate:
+      type: object
+      properties:
+        level: {type: string, enum: [editor, contributor]}
+        roleLabel: {type: string, maxLength: 60, nullable: true}
+        position: {type: integer, minimum: 0, maximum: 1000}
+    OwnershipTransfer:
+      type: object
+      required: [userId]
+      properties:
+        userId: {type: string, format: uuid}
+    ContentDetailViewer:
+      type: object
+      required: [appreciated, bookmarked, isAuthor]
+      properties:
+        appreciated: {type: boolean}
+        bookmarked: {type: boolean}
+        isAuthor: {type: boolean}
+        authorLevel:
+          allOf: [{$ref: "#/components/schemas/AuthorLevel"}]
+          nullable: true
+    ContentDetail:
+      type: object
+      required: [publicId, type, status, slug, title, tags, tools, skills, body, meta, authors, stats, legacyIncomplete]
+      properties:
+        publicId: {type: string}
+        type: {$ref: "#/components/schemas/ContentType"}
+        status: {$ref: "#/components/schemas/ContentStatus"}
+        slug: {type: string}
+        title: {type: string}
+        excerpt: {type: string, nullable: true}
+        cover:
+          allOf: [{$ref: "#/components/schemas/ImageRef"}]
+          nullable: true
+        category:
+          allOf: [{$ref: "#/components/schemas/CategoryRef"}]
+          nullable: true
+        tags:
+          type: array
+          items: {$ref: "#/components/schemas/TaxonomyTerm"}
+        tools:
+          type: array
+          items: {$ref: "#/components/schemas/TaxonomyTerm"}
+        skills:
+          type: array
+          items: {$ref: "#/components/schemas/TaxonomyTerm"}
+        body:
+          type: object
+          additionalProperties: true
+          description: Portfolio `{blocks:[...]}` atau dokumen ProseMirror untuk blog (lihat docs/revamp/editor-blocks.md).
+        meta:
+          type: object
+          additionalProperties: true
+        authors:
+          type: array
+          description: Author accepted, urutan tampil.
+          items: {$ref: "#/components/schemas/ContentAuthor"}
+        stats: {$ref: "#/components/schemas/ContentStats"}
+        viewer:
+          allOf: [{$ref: "#/components/schemas/ContentDetailViewer"}]
+          nullable: true
+        readingMinutes: {type: integer, nullable: true}
+        firstPublishedAt: {type: string, format: date-time, nullable: true}
+        lastPublishedAt: {type: string, format: date-time, nullable: true}
+        legacyIncomplete: {type: boolean, description: Konten migrasi v1 yang belum memenuhi aturan baru.}
+    StudioContentCreate:
+      type: object
+      required: [type]
+      properties:
+        type: {$ref: "#/components/schemas/ContentType"}
+    DraftInput:
+      type: object
+      required: [lockVersion, title, body, meta]
+      properties:
+        lockVersion: {type: integer, minimum: 1}
+        title: {type: string, maxLength: 150}
+        excerpt: {type: string, maxLength: 300, nullable: true}
+        categoryId: {type: string, format: uuid, nullable: true}
+        coverMediaId: {type: string, format: uuid, nullable: true}
+        body: {type: object, additionalProperties: true}
+        meta: {type: object, additionalProperties: true}
+        tags:
+          type: array
+          maxItems: 10
+          items: {type: string, maxLength: 40}
+        tools:
+          type: array
+          maxItems: 20
+          items: {type: string, maxLength: 60, description: Slug tools.}
+        skills:
+          type: array
+          maxItems: 20
+          items: {type: string, maxLength: 60, description: Slug skill.}
+    Draft:
+      type: object
+      required: [lockVersion, title, body, meta, tags, tools, skills, updatedAt]
+      properties:
+        lockVersion: {type: integer}
+        title: {type: string}
+        excerpt: {type: string, nullable: true}
+        categoryId: {type: string, format: uuid, nullable: true}
+        cover:
+          allOf: [{$ref: "#/components/schemas/ImageRef"}]
+          nullable: true
+        body: {type: object, additionalProperties: true}
+        meta: {type: object, additionalProperties: true}
+        tags:
+          type: array
+          items: {$ref: "#/components/schemas/TaxonomyTerm"}
+        tools:
+          type: array
+          items: {$ref: "#/components/schemas/TaxonomyTerm"}
+        skills:
+          type: array
+          items: {$ref: "#/components/schemas/TaxonomyTerm"}
+        updatedAt: {type: string, format: date-time}
+        updatedBy:
+          allOf: [{$ref: "#/components/schemas/AuthorMini"}]
+          nullable: true
+    ModerationAnnotation:
+      type: object
+      required: [targetRef, note]
+      properties:
+        targetRef: {type: string, description: "id blok/node, atau field:<nama>"}
+        note: {type: string}
+    ModerationFeedback:
+      type: object
+      required: [decision, annotations, decidedAt, canAppeal]
+      properties:
+        decision: {type: string, enum: [approved, changes_requested, rejected]}
+        reasonLabel: {type: string, nullable: true}
+        note: {type: string, nullable: true}
+        annotations:
+          type: array
+          items: {$ref: "#/components/schemas/ModerationAnnotation"}
+        decidedAt: {type: string, format: date-time}
+        canAppeal: {type: boolean}
+        appealStatus: {type: string, enum: [open, upheld, overturned], nullable: true}
+    StudioContent:
+      type: object
+      required: [id, publicId, type, status, slug, title, myLevel, draft, hasLiveVersion, inReviewClaimed, authorsCount, createdAt, updatedAt]
+      properties:
+        id: {type: string, format: uuid}
+        publicId: {type: string}
+        type: {$ref: "#/components/schemas/ContentType"}
+        status: {$ref: "#/components/schemas/ContentStatus"}
+        revisionStatus:
+          allOf: [{$ref: "#/components/schemas/RevisionStatus"}]
+          nullable: true
+        slug: {type: string}
+        title: {type: string}
+        myLevel: {$ref: "#/components/schemas/AuthorLevel"}
+        draft: {$ref: "#/components/schemas/Draft"}
+        lastModeration:
+          allOf: [{$ref: "#/components/schemas/ModerationFeedback"}]
+          nullable: true
+        hasLiveVersion: {type: boolean}
+        inReviewClaimed: {type: boolean, description: Moderator sudah mulai meninjau (tidak bisa ditarik).}
+        authorsCount: {type: integer}
+        firstPublishedAt: {type: string, format: date-time, nullable: true}
+        archivedAt: {type: string, format: date-time, nullable: true}
+        deletedAt: {type: string, format: date-time, nullable: true}
+        purgeAfter: {type: string, format: date-time, nullable: true}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+    StudioContentItem:
+      type: object
+      required: [id, publicId, type, status, title, myLevel, authorsCount, updatedAt]
+      properties:
+        id: {type: string, format: uuid}
+        publicId: {type: string}
+        type: {$ref: "#/components/schemas/ContentType"}
+        status: {$ref: "#/components/schemas/ContentStatus"}
+        revisionStatus:
+          allOf: [{$ref: "#/components/schemas/RevisionStatus"}]
+          nullable: true
+        title: {type: string}
+        cover:
+          allOf: [{$ref: "#/components/schemas/ImageRef"}]
+          nullable: true
+        myLevel: {$ref: "#/components/schemas/AuthorLevel"}
+        authorsCount: {type: integer}
+        updatedAt: {type: string, format: date-time}
+    StudioContentPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items: {$ref: "#/components/schemas/StudioContentItem"}
+        nextCursor: {type: string, nullable: true}
+    StudioSummary:
+      type: object
+      required: [counts, pendingInvitations]
+      properties:
+        counts:
+          type: object
+          description: Jumlah konten per status (kunci = ContentStatus).
+          additionalProperties: {type: integer}
+        pendingInvitations: {type: integer}
+    ContentVersion:
+      type: object
+      required: [id, number, kind, state, title, submittedAt, submittedBy]
+      properties:
+        id: {type: string, format: uuid}
+        number: {type: integer}
+        kind: {type: string, enum: [initial, resubmission, revision, legacy]}
+        state: {type: string, enum: [pending, approved, changes_requested, rejected, withdrawn]}
+        title: {type: string}
+        submittedAt: {type: string, format: date-time}
+        decidedAt: {type: string, format: date-time, nullable: true}
+        submittedBy: {$ref: "#/components/schemas/AuthorMini"}
+        decision:
+          allOf: [{$ref: "#/components/schemas/ModerationFeedback"}]
+          nullable: true
+    ContentVersionList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: "#/components/schemas/ContentVersion"}
+    ContentVersionDetail:
+      type: object
+      required: [version, title, body, meta, tags, tools, skills]
+      properties:
+        version: {$ref: "#/components/schemas/ContentVersion"}
+        title: {type: string}
+        excerpt: {type: string, nullable: true}
+        category:
+          allOf: [{$ref: "#/components/schemas/CategoryRef"}]
+          nullable: true
+        cover:
+          allOf: [{$ref: "#/components/schemas/ImageRef"}]
+          nullable: true
+        body: {type: object, additionalProperties: true}
+        meta: {type: object, additionalProperties: true}
+        tags:
+          type: array
+          items: {$ref: "#/components/schemas/TaxonomyTerm"}
+        tools:
+          type: array
+          items: {$ref: "#/components/schemas/TaxonomyTerm"}
+        skills:
+          type: array
+          items: {$ref: "#/components/schemas/TaxonomyTerm"}
+    AppealCreate:
+      type: object
+      required: [message]
+      properties:
+        message: {type: string, minLength: 10, maxLength: 2000}
+    Appeal:
+      type: object
+      required: [id, status, message, createdAt]
+      properties:
+        id: {type: string, format: uuid}
+        status: {type: string, enum: [open, upheld, overturned]}
+        message: {type: string}
+        createdAt: {type: string, format: date-time}
+        decidedAt: {type: string, format: date-time, nullable: true}
+        decisionNote: {type: string, nullable: true}
+    InvitationContent:
+      type: object
+      required: [id, publicId, type, title]
+      properties:
+        id: {type: string, format: uuid}
+        publicId: {type: string}
+        type: {$ref: "#/components/schemas/ContentType"}
+        title: {type: string}
+        cover:
+          allOf: [{$ref: "#/components/schemas/ImageRef"}]
+          nullable: true
+    Invitation:
+      type: object
+      required: [content, invitedBy, level, invitedAt, expiresAt]
+      properties:
+        content: {$ref: "#/components/schemas/InvitationContent"}
+        invitedBy: {$ref: "#/components/schemas/AuthorMini"}
+        level: {$ref: "#/components/schemas/AuthorLevel"}
+        roleLabel: {type: string, nullable: true}
+        invitedAt: {type: string, format: date-time}
+        expiresAt: {type: string, format: date-time}
+    InvitationPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items: {$ref: "#/components/schemas/Invitation"}
+        nextCursor: {type: string, nullable: true}
     CsrfToken:
       type: object
       required: [csrfToken]
