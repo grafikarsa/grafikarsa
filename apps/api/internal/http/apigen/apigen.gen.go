@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"time"
 
@@ -99,6 +100,60 @@ func (e ClassCreateGrade) Valid() bool {
 	case ClassCreateGradeN11:
 		return true
 	case ClassCreateGradeN12:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImportKind.
+const (
+	ImportKindStaff    ImportKind = "staff"
+	ImportKindStudents ImportKind = "students"
+	ImportKindTeachers ImportKind = "teachers"
+)
+
+// Valid indicates whether the value is a known member of the ImportKind enum.
+func (e ImportKind) Valid() bool {
+	switch e {
+	case ImportKindStaff:
+		return true
+	case ImportKindStudents:
+		return true
+	case ImportKindTeachers:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImportStatus.
+const (
+	ImportStatusCancelled  ImportStatus = "cancelled"
+	ImportStatusCommitted  ImportStatus = "committed"
+	ImportStatusCommitting ImportStatus = "committing"
+	ImportStatusFailed     ImportStatus = "failed"
+	ImportStatusInvalid    ImportStatus = "invalid"
+	ImportStatusReady      ImportStatus = "ready"
+	ImportStatusValidating ImportStatus = "validating"
+)
+
+// Valid indicates whether the value is a known member of the ImportStatus enum.
+func (e ImportStatus) Valid() bool {
+	switch e {
+	case ImportStatusCancelled:
+		return true
+	case ImportStatusCommitted:
+		return true
+	case ImportStatusCommitting:
+		return true
+	case ImportStatusFailed:
+		return true
+	case ImportStatusInvalid:
+		return true
+	case ImportStatusReady:
+		return true
+	case ImportStatusValidating:
 		return true
 	default:
 		return false
@@ -630,6 +685,68 @@ type FieldError struct {
 	Ref     *string `json:"ref,omitempty"`
 }
 
+// ImportJob Pekerjaan impor CSV beserta hasil validasi dan eksekusinya.
+type ImportJob struct {
+	// ByClass Jumlah baris valid per kelas (khusus siswa).
+	ByClass     map[string]int `json:"byClass"`
+	CommittedAt *time.Time     `json:"committedAt"`
+
+	// Created Jumlah akun yang dibuat atau sudah ada saat impor selesai.
+	Created   *int               `json:"created"`
+	CreatedAt time.Time          `json:"createdAt"`
+	CreatedBy openapi_types.UUID `json:"createdBy"`
+
+	// ErrorCountTotal Jumlah seluruh kesalahan (daftar `errors` dapat dipotong).
+	ErrorCountTotal int                `json:"errorCountTotal"`
+	Errors          []ImportRowError   `json:"errors"`
+	Id              openapi_types.UUID `json:"id"`
+
+	// Kind Jenis data yang diimpor.
+	Kind    ImportKind         `json:"kind"`
+	Skipped []ImportSkippedRow `json:"skipped"`
+
+	// Status Status pekerjaan impor.
+	Status ImportStatus `json:"status"`
+
+	// TotalRows Jumlah baris data pada berkas.
+	TotalRows *int `json:"totalRows"`
+
+	// ValidRows Jumlah baris yang lolos validasi.
+	ValidRows *int `json:"validRows"`
+}
+
+// ImportJobList defines model for ImportJobList.
+type ImportJobList struct {
+	Items []ImportJob `json:"items"`
+}
+
+// ImportKind Jenis data yang diimpor.
+type ImportKind string
+
+// ImportRowError Satu kesalahan validasi pada satu baris CSV.
+type ImportRowError struct {
+	// Field Nama kolom yang bermasalah.
+	Field string `json:"field"`
+
+	// Message Pesan kesalahan dalam bahasa Indonesia.
+	Message string `json:"message"`
+
+	// Row Nomor baris data (mulai 1). Baris 0 berarti kesalahan seluruh berkas.
+	Row int `json:"row"`
+}
+
+// ImportSkippedRow Satu baris yang dilewati saat impor dijalankan.
+type ImportSkippedRow struct {
+	// Reason Alasan baris dilewati.
+	Reason string `json:"reason"`
+
+	// Row Nomor baris data (mulai 1).
+	Row int `json:"row"`
+}
+
+// ImportStatus Status pekerjaan impor.
+type ImportStatus string
+
 // IssuedPassword Sandi yang baru diterbitkan. Hanya ditampilkan sekali.
 type IssuedPassword struct {
 	// ExpiresAt Waktu kedaluwarsa sandi.
@@ -843,6 +960,15 @@ type GetAdminClassesParams struct {
 	MajorId        *openapi_types.UUID `form:"majorId,omitempty" json:"majorId,omitempty"`
 }
 
+// PostAdminImportMultipartBody defines parameters for PostAdminImport.
+type PostAdminImportMultipartBody struct {
+	// File Berkas CSV UTF-8.
+	File openapi_types.File `json:"file"`
+
+	// Kind Jenis data yang diimpor.
+	Kind ImportKind `json:"kind"`
+}
+
 // GetAdminUsersParams defines parameters for GetAdminUsers.
 type GetAdminUsersParams struct {
 	AccountType *AccountType        `form:"accountType,omitempty" json:"accountType,omitempty"`
@@ -874,6 +1000,9 @@ type PostAdminClassJSONRequestBody = ClassCreate
 
 // PatchAdminClassJSONRequestBody defines body for PatchAdminClass for application/json ContentType.
 type PatchAdminClassJSONRequestBody = ClassUpdate
+
+// PostAdminImportMultipartRequestBody defines body for PostAdminImport for multipart/form-data ContentType.
+type PostAdminImportMultipartRequestBody PostAdminImportMultipartBody
 
 // PostAdminMajorJSONRequestBody defines body for PostAdminMajor for application/json ContentType.
 type PostAdminMajorJSONRequestBody = MajorCreate
@@ -949,6 +1078,18 @@ type ServerInterface interface {
 	// PatchAdminClass Ubah rombel kelas
 	// (PATCH /admin/classes/{id})
 	PatchAdminClass(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// GetAdminImports Daftar impor terakhir
+	// (GET /admin/imports)
+	GetAdminImports(w http.ResponseWriter, r *http.Request)
+	// PostAdminImport Unggah dan validasi CSV
+	// (POST /admin/imports)
+	PostAdminImport(w http.ResponseWriter, r *http.Request)
+	// GetAdminImport Detail impor
+	// (GET /admin/imports/{id})
+	GetAdminImport(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// PostAdminImportCommit Jalankan impor
+	// (POST /admin/imports/{id}/commit)
+	PostAdminImportCommit(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// GetAdminMajors Daftar seluruh jurusan
 	// (GET /admin/majors)
 	GetAdminMajors(w http.ResponseWriter, r *http.Request)
@@ -1123,6 +1264,30 @@ func (_ Unimplemented) DeleteAdminClass(w http.ResponseWriter, r *http.Request, 
 // PatchAdminClass Ubah rombel kelas
 // (PATCH /admin/classes/{id})
 func (_ Unimplemented) PatchAdminClass(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetAdminImports Daftar impor terakhir
+// (GET /admin/imports)
+func (_ Unimplemented) GetAdminImports(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostAdminImport Unggah dan validasi CSV
+// (POST /admin/imports)
+func (_ Unimplemented) PostAdminImport(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetAdminImport Detail impor
+// (GET /admin/imports/{id})
+func (_ Unimplemented) GetAdminImport(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostAdminImportCommit Jalankan impor
+// (POST /admin/imports/{id}/commit)
+func (_ Unimplemented) PostAdminImportCommit(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1723,6 +1888,86 @@ func (siw *ServerInterfaceWrapper) PatchAdminClass(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PatchAdminClass(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAdminImports operation middleware
+func (siw *ServerInterfaceWrapper) GetAdminImports(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAdminImports(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAdminImport operation middleware
+func (siw *ServerInterfaceWrapper) PostAdminImport(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAdminImport(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAdminImport operation middleware
+func (siw *ServerInterfaceWrapper) GetAdminImport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAdminImport(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAdminImportCommit operation middleware
+func (siw *ServerInterfaceWrapper) PostAdminImportCommit(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAdminImportCommit(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2783,6 +3028,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/admin/account-cards", wrapper.GetAdminAccountCards)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/imports", wrapper.GetAdminImports)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/imports", wrapper.PostAdminImport)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/imports/{id}", wrapper.GetAdminImport)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/imports/{id}/commit", wrapper.PostAdminImportCommit)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/permissions", wrapper.GetAdminPermissions)
 	})
 	r.Group(func(r chi.Router) {
@@ -3200,6 +3457,161 @@ type PatchAdminClassdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response PatchAdminClassdefaultApplicationProblemPlusJSONResponse) VisitPatchAdminClassResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAdminImportsRequestObject struct {
+}
+
+type GetAdminImportsResponseObject interface {
+	VisitGetAdminImportsResponse(w http.ResponseWriter) error
+}
+
+type GetAdminImports200JSONResponse ImportJobList
+
+func (response GetAdminImports200JSONResponse) VisitGetAdminImportsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAdminImportsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetAdminImportsdefaultApplicationProblemPlusJSONResponse) VisitGetAdminImportsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAdminImportRequestObject struct {
+	Body *multipart.Reader
+}
+
+type PostAdminImportResponseObject interface {
+	VisitPostAdminImportResponse(w http.ResponseWriter) error
+}
+
+type PostAdminImport201JSONResponse ImportJob
+
+func (response PostAdminImport201JSONResponse) VisitPostAdminImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAdminImportdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostAdminImportdefaultApplicationProblemPlusJSONResponse) VisitPostAdminImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAdminImportRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type GetAdminImportResponseObject interface {
+	VisitGetAdminImportResponse(w http.ResponseWriter) error
+}
+
+type GetAdminImport200JSONResponse ImportJob
+
+func (response GetAdminImport200JSONResponse) VisitGetAdminImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAdminImportdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetAdminImportdefaultApplicationProblemPlusJSONResponse) VisitGetAdminImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAdminImportCommitRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type PostAdminImportCommitResponseObject interface {
+	VisitPostAdminImportCommitResponse(w http.ResponseWriter) error
+}
+
+type PostAdminImportCommit202JSONResponse ImportJob
+
+func (response PostAdminImportCommit202JSONResponse) VisitPostAdminImportCommitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAdminImportCommitdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostAdminImportCommitdefaultApplicationProblemPlusJSONResponse) VisitPostAdminImportCommitResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -4621,6 +5033,18 @@ type StrictServerInterface interface {
 	// PatchAdminClass Ubah rombel kelas
 	// (PATCH /admin/classes/{id})
 	PatchAdminClass(ctx context.Context, request PatchAdminClassRequestObject) (PatchAdminClassResponseObject, error)
+	// GetAdminImports Daftar impor terakhir
+	// (GET /admin/imports)
+	GetAdminImports(ctx context.Context, request GetAdminImportsRequestObject) (GetAdminImportsResponseObject, error)
+	// PostAdminImport Unggah dan validasi CSV
+	// (POST /admin/imports)
+	PostAdminImport(ctx context.Context, request PostAdminImportRequestObject) (PostAdminImportResponseObject, error)
+	// GetAdminImport Detail impor
+	// (GET /admin/imports/{id})
+	GetAdminImport(ctx context.Context, request GetAdminImportRequestObject) (GetAdminImportResponseObject, error)
+	// PostAdminImportCommit Jalankan impor
+	// (POST /admin/imports/{id}/commit)
+	PostAdminImportCommit(ctx context.Context, request PostAdminImportCommitRequestObject) (PostAdminImportCommitResponseObject, error)
 	// GetAdminMajors Daftar seluruh jurusan
 	// (GET /admin/majors)
 	GetAdminMajors(ctx context.Context, request GetAdminMajorsRequestObject) (GetAdminMajorsResponseObject, error)
@@ -5048,6 +5472,113 @@ func (sh *strictHandler) PatchAdminClass(w http.ResponseWriter, r *http.Request,
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(PatchAdminClassResponseObject); ok {
 		if err := validResponse.VisitPatchAdminClassResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetAdminImports operation middleware
+func (sh *strictHandler) GetAdminImports(w http.ResponseWriter, r *http.Request) {
+	var request GetAdminImportsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAdminImports(ctx, request.(GetAdminImportsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAdminImports")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetAdminImportsResponseObject); ok {
+		if err := validResponse.VisitGetAdminImportsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostAdminImport operation middleware
+func (sh *strictHandler) PostAdminImport(w http.ResponseWriter, r *http.Request) {
+	var request PostAdminImportRequestObject
+
+	if reader, err := r.MultipartReader(); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode multipart body: %w", err))
+		return
+	} else {
+		request.Body = reader
+	}
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostAdminImport(ctx, request.(PostAdminImportRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostAdminImport")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostAdminImportResponseObject); ok {
+		if err := validResponse.VisitPostAdminImportResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetAdminImport operation middleware
+func (sh *strictHandler) GetAdminImport(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request GetAdminImportRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAdminImport(ctx, request.(GetAdminImportRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAdminImport")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetAdminImportResponseObject); ok {
+		if err := validResponse.VisitGetAdminImportResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostAdminImportCommit operation middleware
+func (sh *strictHandler) PostAdminImportCommit(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PostAdminImportCommitRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostAdminImportCommit(ctx, request.(PostAdminImportCommitRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostAdminImportCommit")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostAdminImportCommitResponseObject); ok {
+		if err := validResponse.VisitPostAdminImportCommitResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

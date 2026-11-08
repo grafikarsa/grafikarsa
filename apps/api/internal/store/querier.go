@@ -14,6 +14,7 @@ type Querier interface {
 	BlockUserContent(ctx context.Context, arg BlockUserContentParams) error
 	ClearCurrentAcademicYear(ctx context.Context) error
 	CompleteActivation(ctx context.Context, id uuid.UUID) error
+	CompleteImportJob(ctx context.Context, arg CompleteImportJobParams) (int64, error)
 	CountActiveRecoveryCodes(ctx context.Context, userID uuid.UUID) (int64, error)
 	CountActiveRoleHolders(ctx context.Context, roleID uuid.UUID) (int64, error)
 	CountClassEnrollments(ctx context.Context, classID uuid.UUID) (int64, error)
@@ -29,10 +30,13 @@ type Querier interface {
 	DeleteRolePermissions(ctx context.Context, roleID uuid.UUID) error
 	DeleteTeacherMajors(ctx context.Context, userID uuid.UUID) error
 	DeleteVaultEntry(ctx context.Context, userID uuid.UUID) error
+	FailImportJob(ctx context.Context, arg FailImportJobParams) (int64, error)
 	GetAcademicYearByID(ctx context.Context, id uuid.UUID) (GetAcademicYearByIDRow, error)
 	GetClassByID(ctx context.Context, id uuid.UUID) (GetClassByIDRow, error)
 	GetClassGroupByClassID(ctx context.Context, classID uuid.UUID) (GetClassGroupByClassIDRow, error)
 	GetCurrentAcademicYear(ctx context.Context) (GetCurrentAcademicYearRow, error)
+	GetImportExistingUser(ctx context.Context, arg GetImportExistingUserParams) (GetImportExistingUserRow, error)
+	GetImportJob(ctx context.Context, id uuid.UUID) (GetImportJobRow, error)
 	GetMajorByCode(ctx context.Context, code string) (GetMajorByCodeRow, error)
 	GetMajorByID(ctx context.Context, id uuid.UUID) (GetMajorByIDRow, error)
 	GetMajorDetailByCode(ctx context.Context, code string) (GetMajorDetailByCodeRow, error)
@@ -49,11 +53,13 @@ type Querier interface {
 	GetUserForLogin(ctx context.Context, identifier string) (GetUserForLoginRow, error)
 	GetUserIdentity(ctx context.Context, id uuid.UUID) (GetUserIdentityRow, error)
 	GetUserRoleAssignment(ctx context.Context, id uuid.UUID) (GetUserRoleAssignmentRow, error)
+	ImportUserHasEnrollment(ctx context.Context, arg ImportUserHasEnrollmentParams) (bool, error)
 	InsertAcademicYear(ctx context.Context, arg InsertAcademicYearParams) (InsertAcademicYearRow, error)
 	InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) (InsertAuditLogRow, error)
 	InsertClass(ctx context.Context, arg InsertClassParams) (uuid.UUID, error)
 	InsertClassGroup(ctx context.Context, arg InsertClassGroupParams) (uuid.UUID, error)
 	InsertEnrollment(ctx context.Context, arg InsertEnrollmentParams) error
+	InsertImportJob(ctx context.Context, arg InsertImportJobParams) (InsertImportJobRow, error)
 	InsertMajor(ctx context.Context, arg InsertMajorParams) (uuid.UUID, error)
 	InsertMajorGroup(ctx context.Context, majorID uuid.UUID) (uuid.UUID, error)
 	InsertRecoveryCode(ctx context.Context, arg InsertRecoveryCodeParams) error
@@ -75,7 +81,9 @@ type Querier interface {
 	ListAllRolePermissions(ctx context.Context) ([]RolePermission, error)
 	ListAuditLogs(ctx context.Context, arg ListAuditLogsParams) ([]ListAuditLogsRow, error)
 	ListClasses(ctx context.Context, arg ListClassesParams) ([]ListClassesRow, error)
+	ListExistingUserIdentifiers(ctx context.Context, arg ListExistingUserIdentifiersParams) ([]ListExistingUserIdentifiersRow, error)
 	ListExplicitGrants(ctx context.Context, userID uuid.UUID) ([]ListExplicitGrantsRow, error)
+	ListImportJobs(ctx context.Context, arg ListImportJobsParams) ([]ListImportJobsRow, error)
 	ListMajors(ctx context.Context) ([]ListMajorsRow, error)
 	ListPermissions(ctx context.Context) ([]Permission, error)
 	ListRolePermissions(ctx context.Context, roleID uuid.UUID) ([]ListRolePermissionsRow, error)
@@ -87,6 +95,7 @@ type Querier interface {
 	ListUserRoleAssignments(ctx context.Context, userID uuid.UUID) ([]ListUserRoleAssignmentsRow, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error)
 	ListVaultEntriesForClass(ctx context.Context, classID uuid.UUID) ([]ListVaultEntriesForClassRow, error)
+	MarkImportJobCommitting(ctx context.Context, id uuid.UUID) (int64, error)
 	ReactivateUser(ctx context.Context, id uuid.UUID) error
 	RevokeActiveRecoveryCodes(ctx context.Context, userID uuid.UUID) error
 	RevokeSession(ctx context.Context, arg RevokeSessionParams) error

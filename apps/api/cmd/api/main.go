@@ -18,6 +18,7 @@ import (
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/users"
 	apirouter "github.com/grafikarsa/grafikarsa/apps/api/internal/http"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/health"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/jobs"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/cache"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/config"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/db"
@@ -119,6 +120,21 @@ func main() {
 	rolesService := roles.NewService(dataStore, authService)
 	auditService := audit.NewService(dataStore)
 
+	// The API only inserts jobs. Workers live in cmd/worker; the insert client
+	// still needs the shared registry so job argument types stay consistent.
+	jobRegistry := jobs.NewRegistry()
+	// Register the job args type so the insert client accepts it. The API
+	// never starts this worker; execution happens in cmd/worker.
+	jobs.Register(jobRegistry, &users.ImportCommitWorker{})
+	insertClient, err := jobs.NewInsertClient(pool, jobRegistry, log)
+	if err != nil {
+		log.Error("river insert client failed", "error", err)
+		pool.Close()
+		_ = rdb.Close()
+		os.Exit(1)
+	}
+	importer := users.NewImporter(usersService, insertClient)
+
 	srv := &http.Server{
 		Addr: cfg.HTTPAddr,
 		Handler: apirouter.NewRouter(apirouter.RouterDeps{
@@ -127,6 +143,7 @@ func main() {
 			Auth:           authService,
 			Academic:       academicService,
 			Users:          usersService,
+			Imports:        importer,
 			Roles:          rolesService,
 			Audit:          auditService,
 			Limiter:        limiter,

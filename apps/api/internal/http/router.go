@@ -34,6 +34,7 @@ type RouterDeps struct {
 	Auth           *auth.Service
 	Academic       *academic.Service
 	Users          *users.Service
+	Imports        *users.Importer
 	Roles          *roles.Service
 	Audit          *audit.Service
 	Limiter        *ratelimit.Limiter
@@ -90,6 +91,7 @@ func NewRouter(d RouterDeps) stdhttp.Handler {
 			Auth:     d.Auth,
 			Academic: d.Academic,
 			Users:    d.Users,
+			Imports:  d.Imports,
 			Roles:    d.Roles,
 			Audit:    d.Audit,
 			Logger:   logger,

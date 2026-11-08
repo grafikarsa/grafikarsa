@@ -13,10 +13,14 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/users"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/jobs"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/config"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/db"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/logger"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/password"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/secretbox"
+	dbstore "github.com/grafikarsa/grafikarsa/apps/api/internal/store"
 )
 
 const (
@@ -44,6 +48,20 @@ func main() {
 
 	registry := jobs.NewRegistry()
 	jobs.Register(registry, &jobs.PingWorker{Logger: log})
+
+	hasher := password.NewHasher(password.DefaultParams, 0)
+	box, err := secretbox.New([]byte(cfg.SecretKey))
+	if err != nil {
+		log.Error("secretbox failed", "error", err)
+		pool.Close()
+		os.Exit(1)
+	}
+	dataStore := dbstore.NewStore(pool)
+	usersService := users.NewService(dataStore, nil, hasher, box)
+	jobs.Register(registry, &users.ImportCommitWorker{
+		Importer: users.NewImporter(usersService, nil),
+		Logger:   log,
+	})
 
 	client, err := jobs.NewWorkerClient(pool, registry, log)
 	if err != nil {

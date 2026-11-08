@@ -837,6 +837,110 @@ paths:
                 format: binary
         default:
           $ref: "#/components/responses/Problem"
+  /admin/imports:
+    get:
+      operationId: getAdminImports
+      tags: [admin-imports]
+      summary: Daftar impor terakhir
+      description: |
+        Butuh izin `academic.import`. Tanpa izin → 404. Admin global melihat
+        seluruh impor; admin jurusan hanya melihat impor yang ia buat sendiri.
+        Maksimal 20 impor terbaru.
+      responses:
+        "200":
+          description: Daftar impor.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportJobList"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: postAdminImport
+      tags: [admin-imports]
+      summary: Unggah dan validasi CSV
+      description: |
+        Mengunggah berkas CSV berisi siswa, guru, atau tendik. Berkas langsung
+        divalidasi per baris dan hasilnya menjadi `ImportJob` berstatus `ready`
+        atau `invalid`. Format siswa: `nisn,nama,kelas[,tahun_masuk]`; guru:
+        `nip,nama[,jurusan]`; tendik: `nip,nama` (NIP boleh kosong). Pemisah
+        koma atau titik koma dideteksi otomatis. Maksimal 2 MB dan 5000 baris.
+        Butuh izin `academic.import`; admin jurusan hanya boleh mengimpor siswa
+        ke kelas pada jurusannya dan tidak boleh mengimpor guru/tendik.
+        Tanpa izin → 404.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [kind, file]
+              properties:
+                kind:
+                  $ref: "#/components/schemas/ImportKind"
+                file:
+                  type: string
+                  format: binary
+                  description: Berkas CSV UTF-8.
+      responses:
+        "201":
+          description: Hasil unggah dan validasi.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportJob"
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/imports/{id}:
+    get:
+      operationId: getAdminImport
+      tags: [admin-imports]
+      summary: Detail impor
+      description: |
+        Butuh izin `academic.import`. Admin global dapat melihat semua impor;
+        admin jurusan hanya impor yang ia buat sendiri. Di luar itu → 404.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Detail impor.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportJob"
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/imports/{id}/commit:
+    post:
+      operationId: postAdminImportCommit
+      tags: [admin-imports]
+      summary: Jalankan impor
+      description: |
+        Menjalankan impor berstatus `ready` sebagai tugas latar belakang. Hanya
+        pembuat impor atau pemegang izin `academic.import` global yang boleh
+        menjalankannya; di luar itu → 404. Status selain `ready` → 409
+        `INVALID_TRANSITION`.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "202":
+          description: Impor sedang dijalankan.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportJob"
+        default:
+          $ref: "#/components/responses/Problem"
   /admin/permissions:
     get:
       operationId: getAdminPermissions
@@ -2028,6 +2132,110 @@ components:
           type: string
           format: date-time
           description: Waktu kedaluwarsa sandi.
+    ImportKind:
+      type: string
+      enum: [students, teachers, staff]
+      description: Jenis data yang diimpor.
+    ImportStatus:
+      type: string
+      enum: [validating, ready, invalid, committing, committed, failed, cancelled]
+      description: Status pekerjaan impor.
+    ImportRowError:
+      type: object
+      description: Satu kesalahan validasi pada satu baris CSV.
+      required: [row, field, message]
+      properties:
+        row:
+          type: integer
+          description: Nomor baris data (mulai 1). Baris 0 berarti kesalahan seluruh berkas.
+        field:
+          type: string
+          description: Nama kolom yang bermasalah.
+        message:
+          type: string
+          description: Pesan kesalahan dalam bahasa Indonesia.
+    ImportSkippedRow:
+      type: object
+      description: Satu baris yang dilewati saat impor dijalankan.
+      required: [row, reason]
+      properties:
+        row:
+          type: integer
+          description: Nomor baris data (mulai 1).
+        reason:
+          type: string
+          description: Alasan baris dilewati.
+    ImportJob:
+      type: object
+      description: Pekerjaan impor CSV beserta hasil validasi dan eksekusinya.
+      required:
+        - id
+        - kind
+        - status
+        - totalRows
+        - validRows
+        - errorCountTotal
+        - errors
+        - byClass
+        - created
+        - skipped
+        - createdAt
+        - committedAt
+        - createdBy
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          $ref: "#/components/schemas/ImportKind"
+        status:
+          $ref: "#/components/schemas/ImportStatus"
+        totalRows:
+          type: integer
+          nullable: true
+          description: Jumlah baris data pada berkas.
+        validRows:
+          type: integer
+          nullable: true
+          description: Jumlah baris yang lolos validasi.
+        errorCountTotal:
+          type: integer
+          description: Jumlah seluruh kesalahan (daftar `errors` dapat dipotong).
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportRowError"
+        byClass:
+          type: object
+          additionalProperties:
+            type: integer
+          description: Jumlah baris valid per kelas (khusus siswa).
+        created:
+          type: integer
+          nullable: true
+          description: Jumlah akun yang dibuat atau sudah ada saat impor selesai.
+        skipped:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportSkippedRow"
+        createdAt:
+          type: string
+          format: date-time
+        committedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdBy:
+          type: string
+          format: uuid
+    ImportJobList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportJob"
     Pong:
       type: object
       required:
