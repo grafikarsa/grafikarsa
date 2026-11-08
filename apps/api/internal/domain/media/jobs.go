@@ -24,9 +24,10 @@ func (ProcessArgs) InsertOpts() river.InsertOpts {
 	return river.InsertOpts{Queue: jobs.QueueMedia, MaxAttempts: 5}
 }
 
-// ProcessWorker is the placeholder media processing worker. Real processing
-// arrives in a later task; this worker succeeds immediately so jobs do not
-// accumulate in retries.
+// ProcessWorker is a no-op worker used by the API's insert-only River client.
+// The API must stay CGO_ENABLED=0 and must not import the libvips processing
+// package, so the real worker lives in internal/domain/media/process and is
+// registered by cmd/worker.
 type ProcessWorker struct {
 	river.WorkerDefaults[ProcessArgs]
 

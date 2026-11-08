@@ -8,7 +8,9 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.20.16
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.114.9
 	github.com/aws/smithy-go v1.28.8
+	github.com/buckket/go-blurhash v1.1.0
 	github.com/caarlos0/env/v11 v11.4.2
+	github.com/davidbyttow/govips/v2 v2.20.0
 	github.com/go-chi/chi/v5 v5.5.0
 	github.com/go-pdf/fpdf v0.9.0
 	github.com/go-redis/redis_rate/v10 v10.0.1
@@ -20,6 +22,7 @@ require (
 	github.com/redis/go-redis/v9 v9.23.0
 	github.com/riverqueue/river v0.51.1
 	github.com/riverqueue/river/riverdriver/riverpgxv5 v0.51.1
+	github.com/riverqueue/river/rivertype v0.51.1
 	github.com/testcontainers/testcontainers-go v0.45.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.45.0
 	golang.org/x/crypto v0.58.0
@@ -84,7 +87,6 @@ require (
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
 	github.com/riverqueue/river/riverdriver v0.51.1 // indirect
 	github.com/riverqueue/river/rivershared v0.51.1 // indirect
-	github.com/riverqueue/river/rivertype v0.51.1 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3 // indirect
 	github.com/sethvargo/go-retry v0.5.0 // indirect
 	github.com/shirou/gopsutil/v4 v4.26.6 // indirect
@@ -110,7 +112,9 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	go.yaml.in/yaml/v4 v4.0.0 // indirect
+	golang.org/x/image v0.41.0 // indirect
 	golang.org/x/mod v0.42.0 // indirect
+	golang.org/x/net v0.61.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
 	golang.org/x/text v0.43.0 // indirect
