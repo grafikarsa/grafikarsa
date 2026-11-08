@@ -18,6 +18,7 @@ import {
 } from "@/components/admin/users/labels";
 import { MajorBadges } from "@/components/admin/users/major-combobox";
 import { UserActions } from "@/components/admin/users/user-actions";
+import { UserRolesTab } from "@/components/admin/users/user-roles-tab";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -208,69 +209,6 @@ function KelasTab({ user }: { user: AdminUserDetail }) {
                   </TableCell>
                   <TableCell>{enrollment.academicYearLabel}</TableCell>
                   <TableCell>{outcomeLabel(enrollment.outcome)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function RoleTab({
-  user,
-  majors,
-}: {
-  user: AdminUserDetail;
-  majors: Major[];
-}) {
-  const majorById = useMemo(
-    () => new Map(majors.map((major) => [major.id, major])),
-    [majors],
-  );
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Role</CardTitle>
-        <CardDescription>
-          Penugasan role aktif pengguna. Pengelolaan role menyusul.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {user.roles.length === 0 ? (
-          <EmptyState message="Belum ada role aktif." />
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Role</TableHead>
-                <TableHead className="w-40">Cakupan</TableHead>
-                <TableHead className="w-44">Berlaku sampai</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {user.roles.map((role) => (
-                <TableRow key={role.id}>
-                  <TableCell>
-                    <div className="flex flex-col gap-0.5">
-                      <span className="font-medium">{role.roleName}</span>
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {role.roleSlug}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {role.majorId
-                      ? (majorById.get(role.majorId)?.code ?? role.majorId)
-                      : "Global"}
-                  </TableCell>
-                  <TableCell>
-                    {role.expiresAt
-                      ? formatDateTime(role.expiresAt)
-                      : "Tanpa batas"}
-                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -506,7 +444,12 @@ export function UserDetailView({ id }: { id: string }) {
         </TabsContent>
 
         <TabsContent value="role" className="pt-4">
-          <RoleTab user={user} majors={majors} />
+          <UserRolesTab
+            userId={user.id}
+            majors={majors}
+            canAssign={can(session, "role.assign")}
+            fallbackAssignments={user.roles}
+          />
         </TabsContent>
 
         <TabsContent value="keamanan" className="pt-4">
