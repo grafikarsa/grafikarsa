@@ -79,15 +79,18 @@ type Querier interface {
 	ListActiveMajors(ctx context.Context) ([]ListActiveMajorsRow, error)
 	ListActiveRoleHolderIDs(ctx context.Context, roleID uuid.UUID) ([]uuid.UUID, error)
 	ListActiveSessions(ctx context.Context, userID uuid.UUID) ([]ListActiveSessionsRow, error)
+	ListActiveTools(ctx context.Context) ([]ListActiveToolsRow, error)
 	ListActiveUserRoleAssignments(ctx context.Context, arg ListActiveUserRoleAssignmentsParams) ([]ListActiveUserRoleAssignmentsRow, error)
 	ListAllRolePermissions(ctx context.Context) ([]RolePermission, error)
 	ListAuditLogs(ctx context.Context, arg ListAuditLogsParams) ([]ListAuditLogsRow, error)
 	ListClasses(ctx context.Context, arg ListClassesParams) ([]ListClassesRow, error)
+	ListContentCategories(ctx context.Context, contentType string) ([]ListContentCategoriesRow, error)
 	ListExistingUserIdentifiers(ctx context.Context, arg ListExistingUserIdentifiersParams) ([]ListExistingUserIdentifiersRow, error)
 	ListExplicitGrants(ctx context.Context, userID uuid.UUID) ([]ListExplicitGrantsRow, error)
 	ListImportJobs(ctx context.Context, arg ListImportJobsParams) ([]ListImportJobsRow, error)
 	ListMajors(ctx context.Context) ([]ListMajorsRow, error)
 	ListPermissions(ctx context.Context) ([]Permission, error)
+	ListPopularTags(ctx context.Context) ([]ListPopularTagsRow, error)
 	ListRolePermissions(ctx context.Context, roleID uuid.UUID) ([]ListRolePermissionsRow, error)
 	ListRolePermissionsBySlug(ctx context.Context, slug string) ([]string, error)
 	ListRoles(ctx context.Context) ([]ListRolesRow, error)
@@ -104,6 +107,8 @@ type Querier interface {
 	RevokeSession(ctx context.Context, arg RevokeSessionParams) error
 	RevokeUserRole(ctx context.Context, arg RevokeUserRoleParams) (uuid.UUID, error)
 	RevokeUserSessions(ctx context.Context, arg RevokeUserSessionsParams) ([][]byte, error)
+	SearchTags(ctx context.Context, q_ string) ([]SearchTagsRow, error)
+	SearchTools(ctx context.Context, q_ string) ([]SearchToolsRow, error)
 	SetClassGroupStatus(ctx context.Context, arg SetClassGroupStatusParams) error
 	SetCurrentAcademicYear(ctx context.Context, id uuid.UUID) error
 	SetLastLogin(ctx context.Context, id uuid.UUID) error
