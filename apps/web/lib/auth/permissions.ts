@@ -7,6 +7,7 @@ export const ADMIN_PERMISSIONS = {
   manageMajors: "academic.manage_majors",
   manageYears: "academic.manage_years",
   manageClasses: "academic.manage_classes",
+  importCsv: "academic.import",
   auditView: "audit.view",
 } as const;
 
@@ -21,6 +22,11 @@ const ADMIN_SECTIONS: AdminNavItem[] = [
     label: "Pengguna",
     href: "/admin/pengguna",
     permissions: [ADMIN_PERMISSIONS.userView],
+  },
+  {
+    label: "Impor",
+    href: "/admin/impor",
+    permissions: [ADMIN_PERMISSIONS.importCsv],
   },
   {
     label: "Role",

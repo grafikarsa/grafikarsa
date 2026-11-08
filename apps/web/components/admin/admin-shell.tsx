@@ -7,6 +7,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   CalendarRange,
   ExternalLink,
+  FileUp,
   GraduationCap,
   LayoutDashboard,
   School,
@@ -43,6 +44,7 @@ import { isActivePath } from "@/lib/nav";
 const NAV_ICONS: Record<string, LucideIcon> = {
   "/admin": LayoutDashboard,
   "/admin/pengguna": Users,
+  "/admin/impor": FileUp,
   "/admin/role": ShieldCheck,
   "/admin/akademik/jurusan": GraduationCap,
   "/admin/akademik/tahun-ajaran": CalendarRange,
