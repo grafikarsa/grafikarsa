@@ -11,6 +11,7 @@ import (
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/auth"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/media"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/roles"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/taxonomy"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/users"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/apigen"
 )
@@ -26,6 +27,7 @@ type Deps struct {
 	Roles    *roles.Service
 	Audit    *audit.Service
 	Media    *media.Service
+	Taxonomy *taxonomy.Service
 	Logger   *slog.Logger
 }
 
@@ -38,6 +40,7 @@ type Server struct {
 	roles    *roles.Service
 	audit    *audit.Service
 	media    *media.Service
+	taxonomy *taxonomy.Service
 	logger   *slog.Logger
 }
 
@@ -56,6 +59,7 @@ func NewServer(d Deps) *Server {
 		roles:    d.Roles,
 		audit:    d.Audit,
 		media:    d.Media,
+		taxonomy: d.Taxonomy,
 		logger:   logger,
 	}
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/auth"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/media"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/roles"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/taxonomy"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/users"
 	apirouter "github.com/grafikarsa/grafikarsa/apps/api/internal/http"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/health"
@@ -137,6 +138,7 @@ func main() {
 	}
 	importer := users.NewImporter(usersService, insertClient)
 	mediaService := media.NewService(dataStore, store, insertClient, limiter, rdb)
+	taxonomyService := taxonomy.NewService(dataStore, taxonomy.NewValkeyCache(rdb))
 
 	srv := &http.Server{
 		Addr: cfg.HTTPAddr,
@@ -150,6 +152,7 @@ func main() {
 			Roles:          rolesService,
 			Audit:          auditService,
 			Media:          mediaService,
+			Taxonomy:       taxonomyService,
 			Limiter:        limiter,
 			AllowedOrigins: cfg.AllowedOrigins,
 		}),
