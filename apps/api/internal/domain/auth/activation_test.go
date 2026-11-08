@@ -377,3 +377,45 @@ func TestNewService_RejectsShortRecoverySecret(t *testing.T) {
 		t.Fatal("NewService with a short recovery secret returned no error")
 	}
 }
+
+func TestConfirmRecoveryCodes_DeletesInitialPasswordVaultEntry(t *testing.T) {
+	env := newTestEnv(t)
+	expires := env.clock.Now().Add(24 * time.Hour)
+
+	userID := env.createUser(userSpec{
+		Nisn:              ptr("1234567891"),
+		DisplayName:       "Siswa Brankas",
+		Password:          "sandi-awal-123",
+		PasswordKind:      "initial",
+		PasswordExpiresAt: &expires,
+	})
+
+	if _, err := env.pool.Exec(context.Background(), `
+		INSERT INTO initial_password_vault (user_id, ciphertext, expires_at)
+		VALUES ($1, $2, $3)`, userID, []byte("nonce-and-sealed"), expires); err != nil {
+		t.Fatalf("insert vault entry: %v", err)
+	}
+
+	login := env.login("1234567891", "sandi-awal-123")
+	if _, err := env.svc.Activate(context.Background(), login.Principal, "siswa.brankas", ptr("Kopi-Susu-2026!"), "192.0.2.10"); err != nil {
+		t.Fatalf("Activate: %v", err)
+	}
+
+	pending, err := env.svc.Authenticate(context.Background(), login.Token)
+	if err != nil {
+		t.Fatalf("Authenticate after Activate: %v", err)
+	}
+	if _, err := env.svc.ConfirmRecoveryCodes(context.Background(), pending); err != nil {
+		t.Fatalf("ConfirmRecoveryCodes: %v", err)
+	}
+
+	var count int
+	if err := env.pool.QueryRow(context.Background(),
+		"SELECT count(*) FROM initial_password_vault WHERE user_id = $1", userID,
+	).Scan(&count); err != nil {
+		t.Fatalf("count vault entries: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("vault entries after activation = %d, want 0", count)
+	}
+}

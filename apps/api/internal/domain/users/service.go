@@ -24,6 +24,7 @@ import (
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/auth"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/settings"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/password"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/secretbox"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/store"
 )
 
@@ -52,15 +53,18 @@ type Service struct {
 	st      *store.Store
 	authSvc SessionInvalidator
 	hasher  *password.Hasher
+	box     *secretbox.Box
 	now     func() time.Time
 }
 
-// NewService builds a users Service.
-func NewService(st *store.Store, authSvc SessionInvalidator, hasher *password.Hasher) *Service {
+// NewService builds a users Service. box encrypts initial passwords kept for
+// printing account cards.
+func NewService(st *store.Store, authSvc SessionInvalidator, hasher *password.Hasher, box *secretbox.Box) *Service {
 	return &Service{
 		st:      st,
 		authSvc: authSvc,
 		hasher:  hasher,
+		box:     box,
 		now:     time.Now,
 	}
 }
@@ -294,6 +298,35 @@ func (s *Service) generatePassword(ctx context.Context) (plain, hash string, err
 		return "", "", fmt.Errorf("users: hash password: %w", err)
 	}
 	return plain, hash, nil
+}
+
+// putVaultEntry stores the plain initial password encrypted so it can be
+// printed on account cards until the account is activated or the password is
+// replaced. The user id is bound as associated data.
+func (s *Service) putVaultEntry(ctx context.Context, q *store.Queries, userID uuid.UUID, plain string, expiresAt time.Time) error {
+	if s.box == nil {
+		return fmt.Errorf("users: initial password vault is not configured")
+	}
+	ciphertext, err := s.box.Seal([]byte(plain), userID[:])
+	if err != nil {
+		return fmt.Errorf("users: seal initial password: %w", err)
+	}
+	if err := q.UpsertVaultEntry(ctx, store.UpsertVaultEntryParams{
+		UserID:     userID,
+		Ciphertext: ciphertext,
+		ExpiresAt:  expiresAt,
+	}); err != nil {
+		return fmt.Errorf("users: upsert vault entry: %w", err)
+	}
+	return nil
+}
+
+// deleteVaultEntry drops the stored initial password, if any.
+func deleteVaultEntry(ctx context.Context, q *store.Queries, userID uuid.UUID) error {
+	if err := q.DeleteVaultEntry(ctx, userID); err != nil {
+		return fmt.Errorf("users: delete vault entry: %w", err)
+	}
+	return nil
 }
 
 func (s *Service) settingInt(ctx context.Context, key string, def int) int {

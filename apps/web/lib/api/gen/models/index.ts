@@ -44,6 +44,7 @@ export * from './classList';
 export * from './classUpdate';
 export * from './csrfToken';
 export * from './fieldError';
+export * from './getAdminAccountCardsParams';
 export * from './getAdminClassesParams';
 export * from './getAdminUsersParams';
 export * from './getAuthUsernameAvailabilityParams';

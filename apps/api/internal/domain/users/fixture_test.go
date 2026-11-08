@@ -2,24 +2,30 @@ package users_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/apperr"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/auth"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/users"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/password"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/secretbox"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/securetoken"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/store"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/testutil"
 )
 
 const testActorIP = "203.0.113.7"
+
+// testVaultSecret keys the initial-password vault in tests.
+var testVaultSecret = []byte("test-secret-key-for-initial-password-vault")
 
 type fakeInvalidator struct {
 	mu    sync.Mutex
@@ -55,6 +61,7 @@ type fixture struct {
 	store       *store.Store
 	service     *users.Service
 	hasher      *password.Hasher
+	box         *secretbox.Box
 	invalidator *fakeInvalidator
 
 	yearID uuid.UUID
@@ -84,14 +91,19 @@ func newFixture(t *testing.T) *fixture {
 		KeyLength:   32,
 	}, 1)
 	invalidator := &fakeInvalidator{}
+	box, err := secretbox.New(testVaultSecret)
+	if err != nil {
+		t.Fatalf("secretbox.New: %v", err)
+	}
 
 	f := &fixture{
 		t:           t,
 		ctx:         context.Background(),
 		pool:        pool,
 		store:       st,
-		service:     users.NewService(st, invalidator, hasher),
+		service:     users.NewService(st, invalidator, hasher, box),
 		hasher:      hasher,
+		box:         box,
 		invalidator: invalidator,
 	}
 
@@ -282,6 +294,29 @@ func (f *fixture) insertSession(userID uuid.UUID) uuid.UUID {
 		f.t.Fatalf("buat sesi: %v", err)
 	}
 	return id
+}
+
+// vaultPlaintext returns the decrypted initial password kept for userID. ok is
+// false when the vault has no entry for the user.
+func (f *fixture) vaultPlaintext(userID uuid.UUID) (plain string, ok bool) {
+	f.t.Helper()
+
+	var ciphertext []byte
+	err := f.pool.QueryRow(f.ctx,
+		"SELECT ciphertext FROM initial_password_vault WHERE user_id = $1", userID,
+	).Scan(&ciphertext)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", false
+	}
+	if err != nil {
+		f.t.Fatalf("ambil entri brankas: %v", err)
+	}
+
+	plaintext, err := f.box.Open(ciphertext, userID[:])
+	if err != nil {
+		f.t.Fatalf("buka entri brankas: %v", err)
+	}
+	return string(plaintext), true
 }
 
 func (f *fixture) passwordHash(userID uuid.UUID) string {

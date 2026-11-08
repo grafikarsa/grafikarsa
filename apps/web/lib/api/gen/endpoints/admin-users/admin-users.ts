@@ -34,6 +34,7 @@ import type {
   AdminUserDetail,
   AdminUserPage,
   AdminUserUpdate,
+  GetAdminAccountCardsParams,
   GetAdminUsersParams,
   IssuedPassword,
   ProblemResponse
@@ -922,3 +923,115 @@ export const usePostAdminUserContentUnblock = <TError = ProblemResponse,
       > => {
       return useMutation(getPostAdminUserContentUnblockMutationOptions(options), queryClient);
     }
+    export const getGetAdminAccountCardsUrl = (params: GetAdminAccountCardsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/admin/account-cards?${stringifiedParams}` : `/admin/account-cards`
+}
+
+/**
+ * Mengembalikan PDF berisi kartu akun siswa kelas yang belum aktivasi dan
+ * masih memiliki sandi awal yang berlaku (nama, NISN, sandi awal).
+ * Butuh izin `user.reset_password` pada jurusan kelas terkait. Tanpa izin →
+ * 404. Bila tidak ada siswa yang memenuhi syarat → 422. Setiap ekspor
+ * dicatat di audit log.
+ * @summary Ekspor kartu akun per kelas
+ */
+export const getAdminAccountCards = async (params: GetAdminAccountCardsParams, options?: Parameters<typeof apiFetch>[1]): Promise<Blob> => {
+
+  return apiFetch<Blob>(getGetAdminAccountCardsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminAccountCardsQueryKey = (params?: GetAdminAccountCardsParams,) => {
+    return [
+    `/admin/account-cards`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetAdminAccountCardsQueryOptions = <TData = Awaited<ReturnType<typeof getAdminAccountCards>>, TError = ProblemResponse>(params: GetAdminAccountCardsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminAccountCards>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminAccountCardsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminAccountCards>>> = ({ signal }) => getAdminAccountCards(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminAccountCards>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetAdminAccountCardsQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminAccountCards>>>
+export type GetAdminAccountCardsQueryError = ProblemResponse
+
+
+export function useGetAdminAccountCards<TData = Awaited<ReturnType<typeof getAdminAccountCards>>, TError = ProblemResponse>(
+ params: GetAdminAccountCardsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminAccountCards>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAdminAccountCards>>,
+          TError,
+          Awaited<ReturnType<typeof getAdminAccountCards>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAdminAccountCards<TData = Awaited<ReturnType<typeof getAdminAccountCards>>, TError = ProblemResponse>(
+ params: GetAdminAccountCardsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminAccountCards>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAdminAccountCards>>,
+          TError,
+          Awaited<ReturnType<typeof getAdminAccountCards>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAdminAccountCards<TData = Awaited<ReturnType<typeof getAdminAccountCards>>, TError = ProblemResponse>(
+ params: GetAdminAccountCardsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminAccountCards>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Ekspor kartu akun per kelas
+ */
+
+export function useGetAdminAccountCards<TData = Awaited<ReturnType<typeof getAdminAccountCards>>, TError = ProblemResponse>(
+ params: GetAdminAccountCardsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminAccountCards>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetAdminAccountCardsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
