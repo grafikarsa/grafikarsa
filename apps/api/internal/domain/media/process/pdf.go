@@ -116,5 +116,5 @@ func shortCommandOutput(output []byte) string {
 	if len(text) > 200 {
 		text = text[:200]
 	}
-	return text
+	return strings.ToValidUTF8(text, "")
 }

@@ -16,7 +16,9 @@ import (
 	"math"
 	"os"
 	"regexp"
+	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/davidbyttow/govips/v2/vips"
 	"github.com/go-pdf/fpdf"
@@ -360,6 +362,14 @@ func TestFailureReason_IsSingleLineAndShort(t *testing.T) {
 	}
 	if bytes.ContainsAny([]byte(long), "\n\t") {
 		t.Fatalf("alasan masih multi-baris: %q", long)
+	}
+
+	multibyte := failureReason(errors.New(strings.Repeat("é", 400)))
+	if len(multibyte) > failureReasonLimit {
+		t.Fatalf("panjang alasan multibyte = %d, mau <= %d", len(multibyte), failureReasonLimit)
+	}
+	if !utf8.ValidString(multibyte) {
+		t.Fatalf("alasan multibyte bukan UTF-8 valid: %q", multibyte)
 	}
 }
 
