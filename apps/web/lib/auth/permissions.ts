@@ -2,43 +2,56 @@ import type { Session } from "@/lib/api/gen/models";
 
 export const ADMIN_PERMISSIONS = {
   userView: "user.view",
+  roleManage: "role.manage",
+  roleAssign: "role.assign",
   manageMajors: "academic.manage_majors",
   manageYears: "academic.manage_years",
   manageClasses: "academic.manage_classes",
+  importCsv: "academic.import",
   auditView: "audit.view",
 } as const;
 
 export type AdminNavItem = {
   label: string;
   href: string;
-  permission: string | null;
+  permissions: string[];
 };
 
 const ADMIN_SECTIONS: AdminNavItem[] = [
   {
     label: "Pengguna",
     href: "/admin/pengguna",
-    permission: ADMIN_PERMISSIONS.userView,
+    permissions: [ADMIN_PERMISSIONS.userView],
+  },
+  {
+    label: "Impor",
+    href: "/admin/impor",
+    permissions: [ADMIN_PERMISSIONS.importCsv],
+  },
+  {
+    label: "Role",
+    href: "/admin/role",
+    permissions: [ADMIN_PERMISSIONS.roleManage, ADMIN_PERMISSIONS.roleAssign],
   },
   {
     label: "Jurusan",
     href: "/admin/akademik/jurusan",
-    permission: ADMIN_PERMISSIONS.manageMajors,
+    permissions: [ADMIN_PERMISSIONS.manageMajors],
   },
   {
     label: "Tahun Ajaran",
     href: "/admin/akademik/tahun-ajaran",
-    permission: ADMIN_PERMISSIONS.manageYears,
+    permissions: [ADMIN_PERMISSIONS.manageYears],
   },
   {
     label: "Kelas",
     href: "/admin/akademik/kelas",
-    permission: ADMIN_PERMISSIONS.manageClasses,
+    permissions: [ADMIN_PERMISSIONS.manageClasses],
   },
   {
     label: "Audit",
     href: "/admin/audit",
-    permission: ADMIN_PERMISSIONS.auditView,
+    permissions: [ADMIN_PERMISSIONS.auditView],
   },
 ];
 
@@ -87,15 +100,12 @@ export function canForMajor(
  */
 export function adminNav(session: Session | null): AdminNavItem[] {
   const sections = ADMIN_SECTIONS.filter((item) =>
-    item.permission ? hasGrant(session, item.permission) : false,
+    item.permissions.some((permission) => hasGrant(session, permission)),
   );
 
   if (sections.length === 0) {
     return [];
   }
 
-  return [
-    { label: "Dashboard", href: "/admin", permission: null },
-    ...sections,
-  ];
+  return [{ label: "Dashboard", href: "/admin", permissions: [] }, ...sections];
 }

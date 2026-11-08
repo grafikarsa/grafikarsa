@@ -24,9 +24,14 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  CategoryList,
+  GetTaxonomyCategoriesParams,
   GetTaxonomySkillsParams,
+  GetTaxonomyTagsParams,
+  GetTaxonomyToolsParams,
   ProblemResponse,
-  SkillOptionList
+  SkillOptionList,
+  TaxonomyTermList
 } from '../../models';
 
 import { apiFetch } from '../../../fetcher';
@@ -50,6 +55,327 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetTaxonomyCategoriesUrl = (params: GetTaxonomyCategoriesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/taxonomy/categories?${stringifiedParams}` : `/taxonomy/categories`
+}
+
+/**
+ * @summary Kategori konten
+ */
+export const getTaxonomyCategories = async (params: GetTaxonomyCategoriesParams, options?: Parameters<typeof apiFetch>[1]): Promise<CategoryList> => {
+
+  return apiFetch<CategoryList>(getGetTaxonomyCategoriesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTaxonomyCategoriesQueryKey = (params?: GetTaxonomyCategoriesParams,) => {
+    return [
+    `/taxonomy/categories`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetTaxonomyCategoriesQueryOptions = <TData = Awaited<ReturnType<typeof getTaxonomyCategories>>, TError = ProblemResponse>(params: GetTaxonomyCategoriesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTaxonomyCategories>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTaxonomyCategoriesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTaxonomyCategories>>> = ({ signal }) => getTaxonomyCategories(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTaxonomyCategories>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetTaxonomyCategoriesQueryResult = NonNullable<Awaited<ReturnType<typeof getTaxonomyCategories>>>
+export type GetTaxonomyCategoriesQueryError = ProblemResponse
+
+
+export function useGetTaxonomyCategories<TData = Awaited<ReturnType<typeof getTaxonomyCategories>>, TError = ProblemResponse>(
+ params: GetTaxonomyCategoriesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTaxonomyCategories>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTaxonomyCategories>>,
+          TError,
+          Awaited<ReturnType<typeof getTaxonomyCategories>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetTaxonomyCategories<TData = Awaited<ReturnType<typeof getTaxonomyCategories>>, TError = ProblemResponse>(
+ params: GetTaxonomyCategoriesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTaxonomyCategories>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTaxonomyCategories>>,
+          TError,
+          Awaited<ReturnType<typeof getTaxonomyCategories>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetTaxonomyCategories<TData = Awaited<ReturnType<typeof getTaxonomyCategories>>, TError = ProblemResponse>(
+ params: GetTaxonomyCategoriesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTaxonomyCategories>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Kategori konten
+ */
+
+export function useGetTaxonomyCategories<TData = Awaited<ReturnType<typeof getTaxonomyCategories>>, TError = ProblemResponse>(
+ params: GetTaxonomyCategoriesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTaxonomyCategories>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetTaxonomyCategoriesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getGetTaxonomyToolsUrl = (params?: GetTaxonomyToolsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/taxonomy/tools?${stringifiedParams}` : `/taxonomy/tools`
+}
+
+/**
+ * @summary Cari tools/software (autocomplete)
+ */
+export const getTaxonomyTools = async (params?: GetTaxonomyToolsParams, options?: Parameters<typeof apiFetch>[1]): Promise<TaxonomyTermList> => {
+
+  return apiFetch<TaxonomyTermList>(getGetTaxonomyToolsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTaxonomyToolsQueryKey = (params?: GetTaxonomyToolsParams,) => {
+    return [
+    `/taxonomy/tools`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetTaxonomyToolsQueryOptions = <TData = Awaited<ReturnType<typeof getTaxonomyTools>>, TError = ProblemResponse>(params?: GetTaxonomyToolsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTaxonomyTools>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTaxonomyToolsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTaxonomyTools>>> = ({ signal }) => getTaxonomyTools(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTaxonomyTools>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetTaxonomyToolsQueryResult = NonNullable<Awaited<ReturnType<typeof getTaxonomyTools>>>
+export type GetTaxonomyToolsQueryError = ProblemResponse
+
+
+export function useGetTaxonomyTools<TData = Awaited<ReturnType<typeof getTaxonomyTools>>, TError = ProblemResponse>(
+ params: undefined |  GetTaxonomyToolsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTaxonomyTools>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTaxonomyTools>>,
+          TError,
+          Awaited<ReturnType<typeof getTaxonomyTools>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetTaxonomyTools<TData = Awaited<ReturnType<typeof getTaxonomyTools>>, TError = ProblemResponse>(
+ params?: GetTaxonomyToolsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTaxonomyTools>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTaxonomyTools>>,
+          TError,
+          Awaited<ReturnType<typeof getTaxonomyTools>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetTaxonomyTools<TData = Awaited<ReturnType<typeof getTaxonomyTools>>, TError = ProblemResponse>(
+ params?: GetTaxonomyToolsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTaxonomyTools>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Cari tools/software (autocomplete)
+ */
+
+export function useGetTaxonomyTools<TData = Awaited<ReturnType<typeof getTaxonomyTools>>, TError = ProblemResponse>(
+ params?: GetTaxonomyToolsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTaxonomyTools>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetTaxonomyToolsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getGetTaxonomyTagsUrl = (params?: GetTaxonomyTagsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/taxonomy/tags?${stringifiedParams}` : `/taxonomy/tags`
+}
+
+/**
+ * @summary Cari tag (autocomplete)
+ */
+export const getTaxonomyTags = async (params?: GetTaxonomyTagsParams, options?: Parameters<typeof apiFetch>[1]): Promise<TaxonomyTermList> => {
+
+  return apiFetch<TaxonomyTermList>(getGetTaxonomyTagsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTaxonomyTagsQueryKey = (params?: GetTaxonomyTagsParams,) => {
+    return [
+    `/taxonomy/tags`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetTaxonomyTagsQueryOptions = <TData = Awaited<ReturnType<typeof getTaxonomyTags>>, TError = ProblemResponse>(params?: GetTaxonomyTagsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTaxonomyTags>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTaxonomyTagsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTaxonomyTags>>> = ({ signal }) => getTaxonomyTags(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTaxonomyTags>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetTaxonomyTagsQueryResult = NonNullable<Awaited<ReturnType<typeof getTaxonomyTags>>>
+export type GetTaxonomyTagsQueryError = ProblemResponse
+
+
+export function useGetTaxonomyTags<TData = Awaited<ReturnType<typeof getTaxonomyTags>>, TError = ProblemResponse>(
+ params: undefined |  GetTaxonomyTagsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTaxonomyTags>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTaxonomyTags>>,
+          TError,
+          Awaited<ReturnType<typeof getTaxonomyTags>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetTaxonomyTags<TData = Awaited<ReturnType<typeof getTaxonomyTags>>, TError = ProblemResponse>(
+ params?: GetTaxonomyTagsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTaxonomyTags>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTaxonomyTags>>,
+          TError,
+          Awaited<ReturnType<typeof getTaxonomyTags>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetTaxonomyTags<TData = Awaited<ReturnType<typeof getTaxonomyTags>>, TError = ProblemResponse>(
+ params?: GetTaxonomyTagsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTaxonomyTags>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Cari tag (autocomplete)
+ */
+
+export function useGetTaxonomyTags<TData = Awaited<ReturnType<typeof getTaxonomyTags>>, TError = ProblemResponse>(
+ params?: GetTaxonomyTagsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTaxonomyTags>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetTaxonomyTagsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
 
 export const getGetTaxonomySkillsUrl = (params?: GetTaxonomySkillsParams,) => {
   const normalizedParams = new URLSearchParams();

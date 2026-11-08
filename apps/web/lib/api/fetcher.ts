@@ -156,5 +156,14 @@ export const apiFetch = async <T>(
     return undefined as T;
   }
 
-  return (await response.json()) as T;
+  const contentType = response.headers.get("content-type") ?? "";
+
+  if (
+    contentType.includes("application/json") ||
+    contentType.includes("+json")
+  ) {
+    return (await response.json()) as T;
+  }
+
+  return (await response.blob()) as T;
 };

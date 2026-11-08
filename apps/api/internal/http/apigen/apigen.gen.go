@@ -85,6 +85,84 @@ func (e AdminUserDetailPasswordKind) Valid() bool {
 	}
 }
 
+// Defines values for AppealStatus.
+const (
+	AppealStatusOpen       AppealStatus = "open"
+	AppealStatusOverturned AppealStatus = "overturned"
+	AppealStatusUpheld     AppealStatus = "upheld"
+)
+
+// Valid indicates whether the value is a known member of the AppealStatus enum.
+func (e AppealStatus) Valid() bool {
+	switch e {
+	case AppealStatusOpen:
+		return true
+	case AppealStatusOverturned:
+		return true
+	case AppealStatusUpheld:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AuthorInviteLevel.
+const (
+	AuthorInviteLevelContributor AuthorInviteLevel = "contributor"
+	AuthorInviteLevelEditor      AuthorInviteLevel = "editor"
+)
+
+// Valid indicates whether the value is a known member of the AuthorInviteLevel enum.
+func (e AuthorInviteLevel) Valid() bool {
+	switch e {
+	case AuthorInviteLevelContributor:
+		return true
+	case AuthorInviteLevelEditor:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AuthorLevel.
+const (
+	AuthorLevelContributor AuthorLevel = "contributor"
+	AuthorLevelEditor      AuthorLevel = "editor"
+	AuthorLevelOwner       AuthorLevel = "owner"
+)
+
+// Valid indicates whether the value is a known member of the AuthorLevel enum.
+func (e AuthorLevel) Valid() bool {
+	switch e {
+	case AuthorLevelContributor:
+		return true
+	case AuthorLevelEditor:
+		return true
+	case AuthorLevelOwner:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AuthorUpdateLevel.
+const (
+	AuthorUpdateLevelContributor AuthorUpdateLevel = "contributor"
+	AuthorUpdateLevelEditor      AuthorUpdateLevel = "editor"
+)
+
+// Valid indicates whether the value is a known member of the AuthorUpdateLevel enum.
+func (e AuthorUpdateLevel) Valid() bool {
+	switch e {
+	case AuthorUpdateLevelContributor:
+		return true
+	case AuthorUpdateLevelEditor:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ClassCreateGrade.
 const (
 	ClassCreateGradeN10 ClassCreateGrade = 10
@@ -100,6 +178,111 @@ func (e ClassCreateGrade) Valid() bool {
 	case ClassCreateGradeN11:
 		return true
 	case ClassCreateGradeN12:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContentStatus.
+const (
+	ContentStatusArchived         ContentStatus = "archived"
+	ContentStatusChangesRequested ContentStatus = "changes_requested"
+	ContentStatusDeleted          ContentStatus = "deleted"
+	ContentStatusDraft            ContentStatus = "draft"
+	ContentStatusInReview         ContentStatus = "in_review"
+	ContentStatusPublished        ContentStatus = "published"
+	ContentStatusRejected         ContentStatus = "rejected"
+	ContentStatusTakenDown        ContentStatus = "taken_down"
+)
+
+// Valid indicates whether the value is a known member of the ContentStatus enum.
+func (e ContentStatus) Valid() bool {
+	switch e {
+	case ContentStatusArchived:
+		return true
+	case ContentStatusChangesRequested:
+		return true
+	case ContentStatusDeleted:
+		return true
+	case ContentStatusDraft:
+		return true
+	case ContentStatusInReview:
+		return true
+	case ContentStatusPublished:
+		return true
+	case ContentStatusRejected:
+		return true
+	case ContentStatusTakenDown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContentType.
+const (
+	ContentTypeBlog      ContentType = "blog"
+	ContentTypePortfolio ContentType = "portfolio"
+)
+
+// Valid indicates whether the value is a known member of the ContentType enum.
+func (e ContentType) Valid() bool {
+	switch e {
+	case ContentTypeBlog:
+		return true
+	case ContentTypePortfolio:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContentVersionKind.
+const (
+	ContentVersionKindInitial      ContentVersionKind = "initial"
+	ContentVersionKindLegacy       ContentVersionKind = "legacy"
+	ContentVersionKindResubmission ContentVersionKind = "resubmission"
+	ContentVersionKindRevision     ContentVersionKind = "revision"
+)
+
+// Valid indicates whether the value is a known member of the ContentVersionKind enum.
+func (e ContentVersionKind) Valid() bool {
+	switch e {
+	case ContentVersionKindInitial:
+		return true
+	case ContentVersionKindLegacy:
+		return true
+	case ContentVersionKindResubmission:
+		return true
+	case ContentVersionKindRevision:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContentVersionState.
+const (
+	ContentVersionStateApproved         ContentVersionState = "approved"
+	ContentVersionStateChangesRequested ContentVersionState = "changes_requested"
+	ContentVersionStatePending          ContentVersionState = "pending"
+	ContentVersionStateRejected         ContentVersionState = "rejected"
+	ContentVersionStateWithdrawn        ContentVersionState = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the ContentVersionState enum.
+func (e ContentVersionState) Valid() bool {
+	switch e {
+	case ContentVersionStateApproved:
+		return true
+	case ContentVersionStateChangesRequested:
+		return true
+	case ContentVersionStatePending:
+		return true
+	case ContentVersionStateRejected:
+		return true
+	case ContentVersionStateWithdrawn:
 		return true
 	default:
 		return false
@@ -226,6 +409,165 @@ func (e ImportStatus) Valid() bool {
 	}
 }
 
+// Defines values for InviteStatus.
+const (
+	InviteStatusAccepted InviteStatus = "accepted"
+	InviteStatusDeclined InviteStatus = "declined"
+	InviteStatusExpired  InviteStatus = "expired"
+	InviteStatusLeft     InviteStatus = "left"
+	InviteStatusPending  InviteStatus = "pending"
+	InviteStatusRemoved  InviteStatus = "removed"
+)
+
+// Valid indicates whether the value is a known member of the InviteStatus enum.
+func (e InviteStatus) Valid() bool {
+	switch e {
+	case InviteStatusAccepted:
+		return true
+	case InviteStatusDeclined:
+		return true
+	case InviteStatusExpired:
+		return true
+	case InviteStatusLeft:
+		return true
+	case InviteStatusPending:
+		return true
+	case InviteStatusRemoved:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MediaKind.
+const (
+	MediaKindDocument MediaKind = "document"
+	MediaKindImage    MediaKind = "image"
+	MediaKindModel3d  MediaKind = "model3d"
+	MediaKindPdf      MediaKind = "pdf"
+)
+
+// Valid indicates whether the value is a known member of the MediaKind enum.
+func (e MediaKind) Valid() bool {
+	switch e {
+	case MediaKindDocument:
+		return true
+	case MediaKindImage:
+		return true
+	case MediaKindModel3d:
+		return true
+	case MediaKindPdf:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MediaPurpose.
+const (
+	MediaPurposeAvatar               MediaPurpose = "avatar"
+	MediaPurposeBadgeIcon            MediaPurpose = "badge_icon"
+	MediaPurposeBanner               MediaPurpose = "banner"
+	MediaPurposeContent              MediaPurpose = "content"
+	MediaPurposeCurationCover        MediaPurpose = "curation_cover"
+	MediaPurposeExperienceAttachment MediaPurpose = "experience_attachment"
+	MediaPurposeGroupAvatar          MediaPurpose = "group_avatar"
+	MediaPurposeGroupBanner          MediaPurpose = "group_banner"
+	MediaPurposeImport               MediaPurpose = "import"
+)
+
+// Valid indicates whether the value is a known member of the MediaPurpose enum.
+func (e MediaPurpose) Valid() bool {
+	switch e {
+	case MediaPurposeAvatar:
+		return true
+	case MediaPurposeBadgeIcon:
+		return true
+	case MediaPurposeBanner:
+		return true
+	case MediaPurposeContent:
+		return true
+	case MediaPurposeCurationCover:
+		return true
+	case MediaPurposeExperienceAttachment:
+		return true
+	case MediaPurposeGroupAvatar:
+		return true
+	case MediaPurposeGroupBanner:
+		return true
+	case MediaPurposeImport:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MediaStatus.
+const (
+	MediaStatusFailed     MediaStatus = "failed"
+	MediaStatusProcessing MediaStatus = "processing"
+	MediaStatusReady      MediaStatus = "ready"
+	MediaStatusUploaded   MediaStatus = "uploaded"
+)
+
+// Valid indicates whether the value is a known member of the MediaStatus enum.
+func (e MediaStatus) Valid() bool {
+	switch e {
+	case MediaStatusFailed:
+		return true
+	case MediaStatusProcessing:
+		return true
+	case MediaStatusReady:
+		return true
+	case MediaStatusUploaded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ModerationFeedbackAppealStatus.
+const (
+	ModerationFeedbackAppealStatusOpen       ModerationFeedbackAppealStatus = "open"
+	ModerationFeedbackAppealStatusOverturned ModerationFeedbackAppealStatus = "overturned"
+	ModerationFeedbackAppealStatusUpheld     ModerationFeedbackAppealStatus = "upheld"
+)
+
+// Valid indicates whether the value is a known member of the ModerationFeedbackAppealStatus enum.
+func (e ModerationFeedbackAppealStatus) Valid() bool {
+	switch e {
+	case ModerationFeedbackAppealStatusOpen:
+		return true
+	case ModerationFeedbackAppealStatusOverturned:
+		return true
+	case ModerationFeedbackAppealStatusUpheld:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ModerationFeedbackDecision.
+const (
+	ModerationFeedbackDecisionApproved         ModerationFeedbackDecision = "approved"
+	ModerationFeedbackDecisionChangesRequested ModerationFeedbackDecision = "changes_requested"
+	ModerationFeedbackDecisionRejected         ModerationFeedbackDecision = "rejected"
+)
+
+// Valid indicates whether the value is a known member of the ModerationFeedbackDecision enum.
+func (e ModerationFeedbackDecision) Valid() bool {
+	switch e {
+	case ModerationFeedbackDecisionApproved:
+		return true
+	case ModerationFeedbackDecisionChangesRequested:
+		return true
+	case ModerationFeedbackDecisionRejected:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for NextStep.
 const (
 	NextStepActivate       NextStep = "activate"
@@ -241,6 +583,36 @@ func (e NextStep) Valid() bool {
 	case NextStepChangePassword:
 		return true
 	case NextStepNone:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PortfolioContext.
+const (
+	PortfolioContextAssignment  PortfolioContext = "assignment"
+	PortfolioContextCompetition PortfolioContext = "competition"
+	PortfolioContextInternship  PortfolioContext = "internship"
+	PortfolioContextOther       PortfolioContext = "other"
+	PortfolioContextPersonal    PortfolioContext = "personal"
+	PortfolioContextUkk         PortfolioContext = "ukk"
+)
+
+// Valid indicates whether the value is a known member of the PortfolioContext enum.
+func (e PortfolioContext) Valid() bool {
+	switch e {
+	case PortfolioContextAssignment:
+		return true
+	case PortfolioContextCompetition:
+		return true
+	case PortfolioContextInternship:
+		return true
+	case PortfolioContextOther:
+		return true
+	case PortfolioContextPersonal:
+		return true
+	case PortfolioContextUkk:
 		return true
 	default:
 		return false
@@ -313,6 +685,27 @@ func (e ProfileStatus) Valid() bool {
 	}
 }
 
+// Defines values for RevisionStatus.
+const (
+	RevisionStatusChangesRequested RevisionStatus = "changes_requested"
+	RevisionStatusEditing          RevisionStatus = "editing"
+	RevisionStatusInReview         RevisionStatus = "in_review"
+)
+
+// Valid indicates whether the value is a known member of the RevisionStatus enum.
+func (e RevisionStatus) Valid() bool {
+	switch e {
+	case RevisionStatusChangesRequested:
+		return true
+	case RevisionStatusEditing:
+		return true
+	case RevisionStatusInReview:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SkillCategory.
 const (
 	SkillCategoryDesign      SkillCategory = "design"
@@ -370,6 +763,45 @@ func (e UsernameAvailabilityReason) Valid() bool {
 	case UsernameAvailabilityReasonReserved:
 		return true
 	case UsernameAvailabilityReasonTaken:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetContentsParamsSort.
+const (
+	GetContentsParamsSortLatest  GetContentsParamsSort = "latest"
+	GetContentsParamsSortPopular GetContentsParamsSort = "popular"
+)
+
+// Valid indicates whether the value is a known member of the GetContentsParamsSort enum.
+func (e GetContentsParamsSort) Valid() bool {
+	switch e {
+	case GetContentsParamsSortLatest:
+		return true
+	case GetContentsParamsSortPopular:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetContentsParamsPeriod.
+const (
+	GetContentsParamsPeriodAll  GetContentsParamsPeriod = "all"
+	GetContentsParamsPeriodN30d GetContentsParamsPeriod = "30d"
+	GetContentsParamsPeriodN7d  GetContentsParamsPeriod = "7d"
+)
+
+// Valid indicates whether the value is a known member of the GetContentsParamsPeriod enum.
+func (e GetContentsParamsPeriod) Valid() bool {
+	switch e {
+	case GetContentsParamsPeriodAll:
+		return true
+	case GetContentsParamsPeriodN30d:
+		return true
+	case GetContentsParamsPeriodN7d:
 		return true
 	default:
 		return false
@@ -751,6 +1183,24 @@ type AdminUserUpdate struct {
 	TeacherMajorIds *[]openapi_types.UUID `json:"teacherMajorIds,omitempty"`
 }
 
+// Appeal defines model for Appeal.
+type Appeal struct {
+	CreatedAt    time.Time          `json:"createdAt"`
+	DecidedAt    *time.Time         `json:"decidedAt,omitempty"`
+	DecisionNote *string            `json:"decisionNote,omitempty"`
+	Id           openapi_types.UUID `json:"id"`
+	Message      string             `json:"message"`
+	Status       AppealStatus       `json:"status"`
+}
+
+// AppealStatus defines model for Appeal.Status.
+type AppealStatus string
+
+// AppealCreate defines model for AppealCreate.
+type AppealCreate struct {
+	Message string `json:"message"`
+}
+
 // AuditLogEntry defines model for AuditLogEntry.
 type AuditLogEntry struct {
 	Action string `json:"action"`
@@ -776,6 +1226,59 @@ type AuditLogPage struct {
 
 	// NextCursor Cursor halaman berikutnya. Kosong pada halaman terakhir.
 	NextCursor *string `json:"nextCursor"`
+}
+
+// AuthorInvite defines model for AuthorInvite.
+type AuthorInvite struct {
+	Level     AuthorInviteLevel  `json:"level"`
+	RoleLabel *string            `json:"roleLabel,omitempty"`
+	UserId    openapi_types.UUID `json:"userId"`
+}
+
+// AuthorInviteLevel defines model for AuthorInvite.Level.
+type AuthorInviteLevel string
+
+// AuthorLevel defines model for AuthorLevel.
+type AuthorLevel string
+
+// AuthorMini defines model for AuthorMini.
+type AuthorMini struct {
+	AvatarUrl   *string            `json:"avatarUrl,omitempty"`
+	DisplayName string             `json:"displayName"`
+	UserId      openapi_types.UUID `json:"userId"`
+	Username    *string            `json:"username,omitempty"`
+}
+
+// AuthorUpdate defines model for AuthorUpdate.
+type AuthorUpdate struct {
+	Level     *AuthorUpdateLevel `json:"level,omitempty"`
+	Position  *int               `json:"position,omitempty"`
+	RoleLabel *string            `json:"roleLabel,omitempty"`
+}
+
+// AuthorUpdateLevel defines model for AuthorUpdate.Level.
+type AuthorUpdateLevel string
+
+// CategoryList defines model for CategoryList.
+type CategoryList struct {
+	Items []CategoryOption `json:"items"`
+}
+
+// CategoryOption defines model for CategoryOption.
+type CategoryOption struct {
+	Description *string            `json:"description,omitempty"`
+	Id          openapi_types.UUID `json:"id"`
+
+	// MajorCodes Jurusan yang disarankan untuk kategori ini.
+	MajorCodes []string `json:"majorCodes"`
+	Name       string   `json:"name"`
+	Slug       string   `json:"slug"`
+}
+
+// CategoryRef defines model for CategoryRef.
+type CategoryRef struct {
+	Name string `json:"name"`
+	Slug string `json:"slug"`
 }
 
 // ChangePasswordRequest defines model for ChangePasswordRequest.
@@ -846,9 +1349,181 @@ type ClassUpdate struct {
 	Section string `json:"section"`
 }
 
+// ContentAuthor defines model for ContentAuthor.
+type ContentAuthor struct {
+	InviteExpiresAt *time.Time   `json:"inviteExpiresAt,omitempty"`
+	InviteStatus    InviteStatus `json:"inviteStatus"`
+	InvitedAt       time.Time    `json:"invitedAt"`
+	Level           AuthorLevel  `json:"level"`
+	Position        int          `json:"position"`
+
+	// RoleLabel Label peran, mis. Animator.
+	RoleLabel *string    `json:"roleLabel,omitempty"`
+	User      AuthorMini `json:"user"`
+}
+
+// ContentAuthorList defines model for ContentAuthorList.
+type ContentAuthorList struct {
+	Items []ContentAuthor `json:"items"`
+}
+
+// ContentAuthorsPreview defines model for ContentAuthorsPreview.
+type ContentAuthorsPreview struct {
+	// Preview Maksimal 3 author pertama (urutan tampil).
+	Preview []AuthorMini `json:"preview"`
+	Total   int          `json:"total"`
+}
+
+// ContentCard defines model for ContentCard.
+type ContentCard struct {
+	Authors          ContentAuthorsPreview `json:"authors"`
+	Category         *CategoryRef          `json:"category,omitempty"`
+	Cover            *ImageRef             `json:"cover,omitempty"`
+	Excerpt          *string               `json:"excerpt,omitempty"`
+	FirstPublishedAt time.Time             `json:"firstPublishedAt"`
+	PublicId         string                `json:"publicId"`
+	ReadingMinutes   *int                  `json:"readingMinutes,omitempty"`
+	Slug             string                `json:"slug"`
+	Stats            ContentStats          `json:"stats"`
+	Title            string                `json:"title"`
+	Type             ContentType           `json:"type"`
+
+	// Viewer Hanya jika login.
+	Viewer *ContentCardViewer `json:"viewer,omitempty"`
+}
+
+// ContentCardPage defines model for ContentCardPage.
+type ContentCardPage struct {
+	Items      []ContentCard `json:"items"`
+	NextCursor *string       `json:"nextCursor"`
+}
+
+// ContentCardViewer defines model for ContentCardViewer.
+type ContentCardViewer struct {
+	Appreciated bool `json:"appreciated"`
+	Bookmarked  bool `json:"bookmarked"`
+}
+
+// ContentDetail defines model for ContentDetail.
+type ContentDetail struct {
+	// Authors Author accepted, urutan tampil.
+	Authors []ContentAuthor `json:"authors"`
+
+	// Body Portfolio `{blocks:[...]}` atau dokumen ProseMirror untuk blog (lihat docs/revamp/editor-blocks.md).
+	Body             map[string]interface{} `json:"body"`
+	Category         *CategoryRef           `json:"category,omitempty"`
+	Cover            *ImageRef              `json:"cover,omitempty"`
+	Excerpt          *string                `json:"excerpt,omitempty"`
+	FirstPublishedAt *time.Time             `json:"firstPublishedAt,omitempty"`
+	LastPublishedAt  *time.Time             `json:"lastPublishedAt,omitempty"`
+
+	// LegacyIncomplete Konten migrasi v1 yang belum memenuhi aturan baru.
+	LegacyIncomplete bool                   `json:"legacyIncomplete"`
+	Meta             map[string]interface{} `json:"meta"`
+	PublicId         string                 `json:"publicId"`
+	ReadingMinutes   *int                   `json:"readingMinutes,omitempty"`
+	Skills           []TaxonomyTerm         `json:"skills"`
+	Slug             string                 `json:"slug"`
+	Stats            ContentStats           `json:"stats"`
+	Status           ContentStatus          `json:"status"`
+	Tags             []TaxonomyTerm         `json:"tags"`
+	Title            string                 `json:"title"`
+	Tools            []TaxonomyTerm         `json:"tools"`
+	Type             ContentType            `json:"type"`
+	Viewer           *ContentDetailViewer   `json:"viewer,omitempty"`
+}
+
+// ContentDetailViewer defines model for ContentDetailViewer.
+type ContentDetailViewer struct {
+	Appreciated bool         `json:"appreciated"`
+	AuthorLevel *AuthorLevel `json:"authorLevel,omitempty"`
+	Bookmarked  bool         `json:"bookmarked"`
+	IsAuthor    bool         `json:"isAuthor"`
+}
+
+// ContentStats defines model for ContentStats.
+type ContentStats struct {
+	Appreciations int `json:"appreciations"`
+	Comments      int `json:"comments"`
+}
+
+// ContentStatus defines model for ContentStatus.
+type ContentStatus string
+
+// ContentType defines model for ContentType.
+type ContentType string
+
+// ContentVersion defines model for ContentVersion.
+type ContentVersion struct {
+	DecidedAt   *time.Time          `json:"decidedAt,omitempty"`
+	Decision    *ModerationFeedback `json:"decision,omitempty"`
+	Id          openapi_types.UUID  `json:"id"`
+	Kind        ContentVersionKind  `json:"kind"`
+	Number      int                 `json:"number"`
+	State       ContentVersionState `json:"state"`
+	SubmittedAt time.Time           `json:"submittedAt"`
+	SubmittedBy AuthorMini          `json:"submittedBy"`
+	Title       string              `json:"title"`
+}
+
+// ContentVersionKind defines model for ContentVersion.Kind.
+type ContentVersionKind string
+
+// ContentVersionState defines model for ContentVersion.State.
+type ContentVersionState string
+
+// ContentVersionDetail defines model for ContentVersionDetail.
+type ContentVersionDetail struct {
+	Body     map[string]interface{} `json:"body"`
+	Category *CategoryRef           `json:"category,omitempty"`
+	Cover    *ImageRef              `json:"cover,omitempty"`
+	Excerpt  *string                `json:"excerpt,omitempty"`
+	Meta     map[string]interface{} `json:"meta"`
+	Skills   []TaxonomyTerm         `json:"skills"`
+	Tags     []TaxonomyTerm         `json:"tags"`
+	Title    string                 `json:"title"`
+	Tools    []TaxonomyTerm         `json:"tools"`
+	Version  ContentVersion         `json:"version"`
+}
+
+// ContentVersionList defines model for ContentVersionList.
+type ContentVersionList struct {
+	Items []ContentVersion `json:"items"`
+}
+
 // CsrfToken defines model for CsrfToken.
 type CsrfToken struct {
 	CsrfToken string `json:"csrfToken"`
+}
+
+// Draft defines model for Draft.
+type Draft struct {
+	Body        map[string]interface{} `json:"body"`
+	CategoryId  *openapi_types.UUID    `json:"categoryId,omitempty"`
+	Cover       *ImageRef              `json:"cover,omitempty"`
+	Excerpt     *string                `json:"excerpt,omitempty"`
+	LockVersion int                    `json:"lockVersion"`
+	Meta        map[string]interface{} `json:"meta"`
+	Skills      []TaxonomyTerm         `json:"skills"`
+	Tags        []TaxonomyTerm         `json:"tags"`
+	Title       string                 `json:"title"`
+	Tools       []TaxonomyTerm         `json:"tools"`
+	UpdatedAt   time.Time              `json:"updatedAt"`
+	UpdatedBy   *AuthorMini            `json:"updatedBy,omitempty"`
+}
+
+// DraftInput defines model for DraftInput.
+type DraftInput struct {
+	Body         map[string]interface{} `json:"body"`
+	CategoryId   *openapi_types.UUID    `json:"categoryId,omitempty"`
+	CoverMediaId *openapi_types.UUID    `json:"coverMediaId,omitempty"`
+	Excerpt      *string                `json:"excerpt,omitempty"`
+	LockVersion  int                    `json:"lockVersion"`
+	Meta         map[string]interface{} `json:"meta"`
+	Skills       *[]string              `json:"skills,omitempty"`
+	Tags         *[]string              `json:"tags,omitempty"`
+	Title        string                 `json:"title"`
+	Tools        *[]string              `json:"tools,omitempty"`
 }
 
 // EmploymentType defines model for EmploymentType.
@@ -914,6 +1589,16 @@ type FieldError struct {
 	Ref     *string `json:"ref,omitempty"`
 }
 
+// ImageRef Referensi gambar. `url` kosong sampai media diproses/dipublikasikan.
+type ImageRef struct {
+	Blurhash      *string            `json:"blurhash,omitempty"`
+	DominantColor *string            `json:"dominantColor,omitempty"`
+	H             *int               `json:"h,omitempty"`
+	MediaId       openapi_types.UUID `json:"mediaId"`
+	Url           *string            `json:"url,omitempty"`
+	W             *int               `json:"w,omitempty"`
+}
+
 // ImportJob Pekerjaan impor CSV beserta hasil validasi dan eksekusinya.
 type ImportJob struct {
 	// ByClass Jumlah baris valid per kelas (khusus siswa).
@@ -975,6 +1660,34 @@ type ImportSkippedRow struct {
 
 // ImportStatus Status pekerjaan impor.
 type ImportStatus string
+
+// Invitation defines model for Invitation.
+type Invitation struct {
+	Content   InvitationContent `json:"content"`
+	ExpiresAt time.Time         `json:"expiresAt"`
+	InvitedAt time.Time         `json:"invitedAt"`
+	InvitedBy AuthorMini        `json:"invitedBy"`
+	Level     AuthorLevel       `json:"level"`
+	RoleLabel *string           `json:"roleLabel,omitempty"`
+}
+
+// InvitationContent defines model for InvitationContent.
+type InvitationContent struct {
+	Cover    *ImageRef          `json:"cover,omitempty"`
+	Id       openapi_types.UUID `json:"id"`
+	PublicId string             `json:"publicId"`
+	Title    string             `json:"title"`
+	Type     ContentType        `json:"type"`
+}
+
+// InvitationPage defines model for InvitationPage.
+type InvitationPage struct {
+	Items      []Invitation `json:"items"`
+	NextCursor *string      `json:"nextCursor"`
+}
+
+// InviteStatus defines model for InviteStatus.
+type InviteStatus string
 
 // IssuedPassword Sandi yang baru diterbitkan. Hanya ditampilkan sekali.
 type IssuedPassword struct {
@@ -1051,11 +1764,78 @@ type MajorUpdate struct {
 	SortOrder *int `json:"sortOrder,omitempty"`
 }
 
+// MediaAsset defines model for MediaAsset.
+type MediaAsset struct {
+	Blurhash      *string            `json:"blurhash,omitempty"`
+	CreatedAt     time.Time          `json:"createdAt"`
+	DominantColor *string            `json:"dominantColor,omitempty"`
+	Height        *int               `json:"height,omitempty"`
+	Id            openapi_types.UUID `json:"id"`
+	IsPublic      bool               `json:"isPublic"`
+
+	// Kind Jenis media yang dideteksi dari isi berkas.
+	Kind             MediaKind    `json:"kind"`
+	MimeType         string       `json:"mimeType"`
+	OriginalFilename *string      `json:"originalFilename,omitempty"`
+	PageCount        *int         `json:"pageCount,omitempty"`
+	Purpose          MediaPurpose `json:"purpose"`
+	SizeBytes        int64        `json:"sizeBytes"`
+	Status           MediaStatus  `json:"status"`
+
+	// Variants Varian siap pakai, dipetakan dari nama varian ke metadata.
+	Variants map[string]MediaVariant `json:"variants"`
+	Width    *int                    `json:"width,omitempty"`
+}
+
+// MediaKind Jenis media yang dideteksi dari isi berkas.
+type MediaKind string
+
+// MediaPurpose defines model for MediaPurpose.
+type MediaPurpose string
+
 // MediaSelection defines model for MediaSelection.
 type MediaSelection struct {
 	// MediaId ID media. Null mengosongkan pilihan.
 	MediaId *openapi_types.UUID `json:"mediaId"`
 }
+
+// MediaStatus defines model for MediaStatus.
+type MediaStatus string
+
+// MediaVariant defines model for MediaVariant.
+type MediaVariant struct {
+	Bytes int64 `json:"bytes"`
+
+	// Format Format varian, misalnya `avif` atau `webp`.
+	Format string `json:"format"`
+	H      int    `json:"h"`
+	W      int    `json:"w"`
+}
+
+// ModerationAnnotation defines model for ModerationAnnotation.
+type ModerationAnnotation struct {
+	Note string `json:"note"`
+
+	// TargetRef id blok/node, atau field:<nama>
+	TargetRef string `json:"targetRef"`
+}
+
+// ModerationFeedback defines model for ModerationFeedback.
+type ModerationFeedback struct {
+	Annotations  []ModerationAnnotation          `json:"annotations"`
+	AppealStatus *ModerationFeedbackAppealStatus `json:"appealStatus,omitempty"`
+	CanAppeal    bool                            `json:"canAppeal"`
+	DecidedAt    time.Time                       `json:"decidedAt"`
+	Decision     ModerationFeedbackDecision      `json:"decision"`
+	Note         *string                         `json:"note,omitempty"`
+	ReasonLabel  *string                         `json:"reasonLabel,omitempty"`
+}
+
+// ModerationFeedbackAppealStatus defines model for ModerationFeedback.AppealStatus.
+type ModerationFeedbackAppealStatus string
+
+// ModerationFeedbackDecision defines model for ModerationFeedback.Decision.
+type ModerationFeedbackDecision string
 
 // MyProfile defines model for MyProfile.
 type MyProfile struct {
@@ -1102,6 +1882,11 @@ type MyProfile struct {
 // `ACTIVATION_REQUIRED` / `PASSWORD_CHANGE_REQUIRED`.
 type NextStep string
 
+// OwnershipTransfer defines model for OwnershipTransfer.
+type OwnershipTransfer struct {
+	UserId openapi_types.UUID `json:"userId"`
+}
+
 // PasswordConfirmation defines model for PasswordConfirmation.
 type PasswordConfirmation struct {
 	Password string `json:"password"`
@@ -1111,6 +1896,9 @@ type PasswordConfirmation struct {
 type Pong struct {
 	Pong bool `json:"pong"`
 }
+
+// PortfolioContext defines model for PortfolioContext.
+type PortfolioContext string
 
 // Problem Respons error sesuai RFC 9457 (Problem Details for HTTP APIs).
 // Dikirim dengan media type application/problem+json.
@@ -1254,6 +2042,9 @@ type RecoveryCodes struct {
 	Codes []string `json:"codes"`
 }
 
+// RevisionStatus Status revisi atas konten tayang (hanya saat status published).
+type RevisionStatus string
+
 // RoleGrant Izin efektif user. `majorIds` kosong berarti scope global.
 type RoleGrant struct {
 	Global   bool                 `json:"global"`
@@ -1320,6 +2111,75 @@ type SkillOption struct {
 // SkillOptionList defines model for SkillOptionList.
 type SkillOptionList struct {
 	Items []SkillOption `json:"items"`
+}
+
+// StudioContent defines model for StudioContent.
+type StudioContent struct {
+	ArchivedAt       *time.Time         `json:"archivedAt,omitempty"`
+	AuthorsCount     int                `json:"authorsCount"`
+	CreatedAt        time.Time          `json:"createdAt"`
+	DeletedAt        *time.Time         `json:"deletedAt,omitempty"`
+	Draft            Draft              `json:"draft"`
+	FirstPublishedAt *time.Time         `json:"firstPublishedAt,omitempty"`
+	HasLiveVersion   bool               `json:"hasLiveVersion"`
+	Id               openapi_types.UUID `json:"id"`
+
+	// InReviewClaimed Moderator sudah mulai meninjau (tidak bisa ditarik).
+	InReviewClaimed bool                `json:"inReviewClaimed"`
+	LastModeration  *ModerationFeedback `json:"lastModeration,omitempty"`
+	MyLevel         AuthorLevel         `json:"myLevel"`
+	PublicId        string              `json:"publicId"`
+	PurgeAfter      *time.Time          `json:"purgeAfter,omitempty"`
+	RevisionStatus  *RevisionStatus     `json:"revisionStatus,omitempty"`
+	Slug            string              `json:"slug"`
+	Status          ContentStatus       `json:"status"`
+	Title           string              `json:"title"`
+	Type            ContentType         `json:"type"`
+	UpdatedAt       time.Time           `json:"updatedAt"`
+}
+
+// StudioContentCreate defines model for StudioContentCreate.
+type StudioContentCreate struct {
+	Type ContentType `json:"type"`
+}
+
+// StudioContentItem defines model for StudioContentItem.
+type StudioContentItem struct {
+	AuthorsCount   int                `json:"authorsCount"`
+	Cover          *ImageRef          `json:"cover,omitempty"`
+	Id             openapi_types.UUID `json:"id"`
+	MyLevel        AuthorLevel        `json:"myLevel"`
+	PublicId       string             `json:"publicId"`
+	RevisionStatus *RevisionStatus    `json:"revisionStatus,omitempty"`
+	Status         ContentStatus      `json:"status"`
+	Title          string             `json:"title"`
+	Type           ContentType        `json:"type"`
+	UpdatedAt      time.Time          `json:"updatedAt"`
+}
+
+// StudioContentPage defines model for StudioContentPage.
+type StudioContentPage struct {
+	Items      []StudioContentItem `json:"items"`
+	NextCursor *string             `json:"nextCursor"`
+}
+
+// StudioSummary defines model for StudioSummary.
+type StudioSummary struct {
+	// Counts Jumlah konten per status (kunci = ContentStatus).
+	Counts             map[string]int `json:"counts"`
+	PendingInvitations int            `json:"pendingInvitations"`
+}
+
+// TaxonomyTerm defines model for TaxonomyTerm.
+type TaxonomyTerm struct {
+	Category *string `json:"category,omitempty"`
+	Name     string  `json:"name"`
+	Slug     string  `json:"slug"`
+}
+
+// TaxonomyTermList defines model for TaxonomyTermList.
+type TaxonomyTermList struct {
+	Items []TaxonomyTerm `json:"items"`
 }
 
 // UserMini defines model for UserMini.
@@ -1417,8 +2277,74 @@ type GetAuthUsernameAvailabilityParams struct {
 	U string `form:"u" json:"u"`
 }
 
+// GetContentsParams defines parameters for GetContents.
+type GetContentsParams struct {
+	Type *ContentType           `form:"type,omitempty" json:"type,omitempty"`
+	Sort *GetContentsParamsSort `form:"sort,omitempty" json:"sort,omitempty"`
+
+	// Period Hanya untuk sort=popular.
+	Period *GetContentsParamsPeriod `form:"period,omitempty" json:"period,omitempty"`
+
+	// Category Slug kategori.
+	Category *string `form:"category,omitempty" json:"category,omitempty"`
+
+	// Major Kode jurusan (konten yang salah satu author-nya anggota jurusan itu).
+	Major   *string           `form:"major,omitempty" json:"major,omitempty"`
+	Tool    *string           `form:"tool,omitempty" json:"tool,omitempty"`
+	Skill   *string           `form:"skill,omitempty" json:"skill,omitempty"`
+	Tag     *string           `form:"tag,omitempty" json:"tag,omitempty"`
+	Context *PortfolioContext `form:"context,omitempty" json:"context,omitempty"`
+	Cursor  *string           `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit   *int              `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// GetContentsParamsSort defines parameters for GetContents.
+type GetContentsParamsSort string
+
+// GetContentsParamsPeriod defines parameters for GetContents.
+type GetContentsParamsPeriod string
+
+// PostMediaMultipartBody defines parameters for PostMedia.
+type PostMediaMultipartBody struct {
+	File    openapi_types.File `json:"file"`
+	Purpose MediaPurpose       `json:"purpose"`
+}
+
+// PostMediaParams defines parameters for PostMedia.
+type PostMediaParams struct {
+	IdempotencyKey *string `json:"Idempotency-Key,omitempty"`
+}
+
+// GetStudioContentsParams defines parameters for GetStudioContents.
+type GetStudioContentsParams struct {
+	Status *ContentStatus `form:"status,omitempty" json:"status,omitempty"`
+	Type   *ContentType   `form:"type,omitempty" json:"type,omitempty"`
+	Cursor *string        `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit  *int           `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// GetStudioInvitationsParams defines parameters for GetStudioInvitations.
+type GetStudioInvitationsParams struct {
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// GetTaxonomyCategoriesParams defines parameters for GetTaxonomyCategories.
+type GetTaxonomyCategoriesParams struct {
+	Type ContentType `form:"type" json:"type"`
+}
+
 // GetTaxonomySkillsParams defines parameters for GetTaxonomySkills.
 type GetTaxonomySkillsParams struct {
+	Q *string `form:"q,omitempty" json:"q,omitempty"`
+}
+
+// GetTaxonomyTagsParams defines parameters for GetTaxonomyTags.
+type GetTaxonomyTagsParams struct {
+	Q *string `form:"q,omitempty" json:"q,omitempty"`
+}
+
+// GetTaxonomyToolsParams defines parameters for GetTaxonomyTools.
+type GetTaxonomyToolsParams struct {
 	Q *string `form:"q,omitempty" json:"q,omitempty"`
 }
 
@@ -1516,6 +2442,27 @@ type PutMeSkillsJSONRequestBody = ProfileSkillsInput
 
 // PatchMeUsernameJSONRequestBody defines body for PatchMeUsername for application/json ContentType.
 type PatchMeUsernameJSONRequestBody = UsernameChange
+
+// PostMediaMultipartRequestBody defines body for PostMedia for multipart/form-data ContentType.
+type PostMediaMultipartRequestBody PostMediaMultipartBody
+
+// PostStudioContentJSONRequestBody defines body for PostStudioContent for application/json ContentType.
+type PostStudioContentJSONRequestBody = StudioContentCreate
+
+// PostStudioContentAppealJSONRequestBody defines body for PostStudioContentAppeal for application/json ContentType.
+type PostStudioContentAppealJSONRequestBody = AppealCreate
+
+// PostStudioContentAuthorJSONRequestBody defines body for PostStudioContentAuthor for application/json ContentType.
+type PostStudioContentAuthorJSONRequestBody = AuthorInvite
+
+// PatchStudioContentAuthorJSONRequestBody defines body for PatchStudioContentAuthor for application/json ContentType.
+type PatchStudioContentAuthorJSONRequestBody = AuthorUpdate
+
+// PutStudioContentDraftJSONRequestBody defines body for PutStudioContentDraft for application/json ContentType.
+type PutStudioContentDraftJSONRequestBody = DraftInput
+
+// PostStudioContentTransferOwnershipJSONRequestBody defines body for PostStudioContentTransferOwnership for application/json ContentType.
+type PostStudioContentTransferOwnershipJSONRequestBody = OwnershipTransfer
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -1666,6 +2613,12 @@ type ServerInterface interface {
 	// GetAuthUsernameAvailability Cek ketersediaan username
 	// (GET /auth/username-availability)
 	GetAuthUsernameAvailability(w http.ResponseWriter, r *http.Request, params GetAuthUsernameAvailabilityParams)
+	// GetContents Katalog konten tayang (Katalog Karya & Blog)
+	// (GET /contents)
+	GetContents(w http.ResponseWriter, r *http.Request, params GetContentsParams)
+	// GetContent Detail konten
+	// (GET /contents/{publicId})
+	GetContent(w http.ResponseWriter, r *http.Request, publicId string)
 	// GetMajors Daftar jurusan aktif
 	// (GET /majors)
 	GetMajors(w http.ResponseWriter, r *http.Request)
@@ -1702,12 +2655,108 @@ type ServerInterface interface {
 	// PatchMeUsername Ganti username
 	// (PATCH /me/username)
 	PatchMeUsername(w http.ResponseWriter, r *http.Request)
+	// PostMedia Unggah media
+	// (POST /media)
+	PostMedia(w http.ResponseWriter, r *http.Request, params PostMediaParams)
+	// DeleteMedia Hapus media
+	// (DELETE /media/{id})
+	DeleteMedia(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// GetMedia Detail media
+	// (GET /media/{id})
+	GetMedia(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// GetMediaVariant Stream varian media
+	// (GET /media/{id}/{variant})
+	GetMediaVariant(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, variant string)
 	// GetPing Cek API hidup
 	// (GET /ping)
 	GetPing(w http.ResponseWriter, r *http.Request)
+	// GetStudioContents Konten saya (sebagai author accepted)
+	// (GET /studio/contents)
+	GetStudioContents(w http.ResponseWriter, r *http.Request, params GetStudioContentsParams)
+	// PostStudioContent Buat konten baru (draf kosong)
+	// (POST /studio/contents)
+	PostStudioContent(w http.ResponseWriter, r *http.Request)
+	// DeleteStudioContent Hapus konten (soft delete 30 hari, hanya pemilik)
+	// (DELETE /studio/contents/{id})
+	DeleteStudioContent(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// GetStudioContent Detail konten untuk editor
+	// (GET /studio/contents/{id})
+	GetStudioContent(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// PostStudioContentAppeal Ajukan banding atas penolakan (sekali per penolakan, pemilik)
+	// (POST /studio/contents/{id}/appeal)
+	PostStudioContentAppeal(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// PostStudioContentArchive Arsipkan konten tayang (pemilik)
+	// (POST /studio/contents/{id}/archive)
+	PostStudioContentArchive(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// GetStudioContentAuthors Daftar author (termasuk undangan pending)
+	// (GET /studio/contents/{id}/authors)
+	GetStudioContentAuthors(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// PostStudioContentAuthor Undang kolaborator (pemilik)
+	// (POST /studio/contents/{id}/authors)
+	PostStudioContentAuthor(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// DeleteStudioContentAuthor Keluarkan author / batalkan undangan (pemilik)
+	// (DELETE /studio/contents/{id}/authors/{userId})
+	DeleteStudioContentAuthor(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, userId openapi_types.UUID)
+	// PatchStudioContentAuthor Ubah level / label peran / urutan author (pemilik)
+	// (PATCH /studio/contents/{id}/authors/{userId})
+	PatchStudioContentAuthor(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, userId openapi_types.UUID)
+	// PutStudioContentDraft Simpan draf (autosave)
+	// (PUT /studio/contents/{id}/draft)
+	PutStudioContentDraft(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// PostStudioContentLeave Keluar dari konten (editor/kontributor)
+	// (POST /studio/contents/{id}/leave)
+	PostStudioContentLeave(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// PostStudioContentRestore Pulihkan dari sampah (pemilik, ≤ 30 hari)
+	// (POST /studio/contents/{id}/restore)
+	PostStudioContentRestore(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// DeleteStudioContentRevision Buang revisi yang belum dikirim
+	// (DELETE /studio/contents/{id}/revision)
+	DeleteStudioContentRevision(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// PostStudioContentRevision Mulai revisi atas konten tayang
+	// (POST /studio/contents/{id}/revision)
+	PostStudioContentRevision(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// PostStudioContentSubmit Kirim ke moderasi
+	// (POST /studio/contents/{id}/submit)
+	PostStudioContentSubmit(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// PostStudioContentTransferOwnership Pindahkan kepemilikan ke author accepted (pemilik lama jadi editor)
+	// (POST /studio/contents/{id}/transfer-ownership)
+	PostStudioContentTransferOwnership(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// PostStudioContentUnarchive Terbitkan kembali konten arsip tanpa review (pemilik)
+	// (POST /studio/contents/{id}/unarchive)
+	PostStudioContentUnarchive(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// GetStudioContentVersions Riwayat versi + keputusan moderasi
+	// (GET /studio/contents/{id}/versions)
+	GetStudioContentVersions(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// GetStudioContentVersion Snapshot satu versi
+	// (GET /studio/contents/{id}/versions/{versionId})
+	GetStudioContentVersion(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, versionId openapi_types.UUID)
+	// PostStudioContentWithdraw Tarik kembali dari moderasi (selama belum di-claim)
+	// (POST /studio/contents/{id}/withdraw)
+	PostStudioContentWithdraw(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// GetStudioInvitations Undangan kolaborasi yang masuk (pending)
+	// (GET /studio/invitations)
+	GetStudioInvitations(w http.ResponseWriter, r *http.Request, params GetStudioInvitationsParams)
+	// PostStudioInvitationAccept Terima undangan
+	// (POST /studio/invitations/{contentId}/accept)
+	PostStudioInvitationAccept(w http.ResponseWriter, r *http.Request, contentId openapi_types.UUID)
+	// PostStudioInvitationDecline Tolak undangan
+	// (POST /studio/invitations/{contentId}/decline)
+	PostStudioInvitationDecline(w http.ResponseWriter, r *http.Request, contentId openapi_types.UUID)
+	// GetStudioSummary Ringkasan Studio (jumlah per status + undangan pending)
+	// (GET /studio/summary)
+	GetStudioSummary(w http.ResponseWriter, r *http.Request)
+	// GetTaxonomyCategories Kategori konten
+	// (GET /taxonomy/categories)
+	GetTaxonomyCategories(w http.ResponseWriter, r *http.Request, params GetTaxonomyCategoriesParams)
 	// GetTaxonomySkills Cari skill
 	// (GET /taxonomy/skills)
 	GetTaxonomySkills(w http.ResponseWriter, r *http.Request, params GetTaxonomySkillsParams)
+	// GetTaxonomyTags Cari tag (autocomplete)
+	// (GET /taxonomy/tags)
+	GetTaxonomyTags(w http.ResponseWriter, r *http.Request, params GetTaxonomyTagsParams)
+	// GetTaxonomyTools Cari tools/software (autocomplete)
+	// (GET /taxonomy/tools)
+	GetTaxonomyTools(w http.ResponseWriter, r *http.Request, params GetTaxonomyToolsParams)
 	// GetUser Profil pengguna publik
 	// (GET /users/{username})
 	GetUser(w http.ResponseWriter, r *http.Request, username string)
@@ -2032,6 +3081,18 @@ func (_ Unimplemented) GetAuthUsernameAvailability(w http.ResponseWriter, r *htt
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// GetContents Katalog konten tayang (Katalog Karya & Blog)
+// (GET /contents)
+func (_ Unimplemented) GetContents(w http.ResponseWriter, r *http.Request, params GetContentsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetContent Detail konten
+// (GET /contents/{publicId})
+func (_ Unimplemented) GetContent(w http.ResponseWriter, r *http.Request, publicId string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // GetMajors Daftar jurusan aktif
 // (GET /majors)
 func (_ Unimplemented) GetMajors(w http.ResponseWriter, r *http.Request) {
@@ -2104,15 +3165,207 @@ func (_ Unimplemented) PatchMeUsername(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// PostMedia Unggah media
+// (POST /media)
+func (_ Unimplemented) PostMedia(w http.ResponseWriter, r *http.Request, params PostMediaParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DeleteMedia Hapus media
+// (DELETE /media/{id})
+func (_ Unimplemented) DeleteMedia(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetMedia Detail media
+// (GET /media/{id})
+func (_ Unimplemented) GetMedia(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetMediaVariant Stream varian media
+// (GET /media/{id}/{variant})
+func (_ Unimplemented) GetMediaVariant(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, variant string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // GetPing Cek API hidup
 // (GET /ping)
 func (_ Unimplemented) GetPing(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// GetStudioContents Konten saya (sebagai author accepted)
+// (GET /studio/contents)
+func (_ Unimplemented) GetStudioContents(w http.ResponseWriter, r *http.Request, params GetStudioContentsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostStudioContent Buat konten baru (draf kosong)
+// (POST /studio/contents)
+func (_ Unimplemented) PostStudioContent(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DeleteStudioContent Hapus konten (soft delete 30 hari, hanya pemilik)
+// (DELETE /studio/contents/{id})
+func (_ Unimplemented) DeleteStudioContent(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetStudioContent Detail konten untuk editor
+// (GET /studio/contents/{id})
+func (_ Unimplemented) GetStudioContent(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostStudioContentAppeal Ajukan banding atas penolakan (sekali per penolakan, pemilik)
+// (POST /studio/contents/{id}/appeal)
+func (_ Unimplemented) PostStudioContentAppeal(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostStudioContentArchive Arsipkan konten tayang (pemilik)
+// (POST /studio/contents/{id}/archive)
+func (_ Unimplemented) PostStudioContentArchive(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetStudioContentAuthors Daftar author (termasuk undangan pending)
+// (GET /studio/contents/{id}/authors)
+func (_ Unimplemented) GetStudioContentAuthors(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostStudioContentAuthor Undang kolaborator (pemilik)
+// (POST /studio/contents/{id}/authors)
+func (_ Unimplemented) PostStudioContentAuthor(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DeleteStudioContentAuthor Keluarkan author / batalkan undangan (pemilik)
+// (DELETE /studio/contents/{id}/authors/{userId})
+func (_ Unimplemented) DeleteStudioContentAuthor(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, userId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PatchStudioContentAuthor Ubah level / label peran / urutan author (pemilik)
+// (PATCH /studio/contents/{id}/authors/{userId})
+func (_ Unimplemented) PatchStudioContentAuthor(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, userId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PutStudioContentDraft Simpan draf (autosave)
+// (PUT /studio/contents/{id}/draft)
+func (_ Unimplemented) PutStudioContentDraft(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostStudioContentLeave Keluar dari konten (editor/kontributor)
+// (POST /studio/contents/{id}/leave)
+func (_ Unimplemented) PostStudioContentLeave(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostStudioContentRestore Pulihkan dari sampah (pemilik, ≤ 30 hari)
+// (POST /studio/contents/{id}/restore)
+func (_ Unimplemented) PostStudioContentRestore(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DeleteStudioContentRevision Buang revisi yang belum dikirim
+// (DELETE /studio/contents/{id}/revision)
+func (_ Unimplemented) DeleteStudioContentRevision(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostStudioContentRevision Mulai revisi atas konten tayang
+// (POST /studio/contents/{id}/revision)
+func (_ Unimplemented) PostStudioContentRevision(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostStudioContentSubmit Kirim ke moderasi
+// (POST /studio/contents/{id}/submit)
+func (_ Unimplemented) PostStudioContentSubmit(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostStudioContentTransferOwnership Pindahkan kepemilikan ke author accepted (pemilik lama jadi editor)
+// (POST /studio/contents/{id}/transfer-ownership)
+func (_ Unimplemented) PostStudioContentTransferOwnership(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostStudioContentUnarchive Terbitkan kembali konten arsip tanpa review (pemilik)
+// (POST /studio/contents/{id}/unarchive)
+func (_ Unimplemented) PostStudioContentUnarchive(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetStudioContentVersions Riwayat versi + keputusan moderasi
+// (GET /studio/contents/{id}/versions)
+func (_ Unimplemented) GetStudioContentVersions(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetStudioContentVersion Snapshot satu versi
+// (GET /studio/contents/{id}/versions/{versionId})
+func (_ Unimplemented) GetStudioContentVersion(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, versionId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostStudioContentWithdraw Tarik kembali dari moderasi (selama belum di-claim)
+// (POST /studio/contents/{id}/withdraw)
+func (_ Unimplemented) PostStudioContentWithdraw(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetStudioInvitations Undangan kolaborasi yang masuk (pending)
+// (GET /studio/invitations)
+func (_ Unimplemented) GetStudioInvitations(w http.ResponseWriter, r *http.Request, params GetStudioInvitationsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostStudioInvitationAccept Terima undangan
+// (POST /studio/invitations/{contentId}/accept)
+func (_ Unimplemented) PostStudioInvitationAccept(w http.ResponseWriter, r *http.Request, contentId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostStudioInvitationDecline Tolak undangan
+// (POST /studio/invitations/{contentId}/decline)
+func (_ Unimplemented) PostStudioInvitationDecline(w http.ResponseWriter, r *http.Request, contentId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetStudioSummary Ringkasan Studio (jumlah per status + undangan pending)
+// (GET /studio/summary)
+func (_ Unimplemented) GetStudioSummary(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetTaxonomyCategories Kategori konten
+// (GET /taxonomy/categories)
+func (_ Unimplemented) GetTaxonomyCategories(w http.ResponseWriter, r *http.Request, params GetTaxonomyCategoriesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // GetTaxonomySkills Cari skill
 // (GET /taxonomy/skills)
 func (_ Unimplemented) GetTaxonomySkills(w http.ResponseWriter, r *http.Request, params GetTaxonomySkillsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetTaxonomyTags Cari tag (autocomplete)
+// (GET /taxonomy/tags)
+func (_ Unimplemented) GetTaxonomyTags(w http.ResponseWriter, r *http.Request, params GetTaxonomyTagsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetTaxonomyTools Cari tools/software (autocomplete)
+// (GET /taxonomy/tools)
+func (_ Unimplemented) GetTaxonomyTools(w http.ResponseWriter, r *http.Request, params GetTaxonomyToolsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -3426,6 +4679,195 @@ func (siw *ServerInterfaceWrapper) GetAuthUsernameAvailability(w http.ResponseWr
 	handler.ServeHTTP(w, r)
 }
 
+// GetContents operation middleware
+func (siw *ServerInterfaceWrapper) GetContents(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetContentsParams
+
+	// ------------- Optional query parameter "type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "type", r.URL.Query(), &params.Type, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "type", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "sort" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "period" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "period", r.URL.Query(), &params.Period, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "period"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "period", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "category" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "category", r.URL.Query(), &params.Category, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "category"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "category", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "major" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "major", r.URL.Query(), &params.Major, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "major"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "major", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "tool" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tool", r.URL.Query(), &params.Tool, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tool"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tool", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "skill" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "skill", r.URL.Query(), &params.Skill, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "skill"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "skill", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "tag" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tag", r.URL.Query(), &params.Tag, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tag"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "context" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "context", r.URL.Query(), &params.Context, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "context"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "context", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetContents(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetContent operation middleware
+func (siw *ServerInterfaceWrapper) GetContent(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "publicId" -------------
+	var publicId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "publicId", chi.URLParam(r, "publicId"), &publicId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "publicId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetContent(w, r, publicId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetMajors operation middleware
 func (siw *ServerInterfaceWrapper) GetMajors(w http.ResponseWriter, r *http.Request) {
 
@@ -3618,11 +5060,878 @@ func (siw *ServerInterfaceWrapper) PatchMeUsername(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// PostMedia operation middleware
+func (siw *ServerInterfaceWrapper) PostMedia(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PostMediaParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostMedia(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteMedia operation middleware
+func (siw *ServerInterfaceWrapper) DeleteMedia(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteMedia(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMedia operation middleware
+func (siw *ServerInterfaceWrapper) GetMedia(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMedia(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMediaVariant operation middleware
+func (siw *ServerInterfaceWrapper) GetMediaVariant(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "variant" -------------
+	var variant string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "variant", chi.URLParam(r, "variant"), &variant, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "variant", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMediaVariant(w, r, id, variant)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetPing operation middleware
 func (siw *ServerInterfaceWrapper) GetPing(w http.ResponseWriter, r *http.Request) {
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetPing(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetStudioContents operation middleware
+func (siw *ServerInterfaceWrapper) GetStudioContents(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetStudioContentsParams
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "type", r.URL.Query(), &params.Type, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "type", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetStudioContents(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostStudioContent operation middleware
+func (siw *ServerInterfaceWrapper) PostStudioContent(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostStudioContent(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteStudioContent operation middleware
+func (siw *ServerInterfaceWrapper) DeleteStudioContent(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteStudioContent(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetStudioContent operation middleware
+func (siw *ServerInterfaceWrapper) GetStudioContent(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetStudioContent(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostStudioContentAppeal operation middleware
+func (siw *ServerInterfaceWrapper) PostStudioContentAppeal(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostStudioContentAppeal(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostStudioContentArchive operation middleware
+func (siw *ServerInterfaceWrapper) PostStudioContentArchive(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostStudioContentArchive(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetStudioContentAuthors operation middleware
+func (siw *ServerInterfaceWrapper) GetStudioContentAuthors(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetStudioContentAuthors(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostStudioContentAuthor operation middleware
+func (siw *ServerInterfaceWrapper) PostStudioContentAuthor(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostStudioContentAuthor(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteStudioContentAuthor operation middleware
+func (siw *ServerInterfaceWrapper) DeleteStudioContentAuthor(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "userId" -------------
+	var userId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", chi.URLParam(r, "userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteStudioContentAuthor(w, r, id, userId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PatchStudioContentAuthor operation middleware
+func (siw *ServerInterfaceWrapper) PatchStudioContentAuthor(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "userId" -------------
+	var userId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", chi.URLParam(r, "userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PatchStudioContentAuthor(w, r, id, userId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PutStudioContentDraft operation middleware
+func (siw *ServerInterfaceWrapper) PutStudioContentDraft(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutStudioContentDraft(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostStudioContentLeave operation middleware
+func (siw *ServerInterfaceWrapper) PostStudioContentLeave(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostStudioContentLeave(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostStudioContentRestore operation middleware
+func (siw *ServerInterfaceWrapper) PostStudioContentRestore(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostStudioContentRestore(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteStudioContentRevision operation middleware
+func (siw *ServerInterfaceWrapper) DeleteStudioContentRevision(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteStudioContentRevision(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostStudioContentRevision operation middleware
+func (siw *ServerInterfaceWrapper) PostStudioContentRevision(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostStudioContentRevision(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostStudioContentSubmit operation middleware
+func (siw *ServerInterfaceWrapper) PostStudioContentSubmit(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostStudioContentSubmit(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostStudioContentTransferOwnership operation middleware
+func (siw *ServerInterfaceWrapper) PostStudioContentTransferOwnership(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostStudioContentTransferOwnership(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostStudioContentUnarchive operation middleware
+func (siw *ServerInterfaceWrapper) PostStudioContentUnarchive(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostStudioContentUnarchive(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetStudioContentVersions operation middleware
+func (siw *ServerInterfaceWrapper) GetStudioContentVersions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetStudioContentVersions(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetStudioContentVersion operation middleware
+func (siw *ServerInterfaceWrapper) GetStudioContentVersion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "versionId" -------------
+	var versionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "versionId", chi.URLParam(r, "versionId"), &versionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "versionId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetStudioContentVersion(w, r, id, versionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostStudioContentWithdraw operation middleware
+func (siw *ServerInterfaceWrapper) PostStudioContentWithdraw(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostStudioContentWithdraw(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetStudioInvitations operation middleware
+func (siw *ServerInterfaceWrapper) GetStudioInvitations(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetStudioInvitationsParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetStudioInvitations(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostStudioInvitationAccept operation middleware
+func (siw *ServerInterfaceWrapper) PostStudioInvitationAccept(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "contentId" -------------
+	var contentId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contentId", chi.URLParam(r, "contentId"), &contentId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contentId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostStudioInvitationAccept(w, r, contentId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostStudioInvitationDecline operation middleware
+func (siw *ServerInterfaceWrapper) PostStudioInvitationDecline(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "contentId" -------------
+	var contentId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contentId", chi.URLParam(r, "contentId"), &contentId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contentId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostStudioInvitationDecline(w, r, contentId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetStudioSummary operation middleware
+func (siw *ServerInterfaceWrapper) GetStudioSummary(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetStudioSummary(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetTaxonomyCategories operation middleware
+func (siw *ServerInterfaceWrapper) GetTaxonomyCategories(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetTaxonomyCategoriesParams
+
+	// ------------- Required query parameter "type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "type", r.URL.Query(), &params.Type, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "type", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTaxonomyCategories(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3656,6 +5965,72 @@ func (siw *ServerInterfaceWrapper) GetTaxonomySkills(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetTaxonomySkills(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetTaxonomyTags operation middleware
+func (siw *ServerInterfaceWrapper) GetTaxonomyTags(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetTaxonomyTagsParams
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTaxonomyTags(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetTaxonomyTools operation middleware
+func (siw *ServerInterfaceWrapper) GetTaxonomyTools(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetTaxonomyToolsParams
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTaxonomyTools(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -4214,6 +6589,108 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/audit-logs", wrapper.GetAdminAuditLogs)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/media", wrapper.PostMedia)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/media/{id}", wrapper.DeleteMedia)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/media/{id}", wrapper.GetMedia)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/media/{id}/{variant}", wrapper.GetMediaVariant)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/contents", wrapper.GetContents)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/contents/{publicId}", wrapper.GetContent)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/taxonomy/categories", wrapper.GetTaxonomyCategories)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/taxonomy/tools", wrapper.GetTaxonomyTools)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/taxonomy/tags", wrapper.GetTaxonomyTags)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/studio/summary", wrapper.GetStudioSummary)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/studio/contents", wrapper.GetStudioContents)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/studio/contents", wrapper.PostStudioContent)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/studio/contents/{id}", wrapper.DeleteStudioContent)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/studio/contents/{id}", wrapper.GetStudioContent)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/studio/contents/{id}/draft", wrapper.PutStudioContentDraft)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/studio/contents/{id}/submit", wrapper.PostStudioContentSubmit)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/studio/contents/{id}/withdraw", wrapper.PostStudioContentWithdraw)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/studio/contents/{id}/revision", wrapper.DeleteStudioContentRevision)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/studio/contents/{id}/revision", wrapper.PostStudioContentRevision)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/studio/contents/{id}/archive", wrapper.PostStudioContentArchive)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/studio/contents/{id}/unarchive", wrapper.PostStudioContentUnarchive)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/studio/contents/{id}/restore", wrapper.PostStudioContentRestore)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/studio/contents/{id}/versions", wrapper.GetStudioContentVersions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/studio/contents/{id}/versions/{versionId}", wrapper.GetStudioContentVersion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/studio/contents/{id}/appeal", wrapper.PostStudioContentAppeal)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/studio/contents/{id}/authors", wrapper.GetStudioContentAuthors)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/studio/contents/{id}/authors", wrapper.PostStudioContentAuthor)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/studio/contents/{id}/authors/{userId}", wrapper.DeleteStudioContentAuthor)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/studio/contents/{id}/authors/{userId}", wrapper.PatchStudioContentAuthor)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/studio/contents/{id}/transfer-ownership", wrapper.PostStudioContentTransferOwnership)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/studio/contents/{id}/leave", wrapper.PostStudioContentLeave)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/studio/invitations", wrapper.GetStudioInvitations)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/studio/invitations/{contentId}/accept", wrapper.PostStudioInvitationAccept)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/studio/invitations/{contentId}/decline", wrapper.PostStudioInvitationDecline)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me", wrapper.GetMe)
@@ -6131,6 +8608,84 @@ func (response GetAuthUsernameAvailabilitydefaultApplicationProblemPlusJSONRespo
 	return err
 }
 
+type GetContentsRequestObject struct {
+	Params GetContentsParams
+}
+
+type GetContentsResponseObject interface {
+	VisitGetContentsResponse(w http.ResponseWriter) error
+}
+
+type GetContents200JSONResponse ContentCardPage
+
+func (response GetContents200JSONResponse) VisitGetContentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetContentsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetContentsdefaultApplicationProblemPlusJSONResponse) VisitGetContentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetContentRequestObject struct {
+	PublicId string `json:"publicId"`
+}
+
+type GetContentResponseObject interface {
+	VisitGetContentResponse(w http.ResponseWriter) error
+}
+
+type GetContent200JSONResponse ContentDetail
+
+func (response GetContent200JSONResponse) VisitGetContentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetContentdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetContentdefaultApplicationProblemPlusJSONResponse) VisitGetContentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetMajorsRequestObject struct {
 }
 
@@ -6591,6 +9146,176 @@ func (response PatchMeUsernamedefaultApplicationProblemPlusJSONResponse) VisitPa
 	return err
 }
 
+type PostMediaRequestObject struct {
+	Params PostMediaParams
+	Body   *multipart.Reader
+}
+
+type PostMediaResponseObject interface {
+	VisitPostMediaResponse(w http.ResponseWriter) error
+}
+
+type PostMedia202JSONResponse MediaAsset
+
+func (response PostMedia202JSONResponse) VisitPostMediaResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostMediadefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostMediadefaultApplicationProblemPlusJSONResponse) VisitPostMediaResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteMediaRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type DeleteMediaResponseObject interface {
+	VisitDeleteMediaResponse(w http.ResponseWriter) error
+}
+
+type DeleteMedia204Response struct {
+}
+
+func (response DeleteMedia204Response) VisitDeleteMediaResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteMediadefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DeleteMediadefaultApplicationProblemPlusJSONResponse) VisitDeleteMediaResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMediaRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type GetMediaResponseObject interface {
+	VisitGetMediaResponse(w http.ResponseWriter) error
+}
+
+type GetMedia200JSONResponse MediaAsset
+
+func (response GetMedia200JSONResponse) VisitGetMediaResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMediadefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetMediadefaultApplicationProblemPlusJSONResponse) VisitGetMediaResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMediaVariantRequestObject struct {
+	Id      openapi_types.UUID `json:"id"`
+	Variant string             `json:"variant"`
+}
+
+type GetMediaVariantResponseObject interface {
+	VisitGetMediaVariantResponse(w http.ResponseWriter) error
+}
+
+type GetMediaVariant200ResponseHeaders struct {
+	CacheControl *string
+	ContentType  *string
+}
+
+type GetMediaVariant200ApplicationoctetStreamResponse struct {
+	Body          io.Reader
+	Headers       GetMediaVariant200ResponseHeaders
+	ContentLength int64
+}
+
+func (response GetMediaVariant200ApplicationoctetStreamResponse) VisitGetMediaVariantResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "application/octet-stream")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	if response.Headers.CacheControl != nil {
+		w.Header().Set("Cache-Control", fmt.Sprint(*response.Headers.CacheControl))
+	}
+	if response.Headers.ContentType != nil {
+		w.Header().Set("Content-Type", fmt.Sprint(*response.Headers.ContentType))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetMediaVariantdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetMediaVariantdefaultApplicationProblemPlusJSONResponse) VisitGetMediaVariantResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetPingRequestObject struct {
 }
 
@@ -6618,6 +9343,997 @@ type GetPingdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response GetPingdefaultApplicationProblemPlusJSONResponse) VisitGetPingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetStudioContentsRequestObject struct {
+	Params GetStudioContentsParams
+}
+
+type GetStudioContentsResponseObject interface {
+	VisitGetStudioContentsResponse(w http.ResponseWriter) error
+}
+
+type GetStudioContents200JSONResponse StudioContentPage
+
+func (response GetStudioContents200JSONResponse) VisitGetStudioContentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetStudioContentsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetStudioContentsdefaultApplicationProblemPlusJSONResponse) VisitGetStudioContentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostStudioContentRequestObject struct {
+	Body *PostStudioContentJSONRequestBody
+}
+
+type PostStudioContentResponseObject interface {
+	VisitPostStudioContentResponse(w http.ResponseWriter) error
+}
+
+type PostStudioContent201JSONResponse StudioContent
+
+func (response PostStudioContent201JSONResponse) VisitPostStudioContentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostStudioContentdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostStudioContentdefaultApplicationProblemPlusJSONResponse) VisitPostStudioContentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteStudioContentRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type DeleteStudioContentResponseObject interface {
+	VisitDeleteStudioContentResponse(w http.ResponseWriter) error
+}
+
+type DeleteStudioContent204Response struct {
+}
+
+func (response DeleteStudioContent204Response) VisitDeleteStudioContentResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteStudioContentdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DeleteStudioContentdefaultApplicationProblemPlusJSONResponse) VisitDeleteStudioContentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetStudioContentRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type GetStudioContentResponseObject interface {
+	VisitGetStudioContentResponse(w http.ResponseWriter) error
+}
+
+type GetStudioContent200JSONResponse StudioContent
+
+func (response GetStudioContent200JSONResponse) VisitGetStudioContentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetStudioContentdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetStudioContentdefaultApplicationProblemPlusJSONResponse) VisitGetStudioContentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostStudioContentAppealRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *PostStudioContentAppealJSONRequestBody
+}
+
+type PostStudioContentAppealResponseObject interface {
+	VisitPostStudioContentAppealResponse(w http.ResponseWriter) error
+}
+
+type PostStudioContentAppeal201JSONResponse Appeal
+
+func (response PostStudioContentAppeal201JSONResponse) VisitPostStudioContentAppealResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostStudioContentAppealdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostStudioContentAppealdefaultApplicationProblemPlusJSONResponse) VisitPostStudioContentAppealResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostStudioContentArchiveRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type PostStudioContentArchiveResponseObject interface {
+	VisitPostStudioContentArchiveResponse(w http.ResponseWriter) error
+}
+
+type PostStudioContentArchive200JSONResponse StudioContent
+
+func (response PostStudioContentArchive200JSONResponse) VisitPostStudioContentArchiveResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostStudioContentArchivedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostStudioContentArchivedefaultApplicationProblemPlusJSONResponse) VisitPostStudioContentArchiveResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetStudioContentAuthorsRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type GetStudioContentAuthorsResponseObject interface {
+	VisitGetStudioContentAuthorsResponse(w http.ResponseWriter) error
+}
+
+type GetStudioContentAuthors200JSONResponse ContentAuthorList
+
+func (response GetStudioContentAuthors200JSONResponse) VisitGetStudioContentAuthorsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetStudioContentAuthorsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetStudioContentAuthorsdefaultApplicationProblemPlusJSONResponse) VisitGetStudioContentAuthorsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostStudioContentAuthorRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *PostStudioContentAuthorJSONRequestBody
+}
+
+type PostStudioContentAuthorResponseObject interface {
+	VisitPostStudioContentAuthorResponse(w http.ResponseWriter) error
+}
+
+type PostStudioContentAuthor201JSONResponse ContentAuthor
+
+func (response PostStudioContentAuthor201JSONResponse) VisitPostStudioContentAuthorResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostStudioContentAuthordefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostStudioContentAuthordefaultApplicationProblemPlusJSONResponse) VisitPostStudioContentAuthorResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteStudioContentAuthorRequestObject struct {
+	Id     openapi_types.UUID `json:"id"`
+	UserId openapi_types.UUID `json:"userId"`
+}
+
+type DeleteStudioContentAuthorResponseObject interface {
+	VisitDeleteStudioContentAuthorResponse(w http.ResponseWriter) error
+}
+
+type DeleteStudioContentAuthor204Response struct {
+}
+
+func (response DeleteStudioContentAuthor204Response) VisitDeleteStudioContentAuthorResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteStudioContentAuthordefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DeleteStudioContentAuthordefaultApplicationProblemPlusJSONResponse) VisitDeleteStudioContentAuthorResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchStudioContentAuthorRequestObject struct {
+	Id     openapi_types.UUID `json:"id"`
+	UserId openapi_types.UUID `json:"userId"`
+	Body   *PatchStudioContentAuthorJSONRequestBody
+}
+
+type PatchStudioContentAuthorResponseObject interface {
+	VisitPatchStudioContentAuthorResponse(w http.ResponseWriter) error
+}
+
+type PatchStudioContentAuthor200JSONResponse ContentAuthor
+
+func (response PatchStudioContentAuthor200JSONResponse) VisitPatchStudioContentAuthorResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchStudioContentAuthordefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PatchStudioContentAuthordefaultApplicationProblemPlusJSONResponse) VisitPatchStudioContentAuthorResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutStudioContentDraftRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *PutStudioContentDraftJSONRequestBody
+}
+
+type PutStudioContentDraftResponseObject interface {
+	VisitPutStudioContentDraftResponse(w http.ResponseWriter) error
+}
+
+type PutStudioContentDraft200JSONResponse StudioContent
+
+func (response PutStudioContentDraft200JSONResponse) VisitPutStudioContentDraftResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutStudioContentDraftdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PutStudioContentDraftdefaultApplicationProblemPlusJSONResponse) VisitPutStudioContentDraftResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostStudioContentLeaveRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type PostStudioContentLeaveResponseObject interface {
+	VisitPostStudioContentLeaveResponse(w http.ResponseWriter) error
+}
+
+type PostStudioContentLeave204Response struct {
+}
+
+func (response PostStudioContentLeave204Response) VisitPostStudioContentLeaveResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PostStudioContentLeavedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostStudioContentLeavedefaultApplicationProblemPlusJSONResponse) VisitPostStudioContentLeaveResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostStudioContentRestoreRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type PostStudioContentRestoreResponseObject interface {
+	VisitPostStudioContentRestoreResponse(w http.ResponseWriter) error
+}
+
+type PostStudioContentRestore200JSONResponse StudioContent
+
+func (response PostStudioContentRestore200JSONResponse) VisitPostStudioContentRestoreResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostStudioContentRestoredefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostStudioContentRestoredefaultApplicationProblemPlusJSONResponse) VisitPostStudioContentRestoreResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteStudioContentRevisionRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type DeleteStudioContentRevisionResponseObject interface {
+	VisitDeleteStudioContentRevisionResponse(w http.ResponseWriter) error
+}
+
+type DeleteStudioContentRevision200JSONResponse StudioContent
+
+func (response DeleteStudioContentRevision200JSONResponse) VisitDeleteStudioContentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteStudioContentRevisiondefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DeleteStudioContentRevisiondefaultApplicationProblemPlusJSONResponse) VisitDeleteStudioContentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostStudioContentRevisionRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type PostStudioContentRevisionResponseObject interface {
+	VisitPostStudioContentRevisionResponse(w http.ResponseWriter) error
+}
+
+type PostStudioContentRevision200JSONResponse StudioContent
+
+func (response PostStudioContentRevision200JSONResponse) VisitPostStudioContentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostStudioContentRevisiondefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostStudioContentRevisiondefaultApplicationProblemPlusJSONResponse) VisitPostStudioContentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostStudioContentSubmitRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type PostStudioContentSubmitResponseObject interface {
+	VisitPostStudioContentSubmitResponse(w http.ResponseWriter) error
+}
+
+type PostStudioContentSubmit200JSONResponse StudioContent
+
+func (response PostStudioContentSubmit200JSONResponse) VisitPostStudioContentSubmitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostStudioContentSubmitdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostStudioContentSubmitdefaultApplicationProblemPlusJSONResponse) VisitPostStudioContentSubmitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostStudioContentTransferOwnershipRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *PostStudioContentTransferOwnershipJSONRequestBody
+}
+
+type PostStudioContentTransferOwnershipResponseObject interface {
+	VisitPostStudioContentTransferOwnershipResponse(w http.ResponseWriter) error
+}
+
+type PostStudioContentTransferOwnership200JSONResponse ContentAuthorList
+
+func (response PostStudioContentTransferOwnership200JSONResponse) VisitPostStudioContentTransferOwnershipResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostStudioContentTransferOwnershipdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostStudioContentTransferOwnershipdefaultApplicationProblemPlusJSONResponse) VisitPostStudioContentTransferOwnershipResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostStudioContentUnarchiveRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type PostStudioContentUnarchiveResponseObject interface {
+	VisitPostStudioContentUnarchiveResponse(w http.ResponseWriter) error
+}
+
+type PostStudioContentUnarchive200JSONResponse StudioContent
+
+func (response PostStudioContentUnarchive200JSONResponse) VisitPostStudioContentUnarchiveResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostStudioContentUnarchivedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostStudioContentUnarchivedefaultApplicationProblemPlusJSONResponse) VisitPostStudioContentUnarchiveResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetStudioContentVersionsRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type GetStudioContentVersionsResponseObject interface {
+	VisitGetStudioContentVersionsResponse(w http.ResponseWriter) error
+}
+
+type GetStudioContentVersions200JSONResponse ContentVersionList
+
+func (response GetStudioContentVersions200JSONResponse) VisitGetStudioContentVersionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetStudioContentVersionsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetStudioContentVersionsdefaultApplicationProblemPlusJSONResponse) VisitGetStudioContentVersionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetStudioContentVersionRequestObject struct {
+	Id        openapi_types.UUID `json:"id"`
+	VersionId openapi_types.UUID `json:"versionId"`
+}
+
+type GetStudioContentVersionResponseObject interface {
+	VisitGetStudioContentVersionResponse(w http.ResponseWriter) error
+}
+
+type GetStudioContentVersion200JSONResponse ContentVersionDetail
+
+func (response GetStudioContentVersion200JSONResponse) VisitGetStudioContentVersionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetStudioContentVersiondefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetStudioContentVersiondefaultApplicationProblemPlusJSONResponse) VisitGetStudioContentVersionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostStudioContentWithdrawRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type PostStudioContentWithdrawResponseObject interface {
+	VisitPostStudioContentWithdrawResponse(w http.ResponseWriter) error
+}
+
+type PostStudioContentWithdraw200JSONResponse StudioContent
+
+func (response PostStudioContentWithdraw200JSONResponse) VisitPostStudioContentWithdrawResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostStudioContentWithdrawdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostStudioContentWithdrawdefaultApplicationProblemPlusJSONResponse) VisitPostStudioContentWithdrawResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetStudioInvitationsRequestObject struct {
+	Params GetStudioInvitationsParams
+}
+
+type GetStudioInvitationsResponseObject interface {
+	VisitGetStudioInvitationsResponse(w http.ResponseWriter) error
+}
+
+type GetStudioInvitations200JSONResponse InvitationPage
+
+func (response GetStudioInvitations200JSONResponse) VisitGetStudioInvitationsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetStudioInvitationsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetStudioInvitationsdefaultApplicationProblemPlusJSONResponse) VisitGetStudioInvitationsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostStudioInvitationAcceptRequestObject struct {
+	ContentId openapi_types.UUID `json:"contentId"`
+}
+
+type PostStudioInvitationAcceptResponseObject interface {
+	VisitPostStudioInvitationAcceptResponse(w http.ResponseWriter) error
+}
+
+type PostStudioInvitationAccept204Response struct {
+}
+
+func (response PostStudioInvitationAccept204Response) VisitPostStudioInvitationAcceptResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PostStudioInvitationAcceptdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostStudioInvitationAcceptdefaultApplicationProblemPlusJSONResponse) VisitPostStudioInvitationAcceptResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostStudioInvitationDeclineRequestObject struct {
+	ContentId openapi_types.UUID `json:"contentId"`
+}
+
+type PostStudioInvitationDeclineResponseObject interface {
+	VisitPostStudioInvitationDeclineResponse(w http.ResponseWriter) error
+}
+
+type PostStudioInvitationDecline204Response struct {
+}
+
+func (response PostStudioInvitationDecline204Response) VisitPostStudioInvitationDeclineResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PostStudioInvitationDeclinedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostStudioInvitationDeclinedefaultApplicationProblemPlusJSONResponse) VisitPostStudioInvitationDeclineResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetStudioSummaryRequestObject struct {
+}
+
+type GetStudioSummaryResponseObject interface {
+	VisitGetStudioSummaryResponse(w http.ResponseWriter) error
+}
+
+type GetStudioSummary200JSONResponse StudioSummary
+
+func (response GetStudioSummary200JSONResponse) VisitGetStudioSummaryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetStudioSummarydefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetStudioSummarydefaultApplicationProblemPlusJSONResponse) VisitGetStudioSummaryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTaxonomyCategoriesRequestObject struct {
+	Params GetTaxonomyCategoriesParams
+}
+
+type GetTaxonomyCategoriesResponseObject interface {
+	VisitGetTaxonomyCategoriesResponse(w http.ResponseWriter) error
+}
+
+type GetTaxonomyCategories200JSONResponse CategoryList
+
+func (response GetTaxonomyCategories200JSONResponse) VisitGetTaxonomyCategoriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTaxonomyCategoriesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetTaxonomyCategoriesdefaultApplicationProblemPlusJSONResponse) VisitGetTaxonomyCategoriesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -6657,6 +10373,84 @@ type GetTaxonomySkillsdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response GetTaxonomySkillsdefaultApplicationProblemPlusJSONResponse) VisitGetTaxonomySkillsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTaxonomyTagsRequestObject struct {
+	Params GetTaxonomyTagsParams
+}
+
+type GetTaxonomyTagsResponseObject interface {
+	VisitGetTaxonomyTagsResponse(w http.ResponseWriter) error
+}
+
+type GetTaxonomyTags200JSONResponse TaxonomyTermList
+
+func (response GetTaxonomyTags200JSONResponse) VisitGetTaxonomyTagsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTaxonomyTagsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetTaxonomyTagsdefaultApplicationProblemPlusJSONResponse) VisitGetTaxonomyTagsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTaxonomyToolsRequestObject struct {
+	Params GetTaxonomyToolsParams
+}
+
+type GetTaxonomyToolsResponseObject interface {
+	VisitGetTaxonomyToolsResponse(w http.ResponseWriter) error
+}
+
+type GetTaxonomyTools200JSONResponse TaxonomyTermList
+
+func (response GetTaxonomyTools200JSONResponse) VisitGetTaxonomyToolsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTaxonomyToolsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetTaxonomyToolsdefaultApplicationProblemPlusJSONResponse) VisitGetTaxonomyToolsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -7123,6 +10917,12 @@ type StrictServerInterface interface {
 	// GetAuthUsernameAvailability Cek ketersediaan username
 	// (GET /auth/username-availability)
 	GetAuthUsernameAvailability(ctx context.Context, request GetAuthUsernameAvailabilityRequestObject) (GetAuthUsernameAvailabilityResponseObject, error)
+	// GetContents Katalog konten tayang (Katalog Karya & Blog)
+	// (GET /contents)
+	GetContents(ctx context.Context, request GetContentsRequestObject) (GetContentsResponseObject, error)
+	// GetContent Detail konten
+	// (GET /contents/{publicId})
+	GetContent(ctx context.Context, request GetContentRequestObject) (GetContentResponseObject, error)
 	// GetMajors Daftar jurusan aktif
 	// (GET /majors)
 	GetMajors(ctx context.Context, request GetMajorsRequestObject) (GetMajorsResponseObject, error)
@@ -7159,12 +10959,108 @@ type StrictServerInterface interface {
 	// PatchMeUsername Ganti username
 	// (PATCH /me/username)
 	PatchMeUsername(ctx context.Context, request PatchMeUsernameRequestObject) (PatchMeUsernameResponseObject, error)
+	// PostMedia Unggah media
+	// (POST /media)
+	PostMedia(ctx context.Context, request PostMediaRequestObject) (PostMediaResponseObject, error)
+	// DeleteMedia Hapus media
+	// (DELETE /media/{id})
+	DeleteMedia(ctx context.Context, request DeleteMediaRequestObject) (DeleteMediaResponseObject, error)
+	// GetMedia Detail media
+	// (GET /media/{id})
+	GetMedia(ctx context.Context, request GetMediaRequestObject) (GetMediaResponseObject, error)
+	// GetMediaVariant Stream varian media
+	// (GET /media/{id}/{variant})
+	GetMediaVariant(ctx context.Context, request GetMediaVariantRequestObject) (GetMediaVariantResponseObject, error)
 	// GetPing Cek API hidup
 	// (GET /ping)
 	GetPing(ctx context.Context, request GetPingRequestObject) (GetPingResponseObject, error)
+	// GetStudioContents Konten saya (sebagai author accepted)
+	// (GET /studio/contents)
+	GetStudioContents(ctx context.Context, request GetStudioContentsRequestObject) (GetStudioContentsResponseObject, error)
+	// PostStudioContent Buat konten baru (draf kosong)
+	// (POST /studio/contents)
+	PostStudioContent(ctx context.Context, request PostStudioContentRequestObject) (PostStudioContentResponseObject, error)
+	// DeleteStudioContent Hapus konten (soft delete 30 hari, hanya pemilik)
+	// (DELETE /studio/contents/{id})
+	DeleteStudioContent(ctx context.Context, request DeleteStudioContentRequestObject) (DeleteStudioContentResponseObject, error)
+	// GetStudioContent Detail konten untuk editor
+	// (GET /studio/contents/{id})
+	GetStudioContent(ctx context.Context, request GetStudioContentRequestObject) (GetStudioContentResponseObject, error)
+	// PostStudioContentAppeal Ajukan banding atas penolakan (sekali per penolakan, pemilik)
+	// (POST /studio/contents/{id}/appeal)
+	PostStudioContentAppeal(ctx context.Context, request PostStudioContentAppealRequestObject) (PostStudioContentAppealResponseObject, error)
+	// PostStudioContentArchive Arsipkan konten tayang (pemilik)
+	// (POST /studio/contents/{id}/archive)
+	PostStudioContentArchive(ctx context.Context, request PostStudioContentArchiveRequestObject) (PostStudioContentArchiveResponseObject, error)
+	// GetStudioContentAuthors Daftar author (termasuk undangan pending)
+	// (GET /studio/contents/{id}/authors)
+	GetStudioContentAuthors(ctx context.Context, request GetStudioContentAuthorsRequestObject) (GetStudioContentAuthorsResponseObject, error)
+	// PostStudioContentAuthor Undang kolaborator (pemilik)
+	// (POST /studio/contents/{id}/authors)
+	PostStudioContentAuthor(ctx context.Context, request PostStudioContentAuthorRequestObject) (PostStudioContentAuthorResponseObject, error)
+	// DeleteStudioContentAuthor Keluarkan author / batalkan undangan (pemilik)
+	// (DELETE /studio/contents/{id}/authors/{userId})
+	DeleteStudioContentAuthor(ctx context.Context, request DeleteStudioContentAuthorRequestObject) (DeleteStudioContentAuthorResponseObject, error)
+	// PatchStudioContentAuthor Ubah level / label peran / urutan author (pemilik)
+	// (PATCH /studio/contents/{id}/authors/{userId})
+	PatchStudioContentAuthor(ctx context.Context, request PatchStudioContentAuthorRequestObject) (PatchStudioContentAuthorResponseObject, error)
+	// PutStudioContentDraft Simpan draf (autosave)
+	// (PUT /studio/contents/{id}/draft)
+	PutStudioContentDraft(ctx context.Context, request PutStudioContentDraftRequestObject) (PutStudioContentDraftResponseObject, error)
+	// PostStudioContentLeave Keluar dari konten (editor/kontributor)
+	// (POST /studio/contents/{id}/leave)
+	PostStudioContentLeave(ctx context.Context, request PostStudioContentLeaveRequestObject) (PostStudioContentLeaveResponseObject, error)
+	// PostStudioContentRestore Pulihkan dari sampah (pemilik, ≤ 30 hari)
+	// (POST /studio/contents/{id}/restore)
+	PostStudioContentRestore(ctx context.Context, request PostStudioContentRestoreRequestObject) (PostStudioContentRestoreResponseObject, error)
+	// DeleteStudioContentRevision Buang revisi yang belum dikirim
+	// (DELETE /studio/contents/{id}/revision)
+	DeleteStudioContentRevision(ctx context.Context, request DeleteStudioContentRevisionRequestObject) (DeleteStudioContentRevisionResponseObject, error)
+	// PostStudioContentRevision Mulai revisi atas konten tayang
+	// (POST /studio/contents/{id}/revision)
+	PostStudioContentRevision(ctx context.Context, request PostStudioContentRevisionRequestObject) (PostStudioContentRevisionResponseObject, error)
+	// PostStudioContentSubmit Kirim ke moderasi
+	// (POST /studio/contents/{id}/submit)
+	PostStudioContentSubmit(ctx context.Context, request PostStudioContentSubmitRequestObject) (PostStudioContentSubmitResponseObject, error)
+	// PostStudioContentTransferOwnership Pindahkan kepemilikan ke author accepted (pemilik lama jadi editor)
+	// (POST /studio/contents/{id}/transfer-ownership)
+	PostStudioContentTransferOwnership(ctx context.Context, request PostStudioContentTransferOwnershipRequestObject) (PostStudioContentTransferOwnershipResponseObject, error)
+	// PostStudioContentUnarchive Terbitkan kembali konten arsip tanpa review (pemilik)
+	// (POST /studio/contents/{id}/unarchive)
+	PostStudioContentUnarchive(ctx context.Context, request PostStudioContentUnarchiveRequestObject) (PostStudioContentUnarchiveResponseObject, error)
+	// GetStudioContentVersions Riwayat versi + keputusan moderasi
+	// (GET /studio/contents/{id}/versions)
+	GetStudioContentVersions(ctx context.Context, request GetStudioContentVersionsRequestObject) (GetStudioContentVersionsResponseObject, error)
+	// GetStudioContentVersion Snapshot satu versi
+	// (GET /studio/contents/{id}/versions/{versionId})
+	GetStudioContentVersion(ctx context.Context, request GetStudioContentVersionRequestObject) (GetStudioContentVersionResponseObject, error)
+	// PostStudioContentWithdraw Tarik kembali dari moderasi (selama belum di-claim)
+	// (POST /studio/contents/{id}/withdraw)
+	PostStudioContentWithdraw(ctx context.Context, request PostStudioContentWithdrawRequestObject) (PostStudioContentWithdrawResponseObject, error)
+	// GetStudioInvitations Undangan kolaborasi yang masuk (pending)
+	// (GET /studio/invitations)
+	GetStudioInvitations(ctx context.Context, request GetStudioInvitationsRequestObject) (GetStudioInvitationsResponseObject, error)
+	// PostStudioInvitationAccept Terima undangan
+	// (POST /studio/invitations/{contentId}/accept)
+	PostStudioInvitationAccept(ctx context.Context, request PostStudioInvitationAcceptRequestObject) (PostStudioInvitationAcceptResponseObject, error)
+	// PostStudioInvitationDecline Tolak undangan
+	// (POST /studio/invitations/{contentId}/decline)
+	PostStudioInvitationDecline(ctx context.Context, request PostStudioInvitationDeclineRequestObject) (PostStudioInvitationDeclineResponseObject, error)
+	// GetStudioSummary Ringkasan Studio (jumlah per status + undangan pending)
+	// (GET /studio/summary)
+	GetStudioSummary(ctx context.Context, request GetStudioSummaryRequestObject) (GetStudioSummaryResponseObject, error)
+	// GetTaxonomyCategories Kategori konten
+	// (GET /taxonomy/categories)
+	GetTaxonomyCategories(ctx context.Context, request GetTaxonomyCategoriesRequestObject) (GetTaxonomyCategoriesResponseObject, error)
 	// GetTaxonomySkills Cari skill
 	// (GET /taxonomy/skills)
 	GetTaxonomySkills(ctx context.Context, request GetTaxonomySkillsRequestObject) (GetTaxonomySkillsResponseObject, error)
+	// GetTaxonomyTags Cari tag (autocomplete)
+	// (GET /taxonomy/tags)
+	GetTaxonomyTags(ctx context.Context, request GetTaxonomyTagsRequestObject) (GetTaxonomyTagsResponseObject, error)
+	// GetTaxonomyTools Cari tools/software (autocomplete)
+	// (GET /taxonomy/tools)
+	GetTaxonomyTools(ctx context.Context, request GetTaxonomyToolsRequestObject) (GetTaxonomyToolsResponseObject, error)
 	// GetUser Profil pengguna publik
 	// (GET /users/{username})
 	GetUser(ctx context.Context, request GetUserRequestObject) (GetUserResponseObject, error)
@@ -8593,6 +12489,58 @@ func (sh *strictHandler) GetAuthUsernameAvailability(w http.ResponseWriter, r *h
 	}
 }
 
+// GetContents operation middleware
+func (sh *strictHandler) GetContents(w http.ResponseWriter, r *http.Request, params GetContentsParams) {
+	var request GetContentsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetContents(ctx, request.(GetContentsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetContents")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetContentsResponseObject); ok {
+		if err := validResponse.VisitGetContentsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetContent operation middleware
+func (sh *strictHandler) GetContent(w http.ResponseWriter, r *http.Request, publicId string) {
+	var request GetContentRequestObject
+
+	request.PublicId = publicId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetContent(ctx, request.(GetContentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetContent")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetContentResponseObject); ok {
+		if err := validResponse.VisitGetContentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetMajors operation middleware
 func (sh *strictHandler) GetMajors(w http.ResponseWriter, r *http.Request) {
 	var request GetMajorsRequestObject
@@ -8941,6 +12889,118 @@ func (sh *strictHandler) PatchMeUsername(w http.ResponseWriter, r *http.Request)
 	}
 }
 
+// PostMedia operation middleware
+func (sh *strictHandler) PostMedia(w http.ResponseWriter, r *http.Request, params PostMediaParams) {
+	var request PostMediaRequestObject
+
+	request.Params = params
+
+	if reader, err := r.MultipartReader(); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode multipart body: %w", err))
+		return
+	} else {
+		request.Body = reader
+	}
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostMedia(ctx, request.(PostMediaRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostMedia")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostMediaResponseObject); ok {
+		if err := validResponse.VisitPostMediaResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteMedia operation middleware
+func (sh *strictHandler) DeleteMedia(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request DeleteMediaRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteMedia(ctx, request.(DeleteMediaRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteMedia")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteMediaResponseObject); ok {
+		if err := validResponse.VisitDeleteMediaResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetMedia operation middleware
+func (sh *strictHandler) GetMedia(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request GetMediaRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMedia(ctx, request.(GetMediaRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMedia")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetMediaResponseObject); ok {
+		if err := validResponse.VisitGetMediaResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetMediaVariant operation middleware
+func (sh *strictHandler) GetMediaVariant(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, variant string) {
+	var request GetMediaVariantRequestObject
+
+	request.Id = id
+	request.Variant = variant
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMediaVariant(ctx, request.(GetMediaVariantRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMediaVariant")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetMediaVariantResponseObject); ok {
+		if err := validResponse.VisitGetMediaVariantResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetPing operation middleware
 func (sh *strictHandler) GetPing(w http.ResponseWriter, r *http.Request) {
 	var request GetPingRequestObject
@@ -8958,6 +13018,723 @@ func (sh *strictHandler) GetPing(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetPingResponseObject); ok {
 		if err := validResponse.VisitGetPingResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetStudioContents operation middleware
+func (sh *strictHandler) GetStudioContents(w http.ResponseWriter, r *http.Request, params GetStudioContentsParams) {
+	var request GetStudioContentsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetStudioContents(ctx, request.(GetStudioContentsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetStudioContents")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetStudioContentsResponseObject); ok {
+		if err := validResponse.VisitGetStudioContentsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostStudioContent operation middleware
+func (sh *strictHandler) PostStudioContent(w http.ResponseWriter, r *http.Request) {
+	var request PostStudioContentRequestObject
+
+	var body PostStudioContentJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostStudioContent(ctx, request.(PostStudioContentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostStudioContent")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostStudioContentResponseObject); ok {
+		if err := validResponse.VisitPostStudioContentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteStudioContent operation middleware
+func (sh *strictHandler) DeleteStudioContent(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request DeleteStudioContentRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteStudioContent(ctx, request.(DeleteStudioContentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteStudioContent")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteStudioContentResponseObject); ok {
+		if err := validResponse.VisitDeleteStudioContentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetStudioContent operation middleware
+func (sh *strictHandler) GetStudioContent(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request GetStudioContentRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetStudioContent(ctx, request.(GetStudioContentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetStudioContent")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetStudioContentResponseObject); ok {
+		if err := validResponse.VisitGetStudioContentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostStudioContentAppeal operation middleware
+func (sh *strictHandler) PostStudioContentAppeal(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PostStudioContentAppealRequestObject
+
+	request.Id = id
+
+	var body PostStudioContentAppealJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostStudioContentAppeal(ctx, request.(PostStudioContentAppealRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostStudioContentAppeal")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostStudioContentAppealResponseObject); ok {
+		if err := validResponse.VisitPostStudioContentAppealResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostStudioContentArchive operation middleware
+func (sh *strictHandler) PostStudioContentArchive(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PostStudioContentArchiveRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostStudioContentArchive(ctx, request.(PostStudioContentArchiveRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostStudioContentArchive")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostStudioContentArchiveResponseObject); ok {
+		if err := validResponse.VisitPostStudioContentArchiveResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetStudioContentAuthors operation middleware
+func (sh *strictHandler) GetStudioContentAuthors(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request GetStudioContentAuthorsRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetStudioContentAuthors(ctx, request.(GetStudioContentAuthorsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetStudioContentAuthors")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetStudioContentAuthorsResponseObject); ok {
+		if err := validResponse.VisitGetStudioContentAuthorsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostStudioContentAuthor operation middleware
+func (sh *strictHandler) PostStudioContentAuthor(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PostStudioContentAuthorRequestObject
+
+	request.Id = id
+
+	var body PostStudioContentAuthorJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostStudioContentAuthor(ctx, request.(PostStudioContentAuthorRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostStudioContentAuthor")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostStudioContentAuthorResponseObject); ok {
+		if err := validResponse.VisitPostStudioContentAuthorResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteStudioContentAuthor operation middleware
+func (sh *strictHandler) DeleteStudioContentAuthor(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, userId openapi_types.UUID) {
+	var request DeleteStudioContentAuthorRequestObject
+
+	request.Id = id
+	request.UserId = userId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteStudioContentAuthor(ctx, request.(DeleteStudioContentAuthorRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteStudioContentAuthor")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteStudioContentAuthorResponseObject); ok {
+		if err := validResponse.VisitDeleteStudioContentAuthorResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PatchStudioContentAuthor operation middleware
+func (sh *strictHandler) PatchStudioContentAuthor(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, userId openapi_types.UUID) {
+	var request PatchStudioContentAuthorRequestObject
+
+	request.Id = id
+	request.UserId = userId
+
+	var body PatchStudioContentAuthorJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PatchStudioContentAuthor(ctx, request.(PatchStudioContentAuthorRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PatchStudioContentAuthor")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PatchStudioContentAuthorResponseObject); ok {
+		if err := validResponse.VisitPatchStudioContentAuthorResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PutStudioContentDraft operation middleware
+func (sh *strictHandler) PutStudioContentDraft(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PutStudioContentDraftRequestObject
+
+	request.Id = id
+
+	var body PutStudioContentDraftJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PutStudioContentDraft(ctx, request.(PutStudioContentDraftRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PutStudioContentDraft")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PutStudioContentDraftResponseObject); ok {
+		if err := validResponse.VisitPutStudioContentDraftResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostStudioContentLeave operation middleware
+func (sh *strictHandler) PostStudioContentLeave(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PostStudioContentLeaveRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostStudioContentLeave(ctx, request.(PostStudioContentLeaveRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostStudioContentLeave")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostStudioContentLeaveResponseObject); ok {
+		if err := validResponse.VisitPostStudioContentLeaveResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostStudioContentRestore operation middleware
+func (sh *strictHandler) PostStudioContentRestore(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PostStudioContentRestoreRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostStudioContentRestore(ctx, request.(PostStudioContentRestoreRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostStudioContentRestore")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostStudioContentRestoreResponseObject); ok {
+		if err := validResponse.VisitPostStudioContentRestoreResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteStudioContentRevision operation middleware
+func (sh *strictHandler) DeleteStudioContentRevision(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request DeleteStudioContentRevisionRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteStudioContentRevision(ctx, request.(DeleteStudioContentRevisionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteStudioContentRevision")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteStudioContentRevisionResponseObject); ok {
+		if err := validResponse.VisitDeleteStudioContentRevisionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostStudioContentRevision operation middleware
+func (sh *strictHandler) PostStudioContentRevision(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PostStudioContentRevisionRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostStudioContentRevision(ctx, request.(PostStudioContentRevisionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostStudioContentRevision")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostStudioContentRevisionResponseObject); ok {
+		if err := validResponse.VisitPostStudioContentRevisionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostStudioContentSubmit operation middleware
+func (sh *strictHandler) PostStudioContentSubmit(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PostStudioContentSubmitRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostStudioContentSubmit(ctx, request.(PostStudioContentSubmitRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostStudioContentSubmit")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostStudioContentSubmitResponseObject); ok {
+		if err := validResponse.VisitPostStudioContentSubmitResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostStudioContentTransferOwnership operation middleware
+func (sh *strictHandler) PostStudioContentTransferOwnership(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PostStudioContentTransferOwnershipRequestObject
+
+	request.Id = id
+
+	var body PostStudioContentTransferOwnershipJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostStudioContentTransferOwnership(ctx, request.(PostStudioContentTransferOwnershipRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostStudioContentTransferOwnership")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostStudioContentTransferOwnershipResponseObject); ok {
+		if err := validResponse.VisitPostStudioContentTransferOwnershipResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostStudioContentUnarchive operation middleware
+func (sh *strictHandler) PostStudioContentUnarchive(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PostStudioContentUnarchiveRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostStudioContentUnarchive(ctx, request.(PostStudioContentUnarchiveRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostStudioContentUnarchive")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostStudioContentUnarchiveResponseObject); ok {
+		if err := validResponse.VisitPostStudioContentUnarchiveResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetStudioContentVersions operation middleware
+func (sh *strictHandler) GetStudioContentVersions(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request GetStudioContentVersionsRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetStudioContentVersions(ctx, request.(GetStudioContentVersionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetStudioContentVersions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetStudioContentVersionsResponseObject); ok {
+		if err := validResponse.VisitGetStudioContentVersionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetStudioContentVersion operation middleware
+func (sh *strictHandler) GetStudioContentVersion(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, versionId openapi_types.UUID) {
+	var request GetStudioContentVersionRequestObject
+
+	request.Id = id
+	request.VersionId = versionId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetStudioContentVersion(ctx, request.(GetStudioContentVersionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetStudioContentVersion")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetStudioContentVersionResponseObject); ok {
+		if err := validResponse.VisitGetStudioContentVersionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostStudioContentWithdraw operation middleware
+func (sh *strictHandler) PostStudioContentWithdraw(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PostStudioContentWithdrawRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostStudioContentWithdraw(ctx, request.(PostStudioContentWithdrawRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostStudioContentWithdraw")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostStudioContentWithdrawResponseObject); ok {
+		if err := validResponse.VisitPostStudioContentWithdrawResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetStudioInvitations operation middleware
+func (sh *strictHandler) GetStudioInvitations(w http.ResponseWriter, r *http.Request, params GetStudioInvitationsParams) {
+	var request GetStudioInvitationsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetStudioInvitations(ctx, request.(GetStudioInvitationsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetStudioInvitations")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetStudioInvitationsResponseObject); ok {
+		if err := validResponse.VisitGetStudioInvitationsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostStudioInvitationAccept operation middleware
+func (sh *strictHandler) PostStudioInvitationAccept(w http.ResponseWriter, r *http.Request, contentId openapi_types.UUID) {
+	var request PostStudioInvitationAcceptRequestObject
+
+	request.ContentId = contentId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostStudioInvitationAccept(ctx, request.(PostStudioInvitationAcceptRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostStudioInvitationAccept")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostStudioInvitationAcceptResponseObject); ok {
+		if err := validResponse.VisitPostStudioInvitationAcceptResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostStudioInvitationDecline operation middleware
+func (sh *strictHandler) PostStudioInvitationDecline(w http.ResponseWriter, r *http.Request, contentId openapi_types.UUID) {
+	var request PostStudioInvitationDeclineRequestObject
+
+	request.ContentId = contentId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostStudioInvitationDecline(ctx, request.(PostStudioInvitationDeclineRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostStudioInvitationDecline")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostStudioInvitationDeclineResponseObject); ok {
+		if err := validResponse.VisitPostStudioInvitationDeclineResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetStudioSummary operation middleware
+func (sh *strictHandler) GetStudioSummary(w http.ResponseWriter, r *http.Request) {
+	var request GetStudioSummaryRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetStudioSummary(ctx, request.(GetStudioSummaryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetStudioSummary")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetStudioSummaryResponseObject); ok {
+		if err := validResponse.VisitGetStudioSummaryResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetTaxonomyCategories operation middleware
+func (sh *strictHandler) GetTaxonomyCategories(w http.ResponseWriter, r *http.Request, params GetTaxonomyCategoriesParams) {
+	var request GetTaxonomyCategoriesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetTaxonomyCategories(ctx, request.(GetTaxonomyCategoriesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetTaxonomyCategories")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetTaxonomyCategoriesResponseObject); ok {
+		if err := validResponse.VisitGetTaxonomyCategoriesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -8984,6 +13761,58 @@ func (sh *strictHandler) GetTaxonomySkills(w http.ResponseWriter, r *http.Reques
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetTaxonomySkillsResponseObject); ok {
 		if err := validResponse.VisitGetTaxonomySkillsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetTaxonomyTags operation middleware
+func (sh *strictHandler) GetTaxonomyTags(w http.ResponseWriter, r *http.Request, params GetTaxonomyTagsParams) {
+	var request GetTaxonomyTagsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetTaxonomyTags(ctx, request.(GetTaxonomyTagsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetTaxonomyTags")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetTaxonomyTagsResponseObject); ok {
+		if err := validResponse.VisitGetTaxonomyTagsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetTaxonomyTools operation middleware
+func (sh *strictHandler) GetTaxonomyTools(w http.ResponseWriter, r *http.Request, params GetTaxonomyToolsParams) {
+	var request GetTaxonomyToolsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetTaxonomyTools(ctx, request.(GetTaxonomyToolsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetTaxonomyTools")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetTaxonomyToolsResponseObject); ok {
+		if err := validResponse.VisitGetTaxonomyToolsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

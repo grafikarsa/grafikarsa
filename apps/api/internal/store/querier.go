@@ -50,6 +50,7 @@ type Querier interface {
 	GetMajorDetailByCode(ctx context.Context, code string) (GetMajorDetailByCodeRow, error)
 	GetMajorGroupByMajorID(ctx context.Context, majorID uuid.UUID) (GetMajorGroupByMajorIDRow, error)
 	GetOwnedMedia(ctx context.Context, arg GetOwnedMediaParams) (uuid.UUID, error)
+	GetOwnedMediaAsset(ctx context.Context, arg GetOwnedMediaAssetParams) (MediaAsset, error)
 	GetProfileLatestClass(ctx context.Context, userID uuid.UUID) (GetProfileLatestClassRow, error)
 	GetProfileRelations(ctx context.Context, arg GetProfileRelationsParams) (GetProfileRelationsRow, error)
 	GetProfileUserByID(ctx context.Context, userID uuid.UUID) (GetProfileUserByIDRow, error)
@@ -83,6 +84,7 @@ type Querier interface {
 	InsertImportJob(ctx context.Context, arg InsertImportJobParams) (InsertImportJobRow, error)
 	InsertMajor(ctx context.Context, arg InsertMajorParams) (uuid.UUID, error)
 	InsertMajorGroup(ctx context.Context, majorID uuid.UUID) (uuid.UUID, error)
+	InsertMediaAsset(ctx context.Context, arg InsertMediaAssetParams) (MediaAsset, error)
 	InsertProfileLink(ctx context.Context, arg InsertProfileLinkParams) error
 	InsertRecoveryCode(ctx context.Context, arg InsertRecoveryCodeParams) error
 	InsertRole(ctx context.Context, arg InsertRoleParams) (uuid.UUID, error)
@@ -129,6 +131,7 @@ type Querier interface {
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error)
 	ListVaultEntriesForClass(ctx context.Context, classID uuid.UUID) ([]ListVaultEntriesForClassRow, error)
 	MarkImportJobCommitting(ctx context.Context, id uuid.UUID) (int64, error)
+	MediaAssetIsReferenced(ctx context.Context, assetID uuid.UUID) (bool, error)
 	ReactivateUser(ctx context.Context, id uuid.UUID) error
 	RevokeActiveRecoveryCodes(ctx context.Context, userID uuid.UUID) error
 	RevokeSession(ctx context.Context, arg RevokeSessionParams) error
@@ -144,6 +147,7 @@ type Querier interface {
 	SetProfileBanner(ctx context.Context, arg SetProfileBannerParams) error
 	SetUserPassword(ctx context.Context, arg SetUserPasswordParams) error
 	SetUsername(ctx context.Context, arg SetUsernameParams) error
+	SoftDeleteMediaAsset(ctx context.Context, arg SoftDeleteMediaAssetParams) (int64, error)
 	TouchSession(ctx context.Context, arg TouchSessionParams) error
 	UnblockUserContent(ctx context.Context, id uuid.UUID) error
 	UpdateAcademicYearDates(ctx context.Context, arg UpdateAcademicYearDatesParams) (UpdateAcademicYearDatesRow, error)

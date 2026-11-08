@@ -12,6 +12,61 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Kategori konten
+ */
+export const GetTaxonomyCategoriesQueryParams = zod.object({
+  "type": zod.enum(['portfolio', 'blog'])
+})
+
+export const GetTaxonomyCategoriesResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.uuid(),
+  "slug": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "majorCodes": zod.array(zod.string()).describe('Jurusan yang disarankan untuk kategori ini.')
+}))
+})
+
+/**
+ * @summary Cari tools/software (autocomplete)
+ */
+export const getTaxonomyToolsQueryQMax = 60;
+
+
+
+export const GetTaxonomyToolsQueryParams = zod.object({
+  "q": zod.string().max(getTaxonomyToolsQueryQMax).optional()
+})
+
+export const GetTaxonomyToolsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "slug": zod.string(),
+  "name": zod.string(),
+  "category": zod.string().nullish()
+}))
+})
+
+/**
+ * @summary Cari tag (autocomplete)
+ */
+export const getTaxonomyTagsQueryQMax = 40;
+
+
+
+export const GetTaxonomyTagsQueryParams = zod.object({
+  "q": zod.string().max(getTaxonomyTagsQueryQMax).optional()
+})
+
+export const GetTaxonomyTagsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "slug": zod.string(),
+  "name": zod.string(),
+  "category": zod.string().nullish()
+}))
+})
+
+/**
  * Autocomplete katalog skill aktif, maksimal 20 hasil.
  * @summary Cari skill
  */
