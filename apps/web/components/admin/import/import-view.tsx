@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { CircleAlert } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -86,6 +86,16 @@ export function ImportView() {
         query.state.data?.status === "committing" ? 2000 : false,
     },
   });
+
+  const jobStatus = jobQuery.data?.status;
+
+  useEffect(() => {
+    if (jobStatus === "committed" || jobStatus === "failed") {
+      void queryClient.invalidateQueries({
+        queryKey: getGetAdminImportsQueryKey(),
+      });
+    }
+  }, [jobStatus, queryClient]);
 
   const handleUploaded = (job: ImportJob) => {
     queryClient.setQueryData(getGetAdminImportQueryKey(job.id), job);
