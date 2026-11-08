@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/content"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/users"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/jobs"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/config"
@@ -73,6 +74,10 @@ func main() {
 		os.Exit(1)
 	}
 	defer shutdownMedia()
+
+	contentService := content.NewService(dataStore)
+	jobs.Register(registry, &content.ExpireInvitesWorker{Service: contentService, Logger: log})
+	registry.AddPeriodic(content.ExpireInvitesPeriodicJob())
 
 	hasher := password.NewHasher(password.DefaultParams, 0)
 	box, err := secretbox.New([]byte(cfg.SecretKey))
