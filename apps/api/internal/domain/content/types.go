@@ -44,6 +44,10 @@ const (
 	permissionContentCreate = "content.create"
 	maxActiveDraftsSetting  = "content.max_active_drafts"
 	defaultMaxActiveDrafts  = 20
+	maxInReviewSetting      = "content.max_in_review"
+	defaultMaxInReview      = 5
+	trashRetentionSetting   = "content.trash_retention_days"
+	defaultTrashRetention   = 30
 
 	maxPublicIDAttempts = 5
 )
@@ -153,6 +157,40 @@ type StudioContent struct {
 	PurgeAfter       *time.Time
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+}
+
+// CategoryRef is the compact category representation used in version
+// snapshots.
+type CategoryRef struct {
+	Slug string
+	Name string
+}
+
+// ContentVersion is one entry of a content's version history.
+type ContentVersion struct {
+	ID          uuid.UUID
+	Number      int
+	Kind        string
+	State       string
+	Title       string
+	SubmittedAt time.Time
+	DecidedAt   *time.Time
+	SubmittedBy AuthorMini
+	Decision    *ModerationFeedback
+}
+
+// ContentVersionDetail is a version snapshot with taxonomy and media expanded.
+type ContentVersionDetail struct {
+	Version  ContentVersion
+	Title    string
+	Excerpt  *string
+	Category *CategoryRef
+	Cover    *ImageRef
+	Body     map[string]any
+	Meta     map[string]any
+	Tags     []TaxonomyTerm
+	Tools    []TaxonomyTerm
+	Skills   []TaxonomyTerm
 }
 
 // StudioContentItem is one entry of the Studio content list.

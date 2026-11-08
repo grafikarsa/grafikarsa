@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/content"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/media/process"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/users"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/jobs"
@@ -74,6 +75,8 @@ func main() {
 	jobs.Register(registry, &jobs.PingWorker{Logger: log})
 	dataStore := dbstore.NewStore(pool)
 	jobs.Register(registry, process.NewWorker(process.NewProcessor(dataStore, storageClient, log)))
+	jobs.Register(registry, content.NewPurgeWorker(dataStore, log))
+	registry.AddPeriodic(content.PurgePeriodicJob())
 
 	hasher := password.NewHasher(password.DefaultParams, 0)
 	box, err := secretbox.New([]byte(cfg.SecretKey))

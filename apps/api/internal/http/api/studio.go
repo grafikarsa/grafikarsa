@@ -93,6 +93,139 @@ func (s *Server) PutStudioContentDraft(ctx context.Context, request apigen.PutSt
 	return apigen.PutStudioContentDraft200JSONResponse(toStudioContent(result)), nil
 }
 
+// PostStudioContentSubmit sends the draft to moderation.
+func (s *Server) PostStudioContentSubmit(ctx context.Context, request apigen.PostStudioContentSubmitRequestObject) (apigen.PostStudioContentSubmitResponseObject, error) {
+	actor, err := s.studioActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result, err := s.content.Submit(ctx, actor, uuid.UUID(request.Id))
+	if err != nil {
+		return nil, err
+	}
+	return apigen.PostStudioContentSubmit200JSONResponse(toStudioContent(result)), nil
+}
+
+// PostStudioContentWithdraw pulls a pending submission back.
+func (s *Server) PostStudioContentWithdraw(ctx context.Context, request apigen.PostStudioContentWithdrawRequestObject) (apigen.PostStudioContentWithdrawResponseObject, error) {
+	actor, err := s.studioActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result, err := s.content.Withdraw(ctx, actor, uuid.UUID(request.Id))
+	if err != nil {
+		return nil, err
+	}
+	return apigen.PostStudioContentWithdraw200JSONResponse(toStudioContent(result)), nil
+}
+
+// PostStudioContentRevision starts a revision of a published content.
+func (s *Server) PostStudioContentRevision(ctx context.Context, request apigen.PostStudioContentRevisionRequestObject) (apigen.PostStudioContentRevisionResponseObject, error) {
+	actor, err := s.studioActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result, err := s.content.StartRevision(ctx, actor, uuid.UUID(request.Id))
+	if err != nil {
+		return nil, err
+	}
+	return apigen.PostStudioContentRevision200JSONResponse(toStudioContent(result)), nil
+}
+
+// DeleteStudioContentRevision discards an unsent revision.
+func (s *Server) DeleteStudioContentRevision(ctx context.Context, request apigen.DeleteStudioContentRevisionRequestObject) (apigen.DeleteStudioContentRevisionResponseObject, error) {
+	actor, err := s.studioActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result, err := s.content.DiscardRevision(ctx, actor, uuid.UUID(request.Id))
+	if err != nil {
+		return nil, err
+	}
+	return apigen.DeleteStudioContentRevision200JSONResponse(toStudioContent(result)), nil
+}
+
+// PostStudioContentArchive archives a published content.
+func (s *Server) PostStudioContentArchive(ctx context.Context, request apigen.PostStudioContentArchiveRequestObject) (apigen.PostStudioContentArchiveResponseObject, error) {
+	actor, err := s.studioActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result, err := s.content.Archive(ctx, actor, uuid.UUID(request.Id))
+	if err != nil {
+		return nil, err
+	}
+	return apigen.PostStudioContentArchive200JSONResponse(toStudioContent(result)), nil
+}
+
+// PostStudioContentUnarchive republishes an archived content without review.
+func (s *Server) PostStudioContentUnarchive(ctx context.Context, request apigen.PostStudioContentUnarchiveRequestObject) (apigen.PostStudioContentUnarchiveResponseObject, error) {
+	actor, err := s.studioActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result, err := s.content.Unarchive(ctx, actor, uuid.UUID(request.Id))
+	if err != nil {
+		return nil, err
+	}
+	return apigen.PostStudioContentUnarchive200JSONResponse(toStudioContent(result)), nil
+}
+
+// DeleteStudioContent moves a content to the trash.
+func (s *Server) DeleteStudioContent(ctx context.Context, request apigen.DeleteStudioContentRequestObject) (apigen.DeleteStudioContentResponseObject, error) {
+	actor, err := s.studioActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.content.Delete(ctx, actor, uuid.UUID(request.Id)); err != nil {
+		return nil, err
+	}
+	return apigen.DeleteStudioContent204Response{}, nil
+}
+
+// PostStudioContentRestore restores a content from the trash.
+func (s *Server) PostStudioContentRestore(ctx context.Context, request apigen.PostStudioContentRestoreRequestObject) (apigen.PostStudioContentRestoreResponseObject, error) {
+	actor, err := s.studioActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result, err := s.content.Restore(ctx, actor, uuid.UUID(request.Id))
+	if err != nil {
+		return nil, err
+	}
+	return apigen.PostStudioContentRestore200JSONResponse(toStudioContent(result)), nil
+}
+
+// GetStudioContentVersions lists the version history of one content.
+func (s *Server) GetStudioContentVersions(ctx context.Context, request apigen.GetStudioContentVersionsRequestObject) (apigen.GetStudioContentVersionsResponseObject, error) {
+	actor, err := s.studioActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	versions, err := s.content.ListVersions(ctx, actor, uuid.UUID(request.Id))
+	if err != nil {
+		return nil, err
+	}
+	items := make([]apigen.ContentVersion, 0, len(versions))
+	for _, version := range versions {
+		items = append(items, toContentVersion(version))
+	}
+	return apigen.GetStudioContentVersions200JSONResponse{Items: items}, nil
+}
+
+// GetStudioContentVersion returns one version snapshot.
+func (s *Server) GetStudioContentVersion(ctx context.Context, request apigen.GetStudioContentVersionRequestObject) (apigen.GetStudioContentVersionResponseObject, error) {
+	actor, err := s.studioActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	detail, err := s.content.GetVersion(ctx, actor, uuid.UUID(request.Id), uuid.UUID(request.VersionId))
+	if err != nil {
+		return nil, err
+	}
+	return apigen.GetStudioContentVersion200JSONResponse(toContentVersionDetail(detail)), nil
+}
+
 // GetStudioContents lists contents the caller authors.
 func (s *Server) GetStudioContents(ctx context.Context, request apigen.GetStudioContentsRequestObject) (apigen.GetStudioContentsResponseObject, error) {
 	actor, err := s.studioActor(ctx)
@@ -279,4 +412,48 @@ func toRevisionStatus(status *string) *apigen.RevisionStatus {
 	}
 	converted := apigen.RevisionStatus(*status)
 	return &converted
+}
+
+func toContentVersion(version content.ContentVersion) apigen.ContentVersion {
+	return apigen.ContentVersion{
+		Id:          version.ID,
+		Number:      version.Number,
+		Kind:        apigen.ContentVersionKind(version.Kind),
+		State:       apigen.ContentVersionState(version.State),
+		Title:       version.Title,
+		SubmittedAt: version.SubmittedAt,
+		DecidedAt:   version.DecidedAt,
+		SubmittedBy: *toAuthorMini(&version.SubmittedBy),
+		Decision:    toModerationFeedback(version.Decision),
+	}
+}
+
+func toContentVersionDetail(detail content.ContentVersionDetail) apigen.ContentVersionDetail {
+	body := detail.Body
+	if body == nil {
+		body = map[string]any{}
+	}
+	meta := detail.Meta
+	if meta == nil {
+		meta = map[string]any{}
+	}
+	return apigen.ContentVersionDetail{
+		Version:  toContentVersion(detail.Version),
+		Title:    detail.Title,
+		Excerpt:  detail.Excerpt,
+		Category: toCategoryRef(detail.Category),
+		Cover:    toImageRef(detail.Cover),
+		Body:     body,
+		Meta:     meta,
+		Tags:     toContentTaxonomyTerms(detail.Tags),
+		Tools:    toContentTaxonomyTerms(detail.Tools),
+		Skills:   toContentTaxonomyTerms(detail.Skills),
+	}
+}
+
+func toCategoryRef(ref *content.CategoryRef) *apigen.CategoryRef {
+	if ref == nil {
+		return nil
+	}
+	return &apigen.CategoryRef{Slug: ref.Slug, Name: ref.Name}
 }
