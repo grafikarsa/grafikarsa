@@ -7,9 +7,45 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/google/uuid"
 )
+
+const getMediaAssetForProcessing = `-- name: GetMediaAssetForProcessing :one
+SELECT id, owner_id, kind, purpose, original_key, original_filename, mime_type, size_bytes, checksum_sha256, width, height, page_count, status, failure_reason, variants, is_public, public_prefix, blurhash, dominant_color, created_at, processed_at, deleted_at FROM media_assets
+WHERE id = $1 AND deleted_at IS NULL
+`
+
+func (q *Queries) GetMediaAssetForProcessing(ctx context.Context, id uuid.UUID) (MediaAsset, error) {
+	row := q.db.QueryRow(ctx, getMediaAssetForProcessing, id)
+	var i MediaAsset
+	err := row.Scan(
+		&i.ID,
+		&i.OwnerID,
+		&i.Kind,
+		&i.Purpose,
+		&i.OriginalKey,
+		&i.OriginalFilename,
+		&i.MimeType,
+		&i.SizeBytes,
+		&i.ChecksumSha256,
+		&i.Width,
+		&i.Height,
+		&i.PageCount,
+		&i.Status,
+		&i.FailureReason,
+		&i.Variants,
+		&i.IsPublic,
+		&i.PublicPrefix,
+		&i.Blurhash,
+		&i.DominantColor,
+		&i.CreatedAt,
+		&i.ProcessedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
 
 const getOwnedMediaAsset = `-- name: GetOwnedMediaAsset :one
 SELECT id, owner_id, kind, purpose, original_key, original_filename, mime_type, size_bytes, checksum_sha256, width, height, page_count, status, failure_reason, variants, is_public, public_prefix, blurhash, dominant_color, created_at, processed_at, deleted_at FROM media_assets
@@ -110,6 +146,79 @@ func (q *Queries) InsertMediaAsset(ctx context.Context, arg InsertMediaAssetPara
 		&i.DeletedAt,
 	)
 	return i, err
+}
+
+const markMediaAssetFailed = `-- name: MarkMediaAssetFailed :execrows
+UPDATE media_assets
+SET status = 'failed', failure_reason = $1
+WHERE id = $2 AND deleted_at IS NULL
+`
+
+type MarkMediaAssetFailedParams struct {
+	FailureReason *string
+	ID            uuid.UUID
+}
+
+func (q *Queries) MarkMediaAssetFailed(ctx context.Context, arg MarkMediaAssetFailedParams) (int64, error) {
+	result, err := q.db.Exec(ctx, markMediaAssetFailed, arg.FailureReason, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const markMediaAssetProcessing = `-- name: MarkMediaAssetProcessing :execrows
+UPDATE media_assets
+SET status = 'processing', failure_reason = NULL
+WHERE id = $1 AND deleted_at IS NULL
+`
+
+func (q *Queries) MarkMediaAssetProcessing(ctx context.Context, id uuid.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, markMediaAssetProcessing, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const markMediaAssetReady = `-- name: MarkMediaAssetReady :execrows
+UPDATE media_assets
+SET status = 'ready',
+    variants = $1,
+    width = $2,
+    height = $3,
+    page_count = $4,
+    blurhash = $5,
+    dominant_color = $6,
+    processed_at = now(),
+    failure_reason = NULL
+WHERE id = $7 AND deleted_at IS NULL
+`
+
+type MarkMediaAssetReadyParams struct {
+	Variants      json.RawMessage
+	Width         *int32
+	Height        *int32
+	PageCount     *int32
+	Blurhash      *string
+	DominantColor *string
+	ID            uuid.UUID
+}
+
+func (q *Queries) MarkMediaAssetReady(ctx context.Context, arg MarkMediaAssetReadyParams) (int64, error) {
+	result, err := q.db.Exec(ctx, markMediaAssetReady,
+		arg.Variants,
+		arg.Width,
+		arg.Height,
+		arg.PageCount,
+		arg.Blurhash,
+		arg.DominantColor,
+		arg.ID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const mediaAssetIsReferenced = `-- name: MediaAssetIsReferenced :one

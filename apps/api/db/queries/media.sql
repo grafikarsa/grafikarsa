@@ -17,6 +17,33 @@ UPDATE media_assets
 SET deleted_at = now()
 WHERE id = @id AND owner_id = @owner_id AND deleted_at IS NULL;
 
+-- name: GetMediaAssetForProcessing :one
+SELECT * FROM media_assets
+WHERE id = @id AND deleted_at IS NULL;
+
+-- name: MarkMediaAssetProcessing :execrows
+UPDATE media_assets
+SET status = 'processing', failure_reason = NULL
+WHERE id = @id AND deleted_at IS NULL;
+
+-- name: MarkMediaAssetReady :execrows
+UPDATE media_assets
+SET status = 'ready',
+    variants = @variants,
+    width = @width,
+    height = @height,
+    page_count = @page_count,
+    blurhash = @blurhash,
+    dominant_color = @dominant_color,
+    processed_at = now(),
+    failure_reason = NULL
+WHERE id = @id AND deleted_at IS NULL;
+
+-- name: MarkMediaAssetFailed :execrows
+UPDATE media_assets
+SET status = 'failed', failure_reason = @failure_reason
+WHERE id = @id AND deleted_at IS NULL;
+
 -- name: MediaAssetIsReferenced :one
 SELECT count(*) > 0 AS referenced
 FROM (
