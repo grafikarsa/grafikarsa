@@ -20,23 +20,8 @@ func (s *Server) GetContent(_ context.Context, _ apigen.GetContentRequestObject)
 	return nil, apperr.NotImplemented()
 }
 
-// GetStudioContents is not implemented yet.
-func (s *Server) GetStudioContents(_ context.Context, _ apigen.GetStudioContentsRequestObject) (apigen.GetStudioContentsResponseObject, error) {
-	return nil, apperr.NotImplemented()
-}
-
-// PostStudioContent is not implemented yet.
-func (s *Server) PostStudioContent(_ context.Context, _ apigen.PostStudioContentRequestObject) (apigen.PostStudioContentResponseObject, error) {
-	return nil, apperr.NotImplemented()
-}
-
 // DeleteStudioContent is not implemented yet.
 func (s *Server) DeleteStudioContent(_ context.Context, _ apigen.DeleteStudioContentRequestObject) (apigen.DeleteStudioContentResponseObject, error) {
-	return nil, apperr.NotImplemented()
-}
-
-// GetStudioContent is not implemented yet.
-func (s *Server) GetStudioContent(_ context.Context, _ apigen.GetStudioContentRequestObject) (apigen.GetStudioContentResponseObject, error) {
 	return nil, apperr.NotImplemented()
 }
 
@@ -67,11 +52,6 @@ func (s *Server) DeleteStudioContentAuthor(_ context.Context, _ apigen.DeleteStu
 
 // PatchStudioContentAuthor is not implemented yet.
 func (s *Server) PatchStudioContentAuthor(_ context.Context, _ apigen.PatchStudioContentAuthorRequestObject) (apigen.PatchStudioContentAuthorResponseObject, error) {
-	return nil, apperr.NotImplemented()
-}
-
-// PutStudioContentDraft is not implemented yet.
-func (s *Server) PutStudioContentDraft(_ context.Context, _ apigen.PutStudioContentDraftRequestObject) (apigen.PutStudioContentDraftResponseObject, error) {
 	return nil, apperr.NotImplemented()
 }
 
@@ -137,10 +117,5 @@ func (s *Server) PostStudioInvitationAccept(_ context.Context, _ apigen.PostStud
 
 // PostStudioInvitationDecline is not implemented yet.
 func (s *Server) PostStudioInvitationDecline(_ context.Context, _ apigen.PostStudioInvitationDeclineRequestObject) (apigen.PostStudioInvitationDeclineResponseObject, error) {
-	return nil, apperr.NotImplemented()
-}
-
-// GetStudioSummary is not implemented yet.
-func (s *Server) GetStudioSummary(_ context.Context, _ apigen.GetStudioSummaryRequestObject) (apigen.GetStudioSummaryResponseObject, error) {
 	return nil, apperr.NotImplemented()
 }
