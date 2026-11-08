@@ -14,6 +14,7 @@ import (
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/academic"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/audit"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/auth"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/media"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/roles"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/users"
 	apirouter "github.com/grafikarsa/grafikarsa/apps/api/internal/http"
@@ -123,9 +124,10 @@ func main() {
 	// The API only inserts jobs. Workers live in cmd/worker; the insert client
 	// still needs the shared registry so job argument types stay consistent.
 	jobRegistry := jobs.NewRegistry()
-	// Register the job args type so the insert client accepts it. The API
-	// never starts this worker; execution happens in cmd/worker.
+	// Register the job args types so the insert client accepts them. The API
+	// never starts these workers; execution happens in cmd/worker.
 	jobs.Register(jobRegistry, &users.ImportCommitWorker{})
+	jobs.Register(jobRegistry, &media.ProcessWorker{Logger: log})
 	insertClient, err := jobs.NewInsertClient(pool, jobRegistry, log)
 	if err != nil {
 		log.Error("river insert client failed", "error", err)
@@ -134,6 +136,7 @@ func main() {
 		os.Exit(1)
 	}
 	importer := users.NewImporter(usersService, insertClient)
+	mediaService := media.NewService(dataStore, store, insertClient, limiter, rdb)
 
 	srv := &http.Server{
 		Addr: cfg.HTTPAddr,
@@ -146,6 +149,7 @@ func main() {
 			Imports:        importer,
 			Roles:          rolesService,
 			Audit:          auditService,
+			Media:          mediaService,
 			Limiter:        limiter,
 			AllowedOrigins: cfg.AllowedOrigins,
 		}),
