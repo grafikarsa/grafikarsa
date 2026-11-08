@@ -38,6 +38,11 @@ Proses `worker` menjalankan job River dari antrean `default`, `media`, dan `bulk
 environment yang sama dengan API dan menyediakan liveness check di
 `GK_WORKER_HEALTH_ADDR` (default `:8092`).
 
+Worker adalah satu-satunya binary yang memakai cgo: pemrosesan media memerlukan
+[libvips](https://www.libvips.org/) (`libvips-dev`/`libvips42t64`) dan poppler (`pdfinfo`,
+`pdftoppm`). API, migrasi, dan admin tetap dibangun dengan `CGO_ENABLED=0` dan tidak
+mengimpor paket pemrosesan.
+
 ```bash
 cd apps/api && go run ./cmd/worker
 # atau dari root repo
@@ -45,6 +50,18 @@ make worker-run
 
 curl -s localhost:8092/healthz
 ```
+
+Di mesin tanpa libvips, jalankan worker lewat Docker dengan target `worker`:
+
+```bash
+docker build --target worker -t gk-worker apps/api
+docker run --rm -p 8092:8092 --env-file .env gk-worker
+```
+
+Package `internal/domain/media/process` mengubah unggahan menjadi varian WebP (kualitas 80) dan
+AVIF (kualitas 55) pada lebar 320/640/960/1280/1920, menghitung blurhash dan warna dominan, serta
+membuat pratinjau halaman pertama PDF. Job yang gagal dicoba ulang River; pada percobaan terakhir
+status aset menjadi `failed` beserta `failure_reason`.
 
 Job di-enqueue di transaksi yang sama dengan perubahan data lewat klien insert-only
 (`internal/jobs.NewInsertClient`), sehingga perubahan yang di-commit selalu punya job dan perubahan

@@ -13,7 +13,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/media"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/media/process"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/users"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/jobs"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/config"
@@ -21,6 +21,7 @@ import (
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/logger"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/password"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/secretbox"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/storage"
 	dbstore "github.com/grafikarsa/grafikarsa/apps/api/internal/store"
 )
 
@@ -41,15 +42,38 @@ func main() {
 
 	startupCtx, cancelStartup := context.WithTimeout(context.Background(), startupTimeout)
 	pool, err := db.Open(startupCtx, cfg.DatabaseURL)
-	cancelStartup()
 	if err != nil {
+		cancelStartup()
 		log.Error("postgres connection failed", "error", err)
 		os.Exit(1)
 	}
 
+	storageClient, err := storage.New(startupCtx,
+		cfg.S3Endpoint,
+		cfg.S3Region,
+		cfg.S3AccessKey,
+		cfg.S3SecretKey,
+		cfg.S3BucketPrivate,
+		cfg.S3BucketPublic,
+	)
+	cancelStartup()
+	if err != nil {
+		log.Error("storage client failed", "error", err)
+		pool.Close()
+		os.Exit(1)
+	}
+
+	if err := process.Startup(); err != nil {
+		log.Error("libvips startup failed", "error", err)
+		pool.Close()
+		os.Exit(1)
+	}
+	defer process.Shutdown()
+
 	registry := jobs.NewRegistry()
 	jobs.Register(registry, &jobs.PingWorker{Logger: log})
-	jobs.Register(registry, &media.ProcessWorker{Logger: log})
+	dataStore := dbstore.NewStore(pool)
+	jobs.Register(registry, process.NewWorker(process.NewProcessor(dataStore, storageClient, log)))
 
 	hasher := password.NewHasher(password.DefaultParams, 0)
 	box, err := secretbox.New([]byte(cfg.SecretKey))
@@ -58,7 +82,6 @@ func main() {
 		pool.Close()
 		os.Exit(1)
 	}
-	dataStore := dbstore.NewStore(pool)
 	usersService := users.NewService(dataStore, nil, hasher, box)
 	jobs.Register(registry, &users.ImportCommitWorker{
 		Importer: users.NewImporter(usersService, nil),

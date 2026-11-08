@@ -15,15 +15,20 @@ type Querier interface {
 	ClearCurrentAcademicYear(ctx context.Context) error
 	CompleteActivation(ctx context.Context, id uuid.UUID) error
 	CompleteImportJob(ctx context.Context, arg CompleteImportJobParams) (int64, error)
+	CountAcceptedAuthors(ctx context.Context, contentID uuid.UUID) (int32, error)
+	CountActiveDraftsByOwner(ctx context.Context, ownerID uuid.UUID) (int32, error)
 	CountActiveRecoveryCodes(ctx context.Context, userID uuid.UUID) (int64, error)
 	CountActiveRoleHolders(ctx context.Context, roleID uuid.UUID) (int64, error)
 	CountClassEnrollments(ctx context.Context, classID uuid.UUID) (int64, error)
+	CountPendingInvitations(ctx context.Context, userID uuid.UUID) (int32, error)
+	CountStudioContentsByStatus(ctx context.Context, userID uuid.UUID) ([]CountStudioContentsByStatusRow, error)
 	CountUserActiveSessions(ctx context.Context, userID uuid.UUID) (int64, error)
 	CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error)
 	CreateStaffUser(ctx context.Context, arg CreateStaffUserParams) (uuid.UUID, error)
 	DeactivateUser(ctx context.Context, id uuid.UUID) error
 	DeleteClass(ctx context.Context, id uuid.UUID) error
 	DeleteClassGroupByClassID(ctx context.Context, classID uuid.UUID) error
+	DeleteContentDraftMedia(ctx context.Context, contentID uuid.UUID) error
 	DeleteExperience(ctx context.Context, arg DeleteExperienceParams) error
 	DeleteExperienceSkills(ctx context.Context, experienceID uuid.UUID) error
 	DeleteExpiredVaultEntries(ctx context.Context) (int64, error)
@@ -39,16 +44,26 @@ type Querier interface {
 	EnsureProfile(ctx context.Context, userID uuid.UUID) error
 	FailImportJob(ctx context.Context, arg FailImportJobParams) (int64, error)
 	GetAcademicYearByID(ctx context.Context, id uuid.UUID) (GetAcademicYearByIDRow, error)
+	GetAuthorMini(ctx context.Context, id uuid.UUID) (GetAuthorMiniRow, error)
+	GetAuthorOwnedImage(ctx context.Context, arg GetAuthorOwnedImageParams) (GetAuthorOwnedImageRow, error)
+	GetBlogSeriesOwner(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
 	GetClassByID(ctx context.Context, id uuid.UUID) (GetClassByIDRow, error)
 	GetClassGroupByClassID(ctx context.Context, classID uuid.UUID) (GetClassGroupByClassIDRow, error)
+	GetContent(ctx context.Context, id uuid.UUID) (Content, error)
+	GetContentAuthor(ctx context.Context, arg GetContentAuthorParams) (ContentAuthor, error)
+	GetContentCategoryByID(ctx context.Context, id uuid.UUID) (GetContentCategoryByIDRow, error)
+	GetContentDraft(ctx context.Context, contentID uuid.UUID) (ContentDraft, error)
 	GetCurrentAcademicYear(ctx context.Context) (GetCurrentAcademicYearRow, error)
 	GetExperienceByOwner(ctx context.Context, arg GetExperienceByOwnerParams) (GetExperienceByOwnerRow, error)
+	GetImageRef(ctx context.Context, id uuid.UUID) (GetImageRefRow, error)
 	GetImportExistingUser(ctx context.Context, arg GetImportExistingUserParams) (GetImportExistingUserRow, error)
 	GetImportJob(ctx context.Context, id uuid.UUID) (GetImportJobRow, error)
+	GetLatestModerationDecision(ctx context.Context, contentID uuid.UUID) (GetLatestModerationDecisionRow, error)
 	GetMajorByCode(ctx context.Context, code string) (GetMajorByCodeRow, error)
 	GetMajorByID(ctx context.Context, id uuid.UUID) (GetMajorByIDRow, error)
 	GetMajorDetailByCode(ctx context.Context, code string) (GetMajorDetailByCodeRow, error)
 	GetMajorGroupByMajorID(ctx context.Context, majorID uuid.UUID) (GetMajorGroupByMajorIDRow, error)
+	GetMediaAssetForProcessing(ctx context.Context, id uuid.UUID) (MediaAsset, error)
 	GetOwnedMedia(ctx context.Context, arg GetOwnedMediaParams) (uuid.UUID, error)
 	GetOwnedMediaAsset(ctx context.Context, arg GetOwnedMediaAssetParams) (MediaAsset, error)
 	GetProfileLatestClass(ctx context.Context, userID uuid.UUID) (GetProfileLatestClassRow, error)
@@ -64,6 +79,12 @@ type Querier interface {
 	GetRoleMajor(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
 	GetSessionByTokenHash(ctx context.Context, tokenHash []byte) (Session, error)
 	GetSetting(ctx context.Context, key string) (Setting, error)
+	GetSkillsByIDs(ctx context.Context, ids []uuid.UUID) ([]GetSkillsByIDsRow, error)
+	GetSkillsBySlugs(ctx context.Context, slugs []string) ([]GetSkillsBySlugsRow, error)
+	GetTagBySlug(ctx context.Context, slug string) (GetTagBySlugRow, error)
+	GetTagsByIDs(ctx context.Context, ids []uuid.UUID) ([]GetTagsByIDsRow, error)
+	GetToolsByIDs(ctx context.Context, ids []uuid.UUID) ([]GetToolsByIDsRow, error)
+	GetToolsBySlugs(ctx context.Context, slugs []string) ([]GetToolsBySlugsRow, error)
 	GetUserAdminDetail(ctx context.Context, id uuid.UUID) (GetUserAdminDetailRow, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (GetUserByIDRow, error)
 	GetUserForLogin(ctx context.Context, identifier string) (GetUserForLoginRow, error)
@@ -72,11 +93,17 @@ type Querier interface {
 	GetUserSkill(ctx context.Context, arg GetUserSkillParams) (uuid.UUID, error)
 	GetUsernameRedirect(ctx context.Context, oldUsername string) (string, error)
 	GetUsernameState(ctx context.Context, userID uuid.UUID) (GetUsernameStateRow, error)
+	HasClaimedModerationCase(ctx context.Context, contentID uuid.UUID) (bool, error)
 	ImportUserHasEnrollment(ctx context.Context, arg ImportUserHasEnrollmentParams) (bool, error)
 	InsertAcademicYear(ctx context.Context, arg InsertAcademicYearParams) (InsertAcademicYearRow, error)
 	InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) (InsertAuditLogRow, error)
 	InsertClass(ctx context.Context, arg InsertClassParams) (uuid.UUID, error)
 	InsertClassGroup(ctx context.Context, arg InsertClassGroupParams) (uuid.UUID, error)
+	InsertContent(ctx context.Context, arg InsertContentParams) (Content, error)
+	InsertContentDraft(ctx context.Context, arg InsertContentDraftParams) (ContentDraft, error)
+	InsertContentDraftMedia(ctx context.Context, arg InsertContentDraftMediaParams) error
+	InsertContentOwner(ctx context.Context, arg InsertContentOwnerParams) error
+	InsertContentStats(ctx context.Context, contentID uuid.UUID) error
 	InsertEnrollment(ctx context.Context, arg InsertEnrollmentParams) error
 	InsertExperience(ctx context.Context, arg InsertExperienceParams) (uuid.UUID, error)
 	InsertExperienceSkill(ctx context.Context, arg InsertExperienceSkillParams) error
@@ -92,6 +119,7 @@ type Querier interface {
 	InsertSkillEndorsement(ctx context.Context, arg InsertSkillEndorsementParams) error
 	InsertSystemExperience(ctx context.Context, arg InsertSystemExperienceParams) error
 	InsertSystemUserRole(ctx context.Context, arg InsertSystemUserRoleParams) error
+	InsertTag(ctx context.Context, arg InsertTagParams) error
 	InsertTeacherMajor(ctx context.Context, arg InsertTeacherMajorParams) error
 	InsertUser(ctx context.Context, arg InsertUserParams) (uuid.UUID, error)
 	InsertUserRole(ctx context.Context, arg InsertUserRoleParams) (InsertUserRoleRow, error)
@@ -115,6 +143,7 @@ type Querier interface {
 	ListExplicitGrants(ctx context.Context, userID uuid.UUID) ([]ListExplicitGrantsRow, error)
 	ListImportJobs(ctx context.Context, arg ListImportJobsParams) ([]ListImportJobsRow, error)
 	ListMajors(ctx context.Context) ([]ListMajorsRow, error)
+	ListModerationAnnotations(ctx context.Context, caseID uuid.UUID) ([]ListModerationAnnotationsRow, error)
 	ListPermissions(ctx context.Context) ([]Permission, error)
 	ListPopularTags(ctx context.Context) ([]ListPopularTagsRow, error)
 	ListProfileBadges(ctx context.Context, userID uuid.UUID) ([]ListProfileBadgesRow, error)
@@ -128,12 +157,16 @@ type Querier interface {
 	ListRoles(ctx context.Context) ([]ListRolesRow, error)
 	ListSettings(ctx context.Context) ([]Setting, error)
 	ListSkillsBySlugs(ctx context.Context, slugList []string) ([]ListSkillsBySlugsRow, error)
+	ListStudioContents(ctx context.Context, arg ListStudioContentsParams) ([]ListStudioContentsRow, error)
 	ListTeacherMajorIDs(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error)
 	ListUserEnrollments(ctx context.Context, userID uuid.UUID) ([]ListUserEnrollmentsRow, error)
 	ListUserRoleAssignments(ctx context.Context, userID uuid.UUID) ([]ListUserRoleAssignmentsRow, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error)
 	ListVaultEntriesForClass(ctx context.Context, classID uuid.UUID) ([]ListVaultEntriesForClassRow, error)
 	MarkImportJobCommitting(ctx context.Context, id uuid.UUID) (int64, error)
+	MarkMediaAssetFailed(ctx context.Context, arg MarkMediaAssetFailedParams) (int64, error)
+	MarkMediaAssetProcessing(ctx context.Context, id uuid.UUID) (int64, error)
+	MarkMediaAssetReady(ctx context.Context, arg MarkMediaAssetReadyParams) (int64, error)
 	MediaAssetIsReferenced(ctx context.Context, assetID uuid.UUID) (bool, error)
 	ReactivateUser(ctx context.Context, id uuid.UUID) error
 	RevokeActiveRecoveryCodes(ctx context.Context, userID uuid.UUID) error
@@ -153,10 +186,13 @@ type Querier interface {
 	SetUserPassword(ctx context.Context, arg SetUserPasswordParams) error
 	SetUsername(ctx context.Context, arg SetUsernameParams) error
 	SoftDeleteMediaAsset(ctx context.Context, arg SoftDeleteMediaAssetParams) (int64, error)
+	TouchContent(ctx context.Context, id uuid.UUID) error
 	TouchSession(ctx context.Context, arg TouchSessionParams) error
 	UnblockUserContent(ctx context.Context, id uuid.UUID) error
 	UpdateAcademicYearDates(ctx context.Context, arg UpdateAcademicYearDatesParams) (UpdateAcademicYearDatesRow, error)
 	UpdateClassSection(ctx context.Context, arg UpdateClassSectionParams) (uuid.UUID, error)
+	UpdateContentDraft(ctx context.Context, arg UpdateContentDraftParams) (int64, error)
+	UpdateContentFromDraft(ctx context.Context, arg UpdateContentFromDraftParams) error
 	UpdateExperience(ctx context.Context, arg UpdateExperienceParams) error
 	UpdateMajor(ctx context.Context, arg UpdateMajorParams) (uuid.UUID, error)
 	UpdatePasswordHash(ctx context.Context, arg UpdatePasswordHashParams) error
