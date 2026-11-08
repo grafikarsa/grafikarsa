@@ -25,6 +25,9 @@ const (
 	DefaultLimit = 50
 	// MaxLimit is the largest page List will return.
 	MaxLimit = 100
+
+	// PermissionView gates reading the audit log.
+	PermissionView = "audit.view"
 )
 
 // actionPattern mirrors the audit_logs.action CHECK constraint.
@@ -114,15 +117,17 @@ type Filter struct {
 
 // Item is one audit log row as returned by List.
 type Item struct {
-	ID           int64
-	OccurredAt   time.Time
-	ActorID      *uuid.UUID
-	ActorIP      *string
-	Action       string
-	TargetType   *string
-	TargetID     *uuid.UUID
-	ScopeMajorID *uuid.UUID
-	Data         map[string]any
+	ID            int64
+	OccurredAt    time.Time
+	ActorID       *uuid.UUID
+	ActorName     *string
+	ActorUsername *string
+	ActorIP       *string
+	Action        string
+	TargetType    *string
+	TargetID      *uuid.UUID
+	ScopeMajorID  *uuid.UUID
+	Data          map[string]any
 }
 
 // Page is one page of audit log entries.
@@ -131,8 +136,43 @@ type Page struct {
 	NextCursor string
 }
 
-// List returns audit entries matching f, newest first.
+// Scope is the caller's audit.view visibility scope. Granted is false when the
+// caller holds no audit.view grant; ListForActor then reports NotFound.
+type Scope struct {
+	Granted  bool
+	Global   bool
+	MajorIDs []uuid.UUID
+}
+
+// List returns every audit entry matching f, newest first. It does not apply
+// permission scoping; HTTP handlers must use ListForActor instead.
 func List(ctx context.Context, q *store.Queries, f Filter) (Page, error) {
+	return list(ctx, q, f, Scope{Granted: true, Global: true})
+}
+
+// ListForActor returns audit entries matching f that are visible through the
+// caller's audit.view scope. Global scopes see every entry; scoped grants only
+// see entries recorded for their majors (entries without a major scope are
+// hidden). Callers without the permission get NotFound, and scoped callers
+// never receive actor IPs.
+func ListForActor(ctx context.Context, q *store.Queries, scope Scope, f Filter) (Page, error) {
+	if !scope.Granted {
+		return Page{}, apperr.NotFound()
+	}
+
+	page, err := list(ctx, q, f, scope)
+	if err != nil {
+		return Page{}, err
+	}
+	if !scope.Global {
+		for i := range page.Items {
+			page.Items[i].ActorIP = nil
+		}
+	}
+	return page, nil
+}
+
+func list(ctx context.Context, q *store.Queries, f Filter, scope Scope) (Page, error) {
 	limit := f.Limit
 	if limit <= 0 {
 		limit = DefaultLimit
@@ -150,6 +190,10 @@ func List(ctx context.Context, q *store.Queries, f Filter) (Page, error) {
 		ScopeMajorID: f.ScopeMajorID,
 		From:         f.From,
 		To:           f.To,
+		ScopeGlobal:  scope.Global,
+		// Always pass a non-nil slice so PostgreSQL does not receive a NULL
+		// array for the cardinality check.
+		ScopeMajorIds: append([]uuid.UUID{}, scope.MajorIDs...),
 		// Fetch one extra row to detect whether another page exists.
 		LimitCount: int32(limit + 1),
 	}
@@ -183,7 +227,7 @@ func List(ctx context.Context, q *store.Queries, f Filter) (Page, error) {
 	return page, nil
 }
 
-func toItem(row store.AuditLog) (Item, error) {
+func toItem(row store.ListAuditLogsRow) (Item, error) {
 	data := map[string]any{}
 	if len(row.Data) > 0 {
 		if err := json.Unmarshal(row.Data, &data); err != nil {
@@ -201,15 +245,17 @@ func toItem(row store.AuditLog) (Item, error) {
 	}
 
 	return Item{
-		ID:           row.ID,
-		OccurredAt:   row.OccurredAt.UTC(),
-		ActorID:      row.ActorID,
-		ActorIP:      actorIP,
-		Action:       row.Action,
-		TargetType:   row.TargetType,
-		TargetID:     row.TargetID,
-		ScopeMajorID: row.ScopeMajorID,
-		Data:         data,
+		ID:            row.ID,
+		OccurredAt:    row.OccurredAt.UTC(),
+		ActorID:       row.ActorID,
+		ActorName:     row.ActorName,
+		ActorUsername: row.ActorUsername,
+		ActorIP:       actorIP,
+		Action:        row.Action,
+		TargetType:    row.TargetType,
+		TargetID:      row.TargetID,
+		ScopeMajorID:  row.ScopeMajorID,
+		Data:          data,
 	}, nil
 }
 

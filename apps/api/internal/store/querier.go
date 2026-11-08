@@ -71,7 +71,7 @@ type Querier interface {
 	ListActiveSessions(ctx context.Context, userID uuid.UUID) ([]ListActiveSessionsRow, error)
 	ListActiveUserRoleAssignments(ctx context.Context, arg ListActiveUserRoleAssignmentsParams) ([]ListActiveUserRoleAssignmentsRow, error)
 	ListAllRolePermissions(ctx context.Context) ([]RolePermission, error)
-	ListAuditLogs(ctx context.Context, arg ListAuditLogsParams) ([]AuditLog, error)
+	ListAuditLogs(ctx context.Context, arg ListAuditLogsParams) ([]ListAuditLogsRow, error)
 	ListClasses(ctx context.Context, arg ListClassesParams) ([]ListClassesRow, error)
 	ListExplicitGrants(ctx context.Context, userID uuid.UUID) ([]ListExplicitGrantsRow, error)
 	ListMajors(ctx context.Context) ([]ListMajorsRow, error)
