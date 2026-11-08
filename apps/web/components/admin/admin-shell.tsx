@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   School,
   ScrollText,
+  ShieldCheck,
   Users,
 } from "lucide-react";
 
@@ -42,6 +43,7 @@ import { isActivePath } from "@/lib/nav";
 const NAV_ICONS: Record<string, LucideIcon> = {
   "/admin": LayoutDashboard,
   "/admin/pengguna": Users,
+  "/admin/role": ShieldCheck,
   "/admin/akademik/jurusan": GraduationCap,
   "/admin/akademik/tahun-ajaran": CalendarRange,
   "/admin/akademik/kelas": School,
