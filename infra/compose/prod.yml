@@ -59,7 +59,7 @@ services:
   worker:
     build:
       context: ../../apps/api
-    entrypoint: ["/worker"]
+      target: worker
     environment: *api-env
     depends_on:
       postgres:

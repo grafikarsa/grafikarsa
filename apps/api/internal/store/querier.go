@@ -55,6 +55,7 @@ type Querier interface {
 	GetMajorByID(ctx context.Context, id uuid.UUID) (GetMajorByIDRow, error)
 	GetMajorDetailByCode(ctx context.Context, code string) (GetMajorDetailByCodeRow, error)
 	GetMajorGroupByMajorID(ctx context.Context, majorID uuid.UUID) (GetMajorGroupByMajorIDRow, error)
+	GetMediaAssetForProcessing(ctx context.Context, id uuid.UUID) (MediaAsset, error)
 	GetOwnedMediaAsset(ctx context.Context, arg GetOwnedMediaAssetParams) (MediaAsset, error)
 	GetRoleAssignmentTarget(ctx context.Context, id uuid.UUID) (GetRoleAssignmentTargetRow, error)
 	GetRoleByID(ctx context.Context, id uuid.UUID) (GetRoleByIDRow, error)
@@ -130,6 +131,9 @@ type Querier interface {
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error)
 	ListVaultEntriesForClass(ctx context.Context, classID uuid.UUID) ([]ListVaultEntriesForClassRow, error)
 	MarkImportJobCommitting(ctx context.Context, id uuid.UUID) (int64, error)
+	MarkMediaAssetFailed(ctx context.Context, arg MarkMediaAssetFailedParams) (int64, error)
+	MarkMediaAssetProcessing(ctx context.Context, id uuid.UUID) (int64, error)
+	MarkMediaAssetReady(ctx context.Context, arg MarkMediaAssetReadyParams) (int64, error)
 	MediaAssetIsReferenced(ctx context.Context, assetID uuid.UUID) (bool, error)
 	ReactivateUser(ctx context.Context, id uuid.UUID) error
 	RevokeActiveRecoveryCodes(ctx context.Context, userID uuid.UUID) error
