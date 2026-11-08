@@ -100,7 +100,8 @@ export const PostAdminUserResponse = zod.object({
   "roleSlug": zod.string().describe('Slug role, misalnya "major_admin".'),
   "roleName": zod.string().describe('Nama tampilan role.'),
   "majorId": zod.uuid().nullable().describe('Jurusan cakupan role. Kosong berarti global.'),
-  "expiresAt": zod.iso.datetime({"offset":true}).nullable().describe('Waktu kedaluwarsa penugasan.')
+  "expiresAt": zod.iso.datetime({"offset":true}).nullable().describe('Waktu kedaluwarsa penugasan.'),
+  "assignedAt": zod.iso.datetime({"offset":true}).optional().describe('Waktu penugasan dibuat.')
 }).describe('Satu penugasan role aktif pengguna.')).describe('Role aktif pengguna.'),
   "activeSessions": zod.int().describe('Jumlah sesi aktif pengguna.'),
   "passwordKind": zod.enum(['initial', 'temporary', 'user']).describe('Jenis sandi yang sedang berlaku.'),
@@ -151,7 +152,8 @@ export const GetAdminUserResponse = zod.object({
   "roleSlug": zod.string().describe('Slug role, misalnya "major_admin".'),
   "roleName": zod.string().describe('Nama tampilan role.'),
   "majorId": zod.uuid().nullable().describe('Jurusan cakupan role. Kosong berarti global.'),
-  "expiresAt": zod.iso.datetime({"offset":true}).nullable().describe('Waktu kedaluwarsa penugasan.')
+  "expiresAt": zod.iso.datetime({"offset":true}).nullable().describe('Waktu kedaluwarsa penugasan.'),
+  "assignedAt": zod.iso.datetime({"offset":true}).optional().describe('Waktu penugasan dibuat.')
 }).describe('Satu penugasan role aktif pengguna.')).describe('Role aktif pengguna.'),
   "activeSessions": zod.int().describe('Jumlah sesi aktif pengguna.'),
   "passwordKind": zod.enum(['initial', 'temporary', 'user']).describe('Jenis sandi yang sedang berlaku.'),
@@ -210,7 +212,8 @@ export const PatchAdminUserResponse = zod.object({
   "roleSlug": zod.string().describe('Slug role, misalnya "major_admin".'),
   "roleName": zod.string().describe('Nama tampilan role.'),
   "majorId": zod.uuid().nullable().describe('Jurusan cakupan role. Kosong berarti global.'),
-  "expiresAt": zod.iso.datetime({"offset":true}).nullable().describe('Waktu kedaluwarsa penugasan.')
+  "expiresAt": zod.iso.datetime({"offset":true}).nullable().describe('Waktu kedaluwarsa penugasan.'),
+  "assignedAt": zod.iso.datetime({"offset":true}).optional().describe('Waktu penugasan dibuat.')
 }).describe('Satu penugasan role aktif pengguna.')).describe('Role aktif pengguna.'),
   "activeSessions": zod.int().describe('Jumlah sesi aktif pengguna.'),
   "passwordKind": zod.enum(['initial', 'temporary', 'user']).describe('Jenis sandi yang sedang berlaku.'),

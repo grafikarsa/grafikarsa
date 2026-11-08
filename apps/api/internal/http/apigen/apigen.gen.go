@@ -247,8 +247,64 @@ type AdminEnrollment struct {
 	Outcome *string `json:"outcome"`
 }
 
+// AdminPermission Satu entri katalog izin.
+type AdminPermission struct {
+	// Description Penjelasan singkat izin.
+	Description string `json:"description"`
+
+	// Key Kunci izin, misalnya "content.moderate".
+	Key string `json:"key"`
+
+	// Scopable Apakah izin dapat dibatasi per jurusan.
+	Scopable bool `json:"scopable"`
+}
+
+// AdminPermissionList defines model for AdminPermissionList.
+type AdminPermissionList struct {
+	Items []AdminPermission `json:"items"`
+}
+
+// AdminRole Definisi role beserta izin dan jumlah pemilik aktifnya.
+type AdminRole struct {
+	// Description Deskripsi role.
+	Description *string `json:"description"`
+
+	// HolderCount Jumlah penugasan aktif role ini.
+	HolderCount int64 `json:"holderCount"`
+
+	// Id ID role.
+	Id openapi_types.UUID `json:"id"`
+
+	// IsSystem Apakah role bawaan sistem yang tidak dapat dihapus.
+	IsSystem bool `json:"isSystem"`
+
+	// Name Nama tampilan role.
+	Name string `json:"name"`
+
+	// Permissions Kunci izin yang dimiliki role.
+	Permissions []string `json:"permissions"`
+
+	// Slug Slug role, misalnya "major_admin".
+	Slug string `json:"slug"`
+}
+
+// AdminRoleAssign defines model for AdminRoleAssign.
+type AdminRoleAssign struct {
+	// ExpiresAt Waktu kedaluwarsa penugasan. Harus di masa depan.
+	ExpiresAt *time.Time `json:"expiresAt,omitempty"`
+
+	// MajorId Jurusan cakupan role. Kosong berarti global.
+	MajorId *openapi_types.UUID `json:"majorId,omitempty"`
+
+	// RoleSlug Slug role yang diberikan, misalnya "moderator".
+	RoleSlug string `json:"roleSlug"`
+}
+
 // AdminRoleAssignment Satu penugasan role aktif pengguna.
 type AdminRoleAssignment struct {
+	// AssignedAt Waktu penugasan dibuat.
+	AssignedAt *time.Time `json:"assignedAt,omitempty"`
+
 	// ExpiresAt Waktu kedaluwarsa penugasan.
 	ExpiresAt *time.Time `json:"expiresAt"`
 
@@ -263,6 +319,46 @@ type AdminRoleAssignment struct {
 
 	// RoleSlug Slug role, misalnya "major_admin".
 	RoleSlug string `json:"roleSlug"`
+}
+
+// AdminRoleAssignmentList defines model for AdminRoleAssignmentList.
+type AdminRoleAssignmentList struct {
+	Items []AdminRoleAssignment `json:"items"`
+}
+
+// AdminRoleCreate Data pembuatan role kustom.
+type AdminRoleCreate struct {
+	// Description Deskripsi role.
+	Description *string `json:"description,omitempty"`
+
+	// Name Nama tampilan, 2–60 karakter.
+	Name string `json:"name"`
+
+	// Permissions Kunci izin dari katalog.
+	Permissions []string `json:"permissions"`
+
+	// Slug Slug unik, 2–50 karakter huruf kecil, angka, atau garis bawah.
+	Slug string `json:"slug"`
+}
+
+// AdminRoleList defines model for AdminRoleList.
+type AdminRoleList struct {
+	Items []AdminRole `json:"items"`
+}
+
+// AdminRolePermissionsUpdate defines model for AdminRolePermissionsUpdate.
+type AdminRolePermissionsUpdate struct {
+	// Permissions Himpunan izin baru, menggantikan seluruh izin role.
+	Permissions []string `json:"permissions"`
+}
+
+// AdminRoleUpdate Perubahan role. Field yang tidak dikirim tidak berubah.
+type AdminRoleUpdate struct {
+	// Description Deskripsi role. Kirim string kosong untuk mengosongkan.
+	Description *string `json:"description,omitempty"`
+
+	// Name Nama tampilan, 2–60 karakter.
+	Name *string `json:"name,omitempty"`
 }
 
 // AdminUserCreate Data pembuatan akun oleh admin.
@@ -730,6 +826,15 @@ type PostAdminMajorJSONRequestBody = MajorCreate
 // PatchAdminMajorJSONRequestBody defines body for PatchAdminMajor for application/json ContentType.
 type PatchAdminMajorJSONRequestBody = MajorUpdate
 
+// PostAdminRoleJSONRequestBody defines body for PostAdminRole for application/json ContentType.
+type PostAdminRoleJSONRequestBody = AdminRoleCreate
+
+// PatchAdminRoleJSONRequestBody defines body for PatchAdminRole for application/json ContentType.
+type PatchAdminRoleJSONRequestBody = AdminRoleUpdate
+
+// PutAdminRolePermissionsJSONRequestBody defines body for PutAdminRolePermissions for application/json ContentType.
+type PutAdminRolePermissionsJSONRequestBody = AdminRolePermissionsUpdate
+
 // PostAdminUserJSONRequestBody defines body for PostAdminUser for application/json ContentType.
 type PostAdminUserJSONRequestBody = AdminUserCreate
 
@@ -738,6 +843,9 @@ type PatchAdminUserJSONRequestBody = AdminUserUpdate
 
 // PostAdminUserContentBlockJSONRequestBody defines body for PostAdminUserContentBlock for application/json ContentType.
 type PostAdminUserContentBlockJSONRequestBody = AdminContentBlockRequest
+
+// PostAdminUserRoleJSONRequestBody defines body for PostAdminUserRole for application/json ContentType.
+type PostAdminUserRoleJSONRequestBody = AdminRoleAssign
 
 // PostAuthActivateJSONRequestBody defines body for PostAuthActivate for application/json ContentType.
 type PostAuthActivateJSONRequestBody = ActivateRequest
@@ -789,6 +897,27 @@ type ServerInterface interface {
 	// PatchAdminMajor Ubah jurusan
 	// (PATCH /admin/majors/{id})
 	PatchAdminMajor(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// GetAdminPermissions Katalog izin
+	// (GET /admin/permissions)
+	GetAdminPermissions(w http.ResponseWriter, r *http.Request)
+	// GetAdminRoles Daftar role
+	// (GET /admin/roles)
+	GetAdminRoles(w http.ResponseWriter, r *http.Request)
+	// PostAdminRole Buat role kustom
+	// (POST /admin/roles)
+	PostAdminRole(w http.ResponseWriter, r *http.Request)
+	// DeleteAdminRole Hapus role kustom
+	// (DELETE /admin/roles/{id})
+	DeleteAdminRole(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// PatchAdminRole Ubah role
+	// (PATCH /admin/roles/{id})
+	PatchAdminRole(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// PutAdminRolePermissions Ganti izin role
+	// (PUT /admin/roles/{id}/permissions)
+	PutAdminRolePermissions(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// DeleteAdminUserRole Cabut penugasan role
+	// (DELETE /admin/user-roles/{assignmentId})
+	DeleteAdminUserRole(w http.ResponseWriter, r *http.Request, assignmentId openapi_types.UUID)
 	// GetAdminUsers Daftar pengguna
 	// (GET /admin/users)
 	GetAdminUsers(w http.ResponseWriter, r *http.Request, params GetAdminUsersParams)
@@ -819,6 +948,12 @@ type ServerInterface interface {
 	// PostAdminUserResetPassword Reset sandi pengguna
 	// (POST /admin/users/{id}/reset-password)
 	PostAdminUserResetPassword(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// GetAdminUserRoles Daftar role pengguna
+	// (GET /admin/users/{id}/roles)
+	GetAdminUserRoles(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// PostAdminUserRole Beri role ke pengguna
+	// (POST /admin/users/{id}/roles)
+	PostAdminUserRole(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// PostAuthActivate Aktivasi akun (login pertama)
 	// (POST /auth/activate)
 	PostAuthActivate(w http.ResponseWriter, r *http.Request)
@@ -936,6 +1071,48 @@ func (_ Unimplemented) PatchAdminMajor(w http.ResponseWriter, r *http.Request, i
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// GetAdminPermissions Katalog izin
+// (GET /admin/permissions)
+func (_ Unimplemented) GetAdminPermissions(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetAdminRoles Daftar role
+// (GET /admin/roles)
+func (_ Unimplemented) GetAdminRoles(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostAdminRole Buat role kustom
+// (POST /admin/roles)
+func (_ Unimplemented) PostAdminRole(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DeleteAdminRole Hapus role kustom
+// (DELETE /admin/roles/{id})
+func (_ Unimplemented) DeleteAdminRole(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PatchAdminRole Ubah role
+// (PATCH /admin/roles/{id})
+func (_ Unimplemented) PatchAdminRole(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PutAdminRolePermissions Ganti izin role
+// (PUT /admin/roles/{id}/permissions)
+func (_ Unimplemented) PutAdminRolePermissions(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DeleteAdminUserRole Cabut penugasan role
+// (DELETE /admin/user-roles/{assignmentId})
+func (_ Unimplemented) DeleteAdminUserRole(w http.ResponseWriter, r *http.Request, assignmentId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // GetAdminUsers Daftar pengguna
 // (GET /admin/users)
 func (_ Unimplemented) GetAdminUsers(w http.ResponseWriter, r *http.Request, params GetAdminUsersParams) {
@@ -993,6 +1170,18 @@ func (_ Unimplemented) PostAdminUserReissueInitialPassword(w http.ResponseWriter
 // PostAdminUserResetPassword Reset sandi pengguna
 // (POST /admin/users/{id}/reset-password)
 func (_ Unimplemented) PostAdminUserResetPassword(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetAdminUserRoles Daftar role pengguna
+// (GET /admin/users/{id}/roles)
+func (_ Unimplemented) GetAdminUserRoles(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostAdminUserRole Beri role ke pengguna
+// (POST /admin/users/{id}/roles)
+func (_ Unimplemented) PostAdminUserRole(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1341,6 +1530,152 @@ func (siw *ServerInterfaceWrapper) PatchAdminMajor(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// GetAdminPermissions operation middleware
+func (siw *ServerInterfaceWrapper) GetAdminPermissions(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAdminPermissions(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAdminRoles operation middleware
+func (siw *ServerInterfaceWrapper) GetAdminRoles(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAdminRoles(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAdminRole operation middleware
+func (siw *ServerInterfaceWrapper) PostAdminRole(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAdminRole(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteAdminRole operation middleware
+func (siw *ServerInterfaceWrapper) DeleteAdminRole(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteAdminRole(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PatchAdminRole operation middleware
+func (siw *ServerInterfaceWrapper) PatchAdminRole(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PatchAdminRole(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PutAdminRolePermissions operation middleware
+func (siw *ServerInterfaceWrapper) PutAdminRolePermissions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutAdminRolePermissions(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteAdminUserRole operation middleware
+func (siw *ServerInterfaceWrapper) DeleteAdminUserRole(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "assignmentId" -------------
+	var assignmentId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "assignmentId", chi.URLParam(r, "assignmentId"), &assignmentId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "assignmentId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteAdminUserRole(w, r, assignmentId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetAdminUsers operation middleware
 func (siw *ServerInterfaceWrapper) GetAdminUsers(w http.ResponseWriter, r *http.Request) {
 
@@ -1665,6 +2000,58 @@ func (siw *ServerInterfaceWrapper) PostAdminUserResetPassword(w http.ResponseWri
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostAdminUserResetPassword(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAdminUserRoles operation middleware
+func (siw *ServerInterfaceWrapper) GetAdminUserRoles(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAdminUserRoles(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAdminUserRole operation middleware
+func (siw *ServerInterfaceWrapper) PostAdminUserRole(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAdminUserRole(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2136,6 +2523,33 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/admin/users/{id}/content-unblock", wrapper.PostAdminUserContentUnblock)
 	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/permissions", wrapper.GetAdminPermissions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/roles", wrapper.GetAdminRoles)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/roles", wrapper.PostAdminRole)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/admin/roles/{id}", wrapper.DeleteAdminRole)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/admin/roles/{id}", wrapper.PatchAdminRole)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/admin/roles/{id}/permissions", wrapper.PutAdminRolePermissions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/users/{id}/roles", wrapper.GetAdminUserRoles)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/users/{id}/roles", wrapper.PostAdminUserRole)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/admin/user-roles/{assignmentId}", wrapper.DeleteAdminUserRole)
+	})
 
 	return r
 }
@@ -2560,6 +2974,267 @@ func (response PatchAdminMajordefaultApplicationProblemPlusJSONResponse) VisitPa
 	return err
 }
 
+type GetAdminPermissionsRequestObject struct {
+}
+
+type GetAdminPermissionsResponseObject interface {
+	VisitGetAdminPermissionsResponse(w http.ResponseWriter) error
+}
+
+type GetAdminPermissions200JSONResponse AdminPermissionList
+
+func (response GetAdminPermissions200JSONResponse) VisitGetAdminPermissionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAdminPermissionsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetAdminPermissionsdefaultApplicationProblemPlusJSONResponse) VisitGetAdminPermissionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAdminRolesRequestObject struct {
+}
+
+type GetAdminRolesResponseObject interface {
+	VisitGetAdminRolesResponse(w http.ResponseWriter) error
+}
+
+type GetAdminRoles200JSONResponse AdminRoleList
+
+func (response GetAdminRoles200JSONResponse) VisitGetAdminRolesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAdminRolesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetAdminRolesdefaultApplicationProblemPlusJSONResponse) VisitGetAdminRolesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAdminRoleRequestObject struct {
+	Body *PostAdminRoleJSONRequestBody
+}
+
+type PostAdminRoleResponseObject interface {
+	VisitPostAdminRoleResponse(w http.ResponseWriter) error
+}
+
+type PostAdminRole201JSONResponse AdminRole
+
+func (response PostAdminRole201JSONResponse) VisitPostAdminRoleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAdminRoledefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostAdminRoledefaultApplicationProblemPlusJSONResponse) VisitPostAdminRoleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAdminRoleRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type DeleteAdminRoleResponseObject interface {
+	VisitDeleteAdminRoleResponse(w http.ResponseWriter) error
+}
+
+type DeleteAdminRole204Response struct {
+}
+
+func (response DeleteAdminRole204Response) VisitDeleteAdminRoleResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteAdminRoledefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DeleteAdminRoledefaultApplicationProblemPlusJSONResponse) VisitDeleteAdminRoleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchAdminRoleRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *PatchAdminRoleJSONRequestBody
+}
+
+type PatchAdminRoleResponseObject interface {
+	VisitPatchAdminRoleResponse(w http.ResponseWriter) error
+}
+
+type PatchAdminRole200JSONResponse AdminRole
+
+func (response PatchAdminRole200JSONResponse) VisitPatchAdminRoleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchAdminRoledefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PatchAdminRoledefaultApplicationProblemPlusJSONResponse) VisitPatchAdminRoleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutAdminRolePermissionsRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *PutAdminRolePermissionsJSONRequestBody
+}
+
+type PutAdminRolePermissionsResponseObject interface {
+	VisitPutAdminRolePermissionsResponse(w http.ResponseWriter) error
+}
+
+type PutAdminRolePermissions200JSONResponse AdminRole
+
+func (response PutAdminRolePermissions200JSONResponse) VisitPutAdminRolePermissionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutAdminRolePermissionsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PutAdminRolePermissionsdefaultApplicationProblemPlusJSONResponse) VisitPutAdminRolePermissionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAdminUserRoleRequestObject struct {
+	AssignmentId openapi_types.UUID `json:"assignmentId"`
+}
+
+type DeleteAdminUserRoleResponseObject interface {
+	VisitDeleteAdminUserRoleResponse(w http.ResponseWriter) error
+}
+
+type DeleteAdminUserRole204Response struct {
+}
+
+func (response DeleteAdminUserRole204Response) VisitDeleteAdminUserRoleResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteAdminUserRoledefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DeleteAdminUserRoledefaultApplicationProblemPlusJSONResponse) VisitDeleteAdminUserRoleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetAdminUsersRequestObject struct {
 	Params GetAdminUsersParams
 }
@@ -2917,6 +3592,85 @@ type PostAdminUserResetPassworddefaultApplicationProblemPlusJSONResponse struct 
 }
 
 func (response PostAdminUserResetPassworddefaultApplicationProblemPlusJSONResponse) VisitPostAdminUserResetPasswordResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAdminUserRolesRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type GetAdminUserRolesResponseObject interface {
+	VisitGetAdminUserRolesResponse(w http.ResponseWriter) error
+}
+
+type GetAdminUserRoles200JSONResponse AdminRoleAssignmentList
+
+func (response GetAdminUserRoles200JSONResponse) VisitGetAdminUserRolesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAdminUserRolesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetAdminUserRolesdefaultApplicationProblemPlusJSONResponse) VisitGetAdminUserRolesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAdminUserRoleRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *PostAdminUserRoleJSONRequestBody
+}
+
+type PostAdminUserRoleResponseObject interface {
+	VisitPostAdminUserRoleResponse(w http.ResponseWriter) error
+}
+
+type PostAdminUserRole201JSONResponse AdminRoleAssignment
+
+func (response PostAdminUserRole201JSONResponse) VisitPostAdminUserRoleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostAdminUserRoledefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostAdminUserRoledefaultApplicationProblemPlusJSONResponse) VisitPostAdminUserRoleResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -3516,6 +4270,27 @@ type StrictServerInterface interface {
 	// PatchAdminMajor Ubah jurusan
 	// (PATCH /admin/majors/{id})
 	PatchAdminMajor(ctx context.Context, request PatchAdminMajorRequestObject) (PatchAdminMajorResponseObject, error)
+	// GetAdminPermissions Katalog izin
+	// (GET /admin/permissions)
+	GetAdminPermissions(ctx context.Context, request GetAdminPermissionsRequestObject) (GetAdminPermissionsResponseObject, error)
+	// GetAdminRoles Daftar role
+	// (GET /admin/roles)
+	GetAdminRoles(ctx context.Context, request GetAdminRolesRequestObject) (GetAdminRolesResponseObject, error)
+	// PostAdminRole Buat role kustom
+	// (POST /admin/roles)
+	PostAdminRole(ctx context.Context, request PostAdminRoleRequestObject) (PostAdminRoleResponseObject, error)
+	// DeleteAdminRole Hapus role kustom
+	// (DELETE /admin/roles/{id})
+	DeleteAdminRole(ctx context.Context, request DeleteAdminRoleRequestObject) (DeleteAdminRoleResponseObject, error)
+	// PatchAdminRole Ubah role
+	// (PATCH /admin/roles/{id})
+	PatchAdminRole(ctx context.Context, request PatchAdminRoleRequestObject) (PatchAdminRoleResponseObject, error)
+	// PutAdminRolePermissions Ganti izin role
+	// (PUT /admin/roles/{id}/permissions)
+	PutAdminRolePermissions(ctx context.Context, request PutAdminRolePermissionsRequestObject) (PutAdminRolePermissionsResponseObject, error)
+	// DeleteAdminUserRole Cabut penugasan role
+	// (DELETE /admin/user-roles/{assignmentId})
+	DeleteAdminUserRole(ctx context.Context, request DeleteAdminUserRoleRequestObject) (DeleteAdminUserRoleResponseObject, error)
 	// GetAdminUsers Daftar pengguna
 	// (GET /admin/users)
 	GetAdminUsers(ctx context.Context, request GetAdminUsersRequestObject) (GetAdminUsersResponseObject, error)
@@ -3546,6 +4321,12 @@ type StrictServerInterface interface {
 	// PostAdminUserResetPassword Reset sandi pengguna
 	// (POST /admin/users/{id}/reset-password)
 	PostAdminUserResetPassword(ctx context.Context, request PostAdminUserResetPasswordRequestObject) (PostAdminUserResetPasswordResponseObject, error)
+	// GetAdminUserRoles Daftar role pengguna
+	// (GET /admin/users/{id}/roles)
+	GetAdminUserRoles(ctx context.Context, request GetAdminUserRolesRequestObject) (GetAdminUserRolesResponseObject, error)
+	// PostAdminUserRole Beri role ke pengguna
+	// (POST /admin/users/{id}/roles)
+	PostAdminUserRole(ctx context.Context, request PostAdminUserRoleRequestObject) (PostAdminUserRoleResponseObject, error)
 	// PostAuthActivate Aktivasi akun (login pertama)
 	// (POST /auth/activate)
 	PostAuthActivate(ctx context.Context, request PostAuthActivateRequestObject) (PostAuthActivateResponseObject, error)
@@ -3950,6 +4731,203 @@ func (sh *strictHandler) PatchAdminMajor(w http.ResponseWriter, r *http.Request,
 	}
 }
 
+// GetAdminPermissions operation middleware
+func (sh *strictHandler) GetAdminPermissions(w http.ResponseWriter, r *http.Request) {
+	var request GetAdminPermissionsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAdminPermissions(ctx, request.(GetAdminPermissionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAdminPermissions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetAdminPermissionsResponseObject); ok {
+		if err := validResponse.VisitGetAdminPermissionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetAdminRoles operation middleware
+func (sh *strictHandler) GetAdminRoles(w http.ResponseWriter, r *http.Request) {
+	var request GetAdminRolesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAdminRoles(ctx, request.(GetAdminRolesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAdminRoles")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetAdminRolesResponseObject); ok {
+		if err := validResponse.VisitGetAdminRolesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostAdminRole operation middleware
+func (sh *strictHandler) PostAdminRole(w http.ResponseWriter, r *http.Request) {
+	var request PostAdminRoleRequestObject
+
+	var body PostAdminRoleJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostAdminRole(ctx, request.(PostAdminRoleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostAdminRole")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostAdminRoleResponseObject); ok {
+		if err := validResponse.VisitPostAdminRoleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteAdminRole operation middleware
+func (sh *strictHandler) DeleteAdminRole(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request DeleteAdminRoleRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteAdminRole(ctx, request.(DeleteAdminRoleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteAdminRole")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteAdminRoleResponseObject); ok {
+		if err := validResponse.VisitDeleteAdminRoleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PatchAdminRole operation middleware
+func (sh *strictHandler) PatchAdminRole(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PatchAdminRoleRequestObject
+
+	request.Id = id
+
+	var body PatchAdminRoleJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PatchAdminRole(ctx, request.(PatchAdminRoleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PatchAdminRole")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PatchAdminRoleResponseObject); ok {
+		if err := validResponse.VisitPatchAdminRoleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PutAdminRolePermissions operation middleware
+func (sh *strictHandler) PutAdminRolePermissions(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PutAdminRolePermissionsRequestObject
+
+	request.Id = id
+
+	var body PutAdminRolePermissionsJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PutAdminRolePermissions(ctx, request.(PutAdminRolePermissionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PutAdminRolePermissions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PutAdminRolePermissionsResponseObject); ok {
+		if err := validResponse.VisitPutAdminRolePermissionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteAdminUserRole operation middleware
+func (sh *strictHandler) DeleteAdminUserRole(w http.ResponseWriter, r *http.Request, assignmentId openapi_types.UUID) {
+	var request DeleteAdminUserRoleRequestObject
+
+	request.AssignmentId = assignmentId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteAdminUserRole(ctx, request.(DeleteAdminUserRoleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteAdminUserRole")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteAdminUserRoleResponseObject); ok {
+		if err := validResponse.VisitDeleteAdminUserRoleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetAdminUsers operation middleware
 func (sh *strictHandler) GetAdminUsers(w http.ResponseWriter, r *http.Request, params GetAdminUsersParams) {
 	var request GetAdminUsersRequestObject
@@ -4222,6 +5200,65 @@ func (sh *strictHandler) PostAdminUserResetPassword(w http.ResponseWriter, r *ht
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(PostAdminUserResetPasswordResponseObject); ok {
 		if err := validResponse.VisitPostAdminUserResetPasswordResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetAdminUserRoles operation middleware
+func (sh *strictHandler) GetAdminUserRoles(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request GetAdminUserRolesRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAdminUserRoles(ctx, request.(GetAdminUserRolesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAdminUserRoles")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetAdminUserRolesResponseObject); ok {
+		if err := validResponse.VisitGetAdminUserRolesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostAdminUserRole operation middleware
+func (sh *strictHandler) PostAdminUserRole(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PostAdminUserRoleRequestObject
+
+	request.Id = id
+
+	var body PostAdminUserRoleJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostAdminUserRole(ctx, request.(PostAdminUserRoleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostAdminUserRole")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostAdminUserRoleResponseObject); ok {
+		if err := validResponse.VisitPostAdminUserRoleResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

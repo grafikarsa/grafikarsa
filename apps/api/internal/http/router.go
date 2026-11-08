@@ -11,6 +11,7 @@ import (
 
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/academic"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/auth"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/roles"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/users"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/api"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/apigen"
@@ -32,6 +33,7 @@ type RouterDeps struct {
 	Auth           *auth.Service
 	Academic       *academic.Service
 	Users          *users.Service
+	Roles          *roles.Service
 	Limiter        *ratelimit.Limiter
 	AllowedOrigins []string
 }
@@ -86,6 +88,7 @@ func NewRouter(d RouterDeps) stdhttp.Handler {
 			Auth:     d.Auth,
 			Academic: d.Academic,
 			Users:    d.Users,
+			Roles:    d.Roles,
 			Logger:   logger,
 		}), nil, api.StrictOptions(logger)), apigen.ChiServerOptions{
 			BaseRouter: r,
