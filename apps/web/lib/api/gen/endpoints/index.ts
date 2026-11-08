@@ -7,6 +7,8 @@ export * from './admin-users/admin-users';
 export * from './auth/auth';
 export * from './contents/contents';
 export * from './media/media';
+export * from './profile/profile';
 export * from './studio/studio';
 export * from './system/system';
 export * from './taxonomy/taxonomy';
+export * from './users/users';

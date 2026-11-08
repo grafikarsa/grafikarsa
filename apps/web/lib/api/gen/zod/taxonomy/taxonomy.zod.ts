@@ -66,3 +66,23 @@ export const GetTaxonomyTagsResponse = zod.object({
 }))
 })
 
+/**
+ * Autocomplete katalog skill aktif, maksimal 20 hasil.
+ * @summary Cari skill
+ */
+export const getTaxonomySkillsQueryQMax = 100;
+
+
+
+export const GetTaxonomySkillsQueryParams = zod.object({
+  "q": zod.string().max(getTaxonomySkillsQueryQMax).optional()
+})
+
+export const GetTaxonomySkillsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "slug": zod.string(),
+  "name": zod.string(),
+  "category": zod.enum(['design', 'media', 'software', 'network', 'engineering', 'logistics', 'hospitality', 'printing', 'soft_skill', 'other'])
+}))
+})
+

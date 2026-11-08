@@ -26,9 +26,11 @@ import type {
 import type {
   CategoryList,
   GetTaxonomyCategoriesParams,
+  GetTaxonomySkillsParams,
   GetTaxonomyTagsParams,
   GetTaxonomyToolsParams,
   ProblemResponse,
+  SkillOptionList,
   TaxonomyTermList
 } from '../../models';
 
@@ -364,6 +366,114 @@ export function useGetTaxonomyTags<TData = Awaited<ReturnType<typeof getTaxonomy
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getGetTaxonomyTagsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getGetTaxonomySkillsUrl = (params?: GetTaxonomySkillsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/taxonomy/skills?${stringifiedParams}` : `/taxonomy/skills`
+}
+
+/**
+ * Autocomplete katalog skill aktif, maksimal 20 hasil.
+ * @summary Cari skill
+ */
+export const getTaxonomySkills = async (params?: GetTaxonomySkillsParams, options?: Parameters<typeof apiFetch>[1]): Promise<SkillOptionList> => {
+
+  return apiFetch<SkillOptionList>(getGetTaxonomySkillsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTaxonomySkillsQueryKey = (params?: GetTaxonomySkillsParams,) => {
+    return [
+    `/taxonomy/skills`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetTaxonomySkillsQueryOptions = <TData = Awaited<ReturnType<typeof getTaxonomySkills>>, TError = ProblemResponse>(params?: GetTaxonomySkillsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTaxonomySkills>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTaxonomySkillsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTaxonomySkills>>> = ({ signal }) => getTaxonomySkills(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTaxonomySkills>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetTaxonomySkillsQueryResult = NonNullable<Awaited<ReturnType<typeof getTaxonomySkills>>>
+export type GetTaxonomySkillsQueryError = ProblemResponse
+
+
+export function useGetTaxonomySkills<TData = Awaited<ReturnType<typeof getTaxonomySkills>>, TError = ProblemResponse>(
+ params: undefined |  GetTaxonomySkillsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTaxonomySkills>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTaxonomySkills>>,
+          TError,
+          Awaited<ReturnType<typeof getTaxonomySkills>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetTaxonomySkills<TData = Awaited<ReturnType<typeof getTaxonomySkills>>, TError = ProblemResponse>(
+ params?: GetTaxonomySkillsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTaxonomySkills>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTaxonomySkills>>,
+          TError,
+          Awaited<ReturnType<typeof getTaxonomySkills>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetTaxonomySkills<TData = Awaited<ReturnType<typeof getTaxonomySkills>>, TError = ProblemResponse>(
+ params?: GetTaxonomySkillsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTaxonomySkills>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Cari skill
+ */
+
+export function useGetTaxonomySkills<TData = Awaited<ReturnType<typeof getTaxonomySkills>>, TError = ProblemResponse>(
+ params?: GetTaxonomySkillsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTaxonomySkills>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetTaxonomySkillsQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

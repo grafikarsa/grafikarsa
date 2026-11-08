@@ -14,6 +14,7 @@ import (
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/auth"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/content"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/media"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/profiles"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/roles"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/taxonomy"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/users"
@@ -42,6 +43,7 @@ type RouterDeps struct {
 	Auth           *auth.Service
 	Academic       *academic.Service
 	Users          *users.Service
+	Profiles       *profiles.Service
 	Imports        *users.Importer
 	Roles          *roles.Service
 	Audit          *audit.Service
@@ -104,6 +106,7 @@ func NewRouter(d RouterDeps) stdhttp.Handler {
 			Auth:     d.Auth,
 			Academic: d.Academic,
 			Users:    d.Users,
+			Profiles: d.Profiles,
 			Imports:  d.Imports,
 			Roles:    d.Roles,
 			Audit:    d.Audit,
