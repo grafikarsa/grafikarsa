@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/academic"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/audit"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/auth"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/roles"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/users"
@@ -117,6 +118,7 @@ func main() {
 	academicService := academic.NewService(dataStore)
 	usersService := users.NewService(dataStore, authService, hasher, box)
 	rolesService := roles.NewService(dataStore, authService)
+	auditService := audit.NewService(dataStore)
 
 	// The API only inserts jobs. Workers live in cmd/worker; the insert client
 	// still needs the shared registry so job argument types stay consistent.
@@ -143,6 +145,7 @@ func main() {
 			Users:          usersService,
 			Imports:        importer,
 			Roles:          rolesService,
+			Audit:          auditService,
 			Limiter:        limiter,
 			AllowedOrigins: cfg.AllowedOrigins,
 		}),

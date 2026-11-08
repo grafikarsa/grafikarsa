@@ -577,6 +577,33 @@ type AdminUserUpdate struct {
 	TeacherMajorIds *[]openapi_types.UUID `json:"teacherMajorIds,omitempty"`
 }
 
+// AuditLogEntry defines model for AuditLogEntry.
+type AuditLogEntry struct {
+	Action string `json:"action"`
+
+	// ActorId Kosong untuk aksi sistem.
+	ActorId *openapi_types.UUID `json:"actorId,omitempty"`
+
+	// ActorIp Hanya dikirim ke pemegang izin `audit.view` global.
+	ActorIp       *string                `json:"actorIp,omitempty"`
+	ActorName     *string                `json:"actorName,omitempty"`
+	ActorUsername *string                `json:"actorUsername,omitempty"`
+	Data          map[string]interface{} `json:"data"`
+	Id            int64                  `json:"id"`
+	OccurredAt    time.Time              `json:"occurredAt"`
+	ScopeMajorId  *openapi_types.UUID    `json:"scopeMajorId,omitempty"`
+	TargetId      *openapi_types.UUID    `json:"targetId,omitempty"`
+	TargetType    *string                `json:"targetType,omitempty"`
+}
+
+// AuditLogPage defines model for AuditLogPage.
+type AuditLogPage struct {
+	Items []AuditLogEntry `json:"items"`
+
+	// NextCursor Cursor halaman berikutnya. Kosong pada halaman terakhir.
+	NextCursor *string `json:"nextCursor"`
+}
+
 // ChangePasswordRequest defines model for ChangePasswordRequest.
 type ChangePasswordRequest struct {
 	CurrentPassword *string `json:"currentPassword,omitempty"`
@@ -905,6 +932,28 @@ type GetAdminAccountCardsParams struct {
 	ClassId openapi_types.UUID `form:"classId" json:"classId"`
 }
 
+// GetAdminAuditLogsParams defines parameters for GetAdminAuditLogs.
+type GetAdminAuditLogsParams struct {
+	ActorId *openapi_types.UUID `form:"actorId,omitempty" json:"actorId,omitempty"`
+
+	// Action Nama aksi persis, misalnya `user.create`.
+	Action *string `form:"action,omitempty" json:"action,omitempty"`
+
+	// ActionPrefix Awalan aksi, misalnya `user.`.
+	ActionPrefix *string             `form:"actionPrefix,omitempty" json:"actionPrefix,omitempty"`
+	TargetType   *string             `form:"targetType,omitempty" json:"targetType,omitempty"`
+	TargetId     *openapi_types.UUID `form:"targetId,omitempty" json:"targetId,omitempty"`
+
+	// MajorId Filter entri yang dicatat untuk jurusan ini.
+	MajorId *openapi_types.UUID `form:"majorId,omitempty" json:"majorId,omitempty"`
+	From    *time.Time          `form:"from,omitempty" json:"from,omitempty"`
+	To      *time.Time          `form:"to,omitempty" json:"to,omitempty"`
+
+	// Cursor Cursor halaman berikutnya dari `nextCursor`.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // GetAdminClassesParams defines parameters for GetAdminClasses.
 type GetAdminClassesParams struct {
 	AcademicYearId *openapi_types.UUID `form:"academicYearId,omitempty" json:"academicYearId,omitempty"`
@@ -1014,6 +1063,9 @@ type ServerInterface interface {
 	// GetAdminAccountCards Ekspor kartu akun per kelas
 	// (GET /admin/account-cards)
 	GetAdminAccountCards(w http.ResponseWriter, r *http.Request, params GetAdminAccountCardsParams)
+	// GetAdminAuditLogs Daftar audit log
+	// (GET /admin/audit-logs)
+	GetAdminAuditLogs(w http.ResponseWriter, r *http.Request, params GetAdminAuditLogsParams)
 	// GetAdminClasses Daftar kelas
 	// (GET /admin/classes)
 	GetAdminClasses(w http.ResponseWriter, r *http.Request, params GetAdminClassesParams)
@@ -1182,6 +1234,12 @@ func (_ Unimplemented) PostAdminAcademicYearSetCurrent(w http.ResponseWriter, r 
 // GetAdminAccountCards Ekspor kartu akun per kelas
 // (GET /admin/account-cards)
 func (_ Unimplemented) GetAdminAccountCards(w http.ResponseWriter, r *http.Request, params GetAdminAccountCardsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetAdminAuditLogs Daftar audit log
+// (GET /admin/audit-logs)
+func (_ Unimplemented) GetAdminAuditLogs(w http.ResponseWriter, r *http.Request, params GetAdminAuditLogsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1568,6 +1626,156 @@ func (siw *ServerInterfaceWrapper) GetAdminAccountCards(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAdminAccountCards(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAdminAuditLogs operation middleware
+func (siw *ServerInterfaceWrapper) GetAdminAuditLogs(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetAdminAuditLogsParams
+
+	// ------------- Optional query parameter "actorId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "actorId", r.URL.Query(), &params.ActorId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "actorId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "actorId", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "action" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "action", r.URL.Query(), &params.Action, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "action"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "action", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "actionPrefix" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "actionPrefix", r.URL.Query(), &params.ActionPrefix, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "actionPrefix"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "actionPrefix", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "targetType" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "targetType", r.URL.Query(), &params.TargetType, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "targetType"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "targetType", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "targetId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "targetId", r.URL.Query(), &params.TargetId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "targetId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "targetId", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "majorId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "majorId", r.URL.Query(), &params.MajorId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "majorId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "majorId", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAdminAuditLogs(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2858,6 +3066,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/admin/user-roles/{assignmentId}", wrapper.DeleteAdminUserRole)
 	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/audit-logs", wrapper.GetAdminAuditLogs)
+	})
 
 	return r
 }
@@ -3056,6 +3267,45 @@ type GetAdminAccountCardsdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response GetAdminAccountCardsdefaultApplicationProblemPlusJSONResponse) VisitGetAdminAccountCardsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAdminAuditLogsRequestObject struct {
+	Params GetAdminAuditLogsParams
+}
+
+type GetAdminAuditLogsResponseObject interface {
+	VisitGetAdminAuditLogsResponse(w http.ResponseWriter) error
+}
+
+type GetAdminAuditLogs200JSONResponse AuditLogPage
+
+func (response GetAdminAuditLogs200JSONResponse) VisitGetAdminAuditLogsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAdminAuditLogsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetAdminAuditLogsdefaultApplicationProblemPlusJSONResponse) VisitGetAdminAuditLogsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -4768,6 +5018,9 @@ type StrictServerInterface interface {
 	// GetAdminAccountCards Ekspor kartu akun per kelas
 	// (GET /admin/account-cards)
 	GetAdminAccountCards(ctx context.Context, request GetAdminAccountCardsRequestObject) (GetAdminAccountCardsResponseObject, error)
+	// GetAdminAuditLogs Daftar audit log
+	// (GET /admin/audit-logs)
+	GetAdminAuditLogs(ctx context.Context, request GetAdminAuditLogsRequestObject) (GetAdminAuditLogsResponseObject, error)
 	// GetAdminClasses Daftar kelas
 	// (GET /admin/classes)
 	GetAdminClasses(ctx context.Context, request GetAdminClassesRequestObject) (GetAdminClassesResponseObject, error)
@@ -5077,6 +5330,32 @@ func (sh *strictHandler) GetAdminAccountCards(w http.ResponseWriter, r *http.Req
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetAdminAccountCardsResponseObject); ok {
 		if err := validResponse.VisitGetAdminAccountCardsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetAdminAuditLogs operation middleware
+func (sh *strictHandler) GetAdminAuditLogs(w http.ResponseWriter, r *http.Request, params GetAdminAuditLogsParams) {
+	var request GetAdminAuditLogsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAdminAuditLogs(ctx, request.(GetAdminAuditLogsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAdminAuditLogs")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetAdminAuditLogsResponseObject); ok {
+		if err := validResponse.VisitGetAdminAuditLogsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

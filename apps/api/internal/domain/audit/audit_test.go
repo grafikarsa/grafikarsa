@@ -64,14 +64,33 @@ func (f *fixture) createUser(t *testing.T) uuid.UUID {
 
 func (f *fixture) createMajor(t *testing.T) uuid.UUID {
 	t.Helper()
+	return f.createMajorCode(t, "audit-test", "Audit Test", "AT")
+}
+
+func (f *fixture) createMajorCode(t *testing.T, code, name, shortName string) uuid.UUID {
+	t.Helper()
 	var id uuid.UUID
 	err := f.pool.QueryRow(f.ctx, `
 		INSERT INTO majors (code, name, short_name)
-		VALUES ('audit-test', 'Audit Test', 'AT')
-		RETURNING id`,
+		VALUES ($1, $2, $3)
+		RETURNING id`, code, name, shortName,
 	).Scan(&id)
 	if err != nil {
 		t.Fatalf("buat major uji: %v", err)
+	}
+	return id
+}
+
+func (f *fixture) createUserNamed(t *testing.T, displayName string, username *string) uuid.UUID {
+	t.Helper()
+	var id uuid.UUID
+	err := f.pool.QueryRow(f.ctx, `
+		INSERT INTO users (account_type, display_name, username, password_hash, password_kind, password_expires_at)
+		VALUES ('staff', $1, $2, 'x', 'initial', now() + interval '1 day')
+		RETURNING id`, displayName, username,
+	).Scan(&id)
+	if err != nil {
+		t.Fatalf("buat user uji: %v", err)
 	}
 	return id
 }
@@ -407,5 +426,128 @@ func TestRecord_InvalidActorIPStoredAsNull(t *testing.T) {
 	}
 	if page.Items[0].ActorIP != nil {
 		t.Fatalf("ActorIP = %v, mau nil", page.Items[0].ActorIP)
+	}
+}
+
+func TestListForActor_GlobalSeesAllWithActorIdentity(t *testing.T) {
+	f := newFixture(t)
+	username := "audit.admin"
+	actorID := f.createUserNamed(t, "Audit Admin", &username)
+	majorID := f.createMajor(t)
+
+	if err := audit.Record(f.ctx, f.store.Queries, audit.Entry{
+		ActorID: &actorID,
+		ActorIP: "203.0.113.9",
+		Action:  "user.create",
+		Data:    map[string]any{"account_type": "student"},
+	}); err != nil {
+		t.Fatalf("Record: %v", err)
+	}
+	if err := audit.Record(f.ctx, f.store.Queries, audit.Entry{
+		ActorID:      &actorID,
+		Action:       "user.update",
+		ScopeMajorID: &majorID,
+	}); err != nil {
+		t.Fatalf("Record: %v", err)
+	}
+
+	principal := audit.Scope{Granted: true, Global: true}
+	page, err := audit.ListForActor(f.ctx, f.store.Queries, principal, audit.Filter{})
+	if err != nil {
+		t.Fatalf("ListForActor: %v", err)
+	}
+	if len(page.Items) != 2 {
+		t.Fatalf("ListForActor mengembalikan %d item, mau 2", len(page.Items))
+	}
+	for _, item := range page.Items {
+		if item.ActorName == nil || *item.ActorName != "Audit Admin" {
+			t.Errorf("ActorName = %v, mau Audit Admin", item.ActorName)
+		}
+		if item.ActorUsername == nil || *item.ActorUsername != username {
+			t.Errorf("ActorUsername = %v, mau %s", item.ActorUsername, username)
+		}
+		if item.Action == "user.create" && item.ActorIP == nil {
+			t.Error("aktor global tidak menerima actorIp")
+		}
+	}
+}
+
+func TestListForActor_ScopedSeesOnlyItsMajorsAndHidesNullScopes(t *testing.T) {
+	f := newFixture(t)
+	actorID := f.createUser(t)
+	rplID := f.createMajorCode(t, "rpl", "Rekayasa Perangkat Lunak", "RPL")
+	tkjID := f.createMajorCode(t, "tkj", "Teknik Komputer dan Jaringan", "TKJ")
+
+	entries := []audit.Entry{
+		{ActorID: &actorID, Action: "user.create", ScopeMajorID: &rplID},
+		{ActorID: &actorID, Action: "user.update", ScopeMajorID: &tkjID},
+		{ActorID: &actorID, Action: "role.assign"},
+	}
+	for _, entry := range entries {
+		if err := audit.Record(f.ctx, f.store.Queries, entry); err != nil {
+			t.Fatalf("Record: %v", err)
+		}
+	}
+
+	principal := audit.Scope{Granted: true, MajorIDs: []uuid.UUID{rplID}}
+	page, err := audit.ListForActor(f.ctx, f.store.Queries, principal, audit.Filter{})
+	if err != nil {
+		t.Fatalf("ListForActor: %v", err)
+	}
+	if len(page.Items) != 1 {
+		t.Fatalf("ListForActor mengembalikan %d item, mau 1", len(page.Items))
+	}
+	item := page.Items[0]
+	if item.Action != "user.create" {
+		t.Errorf("Action = %q, mau user.create", item.Action)
+	}
+	if item.ScopeMajorID == nil || *item.ScopeMajorID != rplID {
+		t.Errorf("ScopeMajorID = %v, mau %s", item.ScopeMajorID, rplID)
+	}
+}
+
+func TestListForActor_ScopedNeverReceivesActorIP(t *testing.T) {
+	f := newFixture(t)
+	actorID := f.createUser(t)
+	rplID := f.createMajor(t)
+
+	if err := audit.Record(f.ctx, f.store.Queries, audit.Entry{
+		ActorID:      &actorID,
+		ActorIP:      "203.0.113.10",
+		Action:       "user.create",
+		ScopeMajorID: &rplID,
+	}); err != nil {
+		t.Fatalf("Record: %v", err)
+	}
+
+	principal := audit.Scope{Granted: true, MajorIDs: []uuid.UUID{rplID}}
+	page, err := audit.ListForActor(f.ctx, f.store.Queries, principal, audit.Filter{})
+	if err != nil {
+		t.Fatalf("ListForActor: %v", err)
+	}
+	if len(page.Items) != 1 {
+		t.Fatalf("ListForActor mengembalikan %d item, mau 1", len(page.Items))
+	}
+	if page.Items[0].ActorIP != nil {
+		t.Fatalf("ActorIP = %v, mau nil untuk aktor ber-scope", page.Items[0].ActorIP)
+	}
+}
+
+func TestListForActor_WithoutPermissionReturnsNotFound(t *testing.T) {
+	f := newFixture(t)
+	if err := audit.Record(f.ctx, f.store.Queries, audit.Entry{Action: "user.create"}); err != nil {
+		t.Fatalf("Record: %v", err)
+	}
+
+	_, err := audit.ListForActor(f.ctx, f.store.Queries, audit.Scope{}, audit.Filter{})
+	if err == nil {
+		t.Fatal("ListForActor menerima scope tanpa izin audit.view")
+	}
+	e, ok := apperr.As(err)
+	if !ok {
+		t.Fatalf("error = %v, mau *apperr.Error", err)
+	}
+	if e.Code != "NOT_FOUND" {
+		t.Fatalf("kode error = %q, mau NOT_FOUND", e.Code)
 	}
 }

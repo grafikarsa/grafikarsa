@@ -51,39 +51,74 @@ func (q *Queries) InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) 
 }
 
 const listAuditLogs = `-- name: ListAuditLogs :many
-SELECT id, occurred_at, actor_id, actor_ip, action, target_type, target_id, scope_major_id, data
-FROM audit_logs
-WHERE ($1::uuid IS NULL OR actor_id = $1::uuid)
-  AND ($2::text IS NULL OR action = $2::text)
-  AND ($3::text IS NULL OR action LIKE $3::text || '%')
-  AND ($4::text IS NULL OR target_type = $4::text)
-  AND ($5::uuid IS NULL OR target_id = $5::uuid)
-  AND ($6::uuid IS NULL OR scope_major_id = $6::uuid)
-  AND ($7::timestamptz IS NULL OR occurred_at >= $7::timestamptz)
-  AND ($8::timestamptz IS NULL OR occurred_at < $8::timestamptz)
+SELECT
+  al.id,
+  al.occurred_at,
+  al.actor_id,
+  al.actor_ip,
+  al.action,
+  al.target_type,
+  al.target_id,
+  al.scope_major_id,
+  al.data,
+  actor.display_name AS actor_name,
+  actor.username AS actor_username
+FROM audit_logs al
+LEFT JOIN users actor ON actor.id = al.actor_id
+WHERE ($1::uuid IS NULL OR al.actor_id = $1::uuid)
+  AND ($2::text IS NULL OR al.action = $2::text)
+  AND ($3::text IS NULL OR al.action LIKE $3::text || '%')
+  AND ($4::text IS NULL OR al.target_type = $4::text)
+  AND ($5::uuid IS NULL OR al.target_id = $5::uuid)
+  AND ($6::uuid IS NULL OR al.scope_major_id = $6::uuid)
+  AND ($7::timestamptz IS NULL OR al.occurred_at >= $7::timestamptz)
+  AND ($8::timestamptz IS NULL OR al.occurred_at < $8::timestamptz)
   AND (
-    $9::timestamptz IS NULL
-    OR (occurred_at, id) < ($9::timestamptz, $10::bigint)
+    $9::boolean
+    OR (
+      cardinality($10::uuid[]) > 0
+      AND al.scope_major_id = ANY($10::uuid[])
+    )
   )
-ORDER BY occurred_at DESC, id DESC
-LIMIT $11
+  AND (
+    $11::timestamptz IS NULL
+    OR (al.occurred_at, al.id) < ($11::timestamptz, $12::bigint)
+  )
+ORDER BY al.occurred_at DESC, al.id DESC
+LIMIT $13
 `
 
 type ListAuditLogsParams struct {
-	ActorID      *uuid.UUID
-	Action       *string
-	ActionPrefix *string
-	TargetType   *string
-	TargetID     *uuid.UUID
-	ScopeMajorID *uuid.UUID
-	From         *time.Time
-	To           *time.Time
-	CursorTime   *time.Time
-	CursorID     *int64
-	LimitCount   int32
+	ActorID       *uuid.UUID
+	Action        *string
+	ActionPrefix  *string
+	TargetType    *string
+	TargetID      *uuid.UUID
+	ScopeMajorID  *uuid.UUID
+	From          *time.Time
+	To            *time.Time
+	ScopeGlobal   bool
+	ScopeMajorIds []uuid.UUID
+	CursorTime    *time.Time
+	CursorID      *int64
+	LimitCount    int32
 }
 
-func (q *Queries) ListAuditLogs(ctx context.Context, arg ListAuditLogsParams) ([]AuditLog, error) {
+type ListAuditLogsRow struct {
+	ID            int64
+	OccurredAt    time.Time
+	ActorID       *uuid.UUID
+	ActorIp       *netip.Addr
+	Action        string
+	TargetType    *string
+	TargetID      *uuid.UUID
+	ScopeMajorID  *uuid.UUID
+	Data          json.RawMessage
+	ActorName     *string
+	ActorUsername *string
+}
+
+func (q *Queries) ListAuditLogs(ctx context.Context, arg ListAuditLogsParams) ([]ListAuditLogsRow, error) {
 	rows, err := q.db.Query(ctx, listAuditLogs,
 		arg.ActorID,
 		arg.Action,
@@ -93,6 +128,8 @@ func (q *Queries) ListAuditLogs(ctx context.Context, arg ListAuditLogsParams) ([
 		arg.ScopeMajorID,
 		arg.From,
 		arg.To,
+		arg.ScopeGlobal,
+		arg.ScopeMajorIds,
 		arg.CursorTime,
 		arg.CursorID,
 		arg.LimitCount,
@@ -101,9 +138,9 @@ func (q *Queries) ListAuditLogs(ctx context.Context, arg ListAuditLogsParams) ([
 		return nil, err
 	}
 	defer rows.Close()
-	items := []AuditLog{}
+	items := []ListAuditLogsRow{}
 	for rows.Next() {
-		var i AuditLog
+		var i ListAuditLogsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.OccurredAt,
@@ -114,6 +151,8 @@ func (q *Queries) ListAuditLogs(ctx context.Context, arg ListAuditLogsParams) ([
 			&i.TargetID,
 			&i.ScopeMajorID,
 			&i.Data,
+			&i.ActorName,
+			&i.ActorUsername,
 		); err != nil {
 			return nil, err
 		}

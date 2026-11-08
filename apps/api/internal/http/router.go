@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/academic"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/audit"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/auth"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/roles"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/users"
@@ -35,6 +36,7 @@ type RouterDeps struct {
 	Users          *users.Service
 	Imports        *users.Importer
 	Roles          *roles.Service
+	Audit          *audit.Service
 	Limiter        *ratelimit.Limiter
 	AllowedOrigins []string
 }
@@ -91,6 +93,7 @@ func NewRouter(d RouterDeps) stdhttp.Handler {
 			Users:    d.Users,
 			Imports:  d.Imports,
 			Roles:    d.Roles,
+			Audit:    d.Audit,
 			Logger:   logger,
 		}), nil, api.StrictOptions(logger)), apigen.ChiServerOptions{
 			BaseRouter: r,
