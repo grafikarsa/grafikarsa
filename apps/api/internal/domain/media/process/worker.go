@@ -2,14 +2,20 @@ package process
 
 import (
 	"context"
+	"errors"
 	"strings"
+	"time"
+	"unicode/utf8"
 
 	"github.com/riverqueue/river"
 
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/media"
 )
 
-const failureReasonLimit = 300
+const (
+	failureReasonLimit  = 300
+	failureWriteTimeout = 10 * time.Second
+)
 
 // Worker processes media.Process jobs. It retries with River backoff until the
 // final attempt, then records the failure on the asset.
@@ -38,7 +44,16 @@ func (w *Worker) Work(ctx context.Context, job *river.Job[media.ProcessArgs]) er
 	}
 
 	reason := failureReason(err)
-	if failErr := w.processor.Fail(ctx, job.Args.AssetID, reason); failErr != nil {
+	failCtx := ctx
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		// A River job timeout has already expired; the failure must still be
+		// recorded. Shutdown cancellations keep the original context so River
+		// can retry the job later.
+		detached, cancel := context.WithTimeout(context.WithoutCancel(ctx), failureWriteTimeout)
+		defer cancel()
+		failCtx = detached
+	}
+	if failErr := w.processor.Fail(failCtx, job.Args.AssetID, reason); failErr != nil {
 		w.processor.logger.ErrorContext(ctx, "media processing failed and the asset status could not be updated",
 			"asset_id", job.Args.AssetID, "error", failErr)
 		return failErr
@@ -61,7 +76,11 @@ func failureReason(err error) string {
 		text = "unknown media processing error"
 	}
 	if len(text) > failureReasonLimit {
-		text = text[:failureReasonLimit]
+		cut := failureReasonLimit
+		for cut > 0 && !utf8.RuneStart(text[cut]) {
+			cut--
+		}
+		text = text[:cut]
 	}
 	return text
 }
