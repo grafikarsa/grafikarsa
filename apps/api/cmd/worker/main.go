@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/media"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/users"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/jobs"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/config"
@@ -48,6 +49,7 @@ func main() {
 
 	registry := jobs.NewRegistry()
 	jobs.Register(registry, &jobs.PingWorker{Logger: log})
+	jobs.Register(registry, &media.ProcessWorker{Logger: log})
 
 	hasher := password.NewHasher(password.DefaultParams, 0)
 	box, err := secretbox.New([]byte(cfg.SecretKey))
