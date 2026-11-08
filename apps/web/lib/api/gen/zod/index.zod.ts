@@ -1,5 +1,6 @@
 export * from './academic/academic.zod';
 export * from './admin-academic/admin-academic.zod';
+export * from './admin-audit/admin-audit.zod';
 export * from './admin-roles/admin-roles.zod';
 export * from './admin-users/admin-users.zod';
 export * from './auth/auth.zod';
