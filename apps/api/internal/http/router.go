@@ -12,6 +12,7 @@ import (
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/academic"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/audit"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/auth"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/media"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/roles"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/users"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/api"
@@ -27,6 +28,11 @@ import (
 // (or per IP for anonymous requests).
 const generalRateLimit = 600
 
+// maxMediaUploadBytes caps the whole multipart request. It is the largest
+// per-file limit (model 3D, 30 MB by default) plus 1 MB for multipart
+// overhead; the media service enforces the per-kind limits.
+const maxMediaUploadBytes = 31 << 20
+
 // RouterDeps carries the services and settings the router needs.
 type RouterDeps struct {
 	Logger         *slog.Logger
@@ -37,6 +43,7 @@ type RouterDeps struct {
 	Imports        *users.Importer
 	Roles          *roles.Service
 	Audit          *audit.Service
+	Media          *media.Service
 	Limiter        *ratelimit.Limiter
 	AllowedOrigins []string
 }
@@ -86,6 +93,7 @@ func NewRouter(d RouterDeps) stdhttp.Handler {
 		}
 		r.Use(middleware.Onboarding(logger))
 		r.Use(noStoreAdminResponses)
+		r.Use(limitMediaUploadBody)
 
 		apigen.HandlerWithOptions(apigen.NewStrictHandlerWithOptions(api.NewServer(api.Deps{
 			Auth:     d.Auth,
@@ -94,6 +102,7 @@ func NewRouter(d RouterDeps) stdhttp.Handler {
 			Imports:  d.Imports,
 			Roles:    d.Roles,
 			Audit:    d.Audit,
+			Media:    d.Media,
 			Logger:   logger,
 		}), nil, api.StrictOptions(logger)), apigen.ChiServerOptions{
 			BaseRouter: r,
@@ -111,6 +120,17 @@ func noStoreAdminResponses(next stdhttp.Handler) stdhttp.Handler {
 	return stdhttp.HandlerFunc(func(w stdhttp.ResponseWriter, r *stdhttp.Request) {
 		if r.URL.Path == "/api/v1/admin" || strings.HasPrefix(r.URL.Path, "/api/v1/admin/") {
 			w.Header().Set("Cache-Control", "no-store")
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// limitMediaUploadBody caps the upload request before multipart parsing reads
+// an unbounded body.
+func limitMediaUploadBody(next stdhttp.Handler) stdhttp.Handler {
+	return stdhttp.HandlerFunc(func(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+		if r.Method == stdhttp.MethodPost && r.URL.Path == "/api/v1/media" {
+			r.Body = stdhttp.MaxBytesReader(w, r.Body, maxMediaUploadBytes)
 		}
 		next.ServeHTTP(w, r)
 	})

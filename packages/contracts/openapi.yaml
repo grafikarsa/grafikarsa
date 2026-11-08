@@ -1235,6 +1235,129 @@ paths:
                 $ref: "#/components/schemas/AuditLogPage"
         default:
           $ref: "#/components/responses/Problem"
+  /media:
+    post:
+      operationId: postMedia
+      tags: [media]
+      summary: Unggah media
+      description: |
+        Menerima satu berkas lewat `multipart/form-data` dengan field `purpose`
+        lalu `file`. Berkas diperiksa dari isinya (bukan nama atau header),
+        disimpan di bucket privat, dan diproses asinkron. Respons `202` berisi
+        media dengan status `uploaded`.
+
+        Butuh izin `content.create`, kecuali `avatar` dan `banner` yang tetap
+        diizinkan meskipun pembuatan konten sedang diblokir.
+
+        Header `Idempotency-Key` didokumentasikan untuk klien, tetapi belum
+        diterapkan oleh server.
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema:
+            type: string
+            maxLength: 200
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [purpose, file]
+              properties:
+                purpose:
+                  $ref: "#/components/schemas/MediaPurpose"
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "202":
+          description: Media diterima dan menunggu diproses.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaAsset"
+        default:
+          $ref: "#/components/responses/Problem"
+  /media/{id}:
+    get:
+      operationId: getMedia
+      tags: [media]
+      summary: Detail media
+      description: Hanya pemilik media yang dapat melihat detailnya.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Detail media.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaAsset"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: deleteMedia
+      tags: [media]
+      summary: Hapus media
+      description: |
+        Hanya pemilik media. Ditolak dengan `CONFLICT` jika media masih dipakai
+        konten, profil, grup, atau experience.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Media dihapus.
+        default:
+          $ref: "#/components/responses/Problem"
+  /media/{id}/{variant}:
+    get:
+      operationId: getMediaVariant
+      tags: [media]
+      summary: Stream varian media
+      description: |
+        Mengalirkan berkas media dari bucket privat. Nama varian `original`
+        hanya dapat diakses pemilik media.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: variant
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Berkas media.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+            Content-Type:
+              schema:
+                type: string
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        default:
+          $ref: "#/components/responses/Problem"
 components:
   schemas:
     CsrfToken:
@@ -2286,6 +2409,79 @@ components:
             $ref: "#/components/schemas/FieldError"
         requestId:
           type: string
+    MediaKind:
+      type: string
+      description: Jenis media yang dideteksi dari isi berkas.
+      enum: [image, pdf, model3d, document]
+    MediaPurpose:
+      type: string
+      enum:
+        - content
+        - avatar
+        - banner
+        - group_avatar
+        - group_banner
+        - experience_attachment
+        - badge_icon
+        - curation_cover
+        - import
+    MediaStatus:
+      type: string
+      enum: [uploaded, processing, ready, failed]
+    MediaVariant:
+      type: object
+      required: [format, w, h, bytes]
+      properties:
+        format:
+          type: string
+          description: Format varian, misalnya `avif` atau `webp`.
+        w:
+          type: integer
+        h:
+          type: integer
+        bytes:
+          type: integer
+          format: int64
+    MediaAsset:
+      type: object
+      required: [id, kind, purpose, mimeType, sizeBytes, status, variants, isPublic, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          $ref: "#/components/schemas/MediaKind"
+        purpose:
+          $ref: "#/components/schemas/MediaPurpose"
+        mimeType:
+          type: string
+        sizeBytes:
+          type: integer
+          format: int64
+        width:
+          type: integer
+        height:
+          type: integer
+        pageCount:
+          type: integer
+        status:
+          $ref: "#/components/schemas/MediaStatus"
+        variants:
+          type: object
+          description: Varian siap pakai, dipetakan dari nama varian ke metadata.
+          additionalProperties:
+            $ref: "#/components/schemas/MediaVariant"
+        isPublic:
+          type: boolean
+        blurhash:
+          type: string
+        dominantColor:
+          type: string
+        originalFilename:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
   responses:
     Problem:
       description: Error (RFC 9457)
