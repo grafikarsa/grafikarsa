@@ -33,6 +33,7 @@ type RouterDeps struct {
 	Auth           *auth.Service
 	Academic       *academic.Service
 	Users          *users.Service
+	Imports        *users.Importer
 	Roles          *roles.Service
 	Limiter        *ratelimit.Limiter
 	AllowedOrigins []string
@@ -88,6 +89,7 @@ func NewRouter(d RouterDeps) stdhttp.Handler {
 			Auth:     d.Auth,
 			Academic: d.Academic,
 			Users:    d.Users,
+			Imports:  d.Imports,
 			Roles:    d.Roles,
 			Logger:   logger,
 		}), nil, api.StrictOptions(logger)), apigen.ChiServerOptions{
