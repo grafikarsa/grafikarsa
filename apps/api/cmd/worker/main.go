@@ -13,7 +13,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/media/process"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/users"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/jobs"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/config"
@@ -63,17 +62,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := process.Startup(); err != nil {
-		log.Error("libvips startup failed", "error", err)
-		pool.Close()
-		os.Exit(1)
-	}
-	defer process.Shutdown()
-
 	registry := jobs.NewRegistry()
 	jobs.Register(registry, &jobs.PingWorker{Logger: log})
 	dataStore := dbstore.NewStore(pool)
-	jobs.Register(registry, process.NewWorker(process.NewProcessor(dataStore, storageClient, log)))
+
+	shutdownMedia, err := setupMediaProcessing(registry, dataStore, storageClient, log)
+	if err != nil {
+		log.Error("media processing setup failed", "error", err)
+		pool.Close()
+		os.Exit(1)
+	}
+	defer shutdownMedia()
 
 	hasher := password.NewHasher(password.DefaultParams, 0)
 	box, err := secretbox.New([]byte(cfg.SecretKey))
