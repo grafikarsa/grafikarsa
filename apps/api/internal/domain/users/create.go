@@ -31,21 +31,12 @@ func (s *Service) Create(ctx context.Context, a Actor, in CreateInput) (Created,
 		return Created{}, apperr.NotFound()
 	}
 
-	plain, hash, err := s.generatePassword(ctx)
-	if err != nil {
-		return Created{}, err
-	}
-
-	ttlDays := s.settingInt(ctx, initialPasswordTTLKey, initialPasswordTTLDays)
-	expiresAt := s.now().UTC().Add(time.Duration(ttlDays) * 24 * time.Hour)
-
-	var createdID uuid.UUID
-	err = s.st.WithTx(ctx, func(q *store.Queries) error {
-		var (
-			class        store.GetClassByIDRow
-			entryYear    *int16
-			scopeMajorID *uuid.UUID
-		)
+	var (
+		createdID uuid.UUID
+		plain     string
+	)
+	err := s.st.WithTx(ctx, func(q *store.Queries) error {
+		var scopeMajorID *uuid.UUID
 
 		if in.AccountType == accountTypeStudent {
 			row, err := q.GetClassByID(ctx, *in.ClassID)
@@ -58,81 +49,13 @@ func (s *Service) Create(ctx context.Context, a Actor, in CreateInput) (Created,
 			if !scope.allows([]uuid.UUID{row.MajorID}) {
 				return apperr.NotFound()
 			}
-
-			year, err := q.GetAcademicYearByID(ctx, row.AcademicYearID)
-			if err != nil {
-				if errors.Is(err, pgx.ErrNoRows) {
-					return apperr.NotFound()
-				}
-				return fmt.Errorf("users: get academic year: %w", err)
-			}
-
-			computedEntryYear := int16(year.StartYear) - (row.Grade - 10)
-			if in.EntryYear != nil {
-				computedEntryYear = *in.EntryYear
-			}
-			entryYear = &computedEntryYear
-			class = row
-			scopeMajorID = &row.MajorID
+			majorID := row.MajorID
+			scopeMajorID = &majorID
 		}
 
-		if in.AccountType == accountTypeTeacher {
-			if err := s.ensureMajorsExist(ctx, q, in.TeacherMajorIDs); err != nil {
-				return err
-			}
-		}
-
-		id, err := q.InsertUser(ctx, store.InsertUserParams{
-			AccountType:       in.AccountType,
-			Nisn:              in.NISN,
-			StaffNumber:       in.StaffNumber,
-			DisplayName:       in.DisplayName,
-			PasswordHash:      hash,
-			PasswordKind:      "initial",
-			PasswordExpiresAt: expiresAt,
-			EntryYear:         entryYear,
-		})
+		id, password, err := s.createUserTx(ctx, q, in, "admin")
 		if err != nil {
-			if conflict := userConflict(err); conflict != nil {
-				return conflict
-			}
-			return fmt.Errorf("users: insert user: %w", err)
-		}
-
-		if err := s.putVaultEntry(ctx, q, id, plain, expiresAt); err != nil {
 			return err
-		}
-
-		switch in.AccountType {
-		case accountTypeStudent:
-			if err := q.InsertEnrollment(ctx, store.InsertEnrollmentParams{
-				UserID:         id,
-				ClassID:        class.ID,
-				AcademicYearID: class.AcademicYearID,
-				Source:         "admin",
-			}); err != nil {
-				return fmt.Errorf("users: insert enrollment: %w", err)
-			}
-
-			major, err := q.GetMajorByID(ctx, class.MajorID)
-			if err != nil {
-				if errors.Is(err, pgx.ErrNoRows) {
-					return apperr.NotFound()
-				}
-				return fmt.Errorf("users: get major: %w", err)
-			}
-			if err := q.InsertSystemExperience(ctx, store.InsertSystemExperienceParams{
-				UserID:       id,
-				Title:        "Siswa " + major.Name,
-				Organization: schoolOrganization,
-				StartMonth:   firstDayOfJuly(int(*entryYear)),
-			}); err != nil {
-				return fmt.Errorf("users: insert system experience: %w", err)
-			}
-		case accountTypeTeacher:
-			if err := s.replaceTeacherMajors(ctx, q, id, in.TeacherMajorIDs); err != nil {
-				return err
-			}
 		}
 
 		if err := s.recordAudit(ctx, q, a, "user.create", id, scopeMajorID, map[string]any{
@@ -143,6 +66,7 @@ func (s *Service) Create(ctx context.Context, a Actor, in CreateInput) (Created,
 		}
 
 		createdID = id
+		plain = password
 		return nil
 	})
 	if err != nil {
@@ -154,6 +78,115 @@ func (s *Service) Create(ctx context.Context, a Actor, in CreateInput) (Created,
 		return Created{}, err
 	}
 	return Created{User: detail, InitialPassword: plain}, nil
+}
+
+// createUserTx inserts one account and its initial academic links inside the
+// caller's transaction. It does not write an audit entry, so bulk callers can
+// keep the audit volume low. in must already be normalized and validated.
+func (s *Service) createUserTx(
+	ctx context.Context,
+	q *store.Queries,
+	in CreateInput,
+	enrollmentSource string,
+) (uuid.UUID, string, error) {
+	plain, hash, err := s.generatePassword(ctx)
+	if err != nil {
+		return uuid.Nil, "", err
+	}
+
+	ttlDays := s.settingInt(ctx, initialPasswordTTLKey, initialPasswordTTLDays)
+	expiresAt := s.now().UTC().Add(time.Duration(ttlDays) * 24 * time.Hour)
+
+	var (
+		class     store.GetClassByIDRow
+		entryYear *int16
+	)
+
+	if in.AccountType == accountTypeStudent {
+		row, err := q.GetClassByID(ctx, *in.ClassID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return uuid.Nil, "", apperr.NotFound()
+			}
+			return uuid.Nil, "", fmt.Errorf("users: get class: %w", err)
+		}
+
+		year, err := q.GetAcademicYearByID(ctx, row.AcademicYearID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return uuid.Nil, "", apperr.NotFound()
+			}
+			return uuid.Nil, "", fmt.Errorf("users: get academic year: %w", err)
+		}
+
+		computedEntryYear := int16(year.StartYear) - (row.Grade - 10)
+		if in.EntryYear != nil {
+			computedEntryYear = *in.EntryYear
+		}
+		entryYear = &computedEntryYear
+		class = row
+	}
+
+	if in.AccountType == accountTypeTeacher {
+		if err := s.ensureMajorsExist(ctx, q, in.TeacherMajorIDs); err != nil {
+			return uuid.Nil, "", err
+		}
+	}
+
+	id, err := q.InsertUser(ctx, store.InsertUserParams{
+		AccountType:       in.AccountType,
+		Nisn:              in.NISN,
+		StaffNumber:       in.StaffNumber,
+		DisplayName:       in.DisplayName,
+		PasswordHash:      hash,
+		PasswordKind:      "initial",
+		PasswordExpiresAt: expiresAt,
+		EntryYear:         entryYear,
+	})
+	if err != nil {
+		if conflict := userConflict(err); conflict != nil {
+			return uuid.Nil, "", conflict
+		}
+		return uuid.Nil, "", fmt.Errorf("users: insert user: %w", err)
+	}
+
+	if err := s.putVaultEntry(ctx, q, id, plain, expiresAt); err != nil {
+		return uuid.Nil, "", err
+	}
+
+	switch in.AccountType {
+	case accountTypeStudent:
+		if err := q.InsertEnrollment(ctx, store.InsertEnrollmentParams{
+			UserID:         id,
+			ClassID:        class.ID,
+			AcademicYearID: class.AcademicYearID,
+			Source:         enrollmentSource,
+		}); err != nil {
+			return uuid.Nil, "", fmt.Errorf("users: insert enrollment: %w", err)
+		}
+
+		major, err := q.GetMajorByID(ctx, class.MajorID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return uuid.Nil, "", apperr.NotFound()
+			}
+			return uuid.Nil, "", fmt.Errorf("users: get major: %w", err)
+		}
+		if err := q.InsertSystemExperience(ctx, store.InsertSystemExperienceParams{
+			UserID:       id,
+			Title:        "Siswa " + major.Name,
+			Organization: schoolOrganization,
+			StartMonth:   firstDayOfJuly(int(*entryYear)),
+		}); err != nil {
+			return uuid.Nil, "", fmt.Errorf("users: insert system experience: %w", err)
+		}
+	case accountTypeTeacher:
+		if err := s.replaceTeacherMajors(ctx, q, id, in.TeacherMajorIDs); err != nil {
+			return uuid.Nil, "", err
+		}
+	}
+
+	return id, plain, nil
 }
 
 // Update changes profile fields and teacher assignments. Denials are reported
