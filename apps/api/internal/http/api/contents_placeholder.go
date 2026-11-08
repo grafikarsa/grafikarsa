@@ -35,31 +35,6 @@ func (s *Server) PostStudioContentArchive(_ context.Context, _ apigen.PostStudio
 	return nil, apperr.NotImplemented()
 }
 
-// GetStudioContentAuthors is not implemented yet.
-func (s *Server) GetStudioContentAuthors(_ context.Context, _ apigen.GetStudioContentAuthorsRequestObject) (apigen.GetStudioContentAuthorsResponseObject, error) {
-	return nil, apperr.NotImplemented()
-}
-
-// PostStudioContentAuthor is not implemented yet.
-func (s *Server) PostStudioContentAuthor(_ context.Context, _ apigen.PostStudioContentAuthorRequestObject) (apigen.PostStudioContentAuthorResponseObject, error) {
-	return nil, apperr.NotImplemented()
-}
-
-// DeleteStudioContentAuthor is not implemented yet.
-func (s *Server) DeleteStudioContentAuthor(_ context.Context, _ apigen.DeleteStudioContentAuthorRequestObject) (apigen.DeleteStudioContentAuthorResponseObject, error) {
-	return nil, apperr.NotImplemented()
-}
-
-// PatchStudioContentAuthor is not implemented yet.
-func (s *Server) PatchStudioContentAuthor(_ context.Context, _ apigen.PatchStudioContentAuthorRequestObject) (apigen.PatchStudioContentAuthorResponseObject, error) {
-	return nil, apperr.NotImplemented()
-}
-
-// PostStudioContentLeave is not implemented yet.
-func (s *Server) PostStudioContentLeave(_ context.Context, _ apigen.PostStudioContentLeaveRequestObject) (apigen.PostStudioContentLeaveResponseObject, error) {
-	return nil, apperr.NotImplemented()
-}
-
 // PostStudioContentRestore is not implemented yet.
 func (s *Server) PostStudioContentRestore(_ context.Context, _ apigen.PostStudioContentRestoreRequestObject) (apigen.PostStudioContentRestoreResponseObject, error) {
 	return nil, apperr.NotImplemented()
@@ -80,11 +55,6 @@ func (s *Server) PostStudioContentSubmit(_ context.Context, _ apigen.PostStudioC
 	return nil, apperr.NotImplemented()
 }
 
-// PostStudioContentTransferOwnership is not implemented yet.
-func (s *Server) PostStudioContentTransferOwnership(_ context.Context, _ apigen.PostStudioContentTransferOwnershipRequestObject) (apigen.PostStudioContentTransferOwnershipResponseObject, error) {
-	return nil, apperr.NotImplemented()
-}
-
 // PostStudioContentUnarchive is not implemented yet.
 func (s *Server) PostStudioContentUnarchive(_ context.Context, _ apigen.PostStudioContentUnarchiveRequestObject) (apigen.PostStudioContentUnarchiveResponseObject, error) {
 	return nil, apperr.NotImplemented()
@@ -102,20 +72,5 @@ func (s *Server) GetStudioContentVersion(_ context.Context, _ apigen.GetStudioCo
 
 // PostStudioContentWithdraw is not implemented yet.
 func (s *Server) PostStudioContentWithdraw(_ context.Context, _ apigen.PostStudioContentWithdrawRequestObject) (apigen.PostStudioContentWithdrawResponseObject, error) {
-	return nil, apperr.NotImplemented()
-}
-
-// GetStudioInvitations is not implemented yet.
-func (s *Server) GetStudioInvitations(_ context.Context, _ apigen.GetStudioInvitationsRequestObject) (apigen.GetStudioInvitationsResponseObject, error) {
-	return nil, apperr.NotImplemented()
-}
-
-// PostStudioInvitationAccept is not implemented yet.
-func (s *Server) PostStudioInvitationAccept(_ context.Context, _ apigen.PostStudioInvitationAcceptRequestObject) (apigen.PostStudioInvitationAcceptResponseObject, error) {
-	return nil, apperr.NotImplemented()
-}
-
-// PostStudioInvitationDecline is not implemented yet.
-func (s *Server) PostStudioInvitationDecline(_ context.Context, _ apigen.PostStudioInvitationDeclineRequestObject) (apigen.PostStudioInvitationDeclineResponseObject, error) {
 	return nil, apperr.NotImplemented()
 }
