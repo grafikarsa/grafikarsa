@@ -1,7 +1,9 @@
 package api
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"math"
 	"time"
 
@@ -368,6 +370,27 @@ func (s *Server) PostAdminUserContentUnblock(ctx context.Context, request apigen
 	}
 
 	return apigen.PostAdminUserContentUnblock204Response{}, nil
+}
+
+// GetAdminAccountCards streams a PDF of account cards for one class.
+func (s *Server) GetAdminAccountCards(ctx context.Context, request apigen.GetAdminAccountCardsRequestObject) (apigen.GetAdminAccountCardsResponseObject, error) {
+	actor, err := s.usersActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	document, err := s.users.AccountCardsDocument(ctx, actor, uuid.UUID(request.Params.ClassId))
+	if err != nil {
+		return nil, err
+	}
+
+	filename := fmt.Sprintf("kartu-akun-%s.pdf", document.ClassSlug)
+	disposition := fmt.Sprintf("attachment; filename=%q", filename)
+	return apigen.GetAdminAccountCards200ApplicationpdfResponse{
+		Body:          bytes.NewReader(document.PDF),
+		Headers:       apigen.GetAdminAccountCards200ResponseHeaders{ContentDisposition: &disposition},
+		ContentLength: int64(len(document.PDF)),
+	}, nil
 }
 
 // derefString returns the pointed-to string, or an empty string for nil.

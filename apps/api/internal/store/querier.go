@@ -23,10 +23,12 @@ type Querier interface {
 	DeactivateUser(ctx context.Context, id uuid.UUID) error
 	DeleteClass(ctx context.Context, id uuid.UUID) error
 	DeleteClassGroupByClassID(ctx context.Context, classID uuid.UUID) error
+	DeleteExpiredVaultEntries(ctx context.Context) (int64, error)
 	DeleteInactiveRoleAssignments(ctx context.Context, roleID uuid.UUID) error
 	DeleteRole(ctx context.Context, id uuid.UUID) error
 	DeleteRolePermissions(ctx context.Context, roleID uuid.UUID) error
 	DeleteTeacherMajors(ctx context.Context, userID uuid.UUID) error
+	DeleteVaultEntry(ctx context.Context, userID uuid.UUID) error
 	GetAcademicYearByID(ctx context.Context, id uuid.UUID) (GetAcademicYearByIDRow, error)
 	GetClassByID(ctx context.Context, id uuid.UUID) (GetClassByIDRow, error)
 	GetClassGroupByClassID(ctx context.Context, classID uuid.UUID) (GetClassGroupByClassIDRow, error)
@@ -84,6 +86,7 @@ type Querier interface {
 	ListUserEnrollments(ctx context.Context, userID uuid.UUID) ([]ListUserEnrollmentsRow, error)
 	ListUserRoleAssignments(ctx context.Context, userID uuid.UUID) ([]ListUserRoleAssignmentsRow, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error)
+	ListVaultEntriesForClass(ctx context.Context, classID uuid.UUID) ([]ListVaultEntriesForClassRow, error)
 	ReactivateUser(ctx context.Context, id uuid.UUID) error
 	RevokeActiveRecoveryCodes(ctx context.Context, userID uuid.UUID) error
 	RevokeSession(ctx context.Context, arg RevokeSessionParams) error
@@ -105,6 +108,7 @@ type Querier interface {
 	UpdateRole(ctx context.Context, arg UpdateRoleParams) (uuid.UUID, error)
 	UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) error
 	UpsertSetting(ctx context.Context, arg UpsertSettingParams) (Setting, error)
+	UpsertVaultEntry(ctx context.Context, arg UpsertVaultEntryParams) error
 	UseRecoveryCode(ctx context.Context, arg UseRecoveryCodeParams) (uuid.UUID, error)
 }
 

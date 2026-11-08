@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -809,6 +810,11 @@ type UsernameAvailability struct {
 // UsernameAvailabilityReason defines model for UsernameAvailability.Reason.
 type UsernameAvailabilityReason string
 
+// GetAdminAccountCardsParams defines parameters for GetAdminAccountCards.
+type GetAdminAccountCardsParams struct {
+	ClassId openapi_types.UUID `form:"classId" json:"classId"`
+}
+
 // GetAdminAuditLogsParams defines parameters for GetAdminAuditLogs.
 type GetAdminAuditLogsParams struct {
 	ActorId *openapi_types.UUID `form:"actorId,omitempty" json:"actorId,omitempty"`
@@ -925,6 +931,9 @@ type ServerInterface interface {
 	// PostAdminAcademicYearSetCurrent Tandai tahun ajaran sebagai tahun ajaran aktif
 	// (POST /admin/academic-years/{id}/set-current)
 	PostAdminAcademicYearSetCurrent(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// GetAdminAccountCards Ekspor kartu akun per kelas
+	// (GET /admin/account-cards)
+	GetAdminAccountCards(w http.ResponseWriter, r *http.Request, params GetAdminAccountCardsParams)
 	// GetAdminAuditLogs Daftar audit log
 	// (GET /admin/audit-logs)
 	GetAdminAuditLogs(w http.ResponseWriter, r *http.Request, params GetAdminAuditLogsParams)
@@ -1078,6 +1087,12 @@ func (_ Unimplemented) PatchAdminAcademicYear(w http.ResponseWriter, r *http.Req
 // PostAdminAcademicYearSetCurrent Tandai tahun ajaran sebagai tahun ajaran aktif
 // (POST /admin/academic-years/{id}/set-current)
 func (_ Unimplemented) PostAdminAcademicYearSetCurrent(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetAdminAccountCards Ekspor kartu akun per kelas
+// (GET /admin/account-cards)
+func (_ Unimplemented) GetAdminAccountCards(w http.ResponseWriter, r *http.Request, params GetAdminAccountCardsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1413,6 +1428,39 @@ func (siw *ServerInterfaceWrapper) PostAdminAcademicYearSetCurrent(w http.Respon
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostAdminAcademicYearSetCurrent(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAdminAccountCards operation middleware
+func (siw *ServerInterfaceWrapper) GetAdminAccountCards(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetAdminAccountCardsParams
+
+	// ------------- Required query parameter "classId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "classId", r.URL.Query(), &params.ClassId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "classId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "classId", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAdminAccountCards(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2732,6 +2780,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/admin/users/{id}/content-unblock", wrapper.PostAdminUserContentUnblock)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/account-cards", wrapper.GetAdminAccountCards)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/permissions", wrapper.GetAdminPermissions)
 	})
 	r.Group(func(r chi.Router) {
@@ -2906,6 +2957,59 @@ type PostAdminAcademicYearSetCurrentdefaultApplicationProblemPlusJSONResponse st
 }
 
 func (response PostAdminAcademicYearSetCurrentdefaultApplicationProblemPlusJSONResponse) VisitPostAdminAcademicYearSetCurrentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAdminAccountCardsRequestObject struct {
+	Params GetAdminAccountCardsParams
+}
+
+type GetAdminAccountCardsResponseObject interface {
+	VisitGetAdminAccountCardsResponse(w http.ResponseWriter) error
+}
+
+type GetAdminAccountCards200ResponseHeaders struct {
+	ContentDisposition *string
+}
+
+type GetAdminAccountCards200ApplicationpdfResponse struct {
+	Body          io.Reader
+	Headers       GetAdminAccountCards200ResponseHeaders
+	ContentLength int64
+}
+
+func (response GetAdminAccountCards200ApplicationpdfResponse) VisitGetAdminAccountCardsResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "application/pdf")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	if response.Headers.ContentDisposition != nil {
+		w.Header().Set("Content-Disposition", fmt.Sprint(*response.Headers.ContentDisposition))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetAdminAccountCardsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetAdminAccountCardsdefaultApplicationProblemPlusJSONResponse) VisitGetAdminAccountCardsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -4499,6 +4603,9 @@ type StrictServerInterface interface {
 	// PostAdminAcademicYearSetCurrent Tandai tahun ajaran sebagai tahun ajaran aktif
 	// (POST /admin/academic-years/{id}/set-current)
 	PostAdminAcademicYearSetCurrent(ctx context.Context, request PostAdminAcademicYearSetCurrentRequestObject) (PostAdminAcademicYearSetCurrentResponseObject, error)
+	// GetAdminAccountCards Ekspor kartu akun per kelas
+	// (GET /admin/account-cards)
+	GetAdminAccountCards(ctx context.Context, request GetAdminAccountCardsRequestObject) (GetAdminAccountCardsResponseObject, error)
 	// GetAdminAuditLogs Daftar audit log
 	// (GET /admin/audit-logs)
 	GetAdminAuditLogs(ctx context.Context, request GetAdminAuditLogsRequestObject) (GetAdminAuditLogsResponseObject, error)
@@ -4773,6 +4880,32 @@ func (sh *strictHandler) PostAdminAcademicYearSetCurrent(w http.ResponseWriter, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(PostAdminAcademicYearSetCurrentResponseObject); ok {
 		if err := validResponse.VisitPostAdminAcademicYearSetCurrentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetAdminAccountCards operation middleware
+func (sh *strictHandler) GetAdminAccountCards(w http.ResponseWriter, r *http.Request, params GetAdminAccountCardsParams) {
+	var request GetAdminAccountCardsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAdminAccountCards(ctx, request.(GetAdminAccountCardsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAdminAccountCards")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetAdminAccountCardsResponseObject); ok {
+		if err := validResponse.VisitGetAdminAccountCardsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -24,6 +24,7 @@ import (
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/logger"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/password"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/ratelimit"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/secretbox"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/storage"
 	dbstore "github.com/grafikarsa/grafikarsa/apps/api/internal/store"
 )
@@ -91,6 +92,13 @@ func main() {
 	limiter := ratelimit.New(rdb)
 	dataStore := dbstore.NewStore(pool)
 	hasher := password.NewHasher(password.DefaultParams, 0)
+	box, err := secretbox.New([]byte(cfg.SecretKey))
+	if err != nil {
+		log.Error("secretbox failed", "error", err)
+		pool.Close()
+		_ = rdb.Close()
+		os.Exit(1)
+	}
 	authService, err := auth.NewService(
 		dataStore,
 		rdb,
@@ -107,7 +115,7 @@ func main() {
 	}
 
 	academicService := academic.NewService(dataStore)
-	usersService := users.NewService(dataStore, authService, hasher)
+	usersService := users.NewService(dataStore, authService, hasher, box)
 	rolesService := roles.NewService(dataStore, authService)
 	auditService := audit.NewService(dataStore)
 

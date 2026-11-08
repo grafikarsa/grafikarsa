@@ -41,6 +41,9 @@ func (s *Service) Deactivate(ctx context.Context, a Actor, id uuid.UUID) error {
 		if err := revokeUserSessions(ctx, q, id, "deactivated"); err != nil {
 			return err
 		}
+		if err := deleteVaultEntry(ctx, q, id); err != nil {
+			return err
+		}
 		return s.recordAudit(ctx, q, a, "user.deactivate", id, target.auditScopeMajorID(), nil)
 	})
 	if err != nil {
@@ -119,6 +122,9 @@ func (s *Service) ResetPassword(ctx context.Context, a Actor, id uuid.UUID) (str
 		if err := revokeUserSessions(ctx, q, id, "admin_reset"); err != nil {
 			return err
 		}
+		if err := deleteVaultEntry(ctx, q, id); err != nil {
+			return err
+		}
 		return s.recordAudit(ctx, q, a, "user.reset_password", id, target.auditScopeMajorID(), nil)
 	})
 	if err != nil {
@@ -166,6 +172,9 @@ func (s *Service) ReissueInitialPassword(ctx context.Context, a Actor, id uuid.U
 			ID:                id,
 		}); err != nil {
 			return fmt.Errorf("users: set initial password: %w", err)
+		}
+		if err := s.putVaultEntry(ctx, q, id, plain, expiresAt); err != nil {
+			return err
 		}
 		return s.recordAudit(ctx, q, a, "user.reissue_initial_password", id, target.auditScopeMajorID(), nil)
 	})

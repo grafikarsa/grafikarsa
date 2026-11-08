@@ -410,6 +410,13 @@ type ImportJob struct {
 	CommittedAt *time.Time
 }
 
+type InitialPasswordVault struct {
+	UserID     uuid.UUID
+	Ciphertext []byte
+	ExpiresAt  time.Time
+	CreatedAt  time.Time
+}
+
 type LegacyIDMap struct {
 	SourceTable string
 	SourceID    uuid.UUID

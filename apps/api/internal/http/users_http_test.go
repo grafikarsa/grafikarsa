@@ -17,11 +17,15 @@ import (
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/apigen"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/password"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/ratelimit"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/platform/secretbox"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/store"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/testutil"
 )
 
 const usersTestPassword = "sandi-uji-123"
+
+// usersTestVaultSecret keys the initial-password vault in tests.
+var usersTestVaultSecret = []byte("test-secret-key-for-initial-password-vault")
 
 // initialPasswordPattern is the format produced by securetoken.ReadablePassword.
 var initialPasswordPattern = regexp.MustCompile(`^[2-9a-hj-km-np-z]{4}-[2-9a-hj-km-np-z]{4}-[2-9a-hj-km-np-z]{4}$`)
@@ -61,7 +65,7 @@ func newUsersEnv(t *testing.T) *usersEnv {
 	handler := NewRouter(RouterDeps{
 		Logger:         logger,
 		Auth:           authService,
-		Users:          users.NewService(st, authService, hasher),
+		Users:          users.NewService(st, authService, hasher, newUsersTestBox(t)),
 		Limiter:        ratelimit.New(rdb),
 		AllowedOrigins: []string{"http://localhost:3020"},
 	})
@@ -230,6 +234,18 @@ func (e *usersEnv) loginAs(identifier, plain string) (*http.Client, string) {
 		e.t.Fatalf("login %s status = %d, body %s", identifier, res.StatusCode, body)
 	}
 	return c, e.csrfFromJar(c)
+}
+
+// newUsersTestBox builds the secretbox used by the user administration service
+// in tests.
+func newUsersTestBox(t *testing.T) *secretbox.Box {
+	t.Helper()
+
+	box, err := secretbox.New(usersTestVaultSecret)
+	if err != nil {
+		t.Fatalf("secretbox.New: %v", err)
+	}
+	return box
 }
 
 func decodeUsersBody[T any](t *testing.T, body []byte) T {

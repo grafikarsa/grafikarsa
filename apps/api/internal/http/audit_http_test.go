@@ -46,7 +46,7 @@ func newAuditEnv(t *testing.T) *usersEnv {
 	handler := NewRouter(RouterDeps{
 		Logger:         logger,
 		Auth:           authService,
-		Users:          users.NewService(st, authService, hasher),
+		Users:          users.NewService(st, authService, hasher, newUsersTestBox(t)),
 		Audit:          audit.NewService(st),
 		Limiter:        ratelimit.New(rdb),
 		AllowedOrigins: []string{"http://localhost:3020"},
