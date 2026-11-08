@@ -15,6 +15,7 @@ import (
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/media"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/profiles"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/roles"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/taxonomy"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/users"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/api"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/apigen"
@@ -46,6 +47,7 @@ type RouterDeps struct {
 	Roles          *roles.Service
 	Audit          *audit.Service
 	Media          *media.Service
+	Taxonomy       *taxonomy.Service
 	Limiter        *ratelimit.Limiter
 	AllowedOrigins []string
 }
@@ -95,6 +97,7 @@ func NewRouter(d RouterDeps) stdhttp.Handler {
 		}
 		r.Use(middleware.Onboarding(logger))
 		r.Use(noStoreAdminResponses)
+		r.Use(cachePublicTaxonomy)
 		r.Use(limitMediaUploadBody)
 
 		apigen.HandlerWithOptions(apigen.NewStrictHandlerWithOptions(api.NewServer(api.Deps{
@@ -106,6 +109,7 @@ func NewRouter(d RouterDeps) stdhttp.Handler {
 			Roles:    d.Roles,
 			Audit:    d.Audit,
 			Media:    d.Media,
+			Taxonomy: d.Taxonomy,
 			Logger:   logger,
 		}), nil, api.StrictOptions(logger)), apigen.ChiServerOptions{
 			BaseRouter: r,
@@ -123,6 +127,17 @@ func noStoreAdminResponses(next stdhttp.Handler) stdhttp.Handler {
 	return stdhttp.HandlerFunc(func(w stdhttp.ResponseWriter, r *stdhttp.Request) {
 		if r.URL.Path == "/api/v1/admin" || strings.HasPrefix(r.URL.Path, "/api/v1/admin/") {
 			w.Header().Set("Cache-Control", "no-store")
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// cachePublicTaxonomy marks public taxonomy responses as cacheable for five
+// minutes so browsers and shared proxies can reuse them.
+func cachePublicTaxonomy(next stdhttp.Handler) stdhttp.Handler {
+	return stdhttp.HandlerFunc(func(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+		if r.Method == stdhttp.MethodGet && strings.HasPrefix(r.URL.Path, "/api/v1/taxonomy/") {
+			w.Header().Set("Cache-Control", "public, max-age=300")
 		}
 		next.ServeHTTP(w, r)
 	})

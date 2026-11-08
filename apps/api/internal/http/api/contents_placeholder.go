@@ -144,18 +144,3 @@ func (s *Server) PostStudioInvitationDecline(_ context.Context, _ apigen.PostStu
 func (s *Server) GetStudioSummary(_ context.Context, _ apigen.GetStudioSummaryRequestObject) (apigen.GetStudioSummaryResponseObject, error) {
 	return nil, apperr.NotImplemented()
 }
-
-// GetTaxonomyCategories is not implemented yet.
-func (s *Server) GetTaxonomyCategories(_ context.Context, _ apigen.GetTaxonomyCategoriesRequestObject) (apigen.GetTaxonomyCategoriesResponseObject, error) {
-	return nil, apperr.NotImplemented()
-}
-
-// GetTaxonomyTags is not implemented yet.
-func (s *Server) GetTaxonomyTags(_ context.Context, _ apigen.GetTaxonomyTagsRequestObject) (apigen.GetTaxonomyTagsResponseObject, error) {
-	return nil, apperr.NotImplemented()
-}
-
-// GetTaxonomyTools is not implemented yet.
-func (s *Server) GetTaxonomyTools(_ context.Context, _ apigen.GetTaxonomyToolsRequestObject) (apigen.GetTaxonomyToolsResponseObject, error) {
-	return nil, apperr.NotImplemented()
-}
