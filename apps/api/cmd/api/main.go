@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/academic"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/audit"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/auth"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/roles"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/users"
@@ -108,6 +109,7 @@ func main() {
 	academicService := academic.NewService(dataStore)
 	usersService := users.NewService(dataStore, authService, hasher)
 	rolesService := roles.NewService(dataStore, authService)
+	auditService := audit.NewService(dataStore)
 
 	srv := &http.Server{
 		Addr: cfg.HTTPAddr,
@@ -118,6 +120,7 @@ func main() {
 			Academic:       academicService,
 			Users:          usersService,
 			Roles:          rolesService,
+			Audit:          auditService,
 			Limiter:        limiter,
 			AllowedOrigins: cfg.AllowedOrigins,
 		}),
