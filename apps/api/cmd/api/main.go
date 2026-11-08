@@ -13,6 +13,7 @@ import (
 
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/academic"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/auth"
+	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/roles"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/domain/users"
 	apirouter "github.com/grafikarsa/grafikarsa/apps/api/internal/http"
 	"github.com/grafikarsa/grafikarsa/apps/api/internal/http/health"
@@ -114,6 +115,7 @@ func main() {
 
 	academicService := academic.NewService(dataStore)
 	usersService := users.NewService(dataStore, authService, hasher, box)
+	rolesService := roles.NewService(dataStore, authService)
 
 	srv := &http.Server{
 		Addr: cfg.HTTPAddr,
@@ -123,6 +125,7 @@ func main() {
 			Auth:           authService,
 			Academic:       academicService,
 			Users:          usersService,
+			Roles:          rolesService,
 			Limiter:        limiter,
 			AllowedOrigins: cfg.AllowedOrigins,
 		}),

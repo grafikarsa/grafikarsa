@@ -837,6 +837,218 @@ paths:
                 format: binary
         default:
           $ref: "#/components/responses/Problem"
+  /admin/permissions:
+    get:
+      operationId: getAdminPermissions
+      tags: [admin-roles]
+      summary: Katalog izin
+      description: |
+        Butuh izin `role.manage` global atau `role.assign`. Tanpa izin → 404.
+      responses:
+        "200":
+          description: Katalog izin.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminPermissionList"
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/roles:
+    get:
+      operationId: getAdminRoles
+      tags: [admin-roles]
+      summary: Daftar role
+      description: |
+        Butuh izin `role.manage` global atau `role.assign`. Tanpa izin → 404.
+        Termasuk role sistem dan role kustom beserta izin dan jumlah pemiliknya.
+      responses:
+        "200":
+          description: Daftar role.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminRoleList"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: postAdminRole
+      tags: [admin-roles]
+      summary: Buat role kustom
+      description: |
+        Butuh izin `role.manage` global. Tanpa izin → 404. Setiap izin harus ada
+        di katalog dan dimiliki aktor secara global. Slug duplikat → 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminRoleCreate"
+      responses:
+        "201":
+          description: Role dibuat.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminRole"
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/roles/{id}:
+    patch:
+      operationId: patchAdminRole
+      tags: [admin-roles]
+      summary: Ubah role
+      description: |
+        Butuh izin `role.manage` global. Tanpa izin → 404.
+        Hanya nama dan deskripsi yang dapat diubah; slug dan izin role sistem
+        tidak berubah. Field yang tidak dikirim tidak berubah.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminRoleUpdate"
+      responses:
+        "200":
+          description: Role diperbarui.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminRole"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: deleteAdminRole
+      tags: [admin-roles]
+      summary: Hapus role kustom
+      description: |
+        Butuh izin `role.manage` global. Tanpa izin → 404.
+        Role sistem atau role yang masih dimiliki pengguna → 409.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Role dihapus.
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/roles/{id}/permissions:
+    put:
+      operationId: putAdminRolePermissions
+      tags: [admin-roles]
+      summary: Ganti izin role
+      description: |
+        Butuh izin `role.manage` global. Tanpa izin → 404.
+        Mengganti seluruh himpunan izin role kustom. Setiap izin baru harus
+        dimiliki aktor secara global. Role sistem → 409.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminRolePermissionsUpdate"
+      responses:
+        "200":
+          description: Izin role diperbarui.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminRole"
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/users/{id}/roles:
+    get:
+      operationId: getAdminUserRoles
+      tags: [admin-roles]
+      summary: Daftar role pengguna
+      description: |
+        Butuh izin `role.assign`. Tanpa izin atau di luar cakupan jurusan → 404.
+        Admin jurusan hanya melihat penugasan dalam cakupannya.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Penugasan role aktif pengguna.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminRoleAssignmentList"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: postAdminUserRole
+      tags: [admin-roles]
+      summary: Beri role ke pengguna
+      description: |
+        Butuh izin `role.assign` pada cakupan penugasan dan seluruh izin role
+        yang diberikan pada cakupan yang sama. Tanpa izin atau di luar cakupan
+        jurusan → 404. Role implisit (`member`, `teacher`) → 422.
+        Role yang hanya bisa global tidak dapat diberi dengan `majorId` → 422.
+        Penugasan ganda → 409.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminRoleAssign"
+      responses:
+        "201":
+          description: Role diberikan.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminRoleAssignment"
+        default:
+          $ref: "#/components/responses/Problem"
+  /admin/user-roles/{assignmentId}:
+    delete:
+      operationId: deleteAdminUserRole
+      tags: [admin-roles]
+      summary: Cabut penugasan role
+      description: |
+        Butuh izin `role.assign` dan izin role tersebut pada cakupan penugasan.
+        Tanpa izin atau di luar cakupan jurusan → 404.
+      parameters:
+        - name: assignmentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Penugasan dicabut.
+        default:
+          $ref: "#/components/responses/Problem"
 components:
   schemas:
     CsrfToken:
@@ -1243,6 +1455,123 @@ components:
         academicYearLabel:
           type: string
           description: Label tahun ajaran, misalnya "2026/2027".
+    AdminPermission:
+      type: object
+      description: Satu entri katalog izin.
+      required: [key, description, scopable]
+      properties:
+        key:
+          type: string
+          description: Kunci izin, misalnya "content.moderate".
+        description:
+          type: string
+          description: Penjelasan singkat izin.
+        scopable:
+          type: boolean
+          description: Apakah izin dapat dibatasi per jurusan.
+    AdminPermissionList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminPermission"
+    AdminRole:
+      type: object
+      description: Definisi role beserta izin dan jumlah pemilik aktifnya.
+      required: [id, slug, name, description, isSystem, permissions, holderCount]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID role.
+        slug:
+          type: string
+          description: Slug role, misalnya "major_admin".
+        name:
+          type: string
+          description: Nama tampilan role.
+        description:
+          type: string
+          nullable: true
+          description: Deskripsi role.
+        isSystem:
+          type: boolean
+          description: Apakah role bawaan sistem yang tidak dapat dihapus.
+        permissions:
+          type: array
+          description: Kunci izin yang dimiliki role.
+          items:
+            type: string
+        holderCount:
+          type: integer
+          format: int64
+          description: Jumlah penugasan aktif role ini.
+    AdminRoleList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminRole"
+    AdminRoleCreate:
+      type: object
+      description: Data pembuatan role kustom.
+      required: [slug, name, permissions]
+      properties:
+        slug:
+          type: string
+          description: Slug unik, 2–50 karakter huruf kecil, angka, atau garis bawah.
+        name:
+          type: string
+          description: Nama tampilan, 2–60 karakter.
+        description:
+          type: string
+          description: Deskripsi role.
+        permissions:
+          type: array
+          description: Kunci izin dari katalog.
+          items:
+            type: string
+    AdminRoleUpdate:
+      type: object
+      description: Perubahan role. Field yang tidak dikirim tidak berubah.
+      properties:
+        name:
+          type: string
+          description: Nama tampilan, 2–60 karakter.
+        description:
+          type: string
+          nullable: true
+          description: Deskripsi role. Kirim string kosong untuk mengosongkan.
+    AdminRolePermissionsUpdate:
+      type: object
+      required: [permissions]
+      properties:
+        permissions:
+          type: array
+          description: Himpunan izin baru, menggantikan seluruh izin role.
+          items:
+            type: string
+    AdminRoleAssign:
+      type: object
+      required: [roleSlug]
+      properties:
+        roleSlug:
+          type: string
+          description: Slug role yang diberikan, misalnya "moderator".
+        majorId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Jurusan cakupan role. Kosong berarti global.
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Waktu kedaluwarsa penugasan. Harus di masa depan.
     AdminRoleAssignment:
       type: object
       description: Satu penugasan role aktif pengguna.
@@ -1268,6 +1597,18 @@ components:
           format: date-time
           nullable: true
           description: Waktu kedaluwarsa penugasan.
+        assignedAt:
+          type: string
+          format: date-time
+          description: Waktu penugasan dibuat.
+    AdminRoleAssignmentList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminRoleAssignment"
     AdminEnrollment:
       type: object
       description: Satu riwayat kelas pengguna.

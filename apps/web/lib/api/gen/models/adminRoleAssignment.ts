@@ -29,4 +29,6 @@ export interface AdminRoleAssignment {
      * @nullable
      */
   expiresAt: string | null;
+  /** Waktu penugasan dibuat. */
+  assignedAt?: string;
 }
