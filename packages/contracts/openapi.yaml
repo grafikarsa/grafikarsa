@@ -1235,6 +1235,459 @@ paths:
                 $ref: "#/components/schemas/AuditLogPage"
         default:
           $ref: "#/components/responses/Problem"
+  /me:
+    get:
+      operationId: getMe
+      tags: [profile]
+      summary: Profil saya
+      description: Data lengkap profil milik sendiri, termasuk ketersediaan ganti username.
+      responses:
+        "200":
+          description: Profil milik sendiri.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyProfile"
+        default:
+          $ref: "#/components/responses/Problem"
+  /me/profile:
+    patch:
+      operationId: patchMeProfile
+      tags: [profile]
+      summary: Ubah profil saya
+      description: |
+        Field yang tidak dikirim tidak berubah. String di-trim; string kosong
+        pada `headline`, `bio`, dan `city` mengosongkan nilai. `teachingSubjects`
+        hanya untuk akun guru.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileUpdate"
+      responses:
+        "200":
+          description: Profil diperbarui.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyProfile"
+        default:
+          $ref: "#/components/responses/Problem"
+  /me/avatar:
+    put:
+      operationId: putMeAvatar
+      tags: [profile]
+      summary: Setel foto profil
+      description: |
+        `mediaId` harus media milik sendiri, berjenis gambar, dan ber-purpose
+        `avatar`. Kirim `null` untuk mengosongkan.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MediaSelection"
+      responses:
+        "200":
+          description: Foto profil diperbarui.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyProfile"
+        default:
+          $ref: "#/components/responses/Problem"
+  /me/banner:
+    put:
+      operationId: putMeBanner
+      tags: [profile]
+      summary: Setel banner profil
+      description: |
+        `mediaId` harus media milik sendiri, berjenis gambar, dan ber-purpose
+        `banner`. Kirim `null` untuk mengosongkan.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MediaSelection"
+      responses:
+        "200":
+          description: Banner profil diperbarui.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyProfile"
+        default:
+          $ref: "#/components/responses/Problem"
+  /me/links:
+    put:
+      operationId: putMeLinks
+      tags: [profile]
+      summary: Ganti tautan profil
+      description: Mengganti seluruh daftar tautan. Urutan mengikuti urutan kiriman.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileLinksInput"
+      responses:
+        "200":
+          description: Tautan profil diperbarui.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyProfile"
+        default:
+          $ref: "#/components/responses/Problem"
+  /me/skills:
+    put:
+      operationId: putMeSkills
+      tags: [profile]
+      summary: Ganti daftar skill
+      description: Mengganti seluruh daftar skill. Urutan mengikuti urutan kiriman.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileSkillsInput"
+      responses:
+        "200":
+          description: Skill diperbarui.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyProfile"
+        default:
+          $ref: "#/components/responses/Problem"
+  /me/username:
+    patch:
+      operationId: patchMeUsername
+      tags: [profile]
+      summary: Ganti username
+      description: |
+        Maksimal satu kali per 30 hari. Username lama dialihkan ke username baru
+        selama 90 hari. Terlalu cepat → 409 `LIMIT_REACHED`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UsernameChange"
+      responses:
+        "200":
+          description: Username diperbarui.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyProfile"
+        default:
+          $ref: "#/components/responses/Problem"
+  /me/experiences:
+    get:
+      operationId: getMeExperiences
+      tags: [profile]
+      summary: Daftar experience saya
+      responses:
+        "200":
+          description: Daftar experience milik sendiri.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExperienceList"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: postMeExperience
+      tags: [profile]
+      summary: Tambah experience
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExperienceInput"
+      responses:
+        "201":
+          description: Experience dibuat.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Experience"
+        default:
+          $ref: "#/components/responses/Problem"
+  /me/experiences/{id}:
+    patch:
+      operationId: patchMeExperience
+      tags: [profile]
+      summary: Ubah experience
+      description: Entri sistem yang dikelola sekolah tidak dapat diubah → 409.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExperienceInput"
+      responses:
+        "200":
+          description: Experience diperbarui.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Experience"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: deleteMeExperience
+      tags: [profile]
+      summary: Hapus experience
+      description: Entri sistem yang dikelola sekolah tidak dapat dihapus → 409.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Experience dihapus.
+        default:
+          $ref: "#/components/responses/Problem"
+  /users/{username}:
+    get:
+      operationId: getUser
+      tags: [users]
+      summary: Profil pengguna publik
+      description: |
+        Profil publik tanpa data identitas. Username yang sudah diganti
+        menghasilkan `301` dengan header `Location` ke profil baru selama masa
+        redirect masih berlaku. Pengguna nonaktif atau belum aktivasi → 404.
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+            maxLength: 64
+      responses:
+        "200":
+          description: Profil publik.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicProfile"
+        "301":
+          description: Username lama dialihkan ke username baru.
+          headers:
+            Location:
+              required: true
+              schema:
+                type: string
+        default:
+          $ref: "#/components/responses/Problem"
+  /users/{username}/experiences:
+    get:
+      operationId: getUserExperiences
+      tags: [users]
+      summary: Experience pengguna
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+            maxLength: 64
+      responses:
+        "200":
+          description: Daftar experience pengguna.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExperienceList"
+        default:
+          $ref: "#/components/responses/Problem"
+  /users/{username}/followers:
+    get:
+      operationId: getUserFollowers
+      tags: [users]
+      summary: Pengikut pengguna
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+            maxLength: 64
+        - name: cursor
+          in: query
+          required: false
+          description: Cursor halaman berikutnya dari `nextCursor`.
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+      responses:
+        "200":
+          description: Daftar pengikut.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserMiniPage"
+        default:
+          $ref: "#/components/responses/Problem"
+  /users/{username}/following:
+    get:
+      operationId: getUserFollowing
+      tags: [users]
+      summary: Pengguna yang diikuti
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+            maxLength: 64
+        - name: cursor
+          in: query
+          required: false
+          description: Cursor halaman berikutnya dari `nextCursor`.
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+      responses:
+        "200":
+          description: Daftar pengguna yang diikuti.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserMiniPage"
+        default:
+          $ref: "#/components/responses/Problem"
+  /users/{username}/follow:
+    put:
+      operationId: putUserFollow
+      tags: [users]
+      summary: Ikuti pengguna
+      description: Idempoten. Mengikuti diri sendiri → 422.
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+            maxLength: 64
+      responses:
+        "204":
+          description: Sudah mengikuti.
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: deleteUserFollow
+      tags: [users]
+      summary: Berhenti mengikuti pengguna
+      description: Idempoten.
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+            maxLength: 64
+      responses:
+        "204":
+          description: Tidak lagi mengikuti.
+        default:
+          $ref: "#/components/responses/Problem"
+  /users/{username}/skills/{skillSlug}/endorsement:
+    put:
+      operationId: putUserSkillEndorsement
+      tags: [users]
+      summary: Endorse skill pengguna
+      description: Idempoten. Mengendorse diri sendiri → 422.
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+            maxLength: 64
+        - name: skillSlug
+          in: path
+          required: true
+          schema:
+            type: string
+            maxLength: 60
+      responses:
+        "204":
+          description: Endorsement tercatat.
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: deleteUserSkillEndorsement
+      tags: [users]
+      summary: Batalkan endorse skill pengguna
+      description: Idempoten.
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+            maxLength: 64
+        - name: skillSlug
+          in: path
+          required: true
+          schema:
+            type: string
+            maxLength: 60
+      responses:
+        "204":
+          description: Endorsement dibatalkan.
+        default:
+          $ref: "#/components/responses/Problem"
+  /taxonomy/skills:
+    get:
+      operationId: getTaxonomySkills
+      tags: [taxonomy]
+      summary: Cari skill
+      description: Autocomplete katalog skill aktif, maksimal 20 hasil.
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 100
+      responses:
+        "200":
+          description: Daftar skill.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SkillOptionList"
+        default:
+          $ref: "#/components/responses/Problem"
 components:
   schemas:
     CsrfToken:
@@ -2236,6 +2689,419 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ImportJob"
+    ProfileLinkPlatform:
+      type: string
+      enum: [github, gitlab, behance, dribbble, artstation, youtube, instagram, tiktok, linkedin, x, figma, website]
+    SkillCategory:
+      type: string
+      enum: [design, media, software, network, engineering, logistics, hospitality, printing, soft_skill, other]
+    ExperienceKind:
+      type: string
+      enum: [education, internship, job, freelance, organization, committee, competition, certification, volunteer]
+    EmploymentType:
+      type: string
+      enum: [full_time, part_time, contract, internship, freelance]
+    ProfileStatus:
+      type: string
+      description: Status profil yang tampil publik.
+      enum: [active, alumni]
+    ProfileLink:
+      type: object
+      required: [platform, url]
+      properties:
+        platform:
+          $ref: "#/components/schemas/ProfileLinkPlatform"
+        url:
+          type: string
+          description: Tautan https, maksimal 500 karakter.
+    ProfileSkill:
+      type: object
+      required: [slug, name, category, endorsementCount, endorsedByViewer]
+      properties:
+        slug:
+          type: string
+        name:
+          type: string
+        category:
+          $ref: "#/components/schemas/SkillCategory"
+        endorsementCount:
+          type: integer
+          format: int64
+        endorsedByViewer:
+          type: boolean
+          description: Apakah viewer yang sedang melihat sudah mengendorse skill ini.
+    ProfileBadge:
+      type: object
+      required: [slug, name, description, iconKey, note, awardedAt]
+      properties:
+        slug:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        iconKey:
+          type: string
+          nullable: true
+        note:
+          type: string
+          nullable: true
+        awardedAt:
+          type: string
+          format: date-time
+    ProfileClassRef:
+      type: object
+      required: [name, majorCode]
+      properties:
+        name:
+          type: string
+          description: Nama kelas terakhir, misalnya "XI RPL B".
+        majorCode:
+          type: string
+          description: Kode jurusan kelas.
+    ProfileMajorRef:
+      type: object
+      required: [code, name]
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+    ProfileStats:
+      type: object
+      required: [followers, following]
+      properties:
+        followers:
+          type: integer
+          format: int64
+        following:
+          type: integer
+          format: int64
+    ProfileViewer:
+      type: object
+      required: [following, isSelf]
+      properties:
+        following:
+          type: boolean
+        isSelf:
+          type: boolean
+    PublicProfile:
+      type: object
+      required:
+        - id
+        - username
+        - displayName
+        - accountType
+        - status
+        - headline
+        - bio
+        - city
+        - avatarMediaId
+        - avatarUrl
+        - bannerMediaId
+        - bannerUrl
+        - links
+        - skills
+        - badges
+        - currentClass
+        - teacherMajors
+        - teachingSubjects
+        - stats
+        - viewer
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        displayName:
+          type: string
+        accountType:
+          $ref: "#/components/schemas/AccountType"
+        status:
+          $ref: "#/components/schemas/ProfileStatus"
+        headline:
+          type: string
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+        city:
+          type: string
+          nullable: true
+        avatarMediaId:
+          type: string
+          format: uuid
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+          description: URL publik avatar. Belum tersedia; selalu null untuk sekarang.
+        bannerMediaId:
+          type: string
+          format: uuid
+          nullable: true
+        bannerUrl:
+          type: string
+          nullable: true
+          description: URL publik banner. Belum tersedia; selalu null untuk sekarang.
+        links:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProfileLink"
+        skills:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProfileSkill"
+        badges:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProfileBadge"
+        currentClass:
+          allOf:
+            - $ref: "#/components/schemas/ProfileClassRef"
+          nullable: true
+          description: Kelas terakhir siswa atau alumni.
+        teacherMajors:
+          type: array
+          description: Jurusan yang diampu guru.
+          items:
+            $ref: "#/components/schemas/ProfileMajorRef"
+        teachingSubjects:
+          type: array
+          description: Mata pelajaran yang diampu guru.
+          items:
+            type: string
+        stats:
+          $ref: "#/components/schemas/ProfileStats"
+        viewer:
+          $ref: "#/components/schemas/ProfileViewer"
+    MyProfile:
+      allOf:
+        - $ref: "#/components/schemas/PublicProfile"
+        - type: object
+          required: [usernameChangeAvailableAt]
+          properties:
+            usernameChangeAvailableAt:
+              type: string
+              format: date-time
+              nullable: true
+              description: |
+                Waktu paling cepat username dapat diganti lagi. Null berarti
+                dapat diganti sekarang.
+    ProfileUpdate:
+      type: object
+      description: Perubahan profil. Field yang tidak dikirim tidak berubah.
+      properties:
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        headline:
+          type: string
+          maxLength: 120
+        bio:
+          type: string
+          maxLength: 1000
+        city:
+          type: string
+          maxLength: 80
+        teachingSubjects:
+          type: array
+          maxItems: 10
+          items:
+            type: string
+            maxLength: 60
+    MediaSelection:
+      type: object
+      required: [mediaId]
+      properties:
+        mediaId:
+          type: string
+          format: uuid
+          nullable: true
+          description: ID media. Null mengosongkan pilihan.
+    ProfileLinksInput:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          maxItems: 10
+          items:
+            $ref: "#/components/schemas/ProfileLink"
+    ProfileSkillsInput:
+      type: object
+      required: [skills]
+      properties:
+        skills:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            description: Slug skill dari katalog.
+    UsernameChange:
+      type: object
+      required: [username]
+      properties:
+        username:
+          type: string
+          maxLength: 64
+    ExperienceSkill:
+      type: object
+      required: [slug, name]
+      properties:
+        slug:
+          type: string
+        name:
+          type: string
+    Experience:
+      type: object
+      required:
+        - id
+        - kind
+        - title
+        - organization
+        - location
+        - employmentType
+        - startMonth
+        - endMonth
+        - isCurrent
+        - description
+        - credentialUrl
+        - isSystem
+        - skills
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          $ref: "#/components/schemas/ExperienceKind"
+        title:
+          type: string
+        organization:
+          type: string
+        location:
+          type: string
+          nullable: true
+        employmentType:
+          allOf:
+            - $ref: "#/components/schemas/EmploymentType"
+          nullable: true
+        startMonth:
+          type: string
+          description: Bulan mulai dalam format `YYYY-MM`.
+          pattern: "^[0-9]{4}-(0[1-9]|1[0-2])$"
+        endMonth:
+          type: string
+          nullable: true
+          description: Bulan selesai dalam format `YYYY-MM`, null jika masih berjalan.
+          pattern: "^[0-9]{4}-(0[1-9]|1[0-2])$"
+        isCurrent:
+          type: boolean
+        description:
+          type: string
+          nullable: true
+        credentialUrl:
+          type: string
+          nullable: true
+        isSystem:
+          type: boolean
+          description: Entri otomatis dari data akademik yang dikelola sekolah.
+        skills:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExperienceSkill"
+    ExperienceInput:
+      type: object
+      description: Data experience yang dikirim penuh saat membuat atau mengubah.
+      required: [kind, title, organization, startMonth, isCurrent]
+      properties:
+        kind:
+          $ref: "#/components/schemas/ExperienceKind"
+        title:
+          type: string
+          maxLength: 120
+        organization:
+          type: string
+          maxLength: 120
+        location:
+          type: string
+          maxLength: 120
+        employmentType:
+          $ref: "#/components/schemas/EmploymentType"
+        startMonth:
+          type: string
+          pattern: "^[0-9]{4}-(0[1-9]|1[0-2])$"
+        endMonth:
+          type: string
+          nullable: true
+          pattern: "^[0-9]{4}-(0[1-9]|1[0-2])$"
+        isCurrent:
+          type: boolean
+        description:
+          type: string
+          maxLength: 2000
+        credentialUrl:
+          type: string
+          maxLength: 500
+        skills:
+          type: array
+          maxItems: 10
+          items:
+            type: string
+    ExperienceList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Experience"
+    UserMini:
+      type: object
+      required: [username, displayName, accountType, avatarMediaId]
+      properties:
+        username:
+          type: string
+        displayName:
+          type: string
+        accountType:
+          $ref: "#/components/schemas/AccountType"
+        avatarMediaId:
+          type: string
+          format: uuid
+          nullable: true
+    UserMiniPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserMini"
+        nextCursor:
+          type: string
+          nullable: true
+          description: Cursor halaman berikutnya. Kosong pada halaman terakhir.
+    SkillOption:
+      type: object
+      required: [slug, name, category]
+      properties:
+        slug:
+          type: string
+        name:
+          type: string
+        category:
+          $ref: "#/components/schemas/SkillCategory"
+    SkillOptionList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SkillOption"
     Pong:
       type: object
       required:

@@ -5,4 +5,7 @@ export * from './admin-imports/admin-imports';
 export * from './admin-roles/admin-roles';
 export * from './admin-users/admin-users';
 export * from './auth/auth';
+export * from './profile/profile';
 export * from './system/system';
+export * from './taxonomy/taxonomy';
+export * from './users/users';

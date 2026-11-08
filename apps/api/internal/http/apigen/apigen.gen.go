@@ -106,6 +106,72 @@ func (e ClassCreateGrade) Valid() bool {
 	}
 }
 
+// Defines values for EmploymentType.
+const (
+	EmploymentTypeContract   EmploymentType = "contract"
+	EmploymentTypeFreelance  EmploymentType = "freelance"
+	EmploymentTypeFullTime   EmploymentType = "full_time"
+	EmploymentTypeInternship EmploymentType = "internship"
+	EmploymentTypePartTime   EmploymentType = "part_time"
+)
+
+// Valid indicates whether the value is a known member of the EmploymentType enum.
+func (e EmploymentType) Valid() bool {
+	switch e {
+	case EmploymentTypeContract:
+		return true
+	case EmploymentTypeFreelance:
+		return true
+	case EmploymentTypeFullTime:
+		return true
+	case EmploymentTypeInternship:
+		return true
+	case EmploymentTypePartTime:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ExperienceKind.
+const (
+	ExperienceKindCertification ExperienceKind = "certification"
+	ExperienceKindCommittee     ExperienceKind = "committee"
+	ExperienceKindCompetition   ExperienceKind = "competition"
+	ExperienceKindEducation     ExperienceKind = "education"
+	ExperienceKindFreelance     ExperienceKind = "freelance"
+	ExperienceKindInternship    ExperienceKind = "internship"
+	ExperienceKindJob           ExperienceKind = "job"
+	ExperienceKindOrganization  ExperienceKind = "organization"
+	ExperienceKindVolunteer     ExperienceKind = "volunteer"
+)
+
+// Valid indicates whether the value is a known member of the ExperienceKind enum.
+func (e ExperienceKind) Valid() bool {
+	switch e {
+	case ExperienceKindCertification:
+		return true
+	case ExperienceKindCommittee:
+		return true
+	case ExperienceKindCompetition:
+		return true
+	case ExperienceKindEducation:
+		return true
+	case ExperienceKindFreelance:
+		return true
+	case ExperienceKindInternship:
+		return true
+	case ExperienceKindJob:
+		return true
+	case ExperienceKindOrganization:
+		return true
+	case ExperienceKindVolunteer:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ImportKind.
 const (
 	ImportKindStaff    ImportKind = "staff"
@@ -175,6 +241,114 @@ func (e NextStep) Valid() bool {
 	case NextStepChangePassword:
 		return true
 	case NextStepNone:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProfileLinkPlatform.
+const (
+	ProfileLinkPlatformArtstation ProfileLinkPlatform = "artstation"
+	ProfileLinkPlatformBehance    ProfileLinkPlatform = "behance"
+	ProfileLinkPlatformDribbble   ProfileLinkPlatform = "dribbble"
+	ProfileLinkPlatformFigma      ProfileLinkPlatform = "figma"
+	ProfileLinkPlatformGithub     ProfileLinkPlatform = "github"
+	ProfileLinkPlatformGitlab     ProfileLinkPlatform = "gitlab"
+	ProfileLinkPlatformInstagram  ProfileLinkPlatform = "instagram"
+	ProfileLinkPlatformLinkedin   ProfileLinkPlatform = "linkedin"
+	ProfileLinkPlatformTiktok     ProfileLinkPlatform = "tiktok"
+	ProfileLinkPlatformWebsite    ProfileLinkPlatform = "website"
+	ProfileLinkPlatformX          ProfileLinkPlatform = "x"
+	ProfileLinkPlatformYoutube    ProfileLinkPlatform = "youtube"
+)
+
+// Valid indicates whether the value is a known member of the ProfileLinkPlatform enum.
+func (e ProfileLinkPlatform) Valid() bool {
+	switch e {
+	case ProfileLinkPlatformArtstation:
+		return true
+	case ProfileLinkPlatformBehance:
+		return true
+	case ProfileLinkPlatformDribbble:
+		return true
+	case ProfileLinkPlatformFigma:
+		return true
+	case ProfileLinkPlatformGithub:
+		return true
+	case ProfileLinkPlatformGitlab:
+		return true
+	case ProfileLinkPlatformInstagram:
+		return true
+	case ProfileLinkPlatformLinkedin:
+		return true
+	case ProfileLinkPlatformTiktok:
+		return true
+	case ProfileLinkPlatformWebsite:
+		return true
+	case ProfileLinkPlatformX:
+		return true
+	case ProfileLinkPlatformYoutube:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProfileStatus.
+const (
+	ProfileStatusActive ProfileStatus = "active"
+	ProfileStatusAlumni ProfileStatus = "alumni"
+)
+
+// Valid indicates whether the value is a known member of the ProfileStatus enum.
+func (e ProfileStatus) Valid() bool {
+	switch e {
+	case ProfileStatusActive:
+		return true
+	case ProfileStatusAlumni:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SkillCategory.
+const (
+	SkillCategoryDesign      SkillCategory = "design"
+	SkillCategoryEngineering SkillCategory = "engineering"
+	SkillCategoryHospitality SkillCategory = "hospitality"
+	SkillCategoryLogistics   SkillCategory = "logistics"
+	SkillCategoryMedia       SkillCategory = "media"
+	SkillCategoryNetwork     SkillCategory = "network"
+	SkillCategoryOther       SkillCategory = "other"
+	SkillCategoryPrinting    SkillCategory = "printing"
+	SkillCategorySoftSkill   SkillCategory = "soft_skill"
+	SkillCategorySoftware    SkillCategory = "software"
+)
+
+// Valid indicates whether the value is a known member of the SkillCategory enum.
+func (e SkillCategory) Valid() bool {
+	switch e {
+	case SkillCategoryDesign:
+		return true
+	case SkillCategoryEngineering:
+		return true
+	case SkillCategoryHospitality:
+		return true
+	case SkillCategoryLogistics:
+		return true
+	case SkillCategoryMedia:
+		return true
+	case SkillCategoryNetwork:
+		return true
+	case SkillCategoryOther:
+		return true
+	case SkillCategoryPrinting:
+		return true
+	case SkillCategorySoftSkill:
+		return true
+	case SkillCategorySoftware:
 		return true
 	default:
 		return false
@@ -677,6 +851,61 @@ type CsrfToken struct {
 	CsrfToken string `json:"csrfToken"`
 }
 
+// EmploymentType defines model for EmploymentType.
+type EmploymentType string
+
+// Experience defines model for Experience.
+type Experience struct {
+	CredentialUrl  *string         `json:"credentialUrl"`
+	Description    *string         `json:"description"`
+	EmploymentType *EmploymentType `json:"employmentType"`
+
+	// EndMonth Bulan selesai dalam format `YYYY-MM`, null jika masih berjalan.
+	EndMonth  *string            `json:"endMonth"`
+	Id        openapi_types.UUID `json:"id"`
+	IsCurrent bool               `json:"isCurrent"`
+
+	// IsSystem Entri otomatis dari data akademik yang dikelola sekolah.
+	IsSystem     bool              `json:"isSystem"`
+	Kind         ExperienceKind    `json:"kind"`
+	Location     *string           `json:"location"`
+	Organization string            `json:"organization"`
+	Skills       []ExperienceSkill `json:"skills"`
+
+	// StartMonth Bulan mulai dalam format `YYYY-MM`.
+	StartMonth string `json:"startMonth"`
+	Title      string `json:"title"`
+}
+
+// ExperienceInput Data experience yang dikirim penuh saat membuat atau mengubah.
+type ExperienceInput struct {
+	CredentialUrl  *string         `json:"credentialUrl,omitempty"`
+	Description    *string         `json:"description,omitempty"`
+	EmploymentType *EmploymentType `json:"employmentType,omitempty"`
+	EndMonth       *string         `json:"endMonth,omitempty"`
+	IsCurrent      bool            `json:"isCurrent"`
+	Kind           ExperienceKind  `json:"kind"`
+	Location       *string         `json:"location,omitempty"`
+	Organization   string          `json:"organization"`
+	Skills         *[]string       `json:"skills,omitempty"`
+	StartMonth     string          `json:"startMonth"`
+	Title          string          `json:"title"`
+}
+
+// ExperienceKind defines model for ExperienceKind.
+type ExperienceKind string
+
+// ExperienceList defines model for ExperienceList.
+type ExperienceList struct {
+	Items []Experience `json:"items"`
+}
+
+// ExperienceSkill defines model for ExperienceSkill.
+type ExperienceSkill struct {
+	Name string `json:"name"`
+	Slug string `json:"slug"`
+}
+
 // FieldError defines model for FieldError.
 type FieldError struct {
 	Code    string  `json:"code"`
@@ -822,6 +1051,52 @@ type MajorUpdate struct {
 	SortOrder *int `json:"sortOrder,omitempty"`
 }
 
+// MediaSelection defines model for MediaSelection.
+type MediaSelection struct {
+	// MediaId ID media. Null mengosongkan pilihan.
+	MediaId *openapi_types.UUID `json:"mediaId"`
+}
+
+// MyProfile defines model for MyProfile.
+type MyProfile struct {
+	AccountType   AccountType         `json:"accountType"`
+	AvatarMediaId *openapi_types.UUID `json:"avatarMediaId"`
+
+	// AvatarUrl URL publik avatar. Belum tersedia; selalu null untuk sekarang.
+	AvatarUrl     *string             `json:"avatarUrl"`
+	Badges        []ProfileBadge      `json:"badges"`
+	BannerMediaId *openapi_types.UUID `json:"bannerMediaId"`
+
+	// BannerUrl URL publik banner. Belum tersedia; selalu null untuk sekarang.
+	BannerUrl *string `json:"bannerUrl"`
+	Bio       *string `json:"bio"`
+	City      *string `json:"city"`
+
+	// CurrentClass Kelas terakhir siswa atau alumni.
+	CurrentClass *ProfileClassRef   `json:"currentClass"`
+	DisplayName  string             `json:"displayName"`
+	Headline     *string            `json:"headline"`
+	Id           openapi_types.UUID `json:"id"`
+	Links        []ProfileLink      `json:"links"`
+	Skills       []ProfileSkill     `json:"skills"`
+	Stats        ProfileStats       `json:"stats"`
+
+	// Status Status profil yang tampil publik.
+	Status ProfileStatus `json:"status"`
+
+	// TeacherMajors Jurusan yang diampu guru.
+	TeacherMajors []ProfileMajorRef `json:"teacherMajors"`
+
+	// TeachingSubjects Mata pelajaran yang diampu guru.
+	TeachingSubjects []string `json:"teachingSubjects"`
+	Username         string   `json:"username"`
+
+	// UsernameChangeAvailableAt Waktu paling cepat username dapat diganti lagi. Null berarti
+	// dapat diganti sekarang.
+	UsernameChangeAvailableAt *time.Time    `json:"usernameChangeAvailableAt"`
+	Viewer                    ProfileViewer `json:"viewer"`
+}
+
 // NextStep Halaman wajib berikutnya. `activate` → /aktivasi, `change_password` → /ganti-sandi,
 // `none` → bebas. Selama bukan `none`, endpoint lain menolak dengan 403
 // `ACTIVATION_REQUIRED` / `PASSWORD_CHANGE_REQUIRED`.
@@ -847,6 +1122,123 @@ type Problem struct {
 	Status    int           `json:"status"`
 	Title     string        `json:"title"`
 	Type      string        `json:"type"`
+}
+
+// ProfileBadge defines model for ProfileBadge.
+type ProfileBadge struct {
+	AwardedAt   time.Time `json:"awardedAt"`
+	Description string    `json:"description"`
+	IconKey     *string   `json:"iconKey"`
+	Name        string    `json:"name"`
+	Note        *string   `json:"note"`
+	Slug        string    `json:"slug"`
+}
+
+// ProfileClassRef defines model for ProfileClassRef.
+type ProfileClassRef struct {
+	// MajorCode Kode jurusan kelas.
+	MajorCode string `json:"majorCode"`
+
+	// Name Nama kelas terakhir, misalnya "XI RPL B".
+	Name string `json:"name"`
+}
+
+// ProfileLink defines model for ProfileLink.
+type ProfileLink struct {
+	Platform ProfileLinkPlatform `json:"platform"`
+
+	// Url Tautan https, maksimal 500 karakter.
+	Url string `json:"url"`
+}
+
+// ProfileLinkPlatform defines model for ProfileLinkPlatform.
+type ProfileLinkPlatform string
+
+// ProfileLinksInput defines model for ProfileLinksInput.
+type ProfileLinksInput struct {
+	Items []ProfileLink `json:"items"`
+}
+
+// ProfileMajorRef defines model for ProfileMajorRef.
+type ProfileMajorRef struct {
+	Code string `json:"code"`
+	Name string `json:"name"`
+}
+
+// ProfileSkill defines model for ProfileSkill.
+type ProfileSkill struct {
+	Category SkillCategory `json:"category"`
+
+	// EndorsedByViewer Apakah viewer yang sedang melihat sudah mengendorse skill ini.
+	EndorsedByViewer bool   `json:"endorsedByViewer"`
+	EndorsementCount int64  `json:"endorsementCount"`
+	Name             string `json:"name"`
+	Slug             string `json:"slug"`
+}
+
+// ProfileSkillsInput defines model for ProfileSkillsInput.
+type ProfileSkillsInput struct {
+	Skills []string `json:"skills"`
+}
+
+// ProfileStats defines model for ProfileStats.
+type ProfileStats struct {
+	Followers int64 `json:"followers"`
+	Following int64 `json:"following"`
+}
+
+// ProfileStatus Status profil yang tampil publik.
+type ProfileStatus string
+
+// ProfileUpdate Perubahan profil. Field yang tidak dikirim tidak berubah.
+type ProfileUpdate struct {
+	Bio              *string   `json:"bio,omitempty"`
+	City             *string   `json:"city,omitempty"`
+	DisplayName      *string   `json:"displayName,omitempty"`
+	Headline         *string   `json:"headline,omitempty"`
+	TeachingSubjects *[]string `json:"teachingSubjects,omitempty"`
+}
+
+// ProfileViewer defines model for ProfileViewer.
+type ProfileViewer struct {
+	Following bool `json:"following"`
+	IsSelf    bool `json:"isSelf"`
+}
+
+// PublicProfile defines model for PublicProfile.
+type PublicProfile struct {
+	AccountType   AccountType         `json:"accountType"`
+	AvatarMediaId *openapi_types.UUID `json:"avatarMediaId"`
+
+	// AvatarUrl URL publik avatar. Belum tersedia; selalu null untuk sekarang.
+	AvatarUrl     *string             `json:"avatarUrl"`
+	Badges        []ProfileBadge      `json:"badges"`
+	BannerMediaId *openapi_types.UUID `json:"bannerMediaId"`
+
+	// BannerUrl URL publik banner. Belum tersedia; selalu null untuk sekarang.
+	BannerUrl *string `json:"bannerUrl"`
+	Bio       *string `json:"bio"`
+	City      *string `json:"city"`
+
+	// CurrentClass Kelas terakhir siswa atau alumni.
+	CurrentClass *ProfileClassRef   `json:"currentClass"`
+	DisplayName  string             `json:"displayName"`
+	Headline     *string            `json:"headline"`
+	Id           openapi_types.UUID `json:"id"`
+	Links        []ProfileLink      `json:"links"`
+	Skills       []ProfileSkill     `json:"skills"`
+	Stats        ProfileStats       `json:"stats"`
+
+	// Status Status profil yang tampil publik.
+	Status ProfileStatus `json:"status"`
+
+	// TeacherMajors Jurusan yang diampu guru.
+	TeacherMajors []ProfileMajorRef `json:"teacherMajors"`
+
+	// TeachingSubjects Mata pelajaran yang diampu guru.
+	TeachingSubjects []string      `json:"teachingSubjects"`
+	Username         string        `json:"username"`
+	Viewer           ProfileViewer `json:"viewer"`
 }
 
 // RecoverPasswordRequest defines model for RecoverPasswordRequest.
@@ -915,6 +1307,37 @@ type SessionUser struct {
 	Username *string `json:"username,omitempty"`
 }
 
+// SkillCategory defines model for SkillCategory.
+type SkillCategory string
+
+// SkillOption defines model for SkillOption.
+type SkillOption struct {
+	Category SkillCategory `json:"category"`
+	Name     string        `json:"name"`
+	Slug     string        `json:"slug"`
+}
+
+// SkillOptionList defines model for SkillOptionList.
+type SkillOptionList struct {
+	Items []SkillOption `json:"items"`
+}
+
+// UserMini defines model for UserMini.
+type UserMini struct {
+	AccountType   AccountType         `json:"accountType"`
+	AvatarMediaId *openapi_types.UUID `json:"avatarMediaId"`
+	DisplayName   string              `json:"displayName"`
+	Username      string              `json:"username"`
+}
+
+// UserMiniPage defines model for UserMiniPage.
+type UserMiniPage struct {
+	Items []UserMini `json:"items"`
+
+	// NextCursor Cursor halaman berikutnya. Kosong pada halaman terakhir.
+	NextCursor *string `json:"nextCursor"`
+}
+
 // UsernameAvailability defines model for UsernameAvailability.
 type UsernameAvailability struct {
 	Available bool                        `json:"available"`
@@ -926,6 +1349,11 @@ type UsernameAvailability struct {
 
 // UsernameAvailabilityReason defines model for UsernameAvailability.Reason.
 type UsernameAvailabilityReason string
+
+// UsernameChange defines model for UsernameChange.
+type UsernameChange struct {
+	Username string `json:"username"`
+}
 
 // GetAdminAccountCardsParams defines parameters for GetAdminAccountCards.
 type GetAdminAccountCardsParams struct {
@@ -989,6 +1417,25 @@ type GetAuthUsernameAvailabilityParams struct {
 	U string `form:"u" json:"u"`
 }
 
+// GetTaxonomySkillsParams defines parameters for GetTaxonomySkills.
+type GetTaxonomySkillsParams struct {
+	Q *string `form:"q,omitempty" json:"q,omitempty"`
+}
+
+// GetUserFollowersParams defines parameters for GetUserFollowers.
+type GetUserFollowersParams struct {
+	// Cursor Cursor halaman berikutnya dari `nextCursor`.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// GetUserFollowingParams defines parameters for GetUserFollowing.
+type GetUserFollowingParams struct {
+	// Cursor Cursor halaman berikutnya dari `nextCursor`.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // PostAdminAcademicYearJSONRequestBody defines body for PostAdminAcademicYear for application/json ContentType.
 type PostAdminAcademicYearJSONRequestBody = AcademicYearCreate
 
@@ -1045,6 +1492,30 @@ type PostAuthPasswordRecoverJSONRequestBody = RecoverPasswordRequest
 
 // PostAuthRecoveryCodesRegenerateJSONRequestBody defines body for PostAuthRecoveryCodesRegenerate for application/json ContentType.
 type PostAuthRecoveryCodesRegenerateJSONRequestBody = PasswordConfirmation
+
+// PutMeAvatarJSONRequestBody defines body for PutMeAvatar for application/json ContentType.
+type PutMeAvatarJSONRequestBody = MediaSelection
+
+// PutMeBannerJSONRequestBody defines body for PutMeBanner for application/json ContentType.
+type PutMeBannerJSONRequestBody = MediaSelection
+
+// PostMeExperienceJSONRequestBody defines body for PostMeExperience for application/json ContentType.
+type PostMeExperienceJSONRequestBody = ExperienceInput
+
+// PatchMeExperienceJSONRequestBody defines body for PatchMeExperience for application/json ContentType.
+type PatchMeExperienceJSONRequestBody = ExperienceInput
+
+// PutMeLinksJSONRequestBody defines body for PutMeLinks for application/json ContentType.
+type PutMeLinksJSONRequestBody = ProfileLinksInput
+
+// PatchMeProfileJSONRequestBody defines body for PatchMeProfile for application/json ContentType.
+type PatchMeProfileJSONRequestBody = ProfileUpdate
+
+// PutMeSkillsJSONRequestBody defines body for PutMeSkills for application/json ContentType.
+type PutMeSkillsJSONRequestBody = ProfileSkillsInput
+
+// PatchMeUsernameJSONRequestBody defines body for PatchMeUsername for application/json ContentType.
+type PatchMeUsernameJSONRequestBody = UsernameChange
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -1198,9 +1669,69 @@ type ServerInterface interface {
 	// GetMajors Daftar jurusan aktif
 	// (GET /majors)
 	GetMajors(w http.ResponseWriter, r *http.Request)
+	// GetMe Profil saya
+	// (GET /me)
+	GetMe(w http.ResponseWriter, r *http.Request)
+	// PutMeAvatar Setel foto profil
+	// (PUT /me/avatar)
+	PutMeAvatar(w http.ResponseWriter, r *http.Request)
+	// PutMeBanner Setel banner profil
+	// (PUT /me/banner)
+	PutMeBanner(w http.ResponseWriter, r *http.Request)
+	// GetMeExperiences Daftar experience saya
+	// (GET /me/experiences)
+	GetMeExperiences(w http.ResponseWriter, r *http.Request)
+	// PostMeExperience Tambah experience
+	// (POST /me/experiences)
+	PostMeExperience(w http.ResponseWriter, r *http.Request)
+	// DeleteMeExperience Hapus experience
+	// (DELETE /me/experiences/{id})
+	DeleteMeExperience(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// PatchMeExperience Ubah experience
+	// (PATCH /me/experiences/{id})
+	PatchMeExperience(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// PutMeLinks Ganti tautan profil
+	// (PUT /me/links)
+	PutMeLinks(w http.ResponseWriter, r *http.Request)
+	// PatchMeProfile Ubah profil saya
+	// (PATCH /me/profile)
+	PatchMeProfile(w http.ResponseWriter, r *http.Request)
+	// PutMeSkills Ganti daftar skill
+	// (PUT /me/skills)
+	PutMeSkills(w http.ResponseWriter, r *http.Request)
+	// PatchMeUsername Ganti username
+	// (PATCH /me/username)
+	PatchMeUsername(w http.ResponseWriter, r *http.Request)
 	// GetPing Cek API hidup
 	// (GET /ping)
 	GetPing(w http.ResponseWriter, r *http.Request)
+	// GetTaxonomySkills Cari skill
+	// (GET /taxonomy/skills)
+	GetTaxonomySkills(w http.ResponseWriter, r *http.Request, params GetTaxonomySkillsParams)
+	// GetUser Profil pengguna publik
+	// (GET /users/{username})
+	GetUser(w http.ResponseWriter, r *http.Request, username string)
+	// GetUserExperiences Experience pengguna
+	// (GET /users/{username}/experiences)
+	GetUserExperiences(w http.ResponseWriter, r *http.Request, username string)
+	// DeleteUserFollow Berhenti mengikuti pengguna
+	// (DELETE /users/{username}/follow)
+	DeleteUserFollow(w http.ResponseWriter, r *http.Request, username string)
+	// PutUserFollow Ikuti pengguna
+	// (PUT /users/{username}/follow)
+	PutUserFollow(w http.ResponseWriter, r *http.Request, username string)
+	// GetUserFollowers Pengikut pengguna
+	// (GET /users/{username}/followers)
+	GetUserFollowers(w http.ResponseWriter, r *http.Request, username string, params GetUserFollowersParams)
+	// GetUserFollowing Pengguna yang diikuti
+	// (GET /users/{username}/following)
+	GetUserFollowing(w http.ResponseWriter, r *http.Request, username string, params GetUserFollowingParams)
+	// DeleteUserSkillEndorsement Batalkan endorse skill pengguna
+	// (DELETE /users/{username}/skills/{skillSlug}/endorsement)
+	DeleteUserSkillEndorsement(w http.ResponseWriter, r *http.Request, username string, skillSlug string)
+	// PutUserSkillEndorsement Endorse skill pengguna
+	// (PUT /users/{username}/skills/{skillSlug}/endorsement)
+	PutUserSkillEndorsement(w http.ResponseWriter, r *http.Request, username string, skillSlug string)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
@@ -1507,9 +2038,129 @@ func (_ Unimplemented) GetMajors(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// GetMe Profil saya
+// (GET /me)
+func (_ Unimplemented) GetMe(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PutMeAvatar Setel foto profil
+// (PUT /me/avatar)
+func (_ Unimplemented) PutMeAvatar(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PutMeBanner Setel banner profil
+// (PUT /me/banner)
+func (_ Unimplemented) PutMeBanner(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetMeExperiences Daftar experience saya
+// (GET /me/experiences)
+func (_ Unimplemented) GetMeExperiences(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PostMeExperience Tambah experience
+// (POST /me/experiences)
+func (_ Unimplemented) PostMeExperience(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DeleteMeExperience Hapus experience
+// (DELETE /me/experiences/{id})
+func (_ Unimplemented) DeleteMeExperience(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PatchMeExperience Ubah experience
+// (PATCH /me/experiences/{id})
+func (_ Unimplemented) PatchMeExperience(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PutMeLinks Ganti tautan profil
+// (PUT /me/links)
+func (_ Unimplemented) PutMeLinks(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PatchMeProfile Ubah profil saya
+// (PATCH /me/profile)
+func (_ Unimplemented) PatchMeProfile(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PutMeSkills Ganti daftar skill
+// (PUT /me/skills)
+func (_ Unimplemented) PutMeSkills(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PatchMeUsername Ganti username
+// (PATCH /me/username)
+func (_ Unimplemented) PatchMeUsername(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // GetPing Cek API hidup
 // (GET /ping)
 func (_ Unimplemented) GetPing(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetTaxonomySkills Cari skill
+// (GET /taxonomy/skills)
+func (_ Unimplemented) GetTaxonomySkills(w http.ResponseWriter, r *http.Request, params GetTaxonomySkillsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetUser Profil pengguna publik
+// (GET /users/{username})
+func (_ Unimplemented) GetUser(w http.ResponseWriter, r *http.Request, username string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetUserExperiences Experience pengguna
+// (GET /users/{username}/experiences)
+func (_ Unimplemented) GetUserExperiences(w http.ResponseWriter, r *http.Request, username string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DeleteUserFollow Berhenti mengikuti pengguna
+// (DELETE /users/{username}/follow)
+func (_ Unimplemented) DeleteUserFollow(w http.ResponseWriter, r *http.Request, username string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PutUserFollow Ikuti pengguna
+// (PUT /users/{username}/follow)
+func (_ Unimplemented) PutUserFollow(w http.ResponseWriter, r *http.Request, username string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetUserFollowers Pengikut pengguna
+// (GET /users/{username}/followers)
+func (_ Unimplemented) GetUserFollowers(w http.ResponseWriter, r *http.Request, username string, params GetUserFollowersParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetUserFollowing Pengguna yang diikuti
+// (GET /users/{username}/following)
+func (_ Unimplemented) GetUserFollowing(w http.ResponseWriter, r *http.Request, username string, params GetUserFollowingParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DeleteUserSkillEndorsement Batalkan endorse skill pengguna
+// (DELETE /users/{username}/skills/{skillSlug}/endorsement)
+func (_ Unimplemented) DeleteUserSkillEndorsement(w http.ResponseWriter, r *http.Request, username string, skillSlug string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PutUserSkillEndorsement Endorse skill pengguna
+// (PUT /users/{username}/skills/{skillSlug}/endorsement)
+func (_ Unimplemented) PutUserSkillEndorsement(w http.ResponseWriter, r *http.Request, username string, skillSlug string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -2789,11 +3440,506 @@ func (siw *ServerInterfaceWrapper) GetMajors(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r)
 }
 
+// GetMe operation middleware
+func (siw *ServerInterfaceWrapper) GetMe(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMe(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PutMeAvatar operation middleware
+func (siw *ServerInterfaceWrapper) PutMeAvatar(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutMeAvatar(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PutMeBanner operation middleware
+func (siw *ServerInterfaceWrapper) PutMeBanner(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutMeBanner(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMeExperiences operation middleware
+func (siw *ServerInterfaceWrapper) GetMeExperiences(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMeExperiences(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostMeExperience operation middleware
+func (siw *ServerInterfaceWrapper) PostMeExperience(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostMeExperience(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteMeExperience operation middleware
+func (siw *ServerInterfaceWrapper) DeleteMeExperience(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteMeExperience(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PatchMeExperience operation middleware
+func (siw *ServerInterfaceWrapper) PatchMeExperience(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PatchMeExperience(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PutMeLinks operation middleware
+func (siw *ServerInterfaceWrapper) PutMeLinks(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutMeLinks(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PatchMeProfile operation middleware
+func (siw *ServerInterfaceWrapper) PatchMeProfile(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PatchMeProfile(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PutMeSkills operation middleware
+func (siw *ServerInterfaceWrapper) PutMeSkills(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutMeSkills(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PatchMeUsername operation middleware
+func (siw *ServerInterfaceWrapper) PatchMeUsername(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PatchMeUsername(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetPing operation middleware
 func (siw *ServerInterfaceWrapper) GetPing(w http.ResponseWriter, r *http.Request) {
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetPing(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetTaxonomySkills operation middleware
+func (siw *ServerInterfaceWrapper) GetTaxonomySkills(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetTaxonomySkillsParams
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTaxonomySkills(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetUser operation middleware
+func (siw *ServerInterfaceWrapper) GetUser(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "username" -------------
+	var username string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "username", chi.URLParam(r, "username"), &username, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "username", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetUser(w, r, username)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetUserExperiences operation middleware
+func (siw *ServerInterfaceWrapper) GetUserExperiences(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "username" -------------
+	var username string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "username", chi.URLParam(r, "username"), &username, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "username", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetUserExperiences(w, r, username)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteUserFollow operation middleware
+func (siw *ServerInterfaceWrapper) DeleteUserFollow(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "username" -------------
+	var username string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "username", chi.URLParam(r, "username"), &username, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "username", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteUserFollow(w, r, username)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PutUserFollow operation middleware
+func (siw *ServerInterfaceWrapper) PutUserFollow(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "username" -------------
+	var username string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "username", chi.URLParam(r, "username"), &username, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "username", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutUserFollow(w, r, username)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetUserFollowers operation middleware
+func (siw *ServerInterfaceWrapper) GetUserFollowers(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "username" -------------
+	var username string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "username", chi.URLParam(r, "username"), &username, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "username", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetUserFollowersParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetUserFollowers(w, r, username, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetUserFollowing operation middleware
+func (siw *ServerInterfaceWrapper) GetUserFollowing(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "username" -------------
+	var username string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "username", chi.URLParam(r, "username"), &username, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "username", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetUserFollowingParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetUserFollowing(w, r, username, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteUserSkillEndorsement operation middleware
+func (siw *ServerInterfaceWrapper) DeleteUserSkillEndorsement(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "username" -------------
+	var username string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "username", chi.URLParam(r, "username"), &username, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "username", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "skillSlug" -------------
+	var skillSlug string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "skillSlug", chi.URLParam(r, "skillSlug"), &skillSlug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "skillSlug", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteUserSkillEndorsement(w, r, username, skillSlug)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PutUserSkillEndorsement operation middleware
+func (siw *ServerInterfaceWrapper) PutUserSkillEndorsement(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "username" -------------
+	var username string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "username", chi.URLParam(r, "username"), &username, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "username", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "skillSlug" -------------
+	var skillSlug string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "skillSlug", chi.URLParam(r, "skillSlug"), &skillSlug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "skillSlug", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutUserSkillEndorsement(w, r, username, skillSlug)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3068,6 +4214,66 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/audit-logs", wrapper.GetAdminAuditLogs)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me", wrapper.GetMe)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/me/profile", wrapper.PatchMeProfile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/me/avatar", wrapper.PutMeAvatar)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/me/banner", wrapper.PutMeBanner)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/me/links", wrapper.PutMeLinks)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/me/skills", wrapper.PutMeSkills)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/me/username", wrapper.PatchMeUsername)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/experiences", wrapper.GetMeExperiences)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/me/experiences", wrapper.PostMeExperience)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/me/experiences/{id}", wrapper.DeleteMeExperience)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/me/experiences/{id}", wrapper.PatchMeExperience)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/users/{username}", wrapper.GetUser)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/users/{username}/experiences", wrapper.GetUserExperiences)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/users/{username}/followers", wrapper.GetUserFollowers)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/users/{username}/following", wrapper.GetUserFollowing)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/users/{username}/follow", wrapper.DeleteUserFollow)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/users/{username}/follow", wrapper.PutUserFollow)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/users/{username}/skills/{skillSlug}/endorsement", wrapper.DeleteUserSkillEndorsement)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/users/{username}/skills/{skillSlug}/endorsement", wrapper.PutUserSkillEndorsement)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/taxonomy/skills", wrapper.GetTaxonomySkills)
 	})
 
 	return r
@@ -4963,6 +6169,428 @@ func (response GetMajorsdefaultApplicationProblemPlusJSONResponse) VisitGetMajor
 	return err
 }
 
+type GetMeRequestObject struct {
+}
+
+type GetMeResponseObject interface {
+	VisitGetMeResponse(w http.ResponseWriter) error
+}
+
+type GetMe200JSONResponse MyProfile
+
+func (response GetMe200JSONResponse) VisitGetMeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetMedefaultApplicationProblemPlusJSONResponse) VisitGetMeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutMeAvatarRequestObject struct {
+	Body *PutMeAvatarJSONRequestBody
+}
+
+type PutMeAvatarResponseObject interface {
+	VisitPutMeAvatarResponse(w http.ResponseWriter) error
+}
+
+type PutMeAvatar200JSONResponse MyProfile
+
+func (response PutMeAvatar200JSONResponse) VisitPutMeAvatarResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutMeAvatardefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PutMeAvatardefaultApplicationProblemPlusJSONResponse) VisitPutMeAvatarResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutMeBannerRequestObject struct {
+	Body *PutMeBannerJSONRequestBody
+}
+
+type PutMeBannerResponseObject interface {
+	VisitPutMeBannerResponse(w http.ResponseWriter) error
+}
+
+type PutMeBanner200JSONResponse MyProfile
+
+func (response PutMeBanner200JSONResponse) VisitPutMeBannerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutMeBannerdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PutMeBannerdefaultApplicationProblemPlusJSONResponse) VisitPutMeBannerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMeExperiencesRequestObject struct {
+}
+
+type GetMeExperiencesResponseObject interface {
+	VisitGetMeExperiencesResponse(w http.ResponseWriter) error
+}
+
+type GetMeExperiences200JSONResponse ExperienceList
+
+func (response GetMeExperiences200JSONResponse) VisitGetMeExperiencesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMeExperiencesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetMeExperiencesdefaultApplicationProblemPlusJSONResponse) VisitGetMeExperiencesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostMeExperienceRequestObject struct {
+	Body *PostMeExperienceJSONRequestBody
+}
+
+type PostMeExperienceResponseObject interface {
+	VisitPostMeExperienceResponse(w http.ResponseWriter) error
+}
+
+type PostMeExperience201JSONResponse Experience
+
+func (response PostMeExperience201JSONResponse) VisitPostMeExperienceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PostMeExperiencedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PostMeExperiencedefaultApplicationProblemPlusJSONResponse) VisitPostMeExperienceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteMeExperienceRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type DeleteMeExperienceResponseObject interface {
+	VisitDeleteMeExperienceResponse(w http.ResponseWriter) error
+}
+
+type DeleteMeExperience204Response struct {
+}
+
+func (response DeleteMeExperience204Response) VisitDeleteMeExperienceResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteMeExperiencedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DeleteMeExperiencedefaultApplicationProblemPlusJSONResponse) VisitDeleteMeExperienceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchMeExperienceRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *PatchMeExperienceJSONRequestBody
+}
+
+type PatchMeExperienceResponseObject interface {
+	VisitPatchMeExperienceResponse(w http.ResponseWriter) error
+}
+
+type PatchMeExperience200JSONResponse Experience
+
+func (response PatchMeExperience200JSONResponse) VisitPatchMeExperienceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchMeExperiencedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PatchMeExperiencedefaultApplicationProblemPlusJSONResponse) VisitPatchMeExperienceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutMeLinksRequestObject struct {
+	Body *PutMeLinksJSONRequestBody
+}
+
+type PutMeLinksResponseObject interface {
+	VisitPutMeLinksResponse(w http.ResponseWriter) error
+}
+
+type PutMeLinks200JSONResponse MyProfile
+
+func (response PutMeLinks200JSONResponse) VisitPutMeLinksResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutMeLinksdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PutMeLinksdefaultApplicationProblemPlusJSONResponse) VisitPutMeLinksResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchMeProfileRequestObject struct {
+	Body *PatchMeProfileJSONRequestBody
+}
+
+type PatchMeProfileResponseObject interface {
+	VisitPatchMeProfileResponse(w http.ResponseWriter) error
+}
+
+type PatchMeProfile200JSONResponse MyProfile
+
+func (response PatchMeProfile200JSONResponse) VisitPatchMeProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchMeProfiledefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PatchMeProfiledefaultApplicationProblemPlusJSONResponse) VisitPatchMeProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutMeSkillsRequestObject struct {
+	Body *PutMeSkillsJSONRequestBody
+}
+
+type PutMeSkillsResponseObject interface {
+	VisitPutMeSkillsResponse(w http.ResponseWriter) error
+}
+
+type PutMeSkills200JSONResponse MyProfile
+
+func (response PutMeSkills200JSONResponse) VisitPutMeSkillsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutMeSkillsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PutMeSkillsdefaultApplicationProblemPlusJSONResponse) VisitPutMeSkillsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchMeUsernameRequestObject struct {
+	Body *PatchMeUsernameJSONRequestBody
+}
+
+type PatchMeUsernameResponseObject interface {
+	VisitPatchMeUsernameResponse(w http.ResponseWriter) error
+}
+
+type PatchMeUsername200JSONResponse MyProfile
+
+func (response PatchMeUsername200JSONResponse) VisitPatchMeUsernameResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchMeUsernamedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PatchMeUsernamedefaultApplicationProblemPlusJSONResponse) VisitPatchMeUsernameResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetPingRequestObject struct {
 }
 
@@ -4990,6 +6618,351 @@ type GetPingdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response GetPingdefaultApplicationProblemPlusJSONResponse) VisitGetPingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTaxonomySkillsRequestObject struct {
+	Params GetTaxonomySkillsParams
+}
+
+type GetTaxonomySkillsResponseObject interface {
+	VisitGetTaxonomySkillsResponse(w http.ResponseWriter) error
+}
+
+type GetTaxonomySkills200JSONResponse SkillOptionList
+
+func (response GetTaxonomySkills200JSONResponse) VisitGetTaxonomySkillsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTaxonomySkillsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetTaxonomySkillsdefaultApplicationProblemPlusJSONResponse) VisitGetTaxonomySkillsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetUserRequestObject struct {
+	Username string `json:"username"`
+}
+
+type GetUserResponseObject interface {
+	VisitGetUserResponse(w http.ResponseWriter) error
+}
+
+type GetUser200JSONResponse PublicProfile
+
+func (response GetUser200JSONResponse) VisitGetUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetUser301ResponseHeaders struct {
+	Location string
+}
+
+type GetUser301Response struct {
+	Headers GetUser301ResponseHeaders
+}
+
+func (response GetUser301Response) VisitGetUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Location", fmt.Sprint(response.Headers.Location))
+	w.WriteHeader(301)
+	return nil
+}
+
+type GetUserdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetUserdefaultApplicationProblemPlusJSONResponse) VisitGetUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetUserExperiencesRequestObject struct {
+	Username string `json:"username"`
+}
+
+type GetUserExperiencesResponseObject interface {
+	VisitGetUserExperiencesResponse(w http.ResponseWriter) error
+}
+
+type GetUserExperiences200JSONResponse ExperienceList
+
+func (response GetUserExperiences200JSONResponse) VisitGetUserExperiencesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetUserExperiencesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetUserExperiencesdefaultApplicationProblemPlusJSONResponse) VisitGetUserExperiencesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteUserFollowRequestObject struct {
+	Username string `json:"username"`
+}
+
+type DeleteUserFollowResponseObject interface {
+	VisitDeleteUserFollowResponse(w http.ResponseWriter) error
+}
+
+type DeleteUserFollow204Response struct {
+}
+
+func (response DeleteUserFollow204Response) VisitDeleteUserFollowResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteUserFollowdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DeleteUserFollowdefaultApplicationProblemPlusJSONResponse) VisitDeleteUserFollowResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutUserFollowRequestObject struct {
+	Username string `json:"username"`
+}
+
+type PutUserFollowResponseObject interface {
+	VisitPutUserFollowResponse(w http.ResponseWriter) error
+}
+
+type PutUserFollow204Response struct {
+}
+
+func (response PutUserFollow204Response) VisitPutUserFollowResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PutUserFollowdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PutUserFollowdefaultApplicationProblemPlusJSONResponse) VisitPutUserFollowResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetUserFollowersRequestObject struct {
+	Username string `json:"username"`
+	Params   GetUserFollowersParams
+}
+
+type GetUserFollowersResponseObject interface {
+	VisitGetUserFollowersResponse(w http.ResponseWriter) error
+}
+
+type GetUserFollowers200JSONResponse UserMiniPage
+
+func (response GetUserFollowers200JSONResponse) VisitGetUserFollowersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetUserFollowersdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetUserFollowersdefaultApplicationProblemPlusJSONResponse) VisitGetUserFollowersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetUserFollowingRequestObject struct {
+	Username string `json:"username"`
+	Params   GetUserFollowingParams
+}
+
+type GetUserFollowingResponseObject interface {
+	VisitGetUserFollowingResponse(w http.ResponseWriter) error
+}
+
+type GetUserFollowing200JSONResponse UserMiniPage
+
+func (response GetUserFollowing200JSONResponse) VisitGetUserFollowingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetUserFollowingdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetUserFollowingdefaultApplicationProblemPlusJSONResponse) VisitGetUserFollowingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteUserSkillEndorsementRequestObject struct {
+	Username  string `json:"username"`
+	SkillSlug string `json:"skillSlug"`
+}
+
+type DeleteUserSkillEndorsementResponseObject interface {
+	VisitDeleteUserSkillEndorsementResponse(w http.ResponseWriter) error
+}
+
+type DeleteUserSkillEndorsement204Response struct {
+}
+
+func (response DeleteUserSkillEndorsement204Response) VisitDeleteUserSkillEndorsementResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteUserSkillEndorsementdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DeleteUserSkillEndorsementdefaultApplicationProblemPlusJSONResponse) VisitDeleteUserSkillEndorsementResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutUserSkillEndorsementRequestObject struct {
+	Username  string `json:"username"`
+	SkillSlug string `json:"skillSlug"`
+}
+
+type PutUserSkillEndorsementResponseObject interface {
+	VisitPutUserSkillEndorsementResponse(w http.ResponseWriter) error
+}
+
+type PutUserSkillEndorsement204Response struct {
+}
+
+func (response PutUserSkillEndorsement204Response) VisitPutUserSkillEndorsementResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PutUserSkillEndorsementdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response PutUserSkillEndorsementdefaultApplicationProblemPlusJSONResponse) VisitPutUserSkillEndorsementResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -5153,9 +7126,69 @@ type StrictServerInterface interface {
 	// GetMajors Daftar jurusan aktif
 	// (GET /majors)
 	GetMajors(ctx context.Context, request GetMajorsRequestObject) (GetMajorsResponseObject, error)
+	// GetMe Profil saya
+	// (GET /me)
+	GetMe(ctx context.Context, request GetMeRequestObject) (GetMeResponseObject, error)
+	// PutMeAvatar Setel foto profil
+	// (PUT /me/avatar)
+	PutMeAvatar(ctx context.Context, request PutMeAvatarRequestObject) (PutMeAvatarResponseObject, error)
+	// PutMeBanner Setel banner profil
+	// (PUT /me/banner)
+	PutMeBanner(ctx context.Context, request PutMeBannerRequestObject) (PutMeBannerResponseObject, error)
+	// GetMeExperiences Daftar experience saya
+	// (GET /me/experiences)
+	GetMeExperiences(ctx context.Context, request GetMeExperiencesRequestObject) (GetMeExperiencesResponseObject, error)
+	// PostMeExperience Tambah experience
+	// (POST /me/experiences)
+	PostMeExperience(ctx context.Context, request PostMeExperienceRequestObject) (PostMeExperienceResponseObject, error)
+	// DeleteMeExperience Hapus experience
+	// (DELETE /me/experiences/{id})
+	DeleteMeExperience(ctx context.Context, request DeleteMeExperienceRequestObject) (DeleteMeExperienceResponseObject, error)
+	// PatchMeExperience Ubah experience
+	// (PATCH /me/experiences/{id})
+	PatchMeExperience(ctx context.Context, request PatchMeExperienceRequestObject) (PatchMeExperienceResponseObject, error)
+	// PutMeLinks Ganti tautan profil
+	// (PUT /me/links)
+	PutMeLinks(ctx context.Context, request PutMeLinksRequestObject) (PutMeLinksResponseObject, error)
+	// PatchMeProfile Ubah profil saya
+	// (PATCH /me/profile)
+	PatchMeProfile(ctx context.Context, request PatchMeProfileRequestObject) (PatchMeProfileResponseObject, error)
+	// PutMeSkills Ganti daftar skill
+	// (PUT /me/skills)
+	PutMeSkills(ctx context.Context, request PutMeSkillsRequestObject) (PutMeSkillsResponseObject, error)
+	// PatchMeUsername Ganti username
+	// (PATCH /me/username)
+	PatchMeUsername(ctx context.Context, request PatchMeUsernameRequestObject) (PatchMeUsernameResponseObject, error)
 	// GetPing Cek API hidup
 	// (GET /ping)
 	GetPing(ctx context.Context, request GetPingRequestObject) (GetPingResponseObject, error)
+	// GetTaxonomySkills Cari skill
+	// (GET /taxonomy/skills)
+	GetTaxonomySkills(ctx context.Context, request GetTaxonomySkillsRequestObject) (GetTaxonomySkillsResponseObject, error)
+	// GetUser Profil pengguna publik
+	// (GET /users/{username})
+	GetUser(ctx context.Context, request GetUserRequestObject) (GetUserResponseObject, error)
+	// GetUserExperiences Experience pengguna
+	// (GET /users/{username}/experiences)
+	GetUserExperiences(ctx context.Context, request GetUserExperiencesRequestObject) (GetUserExperiencesResponseObject, error)
+	// DeleteUserFollow Berhenti mengikuti pengguna
+	// (DELETE /users/{username}/follow)
+	DeleteUserFollow(ctx context.Context, request DeleteUserFollowRequestObject) (DeleteUserFollowResponseObject, error)
+	// PutUserFollow Ikuti pengguna
+	// (PUT /users/{username}/follow)
+	PutUserFollow(ctx context.Context, request PutUserFollowRequestObject) (PutUserFollowResponseObject, error)
+	// GetUserFollowers Pengikut pengguna
+	// (GET /users/{username}/followers)
+	GetUserFollowers(ctx context.Context, request GetUserFollowersRequestObject) (GetUserFollowersResponseObject, error)
+	// GetUserFollowing Pengguna yang diikuti
+	// (GET /users/{username}/following)
+	GetUserFollowing(ctx context.Context, request GetUserFollowingRequestObject) (GetUserFollowingResponseObject, error)
+	// DeleteUserSkillEndorsement Batalkan endorse skill pengguna
+	// (DELETE /users/{username}/skills/{skillSlug}/endorsement)
+	DeleteUserSkillEndorsement(ctx context.Context, request DeleteUserSkillEndorsementRequestObject) (DeleteUserSkillEndorsementResponseObject, error)
+	// PutUserSkillEndorsement Endorse skill pengguna
+	// (PUT /users/{username}/skills/{skillSlug}/endorsement)
+	PutUserSkillEndorsement(ctx context.Context, request PutUserSkillEndorsementRequestObject) (PutUserSkillEndorsementResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error)
@@ -6584,6 +8617,330 @@ func (sh *strictHandler) GetMajors(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetMe operation middleware
+func (sh *strictHandler) GetMe(w http.ResponseWriter, r *http.Request) {
+	var request GetMeRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMe(ctx, request.(GetMeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMe")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetMeResponseObject); ok {
+		if err := validResponse.VisitGetMeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PutMeAvatar operation middleware
+func (sh *strictHandler) PutMeAvatar(w http.ResponseWriter, r *http.Request) {
+	var request PutMeAvatarRequestObject
+
+	var body PutMeAvatarJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PutMeAvatar(ctx, request.(PutMeAvatarRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PutMeAvatar")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PutMeAvatarResponseObject); ok {
+		if err := validResponse.VisitPutMeAvatarResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PutMeBanner operation middleware
+func (sh *strictHandler) PutMeBanner(w http.ResponseWriter, r *http.Request) {
+	var request PutMeBannerRequestObject
+
+	var body PutMeBannerJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PutMeBanner(ctx, request.(PutMeBannerRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PutMeBanner")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PutMeBannerResponseObject); ok {
+		if err := validResponse.VisitPutMeBannerResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetMeExperiences operation middleware
+func (sh *strictHandler) GetMeExperiences(w http.ResponseWriter, r *http.Request) {
+	var request GetMeExperiencesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMeExperiences(ctx, request.(GetMeExperiencesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMeExperiences")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetMeExperiencesResponseObject); ok {
+		if err := validResponse.VisitGetMeExperiencesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostMeExperience operation middleware
+func (sh *strictHandler) PostMeExperience(w http.ResponseWriter, r *http.Request) {
+	var request PostMeExperienceRequestObject
+
+	var body PostMeExperienceJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostMeExperience(ctx, request.(PostMeExperienceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostMeExperience")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostMeExperienceResponseObject); ok {
+		if err := validResponse.VisitPostMeExperienceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteMeExperience operation middleware
+func (sh *strictHandler) DeleteMeExperience(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request DeleteMeExperienceRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteMeExperience(ctx, request.(DeleteMeExperienceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteMeExperience")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteMeExperienceResponseObject); ok {
+		if err := validResponse.VisitDeleteMeExperienceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PatchMeExperience operation middleware
+func (sh *strictHandler) PatchMeExperience(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PatchMeExperienceRequestObject
+
+	request.Id = id
+
+	var body PatchMeExperienceJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PatchMeExperience(ctx, request.(PatchMeExperienceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PatchMeExperience")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PatchMeExperienceResponseObject); ok {
+		if err := validResponse.VisitPatchMeExperienceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PutMeLinks operation middleware
+func (sh *strictHandler) PutMeLinks(w http.ResponseWriter, r *http.Request) {
+	var request PutMeLinksRequestObject
+
+	var body PutMeLinksJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PutMeLinks(ctx, request.(PutMeLinksRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PutMeLinks")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PutMeLinksResponseObject); ok {
+		if err := validResponse.VisitPutMeLinksResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PatchMeProfile operation middleware
+func (sh *strictHandler) PatchMeProfile(w http.ResponseWriter, r *http.Request) {
+	var request PatchMeProfileRequestObject
+
+	var body PatchMeProfileJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PatchMeProfile(ctx, request.(PatchMeProfileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PatchMeProfile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PatchMeProfileResponseObject); ok {
+		if err := validResponse.VisitPatchMeProfileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PutMeSkills operation middleware
+func (sh *strictHandler) PutMeSkills(w http.ResponseWriter, r *http.Request) {
+	var request PutMeSkillsRequestObject
+
+	var body PutMeSkillsJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PutMeSkills(ctx, request.(PutMeSkillsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PutMeSkills")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PutMeSkillsResponseObject); ok {
+		if err := validResponse.VisitPutMeSkillsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PatchMeUsername operation middleware
+func (sh *strictHandler) PatchMeUsername(w http.ResponseWriter, r *http.Request) {
+	var request PatchMeUsernameRequestObject
+
+	var body PatchMeUsernameJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PatchMeUsername(ctx, request.(PatchMeUsernameRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PatchMeUsername")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PatchMeUsernameResponseObject); ok {
+		if err := validResponse.VisitPatchMeUsernameResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetPing operation middleware
 func (sh *strictHandler) GetPing(w http.ResponseWriter, r *http.Request) {
 	var request GetPingRequestObject
@@ -6601,6 +8958,244 @@ func (sh *strictHandler) GetPing(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetPingResponseObject); ok {
 		if err := validResponse.VisitGetPingResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetTaxonomySkills operation middleware
+func (sh *strictHandler) GetTaxonomySkills(w http.ResponseWriter, r *http.Request, params GetTaxonomySkillsParams) {
+	var request GetTaxonomySkillsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetTaxonomySkills(ctx, request.(GetTaxonomySkillsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetTaxonomySkills")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetTaxonomySkillsResponseObject); ok {
+		if err := validResponse.VisitGetTaxonomySkillsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetUser operation middleware
+func (sh *strictHandler) GetUser(w http.ResponseWriter, r *http.Request, username string) {
+	var request GetUserRequestObject
+
+	request.Username = username
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetUser(ctx, request.(GetUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetUser")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetUserResponseObject); ok {
+		if err := validResponse.VisitGetUserResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetUserExperiences operation middleware
+func (sh *strictHandler) GetUserExperiences(w http.ResponseWriter, r *http.Request, username string) {
+	var request GetUserExperiencesRequestObject
+
+	request.Username = username
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetUserExperiences(ctx, request.(GetUserExperiencesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetUserExperiences")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetUserExperiencesResponseObject); ok {
+		if err := validResponse.VisitGetUserExperiencesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteUserFollow operation middleware
+func (sh *strictHandler) DeleteUserFollow(w http.ResponseWriter, r *http.Request, username string) {
+	var request DeleteUserFollowRequestObject
+
+	request.Username = username
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteUserFollow(ctx, request.(DeleteUserFollowRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteUserFollow")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteUserFollowResponseObject); ok {
+		if err := validResponse.VisitDeleteUserFollowResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PutUserFollow operation middleware
+func (sh *strictHandler) PutUserFollow(w http.ResponseWriter, r *http.Request, username string) {
+	var request PutUserFollowRequestObject
+
+	request.Username = username
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PutUserFollow(ctx, request.(PutUserFollowRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PutUserFollow")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PutUserFollowResponseObject); ok {
+		if err := validResponse.VisitPutUserFollowResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetUserFollowers operation middleware
+func (sh *strictHandler) GetUserFollowers(w http.ResponseWriter, r *http.Request, username string, params GetUserFollowersParams) {
+	var request GetUserFollowersRequestObject
+
+	request.Username = username
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetUserFollowers(ctx, request.(GetUserFollowersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetUserFollowers")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetUserFollowersResponseObject); ok {
+		if err := validResponse.VisitGetUserFollowersResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetUserFollowing operation middleware
+func (sh *strictHandler) GetUserFollowing(w http.ResponseWriter, r *http.Request, username string, params GetUserFollowingParams) {
+	var request GetUserFollowingRequestObject
+
+	request.Username = username
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetUserFollowing(ctx, request.(GetUserFollowingRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetUserFollowing")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetUserFollowingResponseObject); ok {
+		if err := validResponse.VisitGetUserFollowingResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteUserSkillEndorsement operation middleware
+func (sh *strictHandler) DeleteUserSkillEndorsement(w http.ResponseWriter, r *http.Request, username string, skillSlug string) {
+	var request DeleteUserSkillEndorsementRequestObject
+
+	request.Username = username
+	request.SkillSlug = skillSlug
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteUserSkillEndorsement(ctx, request.(DeleteUserSkillEndorsementRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteUserSkillEndorsement")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteUserSkillEndorsementResponseObject); ok {
+		if err := validResponse.VisitDeleteUserSkillEndorsementResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PutUserSkillEndorsement operation middleware
+func (sh *strictHandler) PutUserSkillEndorsement(w http.ResponseWriter, r *http.Request, username string, skillSlug string) {
+	var request PutUserSkillEndorsementRequestObject
+
+	request.Username = username
+	request.SkillSlug = skillSlug
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PutUserSkillEndorsement(ctx, request.(PutUserSkillEndorsementRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PutUserSkillEndorsement")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PutUserSkillEndorsementResponseObject); ok {
+		if err := validResponse.VisitPutUserSkillEndorsementResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
