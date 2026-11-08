@@ -20,6 +20,7 @@ type Deps struct {
 	Auth     *auth.Service
 	Academic *academic.Service
 	Users    *users.Service
+	Imports  *users.Importer
 	Roles    *roles.Service
 	Logger   *slog.Logger
 }
@@ -29,6 +30,7 @@ type Server struct {
 	auth     *auth.Service
 	academic *academic.Service
 	users    *users.Service
+	imports  *users.Importer
 	roles    *roles.Service
 	logger   *slog.Logger
 }
@@ -44,6 +46,7 @@ func NewServer(d Deps) *Server {
 		auth:     d.Auth,
 		academic: d.Academic,
 		users:    d.Users,
+		imports:  d.Imports,
 		roles:    d.Roles,
 		logger:   logger,
 	}
