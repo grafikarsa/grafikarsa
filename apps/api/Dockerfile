@@ -1,4 +1,4 @@
-FROM golang:1.26-alpine AS builder
+FROM golang:1.27-alpine AS builder
 
 WORKDIR /src
 
@@ -13,7 +13,7 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/migrate ./cmd/migr
 
 # The worker is the only binary that links libvips. Keep this builder and the
 # worker runtime separate from the static API image.
-FROM golang:1.26-trixie AS worker-builder
+FROM golang:1.27-trixie AS worker-builder
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
